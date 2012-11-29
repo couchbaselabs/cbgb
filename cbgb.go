@@ -11,9 +11,10 @@ import (
 	"github.com/dustin/gomemcached/server"
 )
 
-const VERSION = "0.0.0"
-
-const MAX_VBUCKET = 1024
+const (
+	VERSION     = "0.0.0"
+	MAX_VBUCKET = 1024
+)
 
 // TODO:  Make a collection of vbuckets
 var vbuckets [MAX_VBUCKET]unsafe.Pointer
