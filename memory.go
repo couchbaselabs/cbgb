@@ -14,9 +14,10 @@ type item struct {
 }
 
 type vbucket struct {
-	data map[string]*item
-	cas  uint64
-	lock sync.Mutex
+	data     map[string]*item
+	cas      uint64
+	observer *broadcaster
+	lock     sync.Mutex
 }
 
 var notFound = &gomemcached.MCResponse{
@@ -45,7 +46,8 @@ var dispatchTable = [256]dispatchFun{
 
 func newVbucket() *vbucket {
 	return &vbucket{
-		data: make(map[string]*item),
+		data:     make(map[string]*item),
+		observer: newBroadcaster(),
 	}
 }
 
@@ -78,6 +80,8 @@ func vbSet(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 		cas:  itemCas,
 		data: req.Body,
 	}
+
+	v.observer.broadcast(mutation{req.Key, itemCas, false})
 
 	if req.Opcode.IsQuiet() {
 		return nil
@@ -122,6 +126,8 @@ func vbDel(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 		return notFound
 	}
 	delete(v.data, k)
+
+	v.observer.broadcast(mutation{req.Key, 0, true})
 
 	return emptyResponse
 }

@@ -18,6 +18,8 @@ const MAX_VBUCKET = 1024
 // TODO:  Make a collection of vbuckets
 var vbuckets [MAX_VBUCKET]unsafe.Pointer
 
+var mutationLogCh = make(chan mutation)
+
 type reqHandler struct {
 }
 
@@ -82,12 +84,26 @@ func waitForConnections(ls net.Listener) {
 	}
 }
 
+func mutationLogger() {
+	for m := range mutationLogCh {
+		sym := "M"
+		if m.deleted {
+			sym = "D"
+		}
+		log.Printf("%v: %s -> %v", sym, m.key, m.cas)
+	}
+}
+
 func main() {
 	addr := flag.String("bind", ":11211", "memcached listen port")
 
 	flag.Parse()
 
-	setVBucket(0, newVbucket())
+	go mutationLogger()
+
+	vb := newVbucket()
+	vb.observer.Register(mutationLogCh)
+	setVBucket(0, vb)
 
 	ls, e := net.Listen("tcp", *addr)
 	if e != nil {
