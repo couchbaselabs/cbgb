@@ -90,6 +90,36 @@ func TestBasicOps(t *testing.T) {
 	}
 }
 
+func TestInvalidCommand(t *testing.T) {
+	testBucket := &bucket{}
+	testBucket.createVBucket(0)
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.CommandCode(255),
+	}
+
+	res := rh.HandleMessage(nil, req)
+
+	if res.Status != gomemcached.UNKNOWN_COMMAND {
+		t.Fatalf("Expected unknown command, got %v", res)
+	}
+}
+
+func BenchmarkInvalidCommand(b *testing.B) {
+	testBucket := &bucket{}
+	testBucket.createVBucket(0)
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.CommandCode(255),
+	}
+
+	for i := 0; i < b.N; i++ {
+		rh.HandleMessage(nil, req)
+	}
+}
+
 // This test doesn't assert much, but relies on the race detector to
 // determine whether anything bad is happening.
 func TestParallelMutations(t *testing.T) {
