@@ -56,8 +56,9 @@ func TestBasicOps(t *testing.T) {
 			gomemcached.SUCCESS, []byte("aye")},
 	}
 
-	rh := reqHandler{}
-	rh.bucket.createVBucket(3)
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	testBucket.createVBucket(3)
 
 	for _, x := range tests {
 		req := &gomemcached.MCRequest{
