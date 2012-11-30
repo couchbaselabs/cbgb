@@ -55,6 +55,8 @@ func TestBasicOps(t *testing.T) {
 		// quiet
 		{gomemcached.GETQ, active, "a", "aye",
 			ignored, empty},
+		{gomemcached.DELETEQ, active, "a", "",
+			ignored, empty},
 		{gomemcached.SET, active, "a", "aye",
 			gomemcached.SUCCESS, empty},
 		{gomemcached.GETQ, active, "a", "",
@@ -91,6 +93,55 @@ func TestBasicOps(t *testing.T) {
 				x.op, x.vb, x.key, x.expValue, res.Body)
 		}
 	}
+}
+
+func testGet(rh *reqHandler, vbid uint16, key string) *gomemcached.MCResponse {
+	req := &gomemcached.MCRequest{
+		Opcode:  gomemcached.GET,
+		VBucket: vbid,
+		Key:     []byte(key),
+	}
+	return rh.HandleMessage(nil, req)
+}
+
+func TestCASDelete(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
+
+	testKey := "x"
+
+	setreq := &gomemcached.MCRequest{
+		Opcode:  gomemcached.SET,
+		VBucket: 3,
+		Key:     []byte(testKey),
+	}
+
+	setres := rh.HandleMessage(nil, setreq)
+	if setres.Status != gomemcached.SUCCESS {
+		t.Fatalf("Error setting initial value: %v", setres)
+	}
+
+	delreq := &gomemcached.MCRequest{
+		Opcode:  gomemcached.DELETE,
+		VBucket: 3,
+		Key:     []byte(testKey),
+		Cas:     82859249,
+	}
+
+	res := rh.HandleMessage(nil, delreq)
+	if res.Status != gomemcached.EINVAL {
+		t.Fatalf("Expected einval, got %v", res)
+	}
+
+	delreq.Cas = setres.Cas
+
+	res = rh.HandleMessage(nil, delreq)
+	if res.Status != gomemcached.SUCCESS {
+		t.Fatalf("Failed to delete with cas: %v", res)
+	}
+
 }
 
 func TestVersionCommand(t *testing.T) {
