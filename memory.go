@@ -54,6 +54,10 @@ func newVbucket(vbid uint16) *vbucket {
 	}
 }
 
+func (v *vbucket) Close() error {
+	return v.observer.Close()
+}
+
 func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	f := dispatchTable[req.Opcode]
 	if f == nil {

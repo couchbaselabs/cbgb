@@ -61,7 +61,8 @@ func TestBasicOps(t *testing.T) {
 
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	testBucket.createVBucket(3)
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
 
 	for _, x := range tests {
 		req := &gomemcached.MCRequest{
@@ -92,7 +93,8 @@ func TestBasicOps(t *testing.T) {
 
 func TestInvalidCommand(t *testing.T) {
 	testBucket := &bucket{}
-	testBucket.createVBucket(0)
+	vb := testBucket.createVBucket(0)
+	defer vb.Close()
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -108,7 +110,8 @@ func TestInvalidCommand(t *testing.T) {
 
 func BenchmarkInvalidCommand(b *testing.B) {
 	testBucket := &bucket{}
-	testBucket.createVBucket(0)
+	vb := testBucket.createVBucket(0)
+	defer vb.Close()
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -124,7 +127,8 @@ func BenchmarkInvalidCommand(b *testing.B) {
 // determine whether anything bad is happening.
 func TestParallelMutations(t *testing.T) {
 	testBucket := &bucket{}
-	testBucket.createVBucket(3)
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
 
 	keys := []string{"a", "b", "c"}
 
@@ -159,7 +163,8 @@ func TestParallelMutations(t *testing.T) {
 // Parallel dispatcher invocation timing.
 func BenchmarkParallelGet(b *testing.B) {
 	testBucket := &bucket{}
-	testBucket.createVBucket(3)
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
 
 	rh := reqHandler{testBucket}
 
@@ -190,7 +195,8 @@ func BenchmarkParallelGet(b *testing.B) {
 // Best case dispatcher timing.
 func BenchmarkDispatch(b *testing.B) {
 	testBucket := &bucket{}
-	testBucket.createVBucket(3)
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
 
 	rh := reqHandler{testBucket}
 
