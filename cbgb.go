@@ -98,10 +98,10 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 	return vb.dispatch(w, req)
 }
 
-func sessionLoop(s net.Conn, handler *reqHandler) {
-	log.Printf("Started session with %v", s.RemoteAddr())
+func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
+	log.Printf("Started session with %v", addr)
 	defer func() {
-		log.Printf("Finished session with %v", s.RemoteAddr())
+		log.Printf("Finished session with %v", addr)
 	}()
 	memcached.HandleIO(s, handler)
 }
@@ -115,15 +115,15 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 		s, e := ls.Accept()
 		if e == nil {
 			log.Printf("Got a connection from %v", s.RemoteAddr())
-			go sessionLoop(s, handler)
+			go sessionLoop(s, s.RemoteAddr().String(), handler)
 		} else {
 			log.Printf("Error accepting from %s", ls)
 		}
 	}
 }
 
-func mutationLogger() {
-	for m := range mutationLogCh {
+func mutationLogger(ch <-chan mutation) {
+	for m := range ch {
 		sym := "M"
 		if m.deleted {
 			sym = "D"
@@ -137,7 +137,7 @@ func main() {
 
 	flag.Parse()
 
-	go mutationLogger()
+	go mutationLogger(mutationLogCh)
 
 	defaultBucket := bucket{}
 	defaultBucket.createVBucket(0).observer.Register(mutationLogCh)
