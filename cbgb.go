@@ -34,6 +34,10 @@ type statItem struct {
 	key, val string
 }
 
+// This is slightly more complicated than it would generally need to
+// be, but as a generator, it's self-terminating based on an input
+// stream.  I may do this a bit differently for stats in the future,
+// but the model is quite helpful for a tap stream or similar.
 func transmitStats(w io.Writer) (chan<- statItem, <-chan error) {
 	ch := make(chan statItem)
 	errs := make(chan error)
