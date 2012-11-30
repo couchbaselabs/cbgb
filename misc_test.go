@@ -16,7 +16,7 @@ func init() {
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {
-	ch := make(chan mutation, 5)
+	ch := make(chan interface{}, 5)
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: true, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 2}

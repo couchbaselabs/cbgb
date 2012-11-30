@@ -22,6 +22,8 @@ type vbucket struct {
 	lock     sync.Mutex
 }
 
+const dataBroadcastBufLen = 100
+
 type dispatchFun func(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse
 
 var dispatchTable = [256]dispatchFun{
@@ -39,7 +41,7 @@ var dispatchTable = [256]dispatchFun{
 func newVbucket(vbid uint16) *vbucket {
 	return &vbucket{
 		data:     make(map[string]*item),
-		observer: newBroadcaster(),
+		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
 	}
 }

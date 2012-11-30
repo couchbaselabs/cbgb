@@ -16,7 +16,7 @@ const (
 	MAX_VBUCKET = 1024
 )
 
-var mutationLogCh = make(chan mutation)
+var mutationLogCh = make(chan interface{})
 
 var serverStart = time.Now()
 
@@ -119,8 +119,9 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 	}
 }
 
-func mutationLogger(ch <-chan mutation) {
-	for m := range ch {
+func mutationLogger(ch <-chan interface{}) {
+	for i := range ch {
+		m := i.(mutation)
 		sym := "M"
 		if m.deleted {
 			sym = "D"

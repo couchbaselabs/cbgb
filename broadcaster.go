@@ -6,14 +6,12 @@ type mutation struct {
 	deleted bool
 }
 
-const broadcastBuffer = 100
-
 type broadcaster struct {
-	input chan mutation
-	reg   chan chan<- mutation
-	unreg chan chan<- mutation
+	input chan interface{}
+	reg   chan chan<- interface{}
+	unreg chan chan<- interface{}
 
-	outputs map[chan<- mutation]bool
+	outputs map[chan<- interface{}]bool
 }
 
 func (b *broadcaster) cleanup() {
@@ -22,7 +20,7 @@ func (b *broadcaster) cleanup() {
 	}
 }
 
-func (b *broadcaster) broadcast(m mutation) {
+func (b *broadcaster) broadcast(m interface{}) {
 	for ch := range b.outputs {
 		ch <- m
 	}
@@ -47,13 +45,13 @@ func (b *broadcaster) run() {
 	}
 }
 
-func newBroadcaster() *broadcaster {
-	input := make(chan mutation, broadcastBuffer)
+func newBroadcaster(buflen int) *broadcaster {
+	input := make(chan interface{}, buflen)
 	b := &broadcaster{
 		input:   input,
-		reg:     make(chan chan<- mutation),
-		unreg:   make(chan chan<- mutation),
-		outputs: make(map[chan<- mutation]bool),
+		reg:     make(chan chan<- interface{}),
+		unreg:   make(chan chan<- interface{}),
+		outputs: make(map[chan<- interface{}]bool),
 	}
 
 	go b.run()
@@ -61,11 +59,11 @@ func newBroadcaster() *broadcaster {
 	return b
 }
 
-func (b *broadcaster) Register(newch chan<- mutation) {
+func (b *broadcaster) Register(newch chan<- interface{}) {
 	b.reg <- newch
 }
 
-func (b *broadcaster) Unregister(newch chan<- mutation) {
+func (b *broadcaster) Unregister(newch chan<- interface{}) {
 	b.unreg <- newch
 }
 
@@ -74,6 +72,6 @@ func (b *broadcaster) Close() error {
 	return nil
 }
 
-func (b *broadcaster) Submit(m mutation) {
+func (b *broadcaster) Submit(m interface{}) {
 	b.input <- m
 }

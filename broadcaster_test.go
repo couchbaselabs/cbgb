@@ -8,13 +8,13 @@ import (
 func TestBroadcast(t *testing.T) {
 	wg := sync.WaitGroup{}
 
-	b := newBroadcaster()
+	b := newBroadcaster(100)
 	defer b.Close()
 
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
 
-		cch := make(chan mutation)
+		cch := make(chan interface{})
 
 		b.Register(cch)
 
@@ -32,7 +32,7 @@ func TestBroadcast(t *testing.T) {
 }
 
 func TestBroadcastCleanup(t *testing.T) {
-	b := newBroadcaster()
-	b.Register(make(chan mutation))
+	b := newBroadcaster(100)
+	b.Register(make(chan interface{}))
 	b.Close()
 }
