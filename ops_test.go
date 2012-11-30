@@ -1,6 +1,8 @@
 package main
 
 import (
+	"io"
+	"io/ioutil"
 	"sync"
 	"testing"
 
@@ -137,6 +139,27 @@ func TestQuit(t *testing.T) {
 
 	if !res.Fatal {
 		t.Fatalf("Expected quit to hangup, got %v", res)
+	}
+}
+
+func TestStats(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.STAT,
+	}
+
+	// TODO:  maybe grab the results and look at them.
+	res := rh.HandleMessage(ioutil.Discard, req)
+
+	if res != nil {
+		t.Fatalf("Expected nil from stats, got %v", res)
+	}
+
+	res = rh.HandleMessage(&errWriter{io.EOF}, req)
+	if !res.Fatal {
+		t.Fatalf("Expected Fatal from a bad stats, got %v", res)
 	}
 }
 
