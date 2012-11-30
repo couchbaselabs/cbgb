@@ -37,6 +37,8 @@ func TestBasicOps(t *testing.T) {
 			gomemcached.SUCCESS, empty},
 		{gomemcached.GET, active, "a", "",
 			gomemcached.SUCCESS, []byte("aye")},
+		{gomemcached.GETK, active, "a", "", // TODO: Assert the key?
+			gomemcached.SUCCESS, []byte("aye")},
 		{gomemcached.GET, 2, "a", "",
 			gomemcached.NOT_MY_VBUCKET, empty},
 		{gomemcached.GET, active, "b", "",
