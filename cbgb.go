@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	"github.com/dustin/gomemcached"
 	"github.com/dustin/gomemcached/server"
@@ -20,6 +21,8 @@ var defaultBucket bucket
 
 var mutationLogCh = make(chan mutation)
 
+var serverStart = time.Now()
+
 type reqHandler struct {
 }
 
@@ -27,7 +30,42 @@ var notMyVbucket = &gomemcached.MCResponse{
 	Status: gomemcached.NOT_MY_VBUCKET,
 }
 
-// TODO:  Make this work with stats and other multi-response things
+type statItem struct {
+	key, val string
+}
+
+func transmitStats(w io.Writer) (chan<- statItem, <-chan error) {
+	ch := make(chan statItem)
+	errs := make(chan error)
+	go func() {
+		for res := range ch {
+			err := (&gomemcached.MCResponse{
+				Opcode: gomemcached.STAT,
+				Key:    []byte(res.key),
+				Body:   []byte(res.val),
+			}).Transmit(w)
+			if err != nil {
+				for _ = range ch {
+					// Eat the input
+				}
+				errs <- err
+				return
+			}
+		}
+		errs <- (&gomemcached.MCResponse{Opcode: gomemcached.STAT}).Transmit(w)
+	}()
+	return ch, errs
+}
+
+func doStats(w io.Writer, key string) error {
+	log.Printf("Doing stats for %#v", key)
+	ch, errs := transmitStats(w)
+	ch <- statItem{"uptime", time.Since(serverStart).String()}
+	ch <- statItem{"version", VERSION}
+	close(ch)
+	return <-errs
+}
+
 func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 
 	switch req.Opcode {
@@ -41,8 +79,15 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		}
 	case gomemcached.NOOP:
 		return emptyResponse
-	case gomemcached.FLUSH, gomemcached.STAT:
+	case gomemcached.FLUSH:
 		panic("OMG")
+	case gomemcached.STAT:
+		err := doStats(w, string(req.Key))
+		if err != nil {
+			log.Printf("Error sending stats: %v", err)
+			return &gomemcached.MCResponse{Fatal: true}
+		}
+		return nil
 	}
 
 	vb := defaultBucket.getVBucket(req.VBucket)
