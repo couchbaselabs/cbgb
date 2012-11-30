@@ -91,6 +91,55 @@ func TestBasicOps(t *testing.T) {
 	}
 }
 
+func TestVersionCommand(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.VERSION,
+	}
+
+	res := rh.HandleMessage(nil, req)
+
+	if res.Status != gomemcached.SUCCESS {
+		t.Fatalf("Expected SUCCESS getting version, got %v", res)
+	}
+
+	if string(res.Body) != VERSION {
+		t.Fatalf("Expected version %s, got %s", VERSION, res.Body)
+	}
+}
+
+func TestVersionNOOP(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.NOOP,
+	}
+
+	res := rh.HandleMessage(nil, req)
+
+	if res.Status != gomemcached.SUCCESS {
+		t.Fatalf("Expected SUCCESS on NOOP, got %v", res)
+	}
+}
+
+func TestQuit(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.QUIT,
+	}
+
+	res := rh.HandleMessage(nil, req)
+
+	if !res.Fatal {
+		t.Fatalf("Expected quit to hangup, got %v", res)
+	}
+}
+
 func TestInvalidCommand(t *testing.T) {
 	testBucket := &bucket{}
 	vb := testBucket.createVBucket(0)
