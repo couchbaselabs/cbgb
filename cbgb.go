@@ -81,8 +81,6 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		}
 	case gomemcached.NOOP:
 		return emptyResponse
-	case gomemcached.FLUSH:
-		panic("OMG")
 	case gomemcached.STAT:
 		err := doStats(w, string(req.Key))
 		if err != nil {
@@ -90,8 +88,6 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 			return &gomemcached.MCResponse{Fatal: true}
 		}
 		return nil
-	case gomemcached.SASL_AUTH:
-		panic("OMG need to implement SASL_AUTH")
 	}
 
 	vb := rh.currentBucket.getVBucket(req.VBucket)
