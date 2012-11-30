@@ -8,12 +8,6 @@ type broadcaster struct {
 	outputs map[chan<- interface{}]bool
 }
 
-func (b *broadcaster) cleanup() {
-	for ch := range b.outputs {
-		close(ch)
-	}
-}
-
 func (b *broadcaster) broadcast(m interface{}) {
 	for ch := range b.outputs {
 		ch <- m
@@ -21,8 +15,6 @@ func (b *broadcaster) broadcast(m interface{}) {
 }
 
 func (b *broadcaster) run() {
-	defer b.cleanup()
-
 	for {
 		select {
 		case m := (<-b.input):
@@ -40,9 +32,8 @@ func (b *broadcaster) run() {
 }
 
 func newBroadcaster(buflen int) *broadcaster {
-	input := make(chan interface{}, buflen)
 	b := &broadcaster{
-		input:   input,
+		input:   make(chan interface{}, buflen),
 		reg:     make(chan chan<- interface{}),
 		unreg:   make(chan chan<- interface{}),
 		outputs: make(map[chan<- interface{}]bool),
