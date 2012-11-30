@@ -120,6 +120,11 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 }
 
 func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	// TODO: CAS
+	if req.Cas != 0 {
+		return eInval
+	}
+
 	k := string(req.Key)
 	_, ok := v.data[k]
 	if !ok {
