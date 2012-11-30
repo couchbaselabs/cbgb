@@ -107,14 +107,13 @@ func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
 }
 
 func waitForConnections(ls net.Listener, defaultBucket *bucket) {
-	handler := &reqHandler{
-		currentBucket: defaultBucket,
-	}
-
 	for {
 		s, e := ls.Accept()
 		if e == nil {
 			log.Printf("Got a connection from %v", s.RemoteAddr())
+			handler := &reqHandler{
+				currentBucket: defaultBucket,
+			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler)
 		} else {
 			log.Printf("Error accepting from %s", ls)
