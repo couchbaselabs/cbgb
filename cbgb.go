@@ -120,12 +120,20 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 	}
 }
 
-func mutationLogger(ch <-chan interface{}) {
+func mutationLogger(ch chan interface{}) {
 	for i := range ch {
 		switch o := i.(type) {
 		case mutation:
 			log.Printf("Mutation: %v", o)
 		case bucketChange:
+			if o.deleted {
+				// Dropped it
+			} else {
+				vb := o.getVBucket()
+				if vb != nil {
+					vb.observer.Register(ch)
+				}
+			}
 			log.Printf("Bucket change: %v", o)
 		default:
 			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
@@ -142,7 +150,7 @@ func main() {
 
 	defaultBucket := newBucket()
 	defaultBucket.observer.Register(mutationLogCh)
-	defaultBucket.createVBucket(0).observer.Register(mutationLogCh)
+	defaultBucket.createVBucket(0)
 
 	ls, e := net.Listen("tcp", *addr)
 	if e != nil {

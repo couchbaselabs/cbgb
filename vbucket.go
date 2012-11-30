@@ -23,6 +23,7 @@ type vbucket struct {
 }
 
 type mutation struct {
+	vb      uint16
 	key     []byte
 	cas     uint64
 	deleted bool
@@ -33,7 +34,7 @@ func (m mutation) String() string {
 	if m.deleted {
 		sym = "D"
 	}
-	return fmt.Sprintf("%v: %s -> %v", sym, m.key, m.cas)
+	return fmt.Sprintf("%v: vb:%v %s -> %v", sym, m.vb, m.key, m.cas)
 }
 
 const dataBroadcastBufLen = 100
@@ -103,7 +104,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		data: req.Body,
 	}
 
-	v.observer.Submit(mutation{req.Key, itemCas, false})
+	v.observer.Submit(mutation{v.vbid, req.Key, itemCas, false})
 
 	if req.Opcode.IsQuiet() {
 		return nil
@@ -162,7 +163,7 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 	}
 	delete(v.data, k)
 
-	v.observer.broadcast(mutation{req.Key, 0, true})
+	v.observer.broadcast(mutation{v.vbid, req.Key, 0, true})
 
 	return &gomemcached.MCResponse{}
 }
