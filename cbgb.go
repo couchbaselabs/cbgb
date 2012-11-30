@@ -94,13 +94,6 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		panic("OMG need to implement SASL_AUTH")
 	}
 
-	if rh.currentBucket == nil {
-		return &gomemcached.MCResponse{
-			Status: gomemcached.EINVAL,
-			Body:   []byte("No current bucket; please SASL_AUTH first"),
-		}
-	}
-
 	vb := rh.currentBucket.getVBucket(req.VBucket)
 	if vb == nil {
 		return notMyVbucket
