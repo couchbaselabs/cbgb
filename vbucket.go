@@ -80,10 +80,16 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 }
 
 func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
-	// TODO: CAS
 	if req.Cas != 0 {
-		return &gomemcached.MCResponse{
-			Status: gomemcached.EINVAL,
+		var oldcas uint64
+		if old, ok := v.data[string(req.Key)]; ok {
+			oldcas = old.cas
+		}
+
+		if oldcas != req.Cas {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+			}
 		}
 	}
 

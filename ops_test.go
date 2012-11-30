@@ -144,6 +144,47 @@ func TestCASDelete(t *testing.T) {
 
 }
 
+func TestCASSet(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
+
+	testKey := "x"
+
+	setreq := &gomemcached.MCRequest{
+		Opcode:  gomemcached.SET,
+		VBucket: 3,
+		Key:     []byte(testKey),
+		Cas:     883494,
+	}
+	res := rh.HandleMessage(nil, setreq)
+	if res.Status != gomemcached.EINVAL {
+		t.Fatalf("Expected einval, got %v", res)
+	}
+
+	objcas := res.Cas
+
+	setreq.Cas = 0
+
+	res = rh.HandleMessage(nil, setreq)
+	if res.Status != gomemcached.SUCCESS {
+		t.Fatalf("Error setting initial value: %v", res)
+	}
+
+	setreq.Cas = 1 + objcas
+	res = rh.HandleMessage(nil, setreq)
+	if res.Status != gomemcached.EINVAL {
+		t.Fatalf("Expected einval, got %v", res)
+	}
+
+	setreq.Cas = objcas
+	res = rh.HandleMessage(nil, setreq)
+	if res.Status != gomemcached.SUCCESS {
+		t.Fatalf("Error setting updated value: %v", res)
+	}
+}
+
 func TestVersionCommand(t *testing.T) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
