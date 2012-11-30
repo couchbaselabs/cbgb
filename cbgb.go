@@ -97,7 +97,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 	if rh.currentBucket == nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.EINVAL,
-			Body: []byte("No current bucket; please SASL_AUTH first"),
+			Body:   []byte("No current bucket; please SASL_AUTH first"),
 		}
 	}
 
