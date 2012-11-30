@@ -4,8 +4,6 @@ import (
 	"flag"
 	"log"
 	"net"
-	"sync/atomic"
-	"unsafe"
 
 	"github.com/dustin/gomemcached"
 	"github.com/dustin/gomemcached/server"
@@ -16,8 +14,8 @@ const (
 	MAX_VBUCKET = 1024
 )
 
-// TODO:  Make a collection of vbuckets
-var vbuckets [MAX_VBUCKET]unsafe.Pointer
+// TODO:  Have more than one of these
+var defaultBucket bucket
 
 var mutationLogCh = make(chan mutation)
 
@@ -26,15 +24,6 @@ type reqHandler struct {
 
 var notMyVbucket = &gomemcached.MCResponse{
 	Status: gomemcached.NOT_MY_VBUCKET,
-}
-
-func getVBucket(vbid uint16) *vbucket {
-	vbp := atomic.LoadPointer(&vbuckets[vbid])
-	return (*vbucket)(vbp)
-}
-
-func setVBucket(vbid uint16, vb *vbucket) {
-	atomic.StorePointer(&vbuckets[vbid], unsafe.Pointer(vb))
 }
 
 // TODO:  Make this work with stats and other multi-response things
@@ -55,7 +44,7 @@ func (rh *reqHandler) HandleMessage(req *gomemcached.MCRequest) *gomemcached.MCR
 		panic("OMG")
 	}
 
-	vb := getVBucket(req.VBucket)
+	vb := defaultBucket.getVBucket(req.VBucket)
 	if vb == nil {
 		return notMyVbucket
 	}
@@ -102,9 +91,7 @@ func main() {
 
 	go mutationLogger()
 
-	vb := newVbucket()
-	vb.observer.Register(mutationLogCh)
-	setVBucket(0, vb)
+	defaultBucket.createVBucket(0).observer.Register(mutationLogCh)
 
 	ls, e := net.Listen("tcp", *addr)
 	if e != nil {
