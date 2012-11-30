@@ -16,14 +16,12 @@ const (
 	MAX_VBUCKET = 1024
 )
 
-// TODO:  Have more than one of these
-var defaultBucket bucket
-
 var mutationLogCh = make(chan mutation)
 
 var serverStart = time.Now()
 
 type reqHandler struct {
+	currentBucket *bucket
 }
 
 var notMyVbucket = &gomemcached.MCResponse{
@@ -92,9 +90,18 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 			return &gomemcached.MCResponse{Fatal: true}
 		}
 		return nil
+	case gomemcached.SASL_AUTH:
+		panic("OMG need to implement SASL_AUTH")
 	}
 
-	vb := defaultBucket.getVBucket(req.VBucket)
+	if rh.currentBucket == nil {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body: []byte("No current bucket; please SASL_AUTH first"),
+		}
+	}
+
+	vb := rh.currentBucket.getVBucket(req.VBucket)
 	if vb == nil {
 		return notMyVbucket
 	}
@@ -110,8 +117,10 @@ func sessionLoop(s net.Conn, handler *reqHandler) {
 	memcached.HandleIO(s, handler)
 }
 
-func waitForConnections(ls net.Listener) {
-	handler := &reqHandler{}
+func waitForConnections(ls net.Listener, defaultBucket *bucket) {
+	handler := &reqHandler{
+		currentBucket: defaultBucket,
+	}
 
 	for {
 		s, e := ls.Accept()
@@ -141,6 +150,7 @@ func main() {
 
 	go mutationLogger()
 
+	defaultBucket := bucket{}
 	defaultBucket.createVBucket(0).observer.Register(mutationLogCh)
 
 	ls, e := net.Listen("tcp", *addr)
@@ -148,5 +158,5 @@ func main() {
 		log.Fatalf("Got an error:  %s", e)
 	}
 
-	waitForConnections(ls)
+	waitForConnections(ls, &defaultBucket)
 }
