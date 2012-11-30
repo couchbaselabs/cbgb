@@ -28,19 +28,18 @@ func TestMutationLogger(t *testing.T) {
 }
 
 func TestMutationInvalid(t *testing.T) {
+	defer func() {
+		if x := recover(); x == nil {
+			t.Fatalf("Expected panic, didn't get it")
+		} else {
+			t.Logf("Got expected panic in invalid mutation: %v", x)
+		}
+	}()
+
 	ch := make(chan interface{}, 5)
 	ch <- 19
 
-	func() {
-		defer func() {
-			if x := recover(); x == nil {
-				t.Fatalf("Expected panic, didn't get it")
-			} else {
-				t.Logf("Got expected panic in invalid mutation: %v", x)
-			}
-		}()
-		mutationLogger(ch)
-	}()
+	mutationLogger(ch)
 }
 
 // Run through the sessionLoop code with a quit command.
