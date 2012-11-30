@@ -46,7 +46,8 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.GETQ:  vbGet,
 	gomemcached.GETKQ: vbGet,
 
-	gomemcached.SET: vbSet,
+	gomemcached.SET:  vbSet,
+	gomemcached.SETQ: vbSet,
 
 	gomemcached.DELETE:  vbDel,
 	gomemcached.DELETEQ: vbDel,

@@ -57,8 +57,8 @@ func TestBasicOps(t *testing.T) {
 			ignored, empty},
 		{gomemcached.DELETEQ, active, "a", "",
 			ignored, empty},
-		{gomemcached.SET, active, "a", "aye",
-			gomemcached.SUCCESS, empty},
+		{gomemcached.SETQ, active, "a", "aye",
+			ignored, empty},
 		{gomemcached.GETQ, active, "a", "",
 			gomemcached.SUCCESS, []byte("aye")},
 	}
