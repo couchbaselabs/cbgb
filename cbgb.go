@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"io"
 	"log"
 	"net"
 
@@ -27,7 +28,7 @@ var notMyVbucket = &gomemcached.MCResponse{
 }
 
 // TODO:  Make this work with stats and other multi-response things
-func (rh *reqHandler) HandleMessage(req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 
 	switch req.Opcode {
 	case gomemcached.QUIT:
@@ -49,10 +50,10 @@ func (rh *reqHandler) HandleMessage(req *gomemcached.MCRequest) *gomemcached.MCR
 		return notMyVbucket
 	}
 
-	return vb.dispatch(req)
+	return vb.dispatch(w, req)
 }
 
-func sessionSomeCrap(s net.Conn, handler *reqHandler) {
+func sessionLoop(s net.Conn, handler *reqHandler) {
 	log.Printf("Started session with %v", s.RemoteAddr())
 	defer func() {
 		log.Printf("Finished session with %v", s.RemoteAddr())
@@ -67,7 +68,7 @@ func waitForConnections(ls net.Listener) {
 		s, e := ls.Accept()
 		if e == nil {
 			log.Printf("Got a connection from %v", s.RemoteAddr())
-			go sessionSomeCrap(s, handler)
+			go sessionLoop(s, handler)
 		} else {
 			log.Printf("Error accepting from %s", ls)
 		}

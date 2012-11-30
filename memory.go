@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"sync"
 
 	"github.com/dustin/gomemcached"
@@ -17,6 +18,7 @@ type vbucket struct {
 	data     map[string]*item
 	cas      uint64
 	observer *broadcaster
+	vbid     uint16
 	lock     sync.Mutex
 }
 
@@ -30,7 +32,7 @@ var eInval = &gomemcached.MCResponse{
 
 var emptyResponse = &gomemcached.MCResponse{}
 
-type dispatchFun func(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse
+type dispatchFun func(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse
 
 var dispatchTable = [256]dispatchFun{
 	gomemcached.GET:   vbGet,
@@ -44,14 +46,15 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.DELETEQ: vbDel,
 }
 
-func newVbucket() *vbucket {
+func newVbucket(vbid uint16) *vbucket {
 	return &vbucket{
 		data:     make(map[string]*item),
 		observer: newBroadcaster(),
+		vbid:     vbid,
 	}
 }
 
-func (v *vbucket) dispatch(req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	f := dispatchTable[req.Opcode]
 	if f == nil {
 		return &gomemcached.MCResponse{
@@ -63,10 +66,10 @@ func (v *vbucket) dispatch(req *gomemcached.MCRequest) *gomemcached.MCResponse {
 
 	v.lock.Lock()
 	defer v.lock.Unlock()
-	return f(v, req)
+	return f(v, w, req)
 }
 
-func vbSet(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	// TODO: CAS
 	if req.Cas != 0 {
 		return eInval
@@ -92,7 +95,7 @@ func vbSet(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	}
 }
 
-func vbGet(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	data, ok := v.data[string(req.Key)]
 	if !ok {
 		if req.Opcode.IsQuiet() {
@@ -116,7 +119,7 @@ func vbGet(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	return res
 }
 
-func vbDel(v *vbucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	k := string(req.Key)
 	_, ok := v.data[k]
 	if !ok {
