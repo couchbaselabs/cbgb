@@ -1,11 +1,5 @@
 package main
 
-type mutation struct {
-	key     []byte
-	cas     uint64
-	deleted bool
-}
-
 type broadcaster struct {
 	input chan interface{}
 	reg   chan chan<- interface{}
@@ -73,5 +67,7 @@ func (b *broadcaster) Close() error {
 }
 
 func (b *broadcaster) Submit(m interface{}) {
-	b.input <- m
+	if b != nil {
+		b.input <- m
+	}
 }

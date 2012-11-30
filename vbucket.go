@@ -22,6 +22,20 @@ type vbucket struct {
 	lock     sync.Mutex
 }
 
+type mutation struct {
+	key     []byte
+	cas     uint64
+	deleted bool
+}
+
+func (m mutation) String() string {
+	sym := "M"
+	if m.deleted {
+		sym = "D"
+	}
+	return fmt.Sprintf("%v: %s -> %v", sym, m.key, m.cas)
+}
+
 const dataBroadcastBufLen = 100
 
 type dispatchFun func(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse

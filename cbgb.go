@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -121,12 +122,14 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 
 func mutationLogger(ch <-chan interface{}) {
 	for i := range ch {
-		m := i.(mutation)
-		sym := "M"
-		if m.deleted {
-			sym = "D"
+		switch o := i.(type) {
+		case mutation:
+			log.Printf("Mutation: %v", o)
+		case bucketChange:
+			log.Printf("Bucket change: %v", o)
+		default:
+			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
 		}
-		log.Printf("%v: %s -> %v", sym, m.key, m.cas)
 	}
 }
 
@@ -137,7 +140,8 @@ func main() {
 
 	go mutationLogger(mutationLogCh)
 
-	defaultBucket := bucket{}
+	defaultBucket := newBucket()
+	defaultBucket.observer.Register(mutationLogCh)
 	defaultBucket.createVBucket(0).observer.Register(mutationLogCh)
 
 	ls, e := net.Listen("tcp", *addr)
@@ -145,5 +149,5 @@ func main() {
 		log.Fatalf("Got an error:  %s", e)
 	}
 
-	waitForConnections(ls, &defaultBucket)
+	waitForConnections(ls, defaultBucket)
 }
