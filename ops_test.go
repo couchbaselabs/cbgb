@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync"
 	"testing"
 
 	"github.com/dustin/gomemcached"
@@ -84,5 +85,91 @@ func TestBasicOps(t *testing.T) {
 			t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
 				x.op, x.vb, x.key, x.expValue, res.Body)
 		}
+	}
+}
+
+// This test doesn't assert much, but relies on the race detector to
+// determine whether anything bad is happening.
+func TestParallelMutations(t *testing.T) {
+	testBucket := &bucket{}
+	testBucket.createVBucket(3)
+
+	keys := []string{"a", "b", "c"}
+
+	wg := sync.WaitGroup{}
+	for i := 0; i < 100; i++ {
+		wg.Add(1)
+		go func(key string) {
+			defer wg.Done()
+			rh := reqHandler{testBucket}
+
+			seq := []gomemcached.CommandCode{
+				gomemcached.SET,
+				gomemcached.SET,
+				gomemcached.SET,
+				gomemcached.DELETE,
+			}
+
+			for _, op := range seq {
+				req := &gomemcached.MCRequest{
+					Opcode:  op,
+					VBucket: 3,
+					Key:     []byte(key),
+				}
+
+				rh.HandleMessage(nil, req)
+			}
+		}(keys[i%len(keys)])
+	}
+	wg.Wait()
+}
+
+// Parallel dispatcher invocation timing.
+func BenchmarkParallelGet(b *testing.B) {
+	testBucket := &bucket{}
+	testBucket.createVBucket(3)
+
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode:  gomemcached.GET,
+		Key:     []byte("k"),
+		VBucket: 3,
+	}
+
+	wg := sync.WaitGroup{}
+	var parallel = 32
+	wg.Add(parallel)
+
+	// Ignore time from above.
+	b.ResetTimer()
+
+	for worker := 0; worker < parallel; worker++ {
+		go func() {
+			defer wg.Done()
+			for i := 0; i < b.N/parallel; i++ {
+				rh.HandleMessage(nil, req)
+			}
+		}()
+	}
+	wg.Wait()
+}
+
+// Best case dispatcher timing.
+func BenchmarkDispatch(b *testing.B) {
+	testBucket := &bucket{}
+	testBucket.createVBucket(3)
+
+	rh := reqHandler{testBucket}
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.GET,
+		Key:    []byte("k"),
+	}
+
+	// Ignore time from above.
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		rh.HandleMessage(nil, req)
 	}
 }
