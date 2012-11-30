@@ -57,3 +57,24 @@ func TestSessionLoop(t *testing.T) {
 	req.Bytes()
 	sessionLoop(rwCloser{bytes.NewBuffer(req.Bytes())}, "test", rh)
 }
+
+func TestNewBucket(t *testing.T) {
+	nb := newBucket()
+
+	ch := make(chan interface{}, 2)
+
+	nb.observer.Register(ch)
+
+	nb.createVBucket(3)
+	nb.setVBucket(3, nil)
+
+	bc := (<-ch).(bucketChange)
+	if bc.vbid != 3 || bc.deleted == true {
+		t.Fatalf("Expected a 3/false, got %v", bc)
+	}
+
+	bc = (<-ch).(bucketChange)
+	if bc.vbid != 3 || bc.deleted == false {
+		t.Fatalf("Expected a 3/true, got %v", bc)
+	}
+}
