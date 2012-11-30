@@ -24,10 +24,6 @@ type reqHandler struct {
 	currentBucket *bucket
 }
 
-var notMyVbucket = &gomemcached.MCResponse{
-	Status: gomemcached.NOT_MY_VBUCKET,
-}
-
 type statItem struct {
 	key, val string
 }
@@ -80,7 +76,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 			Body: []byte(VERSION),
 		}
 	case gomemcached.NOOP:
-		return emptyResponse
+		return &gomemcached.MCResponse{}
 	case gomemcached.STAT:
 		err := doStats(w, string(req.Key))
 		if err != nil {
@@ -92,7 +88,9 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 
 	vb := rh.currentBucket.getVBucket(req.VBucket)
 	if vb == nil {
-		return notMyVbucket
+		return &gomemcached.MCResponse{
+			Status: gomemcached.NOT_MY_VBUCKET,
+		}
 	}
 
 	return vb.dispatch(w, req)

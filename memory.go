@@ -22,16 +22,6 @@ type vbucket struct {
 	lock     sync.Mutex
 }
 
-var notFound = &gomemcached.MCResponse{
-	Status: gomemcached.KEY_ENOENT,
-}
-
-var eInval = &gomemcached.MCResponse{
-	Status: gomemcached.EINVAL,
-}
-
-var emptyResponse = &gomemcached.MCResponse{}
-
 type dispatchFun func(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse
 
 var dispatchTable = [256]dispatchFun{
@@ -76,7 +66,9 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	// TODO: CAS
 	if req.Cas != 0 {
-		return eInval
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+		}
 	}
 
 	itemCas := v.cas
@@ -105,7 +97,9 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		if req.Opcode.IsQuiet() {
 			return nil
 		}
-		return notFound
+		return &gomemcached.MCResponse{
+			Status: gomemcached.KEY_ENOENT,
+		}
 	}
 
 	res := &gomemcached.MCResponse{
@@ -126,7 +120,9 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	// TODO: CAS
 	if req.Cas != 0 {
-		return eInval
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+		}
 	}
 
 	k := string(req.Key)
@@ -135,11 +131,13 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		if req.Opcode.IsQuiet() {
 			return nil
 		}
-		return notFound
+		return &gomemcached.MCResponse{
+			Status: gomemcached.KEY_ENOENT,
+		}
 	}
 	delete(v.data, k)
 
 	v.observer.broadcast(mutation{req.Key, 0, true})
 
-	return emptyResponse
+	return &gomemcached.MCResponse{}
 }
