@@ -25,7 +25,7 @@ func TestBroadcast(t *testing.T) {
 
 	}
 
-	b.broadcast(mutation{})
+	b.Submit(mutation{})
 
 	wg.Wait()
 }

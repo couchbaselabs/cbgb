@@ -9,7 +9,7 @@ type mutation struct {
 const broadcastBuffer = 100
 
 type broadcaster struct {
-	input <-chan mutation
+	input chan mutation
 	reg   chan chan<- mutation
 	unreg chan chan<- mutation
 
@@ -76,4 +76,8 @@ func (b *broadcaster) Unregister(newch chan<- mutation) {
 func (b *broadcaster) Close() error {
 	close(b.reg)
 	return nil
+}
+
+func (b *broadcaster) Submit(m mutation) {
+	b.input <- m
 }

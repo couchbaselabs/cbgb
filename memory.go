@@ -84,7 +84,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		data: req.Body,
 	}
 
-	v.observer.broadcast(mutation{req.Key, itemCas, false})
+	v.observer.Submit(mutation{req.Key, itemCas, false})
 
 	if req.Opcode.IsQuiet() {
 		return nil
