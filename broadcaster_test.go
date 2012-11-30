@@ -9,6 +9,7 @@ func TestBroadcast(t *testing.T) {
 	wg := sync.WaitGroup{}
 
 	b := newBroadcaster()
+	defer b.Close()
 
 	for i := 0; i < 5; i++ {
 		wg.Add(1)
@@ -28,4 +29,10 @@ func TestBroadcast(t *testing.T) {
 	b.Submit(mutation{})
 
 	wg.Wait()
+}
+
+func TestBroadcastCleanup(t *testing.T) {
+	b := newBroadcaster()
+	b.Register(make(chan mutation))
+	b.Close()
 }

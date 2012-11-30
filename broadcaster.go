@@ -33,12 +33,8 @@ func (b *broadcaster) run() {
 
 	for {
 		select {
-		case m, ok := (<-b.input):
-			if ok {
-				b.broadcast(m)
-			} else {
-				return
-			}
+		case m := (<-b.input):
+			b.broadcast(m)
 		case ch, ok := (<-b.reg):
 			if ok {
 				b.outputs[ch] = true
