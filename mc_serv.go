@@ -104,7 +104,10 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler)
 		} else {
-			log.Printf("Error accepting from %s", ls)
+			log.Printf("Error accepting from %s: %v", ls, e)
+			// TODO:  Figure out if this is recoverable.
+			// It probably is most of the time, but not during tests.
+			return
 		}
 	}
 }

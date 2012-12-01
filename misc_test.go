@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io/ioutil"
 	"log"
+	"net"
 	"testing"
 
 	"github.com/dustin/gomemcached"
@@ -82,5 +83,37 @@ func TestNewBucket(t *testing.T) {
 	bc = (<-ch).(bucketChange)
 	if bc.vbid != 3 || bc.deleted == false {
 		t.Fatalf("Expected a 3/true, got %v", bc)
+	}
+}
+
+func TestListener(t *testing.T) {
+	b := newBucket()
+	l, err := startMCServer("", b)
+	if err != nil {
+		t.Fatalf("Error starting listener: %v", err)
+	}
+	t.Logf("Test server listening to %v", l.Addr())
+
+	// Just to be extra ridiculous, dial it.
+	c, err := net.Dial("tcp", l.Addr().String())
+	if err != nil {
+		t.Fatalf("Error connecting: %v", err)
+	}
+	req := &gomemcached.MCRequest{Opcode: gomemcached.QUIT}
+	_, err = c.Write(req.Bytes())
+	if err != nil {
+		t.Fatalf("Error sending hangup request.")
+	}
+
+	l.Close()
+}
+
+func TestListenerFail(t *testing.T) {
+	b := newBucket()
+	l, err := startMCServer("1.1.1.1:22", b)
+	if err == nil {
+		t.Fatalf("Error failing to listen: %v", l.Addr())
+	} else {
+		t.Logf("Listen failed expectedly:  %v", err)
 	}
 }
