@@ -88,7 +88,7 @@ func TestNewBucket(t *testing.T) {
 
 func TestListener(t *testing.T) {
 	b := newBucket()
-	l, err := startMCServer("", b)
+	l, err := startMCServer("0.0.0.0:0", b)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
 	}
