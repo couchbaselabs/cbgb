@@ -22,15 +22,14 @@ func mutationLogger(ch chan interface{}) {
 		case mutation:
 			log.Printf("Mutation: %v", o)
 		case bucketChange:
-			if o.deleted {
-				// Dropped it
-			} else {
+			log.Printf("Bucket change: %v", o)
+			if o.newState == vbActive {
 				vb := o.getVBucket()
 				if vb != nil {
+					// Watch state changes
 					vb.observer.Register(ch)
 				}
 			}
-			log.Printf("Bucket change: %v", o)
 		default:
 			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
 		}
@@ -47,6 +46,7 @@ func main() {
 	defaultBucket := newBucket()
 	defaultBucket.observer.Register(mutationLogCh)
 	defaultBucket.createVBucket(0)
+	defaultBucket.setVBState(0, vbActive)
 
 	_, err := startMCServer(*addr, defaultBucket)
 	if err != nil {

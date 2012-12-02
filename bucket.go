@@ -7,9 +7,9 @@ import (
 )
 
 type bucketChange struct {
-	bucket  *bucket
-	vbid    uint16
-	deleted bool
+	bucket             *bucket
+	vbid               uint16
+	oldState, newState vbState
 }
 
 func (c bucketChange) getVBucket() *vbucket {
@@ -17,11 +17,8 @@ func (c bucketChange) getVBucket() *vbucket {
 }
 
 func (c bucketChange) String() string {
-	t := "created"
-	if c.deleted {
-		t = "deleted"
-	}
-	return fmt.Sprintf("vbucket %v %v", c.vbid, t)
+	return fmt.Sprintf("vbucket %v %v -> %v",
+		c.vbid, c.oldState, c.newState)
 }
 
 type bucket struct {
@@ -45,11 +42,25 @@ func (b *bucket) getVBucket(vbid uint16) *vbucket {
 
 func (b *bucket) setVBucket(vbid uint16, vb *vbucket) {
 	atomic.StorePointer(&b.vbuckets[vbid], unsafe.Pointer(vb))
-	b.observer.Submit(bucketChange{b, vbid, vb == nil})
 }
 
 func (b *bucket) createVBucket(vbid uint16) *vbucket {
 	vb := newVbucket(vbid)
 	b.setVBucket(vbid, vb)
 	return vb
+}
+
+func (b *bucket) destroyVBucket(vbid uint16) {
+	b.setVBState(vbid, vbDead)
+	b.setVBucket(vbid, nil)
+}
+
+func (b *bucket) setVBState(vbid uint16, to vbState) {
+	vb := b.getVBucket(vbid)
+	oldState := vbDead
+	if vb != nil {
+		oldState = vb.state
+		vb.state = to
+	}
+	b.observer.Submit(bucketChange{b, vbid, oldState, to})
 }

@@ -43,9 +43,11 @@ type vbucket struct {
 	cas      uint64
 	observer *broadcaster
 	vbid     uint16
+	state    vbState
 	lock     sync.Mutex
 }
 
+// Message sent on object change
 type mutation struct {
 	vb      uint16
 	key     []byte
@@ -83,6 +85,7 @@ func newVbucket(vbid uint16) *vbucket {
 		data:     make(map[string]*item),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
+		state:    vbDead,
 	}
 }
 
