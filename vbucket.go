@@ -8,6 +8,30 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+type vbState uint8
+
+const (
+	_ = vbState(iota)
+	vbActive
+	vbReplica
+	vbPending
+	vbDead
+)
+
+var vbStateNames = []string{
+	vbActive:  "active",
+	vbReplica: "replica",
+	vbPending: "pending",
+	vbDead:    "dead",
+}
+
+func (v vbState) String() string {
+	if v < vbActive || v > vbDead {
+		panic("Invalid vb state")
+	}
+	return vbStateNames[v]
+}
+
 type item struct {
 	exp, flag uint32
 	cas       uint64

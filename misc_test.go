@@ -117,3 +117,35 @@ func TestListenerFail(t *testing.T) {
 		t.Logf("Listen failed expectedly:  %v", err)
 	}
 }
+
+func TestVBString(t *testing.T) {
+	tests := map[vbState]string{
+		vbState(0):          "", // panics
+		vbActive:            "active",
+		vbReplica:           "replica",
+		vbPending:           "pending",
+		vbDead:              "dead",
+		vbState(vbDead + 1): "", // panics
+	}
+
+	for in, exp := range tests {
+		var got string
+		var err interface{}
+		func() {
+			defer func() { err = recover() }()
+			got = in.String()
+		}()
+
+		if got != exp {
+			t.Errorf("Expected %v for %v, got %v",
+				exp, int(in), got)
+		}
+
+		if exp == "" {
+			if err == nil {
+				t.Errorf("Expected error on %v, got %v",
+					int(in), got)
+			}
+		}
+	}
+}
