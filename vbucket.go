@@ -90,6 +90,9 @@ var dispatchTable = [256]dispatchFun{
 
 	gomemcached.DELETE:  vbDel,
 	gomemcached.DELETEQ: vbDel,
+
+	// TODO: Missing a gomemcached.CHANGES_SINCE, faking it with RSET.
+	gomemcached.RSET: vbChangesSince,
 }
 
 func newVbucket(vbid uint16) *vbucket {
@@ -227,4 +230,32 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 	v.observer.broadcast(mutation{v.vbid, req.Key, cas, true})
 
 	return &gomemcached.MCResponse{}
+}
+
+func vbChangesSince(v *vbucket, w io.Writer,
+	req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	visitor := func(x llrb.Item) bool {
+		i := x.(*item)
+		if i.cas > req.Cas {
+			err := (&gomemcached.MCResponse{
+				Opcode: req.Opcode,
+				Key:    i.key,
+				Cas:    i.cas,
+				// TODO: Extras.
+				// TODO: Should changes-since respond with item value?
+			}).Transmit(w)
+			if err != nil {
+				// TODO: Surrounding func should error, too.
+				return false
+			}
+		}
+		return true
+	}
+
+	v.changes.AscendGreaterOrEqual(&item{cas: req.Cas}, visitor)
+
+	return &gomemcached.MCResponse{
+		Opcode: req.Opcode,
+		Cas:    req.Cas,
+	}
 }

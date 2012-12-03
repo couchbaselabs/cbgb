@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"io"
 	"io/ioutil"
+	"strconv"
 	"sync"
 	"testing"
 
@@ -373,5 +375,92 @@ func BenchmarkDispatch(b *testing.B) {
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		rh.HandleMessage(nil, req)
+	}
+}
+
+func TestChangesSince(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(0)
+	defer vb.Close()
+
+	// TODO: Missing a gomemcached.CHANGES_SINCE, faking it with RSET.
+	changesSinceCmd := gomemcached.RSET
+	changesSinceCAS := uint64(0)
+	numItems := 10
+
+	for i := 0; i < numItems; i++ {
+		req := &gomemcached.MCRequest{
+			Opcode: gomemcached.SET,
+			Key:    []byte(strconv.Itoa(i)),
+			Body:   []byte(strconv.Itoa(i)),
+		}
+
+		rh.HandleMessage(nil, req)
+	}
+
+	for i := 0; i < numItems; i++ {
+		req := &gomemcached.MCRequest{
+			Opcode: gomemcached.GET,
+			Key:    []byte(strconv.Itoa(i)),
+		}
+
+		res := rh.HandleMessage(nil, req)
+		if res.Status != gomemcached.SUCCESS {
+			t.Errorf("Expected GET success, got %v",
+				res.Status)
+		}
+
+		if !bodyEqual([]byte(strconv.Itoa(i)), res.Body) {
+			t.Errorf("Expected body of #v\ngot\n%#v",
+				[]byte(strconv.Itoa(i)), res.Body)
+		}
+	}
+
+	req := &gomemcached.MCRequest{
+		Opcode: changesSinceCmd,
+		Cas:    changesSinceCAS,
+	}
+
+	w := &bytes.Buffer{}
+
+	res := rh.HandleMessage(w, req)
+	if res.Opcode != changesSinceCmd {
+		t.Errorf("Expected last changes opcode %v, got %v",
+			changesSinceCmd, res.Opcode)
+	}
+	if res.Key != nil {
+		t.Errorf("Expected last changes key %v, got %v",
+			nil, res.Key)
+	}
+	if res.Cas != changesSinceCAS {
+		t.Errorf("Expected last changes cas %v, got %v",
+			0, res.Cas)
+	}
+
+	changes := decodeResponses(t, w.Bytes())
+	if len(changes) != numItems-1 {
+		t.Errorf("Expected to see %v changes, got %v",
+			numItems-1, len(changes))
+	}
+
+	for i := range changes {
+		res := changes[i]
+		if res.Opcode != changesSinceCmd {
+			t.Errorf("Expected opcode %v, got %v",
+				changesSinceCmd, res.Opcode)
+		}
+		if res.Cas < changesSinceCAS {
+			t.Errorf("Expected changes cas > %v, got %v",
+				changesSinceCAS, res.Cas)
+		}
+		if res.Cas != uint64(i+1) {
+			t.Errorf("Expected changes cas %v, got %v",
+				i+1, res.Cas)
+		}
+		if !bytes.Equal(res.Key, []byte(strconv.Itoa(i+1))) {
+			t.Errorf("Expected changes key %v, got %v",
+				[]byte(strconv.Itoa(i+1)), res.Key)
+		}
 	}
 }
