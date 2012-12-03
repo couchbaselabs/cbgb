@@ -45,8 +45,13 @@ func KeyLess(p, q interface{}) bool {
 	return bytes.Compare(p.(*item).key, q.(*item).key) < 0
 }
 
+func CASLess(p, q interface{}) bool {
+	return p.(*item).cas < q.(*item).cas
+}
+
 type vbucket struct {
 	items    *llrb.Tree
+	changes  *llrb.Tree
 	cas      uint64
 	observer *broadcaster
 	vbid     uint16
@@ -90,6 +95,7 @@ var dispatchTable = [256]dispatchFun{
 func newVbucket(vbid uint16) *vbucket {
 	return &vbucket{
 		items:    llrb.New(KeyLess),
+		changes:  llrb.New(CASLess),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
 		state:    vbDead,
@@ -116,9 +122,11 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 }
 
 func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	old := v.items.Get(&item{key: req.Key})
+
 	if req.Cas != 0 {
 		var oldcas uint64
-		if old := v.items.Get(&item{key: req.Key}); old != nil {
+		if old != nil {
 			oldcas = old.(*item).cas
 		}
 
@@ -132,12 +140,19 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 	itemCas := v.cas
 	v.cas++
 
-	v.items.ReplaceOrInsert(&item{
+	itemNew := &item{
 		// TODO: Extras
 		key:  req.Key,
 		cas:  itemCas,
 		data: req.Body,
-	})
+	}
+
+	v.items.ReplaceOrInsert(itemNew)
+
+	v.changes.ReplaceOrInsert(itemNew)
+	if old != nil {
+		v.changes.Delete(old)
+	}
 
 	v.observer.Submit(mutation{v.vbid, req.Key, itemCas, false})
 
@@ -198,6 +213,9 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		}
 	}
 	v.items.Delete(t)
+	if x != nil {
+		v.changes.Delete(x) // TODO: Leave a tombstone instead.
+	}
 
 	v.observer.broadcast(mutation{v.vbid, req.Key, 0, true})
 
