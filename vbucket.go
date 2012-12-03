@@ -212,12 +212,19 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 			Status: gomemcached.KEY_ENOENT,
 		}
 	}
-	v.items.Delete(t)
-	if x != nil {
-		v.changes.Delete(x) // TODO: Leave a tombstone instead.
-	}
 
-	v.observer.broadcast(mutation{v.vbid, req.Key, 0, true})
+	cas := v.cas
+	v.cas++
+
+	v.items.Delete(t)
+
+	v.changes.ReplaceOrInsert(&item{
+		key:  req.Key,
+		cas:  cas,
+		data: nil, // A nil data represents a delete mutation.
+	})
+
+	v.observer.broadcast(mutation{v.vbid, req.Key, cas, true})
 
 	return &gomemcached.MCResponse{}
 }
