@@ -1,11 +1,13 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"sync"
 
 	"github.com/dustin/gomemcached"
+	"github.com/petar/GoLLRB/llrb"
 )
 
 type vbState uint8
@@ -33,13 +35,18 @@ func (v vbState) String() string {
 }
 
 type item struct {
+	key       []byte
 	exp, flag uint32
 	cas       uint64
 	data      []byte
 }
 
+func KeyLess(p, q interface{}) bool {
+	return bytes.Compare(p.(*item).key, q.(*item).key) < 0
+}
+
 type vbucket struct {
-	data     map[string]*item
+	items    *llrb.Tree
 	cas      uint64
 	observer *broadcaster
 	vbid     uint16
@@ -82,7 +89,7 @@ var dispatchTable = [256]dispatchFun{
 
 func newVbucket(vbid uint16) *vbucket {
 	return &vbucket{
-		data:     make(map[string]*item),
+		items:    llrb.New(KeyLess),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
 		state:    vbDead,
@@ -111,8 +118,8 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	if req.Cas != 0 {
 		var oldcas uint64
-		if old, ok := v.data[string(req.Key)]; ok {
-			oldcas = old.cas
+		if old := v.items.Get(&item{key: req.Key}); old != nil {
+			oldcas = old.(*item).cas
 		}
 
 		if oldcas != req.Cas {
@@ -125,11 +132,12 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 	itemCas := v.cas
 	v.cas++
 
-	v.data[string(req.Key)] = &item{
+	v.items.ReplaceOrInsert(&item{
 		// TODO: Extras
+		key:  req.Key,
 		cas:  itemCas,
 		data: req.Body,
-	}
+	})
 
 	v.observer.Submit(mutation{v.vbid, req.Key, itemCas, false})
 
@@ -143,8 +151,8 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 }
 
 func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
-	data, ok := v.data[string(req.Key)]
-	if !ok {
+	x := v.items.Get(&item{key: req.Key})
+	if x == nil {
 		if req.Opcode.IsQuiet() {
 			return nil
 		}
@@ -153,12 +161,13 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		}
 	}
 
+	i := x.(*item)
 	res := &gomemcached.MCResponse{
-		Cas:    data.cas,
+		Cas:    i.cas,
 		Extras: make([]byte, 4),
-		Body:   data.data,
+		Body:   i.data,
 	}
-	// TODO:  Extras!
+	// TODO: Extras!
 
 	wantsKey := (req.Opcode == gomemcached.GETK || req.Opcode == gomemcached.GETKQ)
 	if wantsKey {
@@ -169,10 +178,10 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 }
 
 func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
-
-	k := string(req.Key)
-	i, ok := v.data[k]
-	if ok {
+	t := &item{key: req.Key}
+	x := v.items.Get(t)
+	if x != nil {
+		i := x.(*item)
 		if req.Cas != 0 {
 			if req.Cas != i.cas {
 				return &gomemcached.MCResponse{
@@ -188,7 +197,7 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 			Status: gomemcached.KEY_ENOENT,
 		}
 	}
-	delete(v.data, k)
+	v.items.Delete(t)
 
 	v.observer.broadcast(mutation{v.vbid, req.Key, 0, true})
 
