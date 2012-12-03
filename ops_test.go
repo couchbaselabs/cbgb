@@ -11,18 +11,6 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
-func bodyEqual(a, b []byte) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for i := range a {
-		if a[i] != b[i] {
-			return false
-		}
-	}
-	return true
-}
-
 func TestBasicOps(t *testing.T) {
 	empty := []byte{}
 	active := uint16(3)
@@ -90,7 +78,7 @@ func TestBasicOps(t *testing.T) {
 				x.expStatus, x.op, x.vb, x.key, res.Status)
 		}
 
-		if !bodyEqual(x.expValue, res.Body) {
+		if !bytes.Equal(x.expValue, res.Body) {
 			t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
 				x.op, x.vb, x.key, x.expValue, res.Body)
 		}
@@ -411,7 +399,7 @@ func TestChangesSince(t *testing.T) {
 				res.Status)
 		}
 
-		if !bodyEqual([]byte(strconv.Itoa(i)), res.Body) {
+		if !bytes.Equal([]byte(strconv.Itoa(i)), res.Body) {
 			t.Errorf("Expected body of #v\ngot\n%#v",
 				[]byte(strconv.Itoa(i)), res.Body)
 		}
