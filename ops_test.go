@@ -367,8 +367,8 @@ func BenchmarkDispatch(b *testing.B) {
 }
 
 func TestChangesSince(t *testing.T) {
-	for _, numItems := range [...]int{10, 9, 6, 5, 4, 1, 0} {
-		for _, changesSince := range [...]int{0, 5, 10, 11} {
+	for _, numItems := range []int{10, 9, 6, 5, 4, 1, 0} {
+		for _, changesSince := range []int{0, 5, 10, 11} {
 			testChangesSince(t, uint64(changesSince), numItems)
 		}
 	}
