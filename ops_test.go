@@ -459,3 +459,22 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 		}
 	}
 }
+
+func TestChangesSinceTransmitError(t *testing.T) {
+	w := errWriter{io.EOF}
+	v := newVbucket(0)
+	for _, k := range []string{"a", "b"} {
+		vbSet(v, nil, &gomemcached.MCRequest{
+			Opcode: gomemcached.SET,
+			Key:    []byte(k),
+			Body:   []byte(k),
+		})
+	}
+	res := vbChangesSince(v, w, &gomemcached.MCRequest{
+		Opcode: CHANGES_SINCE,
+		Cas:    0,
+	})
+	if !res.Fatal {
+		t.Errorf("Expected fatal response due to transmit error, %v", res)
+	}
+}

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"sync"
 
 	"github.com/dustin/gomemcached"
@@ -236,10 +237,16 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 	return &gomemcached.MCResponse{}
 }
 
-// Responds with the changes since the req.Cas.
+// Responds with the changes since the req.Cas, with the last response
+// in the response stream having no key.
 // TODO: Support a limit on changes-since, perhaps in the req.Extras.
 func vbChangesSince(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+	res = &gomemcached.MCResponse{
+		Opcode: req.Opcode,
+		Cas:    req.Cas,
+	}
+
 	visitor := func(x llrb.Item) bool {
 		i := x.(*item)
 		if i.cas > req.Cas {
@@ -251,7 +258,8 @@ func vbChangesSince(v *vbucket, w io.Writer,
 				// TODO: Should changes-since respond with item value?
 			}).Transmit(w)
 			if err != nil {
-				// TODO: Surrounding func should error, too.
+				log.Printf("Error sending changes-since: %v", err)
+				res = &gomemcached.MCResponse{Fatal: true}
 				return false
 			}
 		}
@@ -259,9 +267,5 @@ func vbChangesSince(v *vbucket, w io.Writer,
 	}
 
 	v.changes.AscendGreaterOrEqual(&item{cas: req.Cas}, visitor)
-
-	return &gomemcached.MCResponse{
-		Opcode: req.Opcode,
-		Cas:    req.Cas,
-	}
+	return
 }
