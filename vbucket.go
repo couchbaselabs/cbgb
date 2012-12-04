@@ -124,12 +124,22 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 		}
 	}
 
-	v.lock.Lock()
-	defer v.lock.Unlock()
 	return f(v, w, req)
 }
 
+func maybeBroadcast(observer *broadcaster, ob interface{}) {
+	if ob != nil {
+		observer.Submit(ob)
+	}
+}
+
 func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	var toBroadcast interface{}
+	defer maybeBroadcast(v.observer, toBroadcast)
+
+	v.lock.Lock()
+	defer v.lock.Unlock()
+
 	old := v.items.Get(&item{key: req.Key})
 
 	if req.Cas != 0 {
@@ -162,7 +172,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		v.changes.Delete(old)
 	}
 
-	v.observer.Submit(mutation{v.vbid, req.Key, itemCas, false})
+	toBroadcast = &mutation{v.vbid, req.Key, itemCas, false}
 
 	if req.Opcode.IsQuiet() {
 		return nil
@@ -174,6 +184,9 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 }
 
 func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	v.lock.Lock()
+	defer v.lock.Unlock()
+
 	x := v.items.Get(&item{key: req.Key})
 	if x == nil {
 		if req.Opcode.IsQuiet() {
@@ -201,6 +214,12 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 }
 
 func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	var toBroadcast interface{}
+	defer maybeBroadcast(v.observer, toBroadcast)
+
+	v.lock.Lock()
+	defer v.lock.Unlock()
+
 	t := &item{key: req.Key}
 	x := v.items.Get(t)
 	if x != nil {
@@ -232,7 +251,7 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 		data: nil, // A nil data represents a delete mutation.
 	})
 
-	v.observer.broadcast(mutation{v.vbid, req.Key, cas, true})
+	toBroadcast = &mutation{v.vbid, req.Key, cas, true}
 
 	return &gomemcached.MCResponse{}
 }
@@ -246,6 +265,9 @@ func vbChangesSince(v *vbucket, w io.Writer,
 		Opcode: req.Opcode,
 		Cas:    req.Cas,
 	}
+
+	v.lock.Lock()
+	defer v.lock.Unlock()
 
 	visitor := func(x llrb.Item) bool {
 		i := x.(*item)
