@@ -367,9 +367,11 @@ func BenchmarkDispatch(b *testing.B) {
 }
 
 func TestChangesSince(t *testing.T) {
-	testChangesSince(t, uint64(0), 10)
-	testChangesSince(t, uint64(0), 1)
-	testChangesSince(t, uint64(0), 0)
+	for _, numItems := range [...]int{10, 9, 6, 5, 4, 1, 0} {
+		for _, changesSince := range [...]int{0, 5, 10, 11} {
+			testChangesSince(t, uint64(changesSince), numItems)
+		}
+	}
 }
 
 func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
@@ -428,7 +430,7 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	}
 
 	changes := decodeResponses(t, w.Bytes())
-	changesExpected := numItems-1
+	changesExpected := numItems - 1 - int(changesSinceCAS)
 	if changesExpected < 0 {
 		changesExpected = 0
 	}
@@ -447,13 +449,13 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 			t.Errorf("Expected changes cas > %v, got %v",
 				changesSinceCAS, res.Cas)
 		}
-		if res.Cas != uint64(i+1) {
+		if res.Cas != uint64(i+1+int(changesSinceCAS)) {
 			t.Errorf("Expected changes cas %v, got %v",
-				i+1, res.Cas)
+				i+1+int(changesSinceCAS), res.Cas)
 		}
-		if !bytes.Equal(res.Key, []byte(strconv.Itoa(i+1))) {
+		if !bytes.Equal(res.Key, []byte(strconv.Itoa(i+1+int(changesSinceCAS)))) {
 			t.Errorf("Expected changes key %v, got %v",
-				[]byte(strconv.Itoa(i+1)), res.Key)
+				[]byte(strconv.Itoa(i+1+int(changesSinceCAS))), res.Key)
 		}
 	}
 }
