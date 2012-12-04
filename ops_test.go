@@ -403,7 +403,7 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 		}
 
 		if !bytes.Equal([]byte(strconv.Itoa(i)), res.Body) {
-			t.Errorf("Expected body of #v\ngot\n%#v",
+			t.Errorf("Expected body of %#v\ngot\n%#v",
 				[]byte(strconv.Itoa(i)), res.Body)
 		}
 	}
