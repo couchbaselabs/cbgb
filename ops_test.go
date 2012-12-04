@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -81,6 +82,82 @@ func TestBasicOps(t *testing.T) {
 		if !bytes.Equal(x.expValue, res.Body) {
 			t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
 				x.op, x.vb, x.key, x.expValue, res.Body)
+		}
+	}
+}
+
+func TestMutationBroadcast(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
+
+	ch := make(chan interface{}, 16)
+
+	vb.observer.Register(ch)
+
+	key := "testkey"
+
+	req := &gomemcached.MCRequest{
+		Opcode:  gomemcached.DELETE,
+		VBucket: 3,
+		Key:     []byte(key),
+	}
+	res := &gomemcached.MCResponse{}
+
+	tests := []struct {
+		name   string
+		prep   func()
+		exp    gomemcached.Status
+		hasMsg bool
+	}{
+		{"missing delete",
+			func() {},
+			gomemcached.KEY_ENOENT, false},
+		{"missing CAS",
+			func() {
+				req.Opcode = gomemcached.SET
+				req.Cas = 85824
+			},
+			gomemcached.EINVAL, false},
+		{"good set",
+			func() { req.Cas = 0 },
+			gomemcached.SUCCESS, true},
+		{"good CAS",
+			func() { req.Cas = res.Cas },
+			gomemcached.SUCCESS, true},
+		{"good delete",
+			func() {
+				req.Opcode = gomemcached.DELETE
+				req.Cas = 0
+			},
+			gomemcached.SUCCESS, true},
+	}
+
+	for _, x := range tests {
+		x.prep()
+		res = rh.HandleMessage(nil, req)
+		if res.Status != x.exp {
+			t.Errorf("%v: expected %v, got %v", x.name, x.exp, res)
+		}
+
+		// Verify delete did *not* send a notification
+		var msg interface{}
+		select {
+		case msg = <-ch:
+		case <-time.After(time.Millisecond * 10):
+			// I'd normally use default here, but the
+			// sending branches out asynchronously, so
+			// this is expected to cover a typical case.
+		}
+
+		switch {
+		case x.hasMsg && msg == nil:
+			t.Errorf("Expected broadcast for %v, got none",
+				x.name)
+		case (!x.hasMsg) && msg != nil:
+			t.Errorf("Expected no broadcast for %v, got %v",
+				x.name, msg)
 		}
 	}
 }
@@ -470,7 +547,7 @@ func TestChangesSinceTransmitError(t *testing.T) {
 			Body:   []byte(k),
 		})
 	}
-	res := vbChangesSince(v, w, &gomemcached.MCRequest{
+	res, _ := vbChangesSince(v, w, &gomemcached.MCRequest{
 		Opcode: CHANGES_SINCE,
 		Cas:    0,
 	})
