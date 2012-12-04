@@ -367,14 +367,16 @@ func BenchmarkDispatch(b *testing.B) {
 }
 
 func TestChangesSince(t *testing.T) {
+	testChangesSince(t, uint64(0), 10)
+	testChangesSince(t, uint64(0), 1)
+	testChangesSince(t, uint64(0), 0)
+}
+
+func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.createVBucket(0)
 	defer vb.Close()
-
-	changesSinceCmd := CHANGES_SINCE
-	changesSinceCAS := uint64(0)
-	numItems := 10
 
 	for i := 0; i < numItems; i++ {
 		req := &gomemcached.MCRequest{
@@ -405,16 +407,16 @@ func TestChangesSince(t *testing.T) {
 	}
 
 	req := &gomemcached.MCRequest{
-		Opcode: changesSinceCmd,
+		Opcode: CHANGES_SINCE,
 		Cas:    changesSinceCAS,
 	}
 
 	w := &bytes.Buffer{}
 
 	res := rh.HandleMessage(w, req)
-	if res.Opcode != changesSinceCmd {
+	if res.Opcode != CHANGES_SINCE {
 		t.Errorf("Expected last changes opcode %v, got %v",
-			changesSinceCmd, res.Opcode)
+			CHANGES_SINCE, res.Opcode)
 	}
 	if res.Key != nil {
 		t.Errorf("Expected last changes key %v, got %v",
@@ -426,16 +428,20 @@ func TestChangesSince(t *testing.T) {
 	}
 
 	changes := decodeResponses(t, w.Bytes())
-	if len(changes) != numItems-1 {
+	changesExpected := numItems-1
+	if changesExpected < 0 {
+		changesExpected = 0
+	}
+	if len(changes) != changesExpected {
 		t.Errorf("Expected to see %v changes, got %v",
-			numItems-1, len(changes))
+			changesExpected, len(changes))
 	}
 
 	for i := range changes {
 		res := changes[i]
-		if res.Opcode != changesSinceCmd {
+		if res.Opcode != CHANGES_SINCE {
 			t.Errorf("Expected opcode %v, got %v",
-				changesSinceCmd, res.Opcode)
+				CHANGES_SINCE, res.Opcode)
 		}
 		if res.Cas < changesSinceCAS {
 			t.Errorf("Expected changes cas > %v, got %v",
