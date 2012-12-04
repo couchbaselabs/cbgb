@@ -372,8 +372,7 @@ func TestChangesSince(t *testing.T) {
 	vb := testBucket.createVBucket(0)
 	defer vb.Close()
 
-	// TODO: Missing a gomemcached.CHANGES_SINCE, faking it with RSET.
-	changesSinceCmd := gomemcached.RSET
+	changesSinceCmd := CHANGES_SINCE
 	changesSinceCAS := uint64(0)
 	numItems := 10
 

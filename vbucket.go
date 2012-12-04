@@ -10,6 +10,10 @@ import (
 	"github.com/petar/GoLLRB/llrb"
 )
 
+const (
+	CHANGES_SINCE = gomemcached.CommandCode(0x60)
+)
+
 type vbState uint8
 
 const (
@@ -91,8 +95,8 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.DELETE:  vbDel,
 	gomemcached.DELETEQ: vbDel,
 
-	// TODO: Missing a gomemcached.CHANGES_SINCE, faking it with RSET.
-	gomemcached.RSET: vbChangesSince,
+	// TODO: Move CHANGES_SINCE to gomemcached one day.
+	CHANGES_SINCE: vbChangesSince,
 }
 
 func newVbucket(vbid uint16) *vbucket {
@@ -232,6 +236,8 @@ func vbDel(v *vbucket, w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCR
 	return &gomemcached.MCResponse{}
 }
 
+// Responds with the changes since the req.Cas.
+// TODO: Support a limit on changes-since, perhaps in the req.Extras.
 func vbChangesSince(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	visitor := func(x llrb.Item) bool {
