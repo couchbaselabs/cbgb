@@ -86,7 +86,6 @@ func doStats(w io.Writer, key string) error {
 }
 
 func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
-
 	switch req.Opcode {
 	case gomemcached.QUIT:
 		return &gomemcached.MCResponse{
