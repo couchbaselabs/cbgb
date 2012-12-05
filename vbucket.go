@@ -306,26 +306,38 @@ func vbChangesSince(v *vbucket, w io.Writer,
 		Cas:    req.Cas,
 	}
 
+	ch, errs := transmitPackets(w)
+	var err error
+
 	visitor := func(x llrb.Item) bool {
 		i := x.(*item)
 		if i.cas > req.Cas {
-			err := (&gomemcached.MCResponse{
+			ch <- &gomemcached.MCResponse{
 				Opcode: req.Opcode,
 				Key:    i.key,
 				Cas:    i.cas,
 				// TODO: Extras.
 				// TODO: Should changes-since respond with item value?
-			}).Transmit(w)
-			if err != nil {
-				log.Printf("Error sending changes-since: %v", err)
-				res = &gomemcached.MCResponse{Fatal: true}
+			}
+			select {
+			case err = <-errs:
 				return false
+			default:
 			}
 		}
 		return true
 	}
 
 	v.changes.AscendGreaterOrEqual(&item{cas: req.Cas}, visitor)
+	close(ch)
+	if err == nil {
+		err = <-errs
+	}
+	if err != nil {
+		log.Printf("Error sending changes-since: %v", err)
+		res = &gomemcached.MCResponse{Fatal: true}
+	}
+
 	return
 }
 
