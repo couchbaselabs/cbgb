@@ -18,29 +18,60 @@ type reqHandler struct {
 	currentBucket *bucket
 }
 
+type transmissible interface {
+	Transmit(io.Writer) error
+}
+
+// Given an io.Writer, return a channel that can be fed things that
+// can write themselves to an io.Writer and a channel that will return
+// any encountered error.
+//
+// The user of this transmitter *MUST* close the input channel to
+// indicate no more messages will be sent.
+//
+// There will be exactly one error written to the error channel either
+// after successfully transmitting the entire stream (in which case it
+// will be nil) or on any transmission error.
+//
+// Unless your transmissible stream is finite, it's recommended to
+// perform a non-blocking receive of the error stream to check for
+// brokenness so you know to stop transmitting.
+func transmitPackets(w io.Writer) (chan<- transmissible, <-chan error) {
+	ch := make(chan transmissible)
+	errs := make(chan error, 1)
+	go func() {
+		for pkt := range ch {
+			err := pkt.Transmit(w)
+			if err != nil {
+				errs <- err
+				for _ = range ch {
+					// Eat the input
+				}
+				return
+			}
+		}
+		errs <- nil
+	}()
+	return ch, errs
+}
+
 // This is slightly more complicated than it would generally need to
 // be, but as a generator, it's self-terminating based on an input
 // stream.  I may do this a bit differently for stats in the future,
 // but the model is quite helpful for a tap stream or similar.
 func transmitStats(w io.Writer) (chan<- statItem, <-chan error) {
 	ch := make(chan statItem)
-	errs := make(chan error)
+	pktch, errs := transmitPackets(w)
 	go func() {
 		for res := range ch {
-			err := (&gomemcached.MCResponse{
+			pktch <- &gomemcached.MCResponse{
 				Opcode: gomemcached.STAT,
 				Key:    []byte(res.key),
 				Body:   []byte(res.val),
-			}).Transmit(w)
-			if err != nil {
-				for _ = range ch {
-					// Eat the input
-				}
-				errs <- err
-				return
 			}
 		}
-		errs <- (&gomemcached.MCResponse{Opcode: gomemcached.STAT}).Transmit(w)
+		pktch <- &gomemcached.MCResponse{Opcode: gomemcached.STAT}
+		close(pktch)
 	}()
 	return ch, errs
 }
