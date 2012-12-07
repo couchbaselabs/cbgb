@@ -28,8 +28,28 @@ type bucket struct {
 
 func newBucket() *bucket {
 	return &bucket{
-		observer: newBroadcaster(10),
+		observer: newBroadcaster(0),
 	}
+}
+
+// Subscribe to bucket events.
+//
+// Note that this is retroactive -- it will send existing states.
+func (b *bucket) Subscribe(ch chan<- interface{}) {
+	b.observer.Register(ch)
+	go func() {
+		for i := uint16(0); i < MAX_VBUCKET; i++ {
+			c := bucketChange{bucket: b,
+				vbid:     i,
+				oldState: vbDead,
+				newState: vbDead}
+			vb := c.getVBucket()
+			if vb != nil && vb.state != vbDead {
+				c.newState = vb.state
+				ch <- c
+			}
+		}
+	}()
 }
 
 func (b *bucket) getVBucket(vbid uint16) *vbucket {
@@ -62,5 +82,6 @@ func (b *bucket) setVBState(vbid uint16, to vbState) {
 		oldState = vb.state
 		vb.state = to
 	}
-	b.observer.Submit(bucketChange{b, vbid, oldState, to})
+	bc := bucketChange{b, vbid, oldState, to}
+	b.observer.Submit(bc)
 }

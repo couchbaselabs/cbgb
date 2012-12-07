@@ -6,6 +6,7 @@ import (
 	"log"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -29,6 +30,55 @@ func TestMutationLogger(t *testing.T) {
 	close(ch)
 
 	mutationLogger(ch)
+}
+
+// Verify the current and future bucket changes are sent.
+func TestBucketNotifications(t *testing.T) {
+	b := newBucket()
+	b.createVBucket(0)
+	b.setVBState(0, vbActive)
+
+	bch := make(chan interface{}, 5)
+
+	b.Subscribe(bch)
+	// Short yield to wait for the subscribe to occur so we'll get
+	// the messages in the order we expect during the test.  It
+	// generally doesn't matter, but I verify an expected sequence
+	// occurs here (normally the backfill might come slightly
+	// after an immediate change).
+	time.Sleep(time.Millisecond * 10)
+
+	b.createVBucket(3)
+	b.setVBState(3, vbActive)
+	b.destroyVBucket(3)
+	b.observer.Unregister(bch)
+	b.destroyVBucket(0)
+
+	tests := []struct {
+		vb uint16
+		st vbState
+	}{
+		{0, vbActive},
+		{3, vbActive},
+		{3, vbDead},
+	}
+
+	for i, x := range tests {
+		c := (<-bch).(bucketChange)
+		if c.vbid != x.vb {
+			t.Fatalf("Wrong vb at %v: %v, exp %+v", i, c, x)
+		}
+		if c.newState != x.st {
+			t.Fatalf("Wrong st at %v: {%v}, exp %v/%v",
+				i, c, x.vb, x.st)
+		}
+	}
+
+	select {
+	case x := <-bch:
+		t.Errorf("Expected no more messages, got %v", x)
+	default:
+	}
 }
 
 func TestMutationInvalid(t *testing.T) {
