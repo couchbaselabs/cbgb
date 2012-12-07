@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"log"
@@ -12,7 +13,10 @@ import (
 )
 
 const (
-	CHANGES_SINCE = gomemcached.CommandCode(0x60)
+	CHANGES_SINCE      = gomemcached.CommandCode(0x60)
+	GET_VBUCKET_CONFIG = gomemcached.CommandCode(0x61)
+	SET_VBUCKET_CONFIG = gomemcached.CommandCode(0x62)
+	NOT_MY_RANGE       = gomemcached.Status(0x60)
 )
 
 type vbState uint8
@@ -54,14 +58,26 @@ func CASLess(p, q interface{}) bool {
 	return p.(*item).cas < q.(*item).cas
 }
 
+type VBConfig struct {
+	MinKeyInclusive Bytes `json:"minKeyInclusive"`
+	MaxKeyExclusive Bytes `json:"maxKeyExclusive"`
+}
+
+func (t *VBConfig) Equal(u *VBConfig) bool {
+	return bytes.Equal(t.MinKeyInclusive, u.MinKeyInclusive) &&
+		bytes.Equal(t.MaxKeyExclusive, u.MaxKeyExclusive)
+}
+
 type vbucket struct {
-	items    *llrb.Tree
-	changes  *llrb.Tree
-	cas      uint64
-	observer *broadcaster
-	vbid     uint16
-	state    vbState
-	lock     sync.Mutex
+	items     *llrb.Tree
+	changes   *llrb.Tree
+	cas       uint64
+	observer  *broadcaster
+	vbid      uint16
+	state     vbState
+	config    *VBConfig
+	configRaw []byte // Keep the original bytes for GET_VBUCKET_CONFIG.
+	lock      sync.Mutex
 }
 
 // Message sent on object change
@@ -97,8 +113,12 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.DELETE:  vbDel,
 	gomemcached.DELETEQ: vbDel,
 
-	// TODO: Move CHANGES_SINCE to gomemcached one day.
+	// TODO: Replace CHANGES_SINCE with enhanced TAP.
 	CHANGES_SINCE: vbChangesSince,
+
+	// TODO: Move new command codes to gomemcached one day.
+	GET_VBUCKET_CONFIG: vbGetConfig,
+	SET_VBUCKET_CONFIG: vbSetConfig,
 }
 
 func newVbucket(vbid uint16) *vbucket {
@@ -138,8 +158,25 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	return res
 }
 
+func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	if v.config != nil {
+		if len(v.config.MinKeyInclusive) > 0 &&
+			bytes.Compare(req.Key, v.config.MinKeyInclusive) < 0 {
+			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
+		}
+		if len(v.config.MaxKeyExclusive) > 0 &&
+			bytes.Compare(req.Key, v.config.MaxKeyExclusive) >= 0 {
+			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
+		}
+	}
+	return nil
+}
+
 func vbSet(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	if rangeErr := v.checkRange(req); rangeErr != nil {
+		return rangeErr, nil
+	}
 
 	old := v.items.Get(&item{key: req.Key})
 
@@ -186,6 +223,9 @@ func vbSet(v *vbucket, w io.Writer,
 
 func vbGet(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	if rangeErr := v.checkRange(req); rangeErr != nil {
+		return rangeErr, nil
+	}
 
 	x := v.items.Get(&item{key: req.Key})
 	if x == nil {
@@ -215,6 +255,9 @@ func vbGet(v *vbucket, w io.Writer,
 
 func vbDel(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	if rangeErr := v.checkRange(req); rangeErr != nil {
+		return rangeErr, nil
+	}
 
 	t := &item{key: req.Key}
 	x := v.items.Get(t)
@@ -283,4 +326,26 @@ func vbChangesSince(v *vbucket, w io.Writer,
 
 	v.changes.AscendGreaterOrEqual(&item{cas: req.Cas}, visitor)
 	return
+}
+
+func vbGetConfig(v *vbucket, w io.Writer,
+	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	return &gomemcached.MCResponse{Body: v.configRaw}, nil
+}
+
+func vbSetConfig(v *vbucket, w io.Writer,
+	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	if req.Body != nil {
+		config := &VBConfig{}
+		err := json.Unmarshal(req.Body, config)
+		if err == nil {
+			v.config = config
+			v.configRaw = req.Body
+			return &gomemcached.MCResponse{}, nil
+		} else {
+			log.Printf("Error decoding vbucket config: %v, err: %v",
+				string(req.Body), err)
+		}
+	}
+	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
 }

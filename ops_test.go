@@ -555,3 +555,173 @@ func TestChangesSinceTransmitError(t *testing.T) {
 		t.Errorf("Expected fatal response due to transmit error, %v", res)
 	}
 }
+
+func TestVBucketConfig(t *testing.T) {
+	empty := []byte{}
+
+	tests := []struct {
+		op  gomemcached.CommandCode
+		val string
+
+		expStatus   gomemcached.Status
+		expValue    []byte
+		expVBConfig *VBConfig
+	}{
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, empty,
+			nil},
+		{SET_VBUCKET_CONFIG, "",
+			gomemcached.EINVAL, empty,
+			nil},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, []byte(""),
+			nil},
+		{SET_VBUCKET_CONFIG, "not-json",
+			gomemcached.EINVAL, empty,
+			nil},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, empty,
+			nil},
+		{SET_VBUCKET_CONFIG, "{}",
+			gomemcached.SUCCESS, empty,
+			&VBConfig{}},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, []byte("{}"),
+			&VBConfig{}},
+		{SET_VBUCKET_CONFIG, `{"hi":"world"}`,
+			gomemcached.SUCCESS, empty,
+			&VBConfig{}},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, []byte(`{"hi":"world"}`),
+			&VBConfig{}},
+		{SET_VBUCKET_CONFIG, `{"minKeyInclusive":""}`,
+			gomemcached.SUCCESS, empty,
+			&VBConfig{MinKeyInclusive: []byte("")}},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, []byte(`{"minKeyInclusive":""}`),
+			&VBConfig{MinKeyInclusive: []byte("")}},
+		{SET_VBUCKET_CONFIG, `{"minKeyInclusive":"aaa"}`,
+			gomemcached.SUCCESS, empty,
+			&VBConfig{MinKeyInclusive: []byte("aaa")}},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS, []byte(`{"minKeyInclusive":"aaa"}`),
+			&VBConfig{MinKeyInclusive: []byte("aaa")}},
+		{SET_VBUCKET_CONFIG,
+			`{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}`,
+			gomemcached.SUCCESS, empty,
+			&VBConfig{
+				MinKeyInclusive: []byte("aaa"),
+				MaxKeyExclusive: []byte("bbb"),
+			},
+		},
+		{GET_VBUCKET_CONFIG, "",
+			gomemcached.SUCCESS,
+			[]byte(`{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}`),
+			&VBConfig{
+				MinKeyInclusive: []byte("aaa"),
+				MaxKeyExclusive: []byte("bbb"),
+			},
+		},
+	}
+
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
+
+	for i, x := range tests {
+		req := &gomemcached.MCRequest{
+			Opcode:  x.op,
+			VBucket: 3,
+			Body:    []byte(x.val),
+		}
+
+		res := rh.HandleMessage(nil, req)
+
+		if res.Status != x.expStatus {
+			t.Errorf("Test %v, expected status %v for %v, got %v",
+				i, x.expStatus, x.op, res.Status)
+		}
+
+		if !bytes.Equal(x.expValue, res.Body) {
+			t.Errorf("Test %v, expected body for %v to be\n%#v\ngot\n%#v",
+				i, x.op, x.expValue, res.Body)
+		}
+
+		if x.expVBConfig != nil {
+			if !x.expVBConfig.Equal(vb.config) {
+				t.Errorf("Test %v, expected vbconfig for %v to be\n%#v\ngot\n%#v",
+					i, x.op, x.expVBConfig, vb.config)
+			}
+		} else {
+			if vb.config != nil {
+				t.Errorf("Test %v, expected vbconfig for %v to be nil\ngot\n%#v",
+					i, x.op, vb.config)
+			}
+		}
+	}
+}
+
+func TestMinMaxRange(t *testing.T) {
+	empty := []byte{}
+
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(3)
+	defer vb.Close()
+
+	tests := []struct {
+		op  gomemcached.CommandCode
+		key string
+		val string
+
+		expStatus gomemcached.Status
+		expValue  []byte
+	}{
+		{gomemcached.SET, "ccc", "CCC",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, "ccc", "",
+			gomemcached.SUCCESS, []byte("CCC")},
+		{SET_VBUCKET_CONFIG, "", `{"minKeyInclusive":"b"}`,
+			gomemcached.SUCCESS, empty},
+		{gomemcached.SET, "aaa", "AAA",
+			NOT_MY_RANGE, empty},
+		{gomemcached.GET, "aaa", "",
+			NOT_MY_RANGE, empty},
+		{gomemcached.SET, "bbb", "BBB",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, "bbb", "",
+			gomemcached.SUCCESS, []byte("BBB")},
+		{gomemcached.GET, "ccc", "",
+			gomemcached.SUCCESS, []byte("CCC")},
+		{SET_VBUCKET_CONFIG, "", `{"minKeyInclusive":"b","maxKeyExclusive":"c"}`,
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, "aaa", "",
+			NOT_MY_RANGE, empty},
+		{gomemcached.SET, "bbb", "BBB",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, "ccc", "",
+			NOT_MY_RANGE, empty},
+	}
+
+	for _, x := range tests {
+		req := &gomemcached.MCRequest{
+			Opcode:  x.op,
+			VBucket: 3,
+			Key:     []byte(x.key),
+			Body:    []byte(x.val),
+		}
+
+		res := rh.HandleMessage(nil, req)
+
+		if res.Status != x.expStatus {
+			t.Errorf("Expected %v for %v:%v, got %v",
+				x.expStatus, x.op, x.key, res.Status)
+		}
+
+		if !bytes.Equal(x.expValue, res.Body) {
+			t.Errorf("Expected body of %v:%v to be\n%#v\ngot\n%#v",
+				x.op, x.key, x.expValue, res.Body)
+		}
+	}
+}
