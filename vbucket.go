@@ -69,14 +69,14 @@ func (t *VBConfig) Equal(u *VBConfig) bool {
 }
 
 type vbucket struct {
-	items     *llrb.Tree
-	changes   *llrb.Tree
-	cas       uint64
-	observer  *broadcaster
-	vbid      uint16
-	state     vbState
-	config    *VBConfig
-	lock      sync.Mutex
+	items    *llrb.Tree
+	changes  *llrb.Tree
+	cas      uint64
+	observer *broadcaster
+	vbid     uint16
+	state    vbState
+	config   *VBConfig
+	lock     sync.Mutex
 }
 
 // Message sent on object change

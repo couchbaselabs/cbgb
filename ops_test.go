@@ -927,4 +927,3 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 		}
 	}
 }
-
