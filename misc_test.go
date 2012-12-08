@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"log"
 	"net"
@@ -199,4 +200,62 @@ func TestVBString(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestBytesEncoder(t *testing.T) {
+	tests := map[string]string{
+		"simple": `"simple"`,
+		"O'Hair": `"O%27Hair"`,
+	}
+
+	for in, out := range tests {
+		b := Bytes(in)
+		got, err := json.Marshal(&b)
+		if err != nil {
+			t.Errorf("Error marshaling %v", in)
+		}
+		if string(got) != out {
+			t.Errorf("Expected %s, got %s", out, got)
+		}
+	}
+}
+
+func TestBytesDecoder(t *testing.T) {
+	pos := map[string]string{
+		`"simple"`:   "simple",
+		`"O%27Hair"`: "O'Hair",
+	}
+
+	for in, out := range pos {
+		b := Bytes{}
+		err := json.Unmarshal([]byte(in), &b)
+		if err != nil {
+			t.Errorf("Error unmarshaling %v", in)
+		}
+		if out != b.String() {
+			t.Errorf("Expected %v for %v, got %v", out, in, b)
+		}
+	}
+
+	neg := []string{"xxx no quotes", `"invalid esc %2x"`}
+
+	for _, in := range neg {
+		b := Bytes{}
+		err := json.Unmarshal([]byte(in), &b)
+		if err == nil {
+			t.Errorf("Expected error unmarshaling %v, got %v", in, b)
+		}
+	}
+
+	// This is odd looking, but I use the internal decoder
+	// directly since the interior error is just about impossible
+	// to encounter otherwise.
+	for _, in := range neg {
+		b := Bytes{}
+		err := b.UnmarshalJSON([]byte(in))
+		if err == nil {
+			t.Errorf("Expected error unmarshaling %v, got %v", in, b)
+		}
+	}
+
 }
