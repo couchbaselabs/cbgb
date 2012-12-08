@@ -702,6 +702,14 @@ func TestMinMaxRange(t *testing.T) {
 			gomemcached.SUCCESS, empty},
 		{gomemcached.GET, "ccc", "",
 			NOT_MY_RANGE, empty},
+		{gomemcached.DELETE, "aaa", "",
+			NOT_MY_RANGE, empty},
+		{gomemcached.DELETE, "bbb", "",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, "bbb", "",
+			gomemcached.KEY_ENOENT, empty},
+		{gomemcached.DELETE, "ccc", "",
+			NOT_MY_RANGE, empty},
 	}
 
 	for _, x := range tests {
