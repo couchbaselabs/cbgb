@@ -112,6 +112,8 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.DELETE:  vbDel,
 	gomemcached.DELETEQ: vbDel,
 
+	gomemcached.RGET: vbRGet,
+
 	// TODO: Replace CHANGES_SINCE with enhanced TAP.
 	CHANGES_SINCE: vbChangesSince,
 
@@ -351,4 +353,44 @@ func vbSetConfig(v *vbucket, w io.Writer,
 		}
 	}
 	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
+}
+
+func vbRGet(v *vbucket, w io.Writer,
+	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	// From http://code.google.com/p/memcached/wiki/RangeOps
+	// Extras field  Bits
+	// ------------------
+	// End key len	 16
+	// Reserved       8
+	// Flags          8
+	// Max results	 32
+
+	// TODO: Extras.
+
+	res := &gomemcached.MCResponse{
+		Opcode: req.Opcode,
+		Cas:    req.Cas,
+	}
+
+	visitor := func(x llrb.Item) bool {
+		i := x.(*item)
+		if bytes.Compare(i.key, req.Key) >= 0 {
+			err := (&gomemcached.MCResponse{
+				Opcode: req.Opcode,
+				Key:    i.key,
+				Cas:    i.cas,
+				Body:   i.data,
+				// TODO: Extras.
+			}).Transmit(w)
+			if err != nil {
+				log.Printf("Error sending RGET values: %v", err)
+				res = &gomemcached.MCResponse{Fatal: true}
+				return false
+			}
+		}
+		return true
+	}
+
+	v.items.AscendGreaterOrEqual(&item{key: req.Key}, visitor)
+	return res, nil
 }

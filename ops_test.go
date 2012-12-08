@@ -737,3 +737,75 @@ func TestMinMaxRange(t *testing.T) {
 		}
 	}
 }
+
+func TestRGet(t *testing.T) {
+	for _, numItems := range []int{8, 7, 6, 5, 4, 1, 0} {
+		for _, startKey := range []int{0, 5, 8, 9} {
+			testRGet(t, startKey, numItems)
+		}
+	}
+}
+
+func testRGet(t *testing.T, startKey int, numItems int) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.createVBucket(0)
+	defer vb.Close()
+
+	for i := 0; i < numItems; i++ {
+		req := &gomemcached.MCRequest{
+			Opcode: gomemcached.SET,
+			Key:    []byte(strconv.Itoa(i)),
+			Body:   []byte(strconv.Itoa(i)),
+		}
+
+		rh.HandleMessage(nil, req)
+	}
+
+	startKeyBytes := []byte(strconv.Itoa(startKey))
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.RGET,
+		Key:    startKeyBytes,
+	}
+
+	w := &bytes.Buffer{}
+
+	res := rh.HandleMessage(w, req)
+	if res.Opcode != gomemcached.RGET {
+		t.Errorf("Expected last rget response opcode %v, got %v",
+			gomemcached.RGET, res.Opcode)
+	}
+	if res.Key != nil {
+		t.Errorf("Expected last rget response key %v, got %v",
+			nil, res.Key)
+	}
+	if res.Body != nil {
+		t.Errorf("Expected last rget response data %v, got %v",
+			nil, res.Body)
+	}
+
+	results := decodeResponses(t, w.Bytes())
+
+	resultsExpected := numItems - startKey
+	if resultsExpected < 0 {
+		resultsExpected = 0
+	}
+	if len(results) != resultsExpected {
+		t.Errorf("Expected to see %v results, got %v, numItems %v, startKey %v",
+			resultsExpected, len(results), numItems, startKey)
+	}
+
+	for i := range results {
+		res := results[i]
+		if res.Opcode != gomemcached.RGET {
+			t.Errorf("Expected opcode %v, got %v",
+				gomemcached.RGET, res.Opcode)
+		}
+		if bytes.Compare(res.Key, startKeyBytes) < 0 {
+			t.Errorf("Expected results key >= %v, got %v",
+				startKeyBytes, res.Key)
+		}
+	}
+}
+
