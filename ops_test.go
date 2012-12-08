@@ -807,6 +807,8 @@ func TestMinMaxRange(t *testing.T) {
 			gomemcached.SUCCESS, empty},
 		{gomemcached.SET, "aaa", "AAA",
 			NOT_MY_RANGE, empty},
+		{gomemcached.DELETE, "aaa", "AAA",
+			NOT_MY_RANGE, empty},
 		{gomemcached.GET, "aaa", "",
 			NOT_MY_RANGE, empty},
 		{gomemcached.SET, "bbb", "BBB",
