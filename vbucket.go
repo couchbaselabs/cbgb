@@ -76,7 +76,6 @@ type vbucket struct {
 	vbid      uint16
 	state     vbState
 	config    *VBConfig
-	configRaw []byte // Keep the original bytes for GET_VBUCKET_CONFIG.
 	lock      sync.Mutex
 }
 
@@ -330,7 +329,12 @@ func vbChangesSince(v *vbucket, w io.Writer,
 
 func vbGetConfig(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
-	return &gomemcached.MCResponse{Body: v.configRaw}, nil
+	if v.config != nil {
+		if j, err := json.Marshal(v.config); err == nil {
+			return &gomemcached.MCResponse{Body: j}, nil
+		}
+	}
+	return &gomemcached.MCResponse{Body: []byte("{}")}, nil
 }
 
 func vbSetConfig(v *vbucket, w io.Writer,
@@ -340,7 +344,6 @@ func vbSetConfig(v *vbucket, w io.Writer,
 		err := json.Unmarshal(req.Body, config)
 		if err == nil {
 			v.config = config
-			v.configRaw = req.Body
 			return &gomemcached.MCResponse{}, nil
 		} else {
 			log.Printf("Error decoding vbucket config: %v, err: %v",
