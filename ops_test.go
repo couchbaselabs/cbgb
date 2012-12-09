@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"reflect"
 	"strconv"
 	"sync"
 	"testing"
@@ -54,6 +55,18 @@ func TestBasicOps(t *testing.T) {
 			gomemcached.SUCCESS, []byte("aye")},
 	}
 
+	expStats := Stats{
+		Items: 1,
+		Ops: uint64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
+		Gets: 6,
+		GetMisses: 3,
+		Sets: 2,
+		Deletes: 3,
+		Creates: 2,
+		IncomingValueBytes: 6,
+		OutgoingValueBytes: 9,
+	}
+
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.createVBucket(3)
@@ -83,6 +96,10 @@ func TestBasicOps(t *testing.T) {
 			t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
 				x.op, x.vb, x.key, x.expValue, res.Body)
 		}
+	}
+
+	if !reflect.DeepEqual(&expStats, &vb.stats) {
+		t.Errorf("Expected stats of %v, got %v", expStats, vb.stats)
 	}
 }
 
@@ -855,6 +872,11 @@ func TestMinMaxRange(t *testing.T) {
 				x.op, x.key, x.expValue, res.Body)
 		}
 	}
+
+	if vb.stats.ErrNotMyRange != uint64(7) {
+		t.Errorf("Expected stats ErrNotMyRange %v, got %v",
+			uint64(7), vb.stats.ErrNotMyRange)
+	}
 }
 
 func TestRGet(t *testing.T) {
@@ -925,5 +947,20 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 			t.Errorf("Expected results key >= %v, got %v",
 				startKeyBytes, res.Key)
 		}
+	}
+
+	if vb.stats.RGets != 1 {
+		t.Errorf("Expected stats RGets %v, got %v",
+			1, vb.stats.RGets)
+	}
+
+	if vb.stats.RGetResults != uint64(len(results)) {
+		t.Errorf("Expected stats results %v, got %v",
+			uint64(len(results)), vb.stats.RGetResults)
+	}
+
+	if vb.stats.OutgoingValueBytes != uint64(len(results)) {
+		t.Errorf("Expected stats results outgoing bytes %v, got %v",
+			uint64(len(results)), vb.stats.OutgoingValueBytes)
 	}
 }

@@ -76,6 +76,7 @@ type vbucket struct {
 	vbid     uint16
 	state    vbState
 	config   *VBConfig
+	stats    Stats
 	lock     sync.Mutex
 }
 
@@ -109,8 +110,8 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.SET:  vbSet,
 	gomemcached.SETQ: vbSet,
 
-	gomemcached.DELETE:  vbDel,
-	gomemcached.DELETEQ: vbDel,
+	gomemcached.DELETE:  vbDelete,
+	gomemcached.DELETEQ: vbDelete,
 
 	gomemcached.RGET: vbRGet,
 
@@ -149,6 +150,7 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	res, msg := func() (*gomemcached.MCResponse, *mutation) {
 		v.lock.Lock()
 		defer v.lock.Unlock()
+		v.stats.Ops++
 		return f(v, w, req)
 	}()
 
@@ -163,10 +165,12 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 	if v.config != nil {
 		if len(v.config.MinKeyInclusive) > 0 &&
 			bytes.Compare(req.Key, v.config.MinKeyInclusive) < 0 {
+			v.stats.ErrNotMyRange++
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
 		if len(v.config.MaxKeyExclusive) > 0 &&
 			bytes.Compare(req.Key, v.config.MaxKeyExclusive) >= 0 {
+			v.stats.ErrNotMyRange++
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
 	}
@@ -175,6 +179,8 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 
 func vbSet(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	v.stats.Sets++
+
 	if rangeErr := v.checkRange(req); rangeErr != nil {
 		return rangeErr, nil
 	}
@@ -204,11 +210,17 @@ func vbSet(v *vbucket, w io.Writer,
 		data: req.Body,
 	}
 
+	v.stats.IncomingValueBytes += uint64(len(req.Body))
+
 	v.items.ReplaceOrInsert(itemNew)
 
 	v.changes.ReplaceOrInsert(itemNew)
 	if old != nil {
 		v.changes.Delete(old)
+		v.stats.Updates++
+	} else {
+		v.stats.Creates++
+		v.stats.Items++
 	}
 
 	toBroadcast := &mutation{v.vbid, req.Key, itemCas, false}
@@ -224,12 +236,15 @@ func vbSet(v *vbucket, w io.Writer,
 
 func vbGet(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	v.stats.Gets++
+
 	if rangeErr := v.checkRange(req); rangeErr != nil {
 		return rangeErr, nil
 	}
 
 	x := v.items.Get(&item{key: req.Key})
 	if x == nil {
+		v.stats.GetMisses++
 		if req.Opcode.IsQuiet() {
 			return nil, nil
 		}
@@ -246,6 +261,8 @@ func vbGet(v *vbucket, w io.Writer,
 	}
 	// TODO: Extras!
 
+	v.stats.OutgoingValueBytes += uint64(len(i.data))
+
 	wantsKey := (req.Opcode == gomemcached.GETK || req.Opcode == gomemcached.GETKQ)
 	if wantsKey {
 		res.Key = req.Key
@@ -254,8 +271,10 @@ func vbGet(v *vbucket, w io.Writer,
 	return res, nil
 }
 
-func vbDel(v *vbucket, w io.Writer,
+func vbDelete(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+	v.stats.Deletes++
+
 	if rangeErr := v.checkRange(req); rangeErr != nil {
 		return rangeErr, nil
 	}
@@ -263,6 +282,7 @@ func vbDel(v *vbucket, w io.Writer,
 	t := &item{key: req.Key}
 	x := v.items.Get(t)
 	if x != nil {
+		v.stats.Items--
 		i := x.(*item)
 		if req.Cas != 0 {
 			if req.Cas != i.cas {
@@ -379,6 +399,8 @@ func vbRGet(v *vbucket, w io.Writer,
 
 	// TODO: Extras.
 
+	v.stats.RGets++
+
 	res := &gomemcached.MCResponse{
 		Opcode: req.Opcode,
 		Cas:    req.Cas,
@@ -399,6 +421,8 @@ func vbRGet(v *vbucket, w io.Writer,
 				res = &gomemcached.MCResponse{Fatal: true}
 				return false
 			}
+			v.stats.RGetResults++
+			v.stats.OutgoingValueBytes += uint64(len(i.data))
 		}
 		return true
 	}

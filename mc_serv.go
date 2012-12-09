@@ -10,10 +10,6 @@ import (
 	"github.com/dustin/gomemcached/server"
 )
 
-type statItem struct {
-	key, val string
-}
-
 type reqHandler struct {
 	currentBucket *bucket
 }
