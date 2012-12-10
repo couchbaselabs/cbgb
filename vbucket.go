@@ -147,6 +147,21 @@ func (v *vbucket) Get(key []byte) *item {
 	return x.(*item)
 }
 
+func (v *vbucket) GetState() vbState {
+	v.lock.Lock()
+	res := v.state
+	v.lock.Unlock()
+	return res
+}
+
+func (v *vbucket) SetState(newState vbState) (oldState vbState) {
+	v.lock.Lock()
+	oldState = v.state
+	v.state = newState
+	v.lock.Unlock()
+	return
+}
+
 func (v *vbucket) AddStats(dest *Stats, key string) {
 	v.lock.Lock()
 	if v.state == vbActive {

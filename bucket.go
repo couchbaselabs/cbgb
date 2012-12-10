@@ -44,9 +44,12 @@ func (b *bucket) Subscribe(ch chan<- interface{}) {
 				oldState: vbDead,
 				newState: vbDead}
 			vb := c.getVBucket()
-			if vb != nil && vb.state != vbDead {
-				c.newState = vb.state
-				ch <- c
+			if vb != nil {
+				s := vb.GetState()
+				if s != vbDead {
+					c.newState = s
+					ch <- c
+				}
 			}
 		}
 	}()
@@ -79,8 +82,7 @@ func (b *bucket) setVBState(vbid uint16, to vbState) {
 	vb := b.getVBucket(vbid)
 	oldState := vbDead
 	if vb != nil {
-		oldState = vb.state
-		vb.state = to
+		oldState = vb.SetState(to)
 	}
 	bc := bucketChange{b, vbid, oldState, to}
 	b.observer.Submit(bc)
