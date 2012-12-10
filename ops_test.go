@@ -56,13 +56,13 @@ func TestBasicOps(t *testing.T) {
 	}
 
 	expStats := Stats{
-		Items: 1,
-		Ops: uint64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
-		Gets: 6,
-		GetMisses: 3,
-		Sets: 2,
-		Deletes: 3,
-		Creates: 2,
+		Items:              1,
+		Ops:                uint64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
+		Gets:               6,
+		GetMisses:          3,
+		Sets:               2,
+		Deletes:            3,
+		Creates:            2,
 		IncomingValueBytes: 6,
 		OutgoingValueBytes: 9,
 	}
