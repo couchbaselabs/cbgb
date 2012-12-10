@@ -69,11 +69,7 @@ func aggregateStats(b *bucket, key string) (agg *Stats) {
 	for i := uint16(0); i < uint16(MAX_VBUCKET); i++ {
 		vb := b.getVBucket(i)
 		if vb != nil {
-			vb.lock.Lock()
-			if vb.state == vbActive {
-				agg.Add(&vb.stats)
-			}
-			vb.lock.Unlock()
+			vb.AddStats(agg, key)
 		}
 	}
 	return
