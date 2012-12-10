@@ -137,6 +137,16 @@ func (v *vbucket) Close() error {
 	return v.observer.Close()
 }
 
+func (v *vbucket) Get(key []byte) *item {
+	v.lock.Lock()
+	x := v.items.Get(&item{key: key})
+	v.lock.Unlock()
+	if x == nil {
+		return nil
+	}
+	return x.(*item)
+}
+
 func (v *vbucket) AddStats(dest *Stats, key string) {
 	v.lock.Lock()
 	if v.state == vbActive {

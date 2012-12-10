@@ -106,17 +106,13 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 
 				vb := rh.currentBucket.getVBucket(m.vb)
 				if vb != nil {
-					vb.lock.Lock()
-					x := vb.items.Get(&item{key: m.key})
-					vb.lock.Unlock()
-
-					if x == nil {
+					i := vb.Get(m.key)
+					if i == nil {
 						log.Printf("Tapped a missing item, skipping: %s",
 							m.key)
 						continue
 					}
 
-					i := x.(*item)
 					pkt.Body = i.data
 				} else {
 					log.Printf("Change on missing vbucket? %v",
