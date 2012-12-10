@@ -169,7 +169,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		}
 	}
 
-	return vb.dispatch(w, req)
+	return vb.Dispatch(w, req)
 }
 
 func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {

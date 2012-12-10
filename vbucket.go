@@ -155,7 +155,7 @@ func (v *vbucket) AddStats(dest *Stats, key string) {
 	v.lock.Unlock()
 }
 
-func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	f := dispatchTable[req.Opcode]
 	if f == nil {
 		return &gomemcached.MCResponse{
