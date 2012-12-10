@@ -71,6 +71,7 @@ func TestBasicOps(t *testing.T) {
 	rh := reqHandler{testBucket}
 	vb := testBucket.createVBucket(3)
 	defer vb.Close()
+	testBucket.setVBState(3, vbActive)
 
 	for _, x := range tests {
 		req := &gomemcached.MCRequest{
@@ -100,6 +101,30 @@ func TestBasicOps(t *testing.T) {
 
 	if !reflect.DeepEqual(&expStats, &vb.stats) {
 		t.Errorf("Expected stats of %v, got %v", expStats, vb.stats)
+	}
+
+	expStatItems := make(chan statItem)
+	actStatItems := make(chan statItem)
+
+	go func() {
+		expStats.Send(expStatItems)
+		close(expStatItems)
+	}()
+	go func() {
+		aggregateStats(testBucket, "").Send(actStatItems)
+		close(actStatItems)
+	}()
+
+	for expitem := range expStatItems {
+		actitem := <-actStatItems
+		if expitem.key != actitem.key {
+			t.Errorf("agg stats expected key %v, got %v",
+				expitem.key, actitem.key)
+		}
+		if expitem.val != actitem.val {
+			t.Errorf("agg stats expected val %v, got %v for key %v",
+				expitem.val, actitem.val, expitem.key)
+		}
 	}
 }
 

@@ -54,36 +54,6 @@ func transmitPackets(w io.Writer) (chan<- transmissible, <-chan error) {
 	return ch, errs
 }
 
-// This is slightly more complicated than it would generally need to
-// be, but as a generator, it's self-terminating based on an input
-// stream.  I may do this a bit differently for stats in the future,
-// but the model is quite helpful for a tap stream or similar.
-func transmitStats(w io.Writer) (chan<- statItem, <-chan error) {
-	ch := make(chan statItem)
-	pktch, errs := transmitPackets(w)
-	go func() {
-		for res := range ch {
-			pktch <- &gomemcached.MCResponse{
-				Opcode: gomemcached.STAT,
-				Key:    []byte(res.key),
-				Body:   []byte(res.val),
-			}
-		}
-		pktch <- &gomemcached.MCResponse{Opcode: gomemcached.STAT}
-		close(pktch)
-	}()
-	return ch, errs
-}
-
-func doStats(w io.Writer, key string) error {
-	log.Printf("Doing stats for %#v", key)
-	ch, errs := transmitStats(w)
-	ch <- statItem{"uptime", time.Since(serverStart).String()}
-	ch <- statItem{"version", VERSION}
-	close(ch)
-	return <-errs
-}
-
 func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 	chpkt chan<- transmissible, cherr <-chan error) error {
 
@@ -188,7 +158,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 	case gomemcached.NOOP:
 		return &gomemcached.MCResponse{}
 	case gomemcached.STAT:
-		err := doStats(w, string(req.Key))
+		err := doStats(rh.currentBucket, w, string(req.Key))
 		if err != nil {
 			log.Printf("Error sending stats: %v", err)
 			return &gomemcached.MCResponse{Fatal: true}
