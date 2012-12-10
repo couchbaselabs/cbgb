@@ -228,7 +228,7 @@ func vbSet(v *vbucket, w io.Writer,
 		data: req.Body,
 	}
 
-	v.stats.IncomingValueBytes += uint64(len(req.Body))
+	v.stats.ValueBytesIncoming += uint64(len(req.Body))
 
 	v.items.ReplaceOrInsert(itemNew)
 
@@ -279,7 +279,7 @@ func vbGet(v *vbucket, w io.Writer,
 	}
 	// TODO: Extras!
 
-	v.stats.OutgoingValueBytes += uint64(len(i.data))
+	v.stats.ValueBytesOutgoing += uint64(len(i.data))
 
 	wantsKey := (req.Opcode == gomemcached.GETK || req.Opcode == gomemcached.GETKQ)
 	if wantsKey {
@@ -440,7 +440,7 @@ func vbRGet(v *vbucket, w io.Writer,
 				return false
 			}
 			v.stats.RGetResults++
-			v.stats.OutgoingValueBytes += uint64(len(i.data))
+			v.stats.ValueBytesOutgoing += uint64(len(i.data))
 		}
 		return true
 	}

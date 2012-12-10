@@ -63,8 +63,8 @@ func TestBasicOps(t *testing.T) {
 		Sets:               2,
 		Deletes:            3,
 		Creates:            2,
-		IncomingValueBytes: 6,
-		OutgoingValueBytes: 9,
+		ValueBytesIncoming: 6,
+		ValueBytesOutgoing: 9,
 	}
 
 	testBucket := &bucket{}
@@ -984,8 +984,13 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 			uint64(len(results)), vb.stats.RGetResults)
 	}
 
-	if vb.stats.OutgoingValueBytes != uint64(len(results)) {
+	if vb.stats.ValueBytesIncoming != uint64(numItems) {
+		t.Errorf("Expected stats results incoming bytes %v, got %v",
+			uint64(numItems), vb.stats.ValueBytesIncoming)
+	}
+
+	if vb.stats.ValueBytesOutgoing != uint64(len(results)) {
 		t.Errorf("Expected stats results outgoing bytes %v, got %v",
-			uint64(len(results)), vb.stats.OutgoingValueBytes)
+			uint64(len(results)), vb.stats.ValueBytesOutgoing)
 	}
 }
