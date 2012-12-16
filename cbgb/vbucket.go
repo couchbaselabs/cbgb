@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"bytes"
@@ -19,25 +19,25 @@ const (
 	NOT_MY_RANGE       = gomemcached.Status(0x60)
 )
 
-type vbState uint8
+type VBState uint8
 
 const (
-	_ = vbState(iota)
-	vbActive
-	vbReplica
-	vbPending
-	vbDead
+	_ = VBState(iota)
+	VBActive
+	VBReplica
+	VBPending
+	VBDead
 )
 
 var vbStateNames = []string{
-	vbActive:  "active",
-	vbReplica: "replica",
-	vbPending: "pending",
-	vbDead:    "dead",
+	VBActive:  "active",
+	VBReplica: "replica",
+	VBPending: "pending",
+	VBDead:    "dead",
 }
 
-func (v vbState) String() string {
-	if v < vbActive || v > vbDead {
+func (v VBState) String() string {
+	if v < VBActive || v > VBDead {
 		panic("Invalid vb state")
 	}
 	return vbStateNames[v]
@@ -74,7 +74,7 @@ type vbucket struct {
 	cas      uint64
 	observer *broadcaster
 	vbid     uint16
-	state    vbState
+	state    VBState
 	config   *VBConfig
 	stats    Stats
 	lock     sync.Mutex
@@ -129,7 +129,7 @@ func newVbucket(vbid uint16) *vbucket {
 		changes:  llrb.New(CASLess),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
-		state:    vbDead,
+		state:    VBDead,
 	}
 }
 
@@ -147,14 +147,14 @@ func (v *vbucket) Get(key []byte) *item {
 	return x.(*item)
 }
 
-func (v *vbucket) GetState() vbState {
+func (v *vbucket) GetState() VBState {
 	v.lock.Lock()
 	res := v.state
 	v.lock.Unlock()
 	return res
 }
 
-func (v *vbucket) SetState(newState vbState) (oldState vbState) {
+func (v *vbucket) SetState(newState VBState) (oldState VBState) {
 	v.lock.Lock()
 	oldState = v.state
 	v.state = newState
@@ -164,7 +164,7 @@ func (v *vbucket) SetState(newState vbState) (oldState vbState) {
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
 	v.lock.Lock()
-	if v.state == vbActive {
+	if v.state == VBActive {
 		dest.Add(&v.stats)
 	}
 	v.lock.Unlock()

@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"io"
@@ -8,6 +8,8 @@ import (
 
 	"github.com/dustin/gomemcached"
 )
+
+var serverStart = time.Now()
 
 type statItem struct {
 	key, val string

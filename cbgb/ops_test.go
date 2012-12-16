@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"bytes"
@@ -69,9 +69,9 @@ func TestBasicOps(t *testing.T) {
 
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
-	testBucket.setVBState(3, vbActive)
+	testBucket.SetVBState(3, VBActive)
 
 	for _, x := range tests {
 		req := &gomemcached.MCRequest{
@@ -131,7 +131,7 @@ func TestBasicOps(t *testing.T) {
 func TestMutationBroadcast(t *testing.T) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	ch := make(chan interface{}, 16)
@@ -216,7 +216,7 @@ func testGet(rh *reqHandler, vbid uint16, key string) *gomemcached.MCResponse {
 func TestCASDelete(t *testing.T) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	testKey := "x"
@@ -256,7 +256,7 @@ func TestCASDelete(t *testing.T) {
 func TestCASSet(t *testing.T) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	testKey := "x"
@@ -344,9 +344,9 @@ func TestQuit(t *testing.T) {
 }
 
 func TestTapSetup(t *testing.T) {
-	testBucket := newBucket()
-	testBucket.createVBucket(0)
-	testBucket.setVBState(0, vbActive)
+	testBucket := NewBucket()
+	testBucket.CreateVBucket(0)
+	testBucket.SetVBState(0, VBActive)
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -376,7 +376,7 @@ func TestTapChanges(t *testing.T) {
 	// starts spuriously failing, that's why, and we'll make it
 	// better.
 
-	testBucket := newBucket()
+	testBucket := NewBucket()
 	rh := reqHandler{testBucket}
 
 	chpkt := make(chan transmissible, 128)
@@ -388,8 +388,8 @@ func TestTapChanges(t *testing.T) {
 
 	go rh.doTap(treq, chpkt, cherr)
 
-	vb0 := testBucket.createVBucket(0)
-	testBucket.setVBState(0, vbActive)
+	vb0 := testBucket.CreateVBucket(0)
+	testBucket.SetVBState(0, VBActive)
 
 	testKey := []byte("testKey")
 
@@ -443,7 +443,7 @@ func TestTapChanges(t *testing.T) {
 	mustNotTransmit("negative set")
 
 	// Verify we *don't* get a set on a pending vbucket.
-	testBucket.setVBState(0, vbPending)
+	testBucket.SetVBState(0, VBPending)
 	time.Sleep(100 * time.Millisecond) // Let the state change settle
 	req.Opcode = gomemcached.SET
 	sendReq(req)
@@ -454,7 +454,7 @@ func TestTapChanges(t *testing.T) {
 	// This test is weird because it's a weird thing.  I need to
 	// have an active subscription, and then I forge a message
 	// across it from another vbucket we should ignore.
-	testBucket.setVBState(0, vbActive)
+	testBucket.SetVBState(0, VBActive)
 	time.Sleep(100 * time.Millisecond) // settle
 	vb0.observer.Submit(mutation{vb: 1, key: testKey})
 	mustNotTransmit("no vbucket")
@@ -483,7 +483,7 @@ func TestStats(t *testing.T) {
 
 func TestInvalidCommand(t *testing.T) {
 	testBucket := &bucket{}
-	vb := testBucket.createVBucket(0)
+	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
 	rh := reqHandler{testBucket}
 
@@ -500,7 +500,7 @@ func TestInvalidCommand(t *testing.T) {
 
 func BenchmarkInvalidCommand(b *testing.B) {
 	testBucket := &bucket{}
-	vb := testBucket.createVBucket(0)
+	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
 	rh := reqHandler{testBucket}
 
@@ -517,7 +517,7 @@ func BenchmarkInvalidCommand(b *testing.B) {
 // determine whether anything bad is happening.
 func TestParallelMutations(t *testing.T) {
 	testBucket := &bucket{}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	keys := []string{"a", "b", "c"}
@@ -553,7 +553,7 @@ func TestParallelMutations(t *testing.T) {
 // Parallel dispatcher invocation timing.
 func BenchmarkParallelGet(b *testing.B) {
 	testBucket := &bucket{}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	rh := reqHandler{testBucket}
@@ -585,7 +585,7 @@ func BenchmarkParallelGet(b *testing.B) {
 // Best case dispatcher timing.
 func BenchmarkDispatch(b *testing.B) {
 	testBucket := &bucket{}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	rh := reqHandler{testBucket}
@@ -613,7 +613,7 @@ func TestChangesSince(t *testing.T) {
 func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(0)
+	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
 
 	for i := 0; i < numItems; i++ {
@@ -789,7 +789,7 @@ func TestVBucketConfig(t *testing.T) {
 
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	for i, x := range tests {
@@ -830,7 +830,7 @@ func TestMinMaxRange(t *testing.T) {
 
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(3)
+	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
 	tests := []struct {
@@ -915,7 +915,7 @@ func TestRGet(t *testing.T) {
 func testRGet(t *testing.T, startKey int, numItems int) {
 	testBucket := &bucket{}
 	rh := reqHandler{testBucket}
-	vb := testBucket.createVBucket(0)
+	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
 
 	for i := 0; i < numItems; i++ {

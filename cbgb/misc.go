@@ -1,7 +1,9 @@
-package main
+package cbgb
 
 import (
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/url"
 )
 
@@ -28,3 +30,24 @@ func (a *Bytes) UnmarshalJSON(d []byte) error {
 func (a *Bytes) String() string {
 	return string(*a)
 }
+
+func MutationLogger(ch chan interface{}) {
+	for i := range ch {
+		switch o := i.(type) {
+		case mutation:
+			log.Printf("Mutation: %v", o)
+		case bucketChange:
+			log.Printf("Bucket change: %v", o)
+			if o.newState == VBActive {
+				vb := o.getVBucket()
+				if vb != nil {
+					// Watch state changes
+					vb.observer.Register(ch)
+				}
+			}
+		default:
+			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
+		}
+	}
+}
+

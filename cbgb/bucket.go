@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"fmt"
@@ -6,10 +6,15 @@ import (
 	"unsafe"
 )
 
+const (
+	VERSION     = "0.0.0"
+	MAX_VBUCKET = 1024
+)
+
 type bucketChange struct {
 	bucket             *bucket
 	vbid               uint16
-	oldState, newState vbState
+	oldState, newState VBState
 }
 
 func (c bucketChange) getVBucket() *vbucket {
@@ -26,10 +31,14 @@ type bucket struct {
 	observer *broadcaster
 }
 
-func newBucket() *bucket {
+func NewBucket() *bucket {
 	return &bucket{
 		observer: newBroadcaster(0),
 	}
+}
+
+func (b *bucket) Observer() *broadcaster {
+	return b.observer
 }
 
 // Subscribe to bucket events.
@@ -41,12 +50,12 @@ func (b *bucket) Subscribe(ch chan<- interface{}) {
 		for i := uint16(0); i < MAX_VBUCKET; i++ {
 			c := bucketChange{bucket: b,
 				vbid:     i,
-				oldState: vbDead,
-				newState: vbDead}
+				oldState: VBDead,
+				newState: VBDead}
 			vb := c.getVBucket()
 			if vb != nil {
 				s := vb.GetState()
-				if s != vbDead {
+				if s != VBDead {
 					c.newState = s
 					ch <- c
 				}
@@ -67,20 +76,20 @@ func (b *bucket) setVBucket(vbid uint16, vb *vbucket) {
 	atomic.StorePointer(&b.vbuckets[vbid], unsafe.Pointer(vb))
 }
 
-func (b *bucket) createVBucket(vbid uint16) *vbucket {
+func (b *bucket) CreateVBucket(vbid uint16) *vbucket {
 	vb := newVbucket(vbid)
 	b.setVBucket(vbid, vb)
 	return vb
 }
 
 func (b *bucket) destroyVBucket(vbid uint16) {
-	b.setVBState(vbid, vbDead)
+	b.SetVBState(vbid, VBDead)
 	b.setVBucket(vbid, nil)
 }
 
-func (b *bucket) setVBState(vbid uint16, to vbState) {
+func (b *bucket) SetVBState(vbid uint16, to VBState) {
 	vb := b.getVBucket(vbid)
-	oldState := vbDead
+	oldState := VBDead
 	if vb != nil {
 		oldState = vb.SetState(to)
 	}

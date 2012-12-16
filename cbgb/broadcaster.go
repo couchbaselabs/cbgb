@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 type broadcaster struct {
 	input chan interface{}

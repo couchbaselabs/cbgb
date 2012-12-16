@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"bytes"
@@ -19,25 +19,25 @@ func init() {
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {
-	b := newBucket()
-	b.createVBucket(0)
+	b := NewBucket()
+	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 10)
-	ch <- bucketChange{bucket: b, vbid: 0, oldState: vbDead, newState: vbActive}
+	ch <- bucketChange{bucket: b, vbid: 0, oldState: VBDead, newState: VBActive}
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: true, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 2}
-	ch <- bucketChange{bucket: b, vbid: 0, oldState: vbActive, newState: vbDead}
+	ch <- bucketChange{bucket: b, vbid: 0, oldState: VBActive, newState: VBDead}
 	close(ch)
 
-	mutationLogger(ch)
+	MutationLogger(ch)
 }
 
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
-	b := newBucket()
-	b.createVBucket(0)
-	b.setVBState(0, vbActive)
+	b := NewBucket()
+	b.CreateVBucket(0)
+	b.SetVBState(0, VBActive)
 
 	bch := make(chan interface{}, 5)
 
@@ -49,19 +49,19 @@ func TestBucketNotifications(t *testing.T) {
 	// after an immediate change).
 	time.Sleep(time.Millisecond * 10)
 
-	b.createVBucket(3)
-	b.setVBState(3, vbActive)
+	b.CreateVBucket(3)
+	b.SetVBState(3, VBActive)
 	b.destroyVBucket(3)
 	b.observer.Unregister(bch)
 	b.destroyVBucket(0)
 
 	tests := []struct {
 		vb uint16
-		st vbState
+		st VBState
 	}{
-		{0, vbActive},
-		{3, vbActive},
-		{3, vbDead},
+		{0, VBActive},
+		{3, VBActive},
+		{3, VBDead},
 	}
 
 	for i, x := range tests {
@@ -93,11 +93,11 @@ func TestMutationInvalid(t *testing.T) {
 
 	ch := make(chan interface{}, 5)
 	// Notification of a non-existence bucket is a null lookup.
-	ch <- bucketChange{vbid: 0, oldState: vbDead, newState: vbActive}
+	ch <- bucketChange{vbid: 0, oldState: VBDead, newState: VBActive}
 	// But this is crazy stupid and will crash the logger.
 	ch <- 19
 
-	mutationLogger(ch)
+	MutationLogger(ch)
 }
 
 // Run through the sessionLoop code with a quit command.
@@ -117,30 +117,30 @@ func TestSessionLoop(t *testing.T) {
 }
 
 func TestNewBucket(t *testing.T) {
-	nb := newBucket()
+	nb := NewBucket()
 
 	ch := make(chan interface{}, 2)
 
 	nb.observer.Register(ch)
 
-	nb.createVBucket(3)
-	nb.setVBState(3, vbActive)
+	nb.CreateVBucket(3)
+	nb.SetVBState(3, VBActive)
 	nb.destroyVBucket(3)
 
 	bc := (<-ch).(bucketChange)
-	if bc.vbid != 3 || bc.newState != vbActive {
+	if bc.vbid != 3 || bc.newState != VBActive {
 		t.Fatalf("Expected a 3/active, got %v", bc)
 	}
 
 	bc = (<-ch).(bucketChange)
-	if bc.vbid != 3 || bc.newState != vbDead {
+	if bc.vbid != 3 || bc.newState != VBDead {
 		t.Fatalf("Expected a 3/dead, got %v", bc)
 	}
 }
 
 func TestListener(t *testing.T) {
-	b := newBucket()
-	l, err := startMCServer("0.0.0.0:0", b)
+	b := NewBucket()
+	l, err := StartMCServer("0.0.0.0:0", b)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
 	}
@@ -161,8 +161,8 @@ func TestListener(t *testing.T) {
 }
 
 func TestListenerFail(t *testing.T) {
-	b := newBucket()
-	l, err := startMCServer("1.1.1.1:22", b)
+	b := NewBucket()
+	l, err := StartMCServer("1.1.1.1:22", b)
 	if err == nil {
 		t.Fatalf("Error failing to listen: %v", l.Addr())
 	} else {
@@ -171,13 +171,13 @@ func TestListenerFail(t *testing.T) {
 }
 
 func TestVBString(t *testing.T) {
-	tests := map[vbState]string{
-		vbState(0):          "", // panics
-		vbActive:            "active",
-		vbReplica:           "replica",
-		vbPending:           "pending",
-		vbDead:              "dead",
-		vbState(vbDead + 1): "", // panics
+	tests := map[VBState]string{
+		VBState(0):          "", // panics
+		VBActive:            "active",
+		VBReplica:           "replica",
+		VBPending:           "pending",
+		VBDead:              "dead",
+		VBState(VBDead + 1): "", // panics
 	}
 
 	for in, exp := range tests {

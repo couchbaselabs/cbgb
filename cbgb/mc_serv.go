@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"io"
@@ -83,7 +83,7 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 			// Bucket state change.  Register
 			c := ci.(bucketChange)
 			vb := c.getVBucket()
-			if c.newState == vbActive {
+			if c.newState == VBActive {
 				vb.observer.Register(mch)
 				registered[vb.vbid] = true
 			} else if vb != nil {
@@ -198,7 +198,7 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 	}
 }
 
-func startMCServer(addr string, defaultBucket *bucket) (net.Listener, error) {
+func StartMCServer(addr string, defaultBucket *bucket) (net.Listener, error) {
 	ls, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
