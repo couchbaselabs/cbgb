@@ -80,8 +80,8 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 	for {
 		select {
 		case ci := <-bch:
-			// Bucket state change.  Register
-			c := ci.(bucketChange)
+			// VBucket state change, so update registrations
+			c := ci.(vbucketChange)
 			vb := c.getVBucket()
 			if c.newState == VBActive {
 				vb.observer.Register(mch)

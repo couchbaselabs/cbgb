@@ -23,11 +23,11 @@ func TestMutationLogger(t *testing.T) {
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 10)
-	ch <- bucketChange{bucket: b, vbid: 0, oldState: VBDead, newState: VBActive}
+	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBDead, newState: VBActive}
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: true, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 2}
-	ch <- bucketChange{bucket: b, vbid: 0, oldState: VBActive, newState: VBDead}
+	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBActive, newState: VBDead}
 	close(ch)
 
 	MutationLogger(ch)
@@ -65,7 +65,7 @@ func TestBucketNotifications(t *testing.T) {
 	}
 
 	for i, x := range tests {
-		c := (<-bch).(bucketChange)
+		c := (<-bch).(vbucketChange)
 		if c.vbid != x.vb {
 			t.Fatalf("Wrong vb at %v: %v, exp %+v", i, c, x)
 		}
@@ -93,7 +93,7 @@ func TestMutationInvalid(t *testing.T) {
 
 	ch := make(chan interface{}, 5)
 	// Notification of a non-existence bucket is a null lookup.
-	ch <- bucketChange{vbid: 0, oldState: VBDead, newState: VBActive}
+	ch <- vbucketChange{vbid: 0, oldState: VBDead, newState: VBActive}
 	// But this is crazy stupid and will crash the logger.
 	ch <- 19
 
@@ -127,12 +127,12 @@ func TestNewBucket(t *testing.T) {
 	nb.SetVBState(3, VBActive)
 	nb.destroyVBucket(3)
 
-	bc := (<-ch).(bucketChange)
+	bc := (<-ch).(vbucketChange)
 	if bc.vbid != 3 || bc.newState != VBActive {
 		t.Fatalf("Expected a 3/active, got %v", bc)
 	}
 
-	bc = (<-ch).(bucketChange)
+	bc = (<-ch).(vbucketChange)
 	if bc.vbid != 3 || bc.newState != VBDead {
 		t.Fatalf("Expected a 3/dead, got %v", bc)
 	}

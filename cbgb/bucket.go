@@ -11,17 +11,17 @@ const (
 	MAX_VBUCKET = 1024
 )
 
-type bucketChange struct {
+type vbucketChange struct {
 	bucket             *bucket
 	vbid               uint16
 	oldState, newState VBState
 }
 
-func (c bucketChange) getVBucket() *vbucket {
+func (c vbucketChange) getVBucket() *vbucket {
 	return c.bucket.getVBucket(c.vbid)
 }
 
-func (c bucketChange) String() string {
+func (c vbucketChange) String() string {
 	return fmt.Sprintf("vbucket %v %v -> %v",
 		c.vbid, c.oldState, c.newState)
 }
@@ -48,7 +48,7 @@ func (b *bucket) Subscribe(ch chan<- interface{}) {
 	b.observer.Register(ch)
 	go func() {
 		for i := uint16(0); i < MAX_VBUCKET; i++ {
-			c := bucketChange{bucket: b,
+			c := vbucketChange{bucket: b,
 				vbid:     i,
 				oldState: VBDead,
 				newState: VBDead}
@@ -93,6 +93,6 @@ func (b *bucket) SetVBState(vbid uint16, to VBState) {
 	if vb != nil {
 		oldState = vb.SetState(to)
 	}
-	bc := bucketChange{b, vbid, oldState, to}
+	bc := vbucketChange{b, vbid, oldState, to}
 	b.observer.Submit(bc)
 }

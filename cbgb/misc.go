@@ -36,8 +36,8 @@ func MutationLogger(ch chan interface{}) {
 		switch o := i.(type) {
 		case mutation:
 			log.Printf("Mutation: %v", o)
-		case bucketChange:
-			log.Printf("Bucket change: %v", o)
+		case vbucketChange:
+			log.Printf("VBucket change: %v", o)
 			if o.newState == VBActive {
 				vb := o.getVBucket()
 				if vb != nil {
