@@ -10,6 +10,10 @@ import (
 	"github.com/dustin/gomemcached/server"
 )
 
+const (
+	VERSION = "0.0.0"
+)
+
 type reqHandler struct {
 	currentBucket *bucket
 }

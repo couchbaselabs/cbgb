@@ -7,7 +7,6 @@ import (
 )
 
 const (
-	VERSION     = "0.0.0"
 	MAX_VBUCKET = 1024
 )
 
