@@ -69,6 +69,7 @@ func (t *VBConfig) Equal(u *VBConfig) bool {
 }
 
 type vbucket struct {
+	parent   *bucket
 	items    *llrb.Tree
 	changes  *llrb.Tree
 	cas      uint64
@@ -123,8 +124,9 @@ var dispatchTable = [256]dispatchFun{
 	SET_VBUCKET_CONFIG: vbSetConfig,
 }
 
-func newVbucket(vbid uint16) *vbucket {
+func newVBucket(parent *bucket, vbid uint16) *vbucket {
 	return &vbucket{
+		parent:   parent,
 		items:    llrb.New(KeyLess),
 		changes:  llrb.New(CASLess),
 		observer: newBroadcaster(dataBroadcastBufLen),

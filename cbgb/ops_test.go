@@ -698,7 +698,7 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 
 func TestChangesSinceTransmitError(t *testing.T) {
 	w := errWriter{io.EOF}
-	v := newVbucket(0)
+	v := newVBucket(nil, 0)
 	for _, k := range []string{"a", "b"} {
 		vbSet(v, nil, &gomemcached.MCRequest{
 			Opcode: gomemcached.SET,

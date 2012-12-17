@@ -77,7 +77,7 @@ func (b *bucket) casVBucket(vbid uint16, vb *vbucket, vbPrev *vbucket) bool {
 }
 
 func (b *bucket) CreateVBucket(vbid uint16) *vbucket {
-	vb := newVbucket(vbid)
+	vb := newVBucket(b, vbid)
 	if b.casVBucket(vbid, vb, nil) {
 		return vb
 	}
