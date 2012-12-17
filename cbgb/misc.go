@@ -50,4 +50,3 @@ func MutationLogger(ch chan interface{}) {
 		}
 	}
 }
-

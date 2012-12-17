@@ -62,7 +62,6 @@ func TestSessionLoop(t *testing.T) {
 
 	rh := &reqHandler{}
 
-	req.Bytes()
 	sessionLoop(rwCloser{bytes.NewBuffer(req.Bytes())}, "test", rh)
 }
 
@@ -153,5 +152,4 @@ func TestBytesDecoder(t *testing.T) {
 			t.Errorf("Expected error unmarshaling %v, got %v", in, b)
 		}
 	}
-
 }
