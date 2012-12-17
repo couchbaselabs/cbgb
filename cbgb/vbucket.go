@@ -147,14 +147,14 @@ func (v *vbucket) Get(key []byte) *item {
 	return x.(*item)
 }
 
-func (v *vbucket) GetState() VBState {
+func (v *vbucket) GetVBState() VBState {
 	v.lock.Lock()
 	res := v.state
 	v.lock.Unlock()
 	return res
 }
 
-func (v *vbucket) SetState(newState VBState) (oldState VBState) {
+func (v *vbucket) SetVBState(newState VBState) (oldState VBState) {
 	v.lock.Lock()
 	oldState = v.state
 	v.state = newState
