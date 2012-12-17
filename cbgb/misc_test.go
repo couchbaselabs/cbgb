@@ -140,7 +140,7 @@ func TestNewBucket(t *testing.T) {
 
 func TestListener(t *testing.T) {
 	b := NewBucket()
-	l, err := StartMCServer("0.0.0.0:0", b)
+	l, err := StartServer("0.0.0.0:0", b)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
 	}
@@ -162,7 +162,7 @@ func TestListener(t *testing.T) {
 
 func TestListenerFail(t *testing.T) {
 	b := NewBucket()
-	l, err := StartMCServer("1.1.1.1:22", b)
+	l, err := StartServer("1.1.1.1:22", b)
 	if err == nil {
 		t.Fatalf("Error failing to listen: %v", l.Addr())
 	} else {

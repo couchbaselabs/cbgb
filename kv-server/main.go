@@ -21,7 +21,7 @@ func main() {
 	defaultBucket.CreateVBucket(0)
 	defaultBucket.SetVBState(0, cbgb.VBActive)
 
-	_, err := cbgb.StartMCServer(*addr, defaultBucket)
+	_, err := cbgb.StartServer(*addr, defaultBucket)
 	if err != nil {
 		log.Fatalf("Got an error:  %s", err)
 	}

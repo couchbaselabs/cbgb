@@ -202,7 +202,7 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 	}
 }
 
-func StartMCServer(addr string, defaultBucket *bucket) (net.Listener, error) {
+func StartServer(addr string, defaultBucket *bucket) (net.Listener, error) {
 	ls, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
