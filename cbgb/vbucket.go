@@ -154,10 +154,14 @@ func (v *vbucket) GetVBState() VBState {
 	return res
 }
 
-func (v *vbucket) SetVBState(newState VBState) (oldState VBState) {
+func (v *vbucket) SetVBState(newState VBState,
+	cb func(oldState VBState)) (oldState VBState) {
 	v.lock.Lock()
 	oldState = v.state
 	v.state = newState
+	if cb != nil {
+		cb(oldState) // The cb() in the lock is for race reduction.
+	}
 	v.lock.Unlock()
 	return
 }

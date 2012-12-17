@@ -86,12 +86,12 @@ func (b *bucket) destroyVBucket(vbid uint16) {
 	b.setVBucket(vbid, nil)
 }
 
-func (b *bucket) SetVBState(vbid uint16, to VBState) {
+func (b *bucket) SetVBState(vbid uint16, newState VBState) {
 	vb := b.getVBucket(vbid)
-	oldState := VBDead
 	if vb != nil {
-		oldState = vb.SetVBState(to)
+		vb.SetVBState(newState, func(oldState VBState) {
+			bc := vbucketChange{b, vbid, oldState, newState}
+			b.observer.Submit(bc)
+		})
 	}
-	bc := vbucketChange{b, vbid, oldState, to}
-	b.observer.Submit(bc)
 }
