@@ -138,6 +138,23 @@ func TestNewBucket(t *testing.T) {
 	}
 }
 
+func TestCreateDestroyVBucket(t *testing.T) {
+	nb := NewBucket()
+
+	if nb.CreateVBucket(300) == nil {
+		t.Fatalf("Expected successful CreateVBucket")
+	}
+	if nb.CreateVBucket(300) != nil {
+		t.Fatalf("Expected failed second CreateVBucket")
+	}
+	if !nb.destroyVBucket(300) {
+		t.Fatalf("Expected successful destroyVBucket")
+	}
+	if nb.destroyVBucket(300) {
+		t.Fatalf("Expected failed second destroyVBucket")
+	}
+}
+
 func TestListener(t *testing.T) {
 	b := NewBucket()
 	l, err := StartServer("0.0.0.0:0", b)

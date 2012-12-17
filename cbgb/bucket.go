@@ -71,27 +71,37 @@ func (b *bucket) getVBucket(vbid uint16) *vbucket {
 	return (*vbucket)(vbp)
 }
 
-func (b *bucket) setVBucket(vbid uint16, vb *vbucket) {
-	atomic.StorePointer(&b.vbuckets[vbid], unsafe.Pointer(vb))
+func (b *bucket) casVBucket(vbid uint16, vb *vbucket, vbPrev *vbucket) bool {
+	return atomic.CompareAndSwapPointer(&b.vbuckets[vbid],
+		unsafe.Pointer(vbPrev), unsafe.Pointer(vb))
 }
 
 func (b *bucket) CreateVBucket(vbid uint16) *vbucket {
 	vb := newVbucket(vbid)
-	b.setVBucket(vbid, vb)
-	return vb
+	if b.casVBucket(vbid, vb, nil) {
+		return vb
+	}
+	return nil
 }
 
-func (b *bucket) destroyVBucket(vbid uint16) {
-	b.SetVBState(vbid, VBDead)
-	b.setVBucket(vbid, nil)
+func (b *bucket) destroyVBucket(vbid uint16) bool {
+	vb := b.SetVBState(vbid, VBDead)
+	if vb != nil {
+		return b.casVBucket(vbid, nil, vb)
+	}
+	return false
 }
 
-func (b *bucket) SetVBState(vbid uint16, newState VBState) {
+func (b *bucket) SetVBState(vbid uint16, newState VBState) *vbucket {
 	vb := b.getVBucket(vbid)
 	if vb != nil {
 		vb.SetVBState(newState, func(oldState VBState) {
-			bc := vbucketChange{b, vbid, oldState, newState}
-			b.observer.Submit(bc)
+			if b.getVBucket(vbid) == vb {
+				b.observer.Submit(vbucketChange{b, vbid, oldState, newState})
+			} else {
+				vb = nil
+			}
 		})
 	}
+	return vb
 }
