@@ -84,12 +84,18 @@ func (b *bucket) CreateVBucket(vbid uint16) *vbucket {
 	return nil
 }
 
-func (b *bucket) destroyVBucket(vbid uint16) bool {
-	vb := b.SetVBState(vbid, VBDead)
+func (b *bucket) destroyVBucket(vbid uint16) (destroyed bool) {
+	destroyed = false
+	vb := b.getVBucket(vbid)
 	if vb != nil {
-		return b.casVBucket(vbid, nil, vb)
+		vb.SetVBState(VBDead, func(oldState VBState) {
+			if b.casVBucket(vbid, nil, vb) {
+				b.observer.Submit(vbucketChange{b, vbid, oldState, VBDead})
+				destroyed = true
+			}
+		})
 	}
-	return false
+	return
 }
 
 func (b *bucket) SetVBState(vbid uint16, newState VBState) *vbucket {
