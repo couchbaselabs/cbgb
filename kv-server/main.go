@@ -4,7 +4,7 @@ import (
 	"flag"
 	"log"
 
-	"github.com/couchbaselabs/cbgb/cbgb"
+	"github.com/couchbaselabs/cbgb"
 )
 
 var mutationLogCh = make(chan interface{})
