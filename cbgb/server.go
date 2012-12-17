@@ -123,7 +123,6 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 						m.vb)
 					continue
 				}
-
 			}
 			chpkt <- pkt
 		case <-ticker.C:
