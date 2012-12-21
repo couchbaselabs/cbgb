@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"sync"
 
 	"github.com/dustin/gomemcached"
 	"github.com/petar/GoLLRB/llrb"
@@ -68,6 +67,24 @@ func (t *VBConfig) Equal(u *VBConfig) bool {
 		bytes.Equal(t.MaxKeyExclusive, u.MaxKeyExclusive)
 }
 
+type vbreq struct {
+	w     io.Writer
+	req   *gomemcached.MCRequest
+	resch chan *gomemcached.MCResponse
+}
+
+type vbstatereq struct {
+	cb       func(VBState)
+	newState VBState
+	update   bool
+	res      chan VBState // previous state
+}
+
+type vbgetreq struct {
+	i   *item
+	res chan *item
+}
+
 type vbucket struct {
 	parent   *bucket
 	items    *llrb.Tree
@@ -78,7 +95,9 @@ type vbucket struct {
 	state    VBState
 	config   *VBConfig
 	stats    Stats
-	lock     sync.Mutex
+	ch       chan vbreq
+	statech  chan vbstatereq
+	getch    chan vbgetreq
 }
 
 // Message sent on object change
@@ -125,58 +144,60 @@ var dispatchTable = [256]dispatchFun{
 }
 
 func newVBucket(parent *bucket, vbid uint16) *vbucket {
-	return &vbucket{
+	rv := &vbucket{
 		parent:   parent,
 		items:    llrb.New(KeyLess),
 		changes:  llrb.New(CASLess),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
 		state:    VBDead,
+		ch:       make(chan vbreq),
+		statech:  make(chan vbstatereq),
+		getch:    make(chan vbgetreq),
 	}
+
+	go rv.service()
+
+	return rv
 }
 
 func (v *vbucket) Close() error {
+	close(v.ch)
 	return v.observer.Close()
 }
 
-func (v *vbucket) Get(key []byte) *item {
-	v.lock.Lock()
-	x := v.items.Get(&item{key: key})
-	v.lock.Unlock()
-	if x == nil {
-		return nil
-	}
-	return x.(*item)
+func (v *vbucket) get(key []byte) *item {
+	req := vbgetreq{&item{key: key}, make(chan *item, 1)}
+	v.getch <- req
+	return <-req.res
 }
 
 func (v *vbucket) GetVBState() VBState {
-	v.lock.Lock()
-	res := v.state
-	v.lock.Unlock()
-	return res
+	req := vbstatereq{update: false, res: make(chan VBState)}
+	v.statech <- req
+	return <-req.res
 }
 
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
-	v.lock.Lock()
-	oldState = v.state
-	v.state = newState
-	if cb != nil {
-		cb(oldState) // The cb() in the lock is for race reduction.
-	}
-	v.lock.Unlock()
-	return
+	req := vbstatereq{cb, newState, true, make(chan VBState)}
+	v.statech <- req
+	return <-req.res
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	v.lock.Lock()
 	if v.state == VBActive {
 		dest.Add(&v.stats)
 	}
-	v.lock.Unlock()
 }
 
 func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	resch := make(chan *gomemcached.MCResponse, 1)
+	v.ch <- vbreq{w, req, resch}
+	return <-resch
+}
+
+func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	f := dispatchTable[req.Opcode]
 	if f == nil {
 		return &gomemcached.MCResponse{
@@ -187,8 +208,6 @@ func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	}
 
 	res, msg := func() (*gomemcached.MCResponse, *mutation) {
-		v.lock.Lock()
-		defer v.lock.Unlock()
 		v.stats.Ops++
 		return f(v, w, req)
 	}()
@@ -198,6 +217,37 @@ func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	}
 
 	return res
+}
+
+func (v *vbucket) service() {
+	for {
+		select {
+		case req, ok := <-v.ch:
+			if !ok {
+				return
+			}
+			res := v.dispatch(req.w, req.req)
+			req.resch <- res
+
+		case statereq := <-v.statech:
+			oldState := v.state
+			if statereq.update {
+				v.state = statereq.newState
+				if statereq.cb != nil {
+					statereq.cb(oldState)
+				}
+			}
+			statereq.res <- oldState
+
+		case getreq := <-v.getch:
+			x := v.items.Get(getreq.i)
+			if x == nil {
+				getreq.res <- nil
+			} else {
+				getreq.res <- x.(*item)
+			}
+		}
+	}
 }
 
 func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
