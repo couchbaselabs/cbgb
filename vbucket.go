@@ -162,7 +162,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 }
 
 func (v *vbucket) Close() error {
-	close(v.ch)
+	close(v.statech)
 	return v.observer.Close()
 }
 
@@ -222,14 +222,14 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 func (v *vbucket) service() {
 	for {
 		select {
-		case req, ok := <-v.ch:
-			if !ok {
-				return
-			}
+		case req := <-v.ch:
 			res := v.dispatch(req.w, req.req)
 			req.resch <- res
 
-		case statereq := <-v.statech:
+		case statereq, ok := <-v.statech:
+			if !ok {
+				return
+			}
 			oldState := v.state
 			if statereq.update {
 				v.state = statereq.newState
