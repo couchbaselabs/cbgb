@@ -36,8 +36,6 @@ func TestMutationInvalid(t *testing.T) {
 	defer func() {
 		if x := recover(); x == nil {
 			t.Fatalf("Expected panic, didn't get it")
-		} else {
-			t.Logf("Got expected panic in invalid mutation: %v", x)
 		}
 	}()
 
@@ -71,7 +69,6 @@ func TestListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
 	}
-	t.Logf("Test server listening to %v", l.Addr())
 
 	// Just to be extra ridiculous, dial it.
 	c, err := net.Dial("tcp", l.Addr().String())
@@ -92,8 +89,6 @@ func TestListenerFail(t *testing.T) {
 	l, err := StartServer("1.1.1.1:22", b)
 	if err == nil {
 		t.Fatalf("Error failing to listen: %v", l.Addr())
-	} else {
-		t.Logf("Listen failed expectedly:  %v", err)
 	}
 }
 
