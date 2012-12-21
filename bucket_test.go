@@ -131,3 +131,64 @@ func TestVBString(t *testing.T) {
 		}
 	}
 }
+
+func TestVBSuspend(t *testing.T) {
+	nb := NewBucket()
+
+	if nb.CreateVBucket(300) == nil {
+		t.Fatalf("Expected successful CreateVBucket")
+	}
+	defer nb.destroyVBucket(300)
+
+	vb := nb.getVBucket(300)
+	vb.SetVBState(VBActive, nil)
+
+	// Verify we can get a thing
+	x := vb.get([]byte{'x'})
+	if x != nil {
+		t.Fatalf("Expected nil in x req, got %v", x)
+	}
+
+	// Verify the current state
+	st := vb.GetVBState()
+	if st != VBActive {
+		t.Fatalf("Expected state active, got %v", st)
+	}
+
+	// Now suspend it.  Only state changes can occur and be reflected.
+	vb.Suspend()
+
+	// At this point, we're going to asynchronously try to grab a
+	// value It should hang until we resume the vbucket state.
+	ch := make(chan *item)
+	go func() { ch <- vb.get([]byte{'x'}) }()
+
+	// Verify there is no item ready.
+	select {
+	default:
+	case x = <-ch:
+		t.Fatalf("Expected no item ready, got %v", x)
+	}
+
+	// However, state changes are fine.
+	vb.SetVBState(VBReplica, nil)
+	st = vb.GetVBState()
+	if st != VBReplica {
+		t.Fatalf("Expected state replica, got %v", st)
+	}
+
+	// We've seen messages processed, but we're still not getting our value.
+	select {
+	default:
+	case x = <-ch:
+		t.Fatalf("Expected no item ready, got %v", x)
+	}
+
+	// But once we resume our vbucket, data should be pretty much immediately ready.
+	vb.Resume()
+
+	x = <-ch
+	if x != nil {
+		t.Fatalf("Expected nil in x req, got %v", x)
+	}
+}

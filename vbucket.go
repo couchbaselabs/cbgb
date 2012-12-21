@@ -74,10 +74,11 @@ type vbreq struct {
 }
 
 type vbstatereq struct {
-	cb       func(VBState)
-	newState VBState
-	update   bool
-	res      chan VBState // previous state
+	cb        func(VBState)
+	newState  VBState
+	update    bool
+	suspended *bool        // trinary  (yes, no, don't care)
+	res       chan VBState // previous state
 }
 
 type vbgetreq struct {
@@ -180,7 +181,7 @@ func (v *vbucket) GetVBState() VBState {
 
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
-	req := vbstatereq{cb, newState, true, make(chan VBState)}
+	req := vbstatereq{cb, newState, true, nil, make(chan VBState)}
 	v.statech <- req
 	return <-req.res
 }
@@ -219,6 +220,40 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	return res
 }
 
+func (v *vbucket) Suspend() {
+	sus := true
+	req := vbstatereq{suspended: &sus, res: make(chan VBState)}
+	v.statech <- req
+	<-req.res
+}
+
+func (v *vbucket) Resume() {
+	sus := false
+	req := vbstatereq{suspended: &sus, res: make(chan VBState)}
+	v.statech <- req
+	<-req.res
+}
+
+func (v *vbucket) suspended() {
+	for st := range v.statech {
+		v.changeState(st)
+		if st.suspended != nil && !(*st.suspended) {
+			return
+		}
+	}
+}
+
+func (v *vbucket) changeState(req vbstatereq) {
+	oldState := v.state
+	if req.update {
+		v.state = req.newState
+		if req.cb != nil {
+			req.cb(oldState)
+		}
+	}
+	req.res <- oldState
+}
+
 func (v *vbucket) service() {
 	for {
 		select {
@@ -230,14 +265,10 @@ func (v *vbucket) service() {
 			if !ok {
 				return
 			}
-			oldState := v.state
-			if statereq.update {
-				v.state = statereq.newState
-				if statereq.cb != nil {
-					statereq.cb(oldState)
-				}
+			v.changeState(statereq)
+			if statereq.suspended != nil && *statereq.suspended {
+				v.suspended()
 			}
-			statereq.res <- oldState
 
 		case getreq := <-v.getch:
 			x := v.items.Get(getreq.i)
