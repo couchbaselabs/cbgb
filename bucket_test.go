@@ -31,7 +31,7 @@ func TestBucketNotifications(t *testing.T) {
 	b.CreateVBucket(3)
 	b.SetVBState(3, VBActive)
 	b.destroyVBucket(3)
-	b.observer.Unregister(bch)
+	b.Observer().Unregister(bch)
 	b.destroyVBucket(0)
 
 	tests := []struct {
