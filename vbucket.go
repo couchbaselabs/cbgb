@@ -599,17 +599,14 @@ func vbSplitRange(v *vbucket, w io.Writer,
 }
 
 func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
-	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
-
 	// Spliting to just 1 new destination vbucket is allowed.  It's
 	// equivalent to re-numbering a vbucket with a different
 	// vbucket-id.
 	if len(sr.Splits) < 1 {
-		res = &gomemcached.MCResponse{
+		return &gomemcached.MCResponse{
 			Status: gomemcached.EINVAL,
 			Body:   []byte("Error need at least 1 splits"),
 		}
-		return
 	}
 
 	// Copy the splits, but have one more entry to represent current
@@ -628,26 +625,30 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 	max := -1
 	for _, split := range splits {
 		if split.VBucketId < 0 || split.VBucketId >= MAX_VBUCKET {
-			res = &gomemcached.MCResponse{
+			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("vbucket id %v out of range",
 					split.VBucketId)),
 			}
-			return
 		}
 		if split.VBucketId <= max { // Checks for duplicate vbucket-id's.
-			res = &gomemcached.MCResponse{
+			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("vbucket id %v is duplicate",
 					split.VBucketId)),
 			}
-			return
 		}
 		max = split.VBucketId
 	}
 
 	// TODO: Validate that split ranges are non-overlapping and fully
 	// covering v's existing range.
+
+	return v.splitRangeActual(splits)
+}
+
+func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.MCResponse) {
+	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 
 	src := vbucket{ // Snapshot initial vbucket fields.
 		items:   v.items,
@@ -694,24 +695,16 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 				if vbLocked.state == VBDead {
 					transferSplits(splitIdx + 1)
 					if res.Status == gomemcached.SUCCESS {
-						// We take over and share the original source
-						// v's items and state amongst all split
-						// destination vbuckets.  That is, instead of
-						// performing tree copies right now, we'll
-						// lazily rely on min/max key filtering on
-						// future accesses, and assuming that future
-						// takeovers will anyways move many of the
-						// new destination vbuckets away.
-						vbLocked.items = treeCopy(src.items, llrb.New(KeyLess),
+						vbLocked.items = filteredTreeCopy(src.items, llrb.New(KeyLess),
 							src.items.Min(), // TODO: inefficient.
 							splits[splitIdx].MinKeyInclusive,
 							splits[splitIdx].MaxKeyExclusive)
-						vbLocked.changes = treeCopy(src.changes, llrb.New(CASLess),
+						vbLocked.changes = filteredTreeCopy(src.changes, llrb.New(CASLess),
 							src.changes.Min(), // TODO: inefficient.
 							splits[splitIdx].MinKeyInclusive,
 							splits[splitIdx].MaxKeyExclusive)
 						vbLocked.cas = src.cas
-						vbLocked.state = src.state
+						vbLocked.state = src.state // TODO: poke observers.
 						vbLocked.config = &VBConfig{
 							MinKeyInclusive: splits[splitIdx].MinKeyInclusive,
 							MaxKeyExclusive: splits[splitIdx].MaxKeyExclusive,
@@ -722,7 +715,7 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 						Status: gomemcached.EINVAL,
 						Body: []byte(fmt.Sprintf("Error split-range, vbucket: %v,"+
 							" state not initially dead or was incorrect,"+
-							" was: %v, req: %v", vbid, vbLocked.state, sr)),
+							" was: %v, req: %v", vbid, vbLocked.state, splits)),
 					}
 				}
 			})
@@ -730,8 +723,8 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("Error split-range,"+
-					" tried to create/get vbucket: %v, req %v",
-					vbid, sr)),
+					" tried to create/get vbucket: %v, req: %v",
+					vbid, splits)),
 			}
 		}
 	}
@@ -740,7 +733,7 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 	return
 }
 
-func treeCopy(src *llrb.Tree, dst *llrb.Tree, minItem llrb.Item,
+func filteredTreeCopy(src *llrb.Tree, dst *llrb.Tree, minItem llrb.Item,
 	minKeyInclusive []byte, maxKeyExclusive []byte) *llrb.Tree {
 	visitor := func(x llrb.Item) bool {
 		i := x.(*item)
