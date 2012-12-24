@@ -92,7 +92,7 @@ type vbucket struct {
 	stats     Stats
 	suspended bool
 	ch        chan vbreq
-	ich       chan interface{} // Channel of interface{}-based requests.
+	vch       chan vbvisitreq
 }
 
 // Message sent on object change
@@ -149,7 +149,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 		vbid:     vbid,
 		state:    VBDead,
 		ch:       make(chan vbreq),
-		ich:      make(chan interface{}),
+		vch:      make(chan vbvisitreq),
 	}
 
 	go rv.service()
@@ -158,7 +158,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 }
 
 func (v *vbucket) Close() error {
-	close(v.ich)
+	close(v.vch)
 	return v.observer.Close()
 }
 
@@ -237,24 +237,21 @@ func (v *vbucket) Resume() {
 
 func (v *vbucket) Visit(cb func(*vbucket)) {
 	req := vbvisitreq{cb: cb, res: make(chan bool)}
-	v.ich <- req
+	v.vch <- req
 	<-req.res
 }
 
 func (v *vbucket) service() {
 	for {
 		select {
-		case i, ok := <-v.ich:
+		case vr, ok := <-v.vch:
 			if !ok {
 				return
 			}
-			switch o := i.(type) {
-			case vbvisitreq:
-				o.cb(v)
-				close(o.res)
-				if v.suspended {
-					v.serviceSuspended()
-				}
+			vr.cb(v)
+			close(vr.res)
+			if v.suspended {
+				v.serviceSuspended()
 			}
 
 		case req := <-v.ch:
@@ -265,14 +262,11 @@ func (v *vbucket) service() {
 }
 
 func (v *vbucket) serviceSuspended() {
-	for i := range v.ich {
-		switch o := i.(type) {
-		case vbvisitreq:
-			o.cb(v)
-			close(o.res)
-			if !v.suspended {
-				return
-			}
+	for vr := range v.vch {
+		vr.cb(v)
+		close(vr.res)
+		if !v.suspended {
+			return
 		}
 	}
 }
