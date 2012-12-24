@@ -50,6 +50,12 @@ func (s *Stats) Add(in *Stats) {
 	s.ErrNotMyRange += in.ErrNotMyRange
 }
 
+func (s *Stats) Copy() *Stats {
+	res := &Stats{}
+	res.Add(s)
+	return res
+}
+
 func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"items", strconv.FormatUint(s.Items, 10)}
 	ch <- statItem{"ops", strconv.FormatUint(s.Ops, 10)}
