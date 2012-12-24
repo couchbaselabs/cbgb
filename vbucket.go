@@ -83,11 +83,6 @@ type vbstatereq struct {
 	res       chan VBState // previous state
 }
 
-type vbstatsreq struct {
-	key string
-	res chan *Stats
-}
-
 type vbvisitreq struct {
 	cb  func(*vbucket)
 	res chan bool
@@ -196,11 +191,14 @@ func (v *vbucket) SetVBState(newState VBState,
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	req := vbstatsreq{key: key, res: make(chan *Stats)}
-	v.ich <- req
-	for s := range req.res {
-		dest.Add(s)
+	cb := func(vbLocked *vbucket) {
+		if v.state == VBActive { // TODO: handle key
+			dest.Add(&vbLocked.stats)
+		}
 	}
+	req := vbvisitreq{cb: cb, res: make(chan bool)}
+	v.ich <- req
+	<-req.res
 }
 
 func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
@@ -277,11 +275,6 @@ func (v *vbucket) service() {
 				if o.suspended != nil && *o.suspended {
 					v.serviceSuspended()
 				}
-			case vbstatsreq:
-				if v.state == VBActive { // TODO: handle o.key
-					o.res <- v.stats.Copy()
-				}
-				close(o.res)
 			case vbvisitreq:
 				o.cb(v)
 				close(o.res)
@@ -298,11 +291,6 @@ func (v *vbucket) serviceSuspended() {
 			if o.suspended != nil && !(*o.suspended) {
 				return
 			}
-		case vbstatsreq:
-			if v.state == VBActive { // TODO: handle o.key
-				o.res <- v.stats.Copy()
-			}
-			close(o.res)
 		case vbvisitreq:
 			o.cb(v)
 			close(o.res)
