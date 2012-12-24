@@ -3,18 +3,11 @@ package cbgb
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
-	"log"
 	"net"
 	"testing"
 
 	"github.com/dustin/gomemcached"
 )
-
-// Don't do any normal logging while running tests.
-func init() {
-	log.SetOutput(ioutil.Discard)
-}
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {

@@ -81,11 +81,6 @@ type vbstatereq struct {
 	res       chan VBState // previous state
 }
 
-type vbgetreq struct {
-	i   *item
-	res chan *item
-}
-
 type vbucket struct {
 	parent   *bucket
 	items    *llrb.Tree
@@ -98,7 +93,6 @@ type vbucket struct {
 	stats    Stats
 	ch       chan vbreq
 	statech  chan vbstatereq
-	getch    chan vbgetreq
 }
 
 // Message sent on object change
@@ -154,7 +148,6 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 		state:    VBDead,
 		ch:       make(chan vbreq),
 		statech:  make(chan vbstatereq),
-		getch:    make(chan vbgetreq),
 	}
 
 	go rv.service()
@@ -167,10 +160,12 @@ func (v *vbucket) Close() error {
 	return v.observer.Close()
 }
 
-func (v *vbucket) get(key []byte) *item {
-	req := vbgetreq{&item{key: key}, make(chan *item, 1)}
-	v.getch <- req
-	return <-req.res
+func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
+	return v.Dispatch(nil, &gomemcached.MCRequest{
+		Opcode:  gomemcached.GET,
+		Key:     key,
+		VBucket: v.vbid,
+	})
 }
 
 func (v *vbucket) GetVBState() VBState {
@@ -209,7 +204,10 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	}
 
 	res, msg := func() (*gomemcached.MCResponse, *mutation) {
-		v.stats.Ops++
+		if w != nil {
+			v.stats.Ops++
+		}
+
 		return f(v, w, req)
 	}()
 
@@ -268,14 +266,6 @@ func (v *vbucket) service() {
 			v.changeState(statereq)
 			if statereq.suspended != nil && *statereq.suspended {
 				v.suspended()
-			}
-
-		case getreq := <-v.getch:
-			x := v.items.Get(getreq.i)
-			if x == nil {
-				getreq.res <- nil
-			} else {
-				getreq.res <- x.(*item)
 			}
 		}
 	}
@@ -356,7 +346,10 @@ func vbSet(v *vbucket, w io.Writer,
 
 func vbGet(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
-	v.stats.Gets++
+	// Only update stats for requests that came from the "outside".
+	if w != nil {
+		v.stats.Gets++
+	}
 
 	if rangeErr := v.checkRange(req); rangeErr != nil {
 		return rangeErr, nil
@@ -364,7 +357,9 @@ func vbGet(v *vbucket, w io.Writer,
 
 	x := v.items.Get(&item{key: req.Key})
 	if x == nil {
-		v.stats.GetMisses++
+		if w != nil {
+			v.stats.GetMisses++
+		}
 		if req.Opcode.IsQuiet() {
 			return nil, nil
 		}
@@ -381,7 +376,9 @@ func vbGet(v *vbucket, w io.Writer,
 	}
 	// TODO: Extras!
 
-	v.stats.ValueBytesOutgoing += uint64(len(i.data))
+	if w != nil {
+		v.stats.ValueBytesOutgoing += uint64(len(i.data))
+	}
 
 	wantsKey := (req.Opcode == gomemcached.GETK || req.Opcode == gomemcached.GETKQ)
 	if wantsKey {

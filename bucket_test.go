@@ -1,16 +1,11 @@
 package cbgb
 
 import (
-	"io/ioutil"
-	"log"
 	"testing"
 	"time"
-)
 
-// Don't do any normal logging while running tests.
-func init() {
-	log.SetOutput(ioutil.Discard)
-}
+	"github.com/dustin/gomemcached"
+)
 
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
@@ -144,9 +139,9 @@ func TestVBSuspend(t *testing.T) {
 	vb.SetVBState(VBActive, nil)
 
 	// Verify we can get a thing
-	x := vb.get([]byte{'x'})
-	if x != nil {
-		t.Fatalf("Expected nil in x req, got %v", x)
+	r := vb.get([]byte{'x'})
+	if r.Status == gomemcached.SUCCESS {
+		t.Fatalf("Expected nil in x req, got %v", r)
 	}
 
 	// Verify the current state
@@ -159,11 +154,19 @@ func TestVBSuspend(t *testing.T) {
 	vb.Suspend()
 
 	// At this point, we're going to asynchronously try to grab a
-	// value It should hang until we resume the vbucket state.
+	// value. It should hang until we resume the vbucket state.
 	ch := make(chan *item)
-	go func() { ch <- vb.get([]byte{'x'}) }()
+	go func() {
+		r := vb.get([]byte{'x'})
+		if r.Status == gomemcached.SUCCESS {
+			ch <- &item{key: []byte{'x'}, data: r.Body}
+		} else {
+			ch <- nil
+		}
+	}()
 
 	// Verify there is no item ready.
+	var x *item
 	select {
 	default:
 	case x = <-ch:

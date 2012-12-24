@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"io/ioutil"
+	"log"
 	"reflect"
 	"strconv"
 	"sync"
@@ -12,6 +13,11 @@ import (
 
 	"github.com/dustin/gomemcached"
 )
+
+// Don't do any normal logging while running tests.
+func init() {
+    log.SetOutput(ioutil.Discard)
+}
 
 func TestBasicOps(t *testing.T) {
 	empty := []byte{}
@@ -81,7 +87,7 @@ func TestBasicOps(t *testing.T) {
 			Body:    []byte(x.val),
 		}
 
-		res := rh.HandleMessage(nil, req)
+		res := rh.HandleMessage(ioutil.Discard, req)
 
 		if res == nil && x.expStatus == ignored {
 			// this was a "normal" quiet command
@@ -424,6 +430,7 @@ func TestTapChanges(t *testing.T) {
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.SET,
 		Key:    testKey,
+		Body:   []byte("hi"),
 	}
 
 	// Let tap settle.
