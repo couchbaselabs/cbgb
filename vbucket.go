@@ -232,15 +232,6 @@ func (v *vbucket) Resume() {
 	<-req.res
 }
 
-func (v *vbucket) suspended() {
-	for st := range v.statech {
-		v.changeState(st)
-		if st.suspended != nil && !(*st.suspended) {
-			return
-		}
-	}
-}
-
 func (v *vbucket) changeState(req vbstatereq) {
 	oldState := v.state
 	if req.update {
@@ -265,8 +256,17 @@ func (v *vbucket) service() {
 			}
 			v.changeState(statereq)
 			if statereq.suspended != nil && *statereq.suspended {
-				v.suspended()
+				v.serviceSuspended()
 			}
+		}
+	}
+}
+
+func (v *vbucket) serviceSuspended() {
+	for st := range v.statech {
+		v.changeState(st)
+		if st.suspended != nil && !(*st.suspended) {
+			return
 		}
 	}
 }
