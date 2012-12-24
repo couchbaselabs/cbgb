@@ -3,4 +3,5 @@
 *.test
 index-server/index-server
 kv-server/kv-server
+tmp
 _*
