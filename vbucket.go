@@ -265,6 +265,8 @@ func (v *vbucket) service() {
 			req.resch <- res
 		}
 	}
+
+	// TODO: shall we unregister from bucket if we reach here?
 }
 
 func (v *vbucket) serviceSuspended() {
@@ -642,13 +644,6 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 
-	src := vbucket{ // Snapshot initial vbucket fields.
-		items:   v.items,
-		changes: v.changes,
-		cas:     v.cas,
-		state:   v.state,
-	}
-
 	var transferSplits func(int)
 	transferSplits = func(splitIdx int) {
 		log.Printf("transferSplits %v", splitIdx)
@@ -665,8 +660,10 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 		vbid := uint16(splits[splitIdx].VBucketId)
 		var vb *vbucket
+		created := false
 		if vbid != v.vbid {
 			vb = v.parent.CreateVBucket(vbid)
+			created = true
 		}
 		if vb == nil {
 			vb = v.parent.getVBucket(vbid)
@@ -676,20 +673,10 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 				if vbLocked.state == VBDead {
 					transferSplits(splitIdx + 1)
 					if res.Status == gomemcached.SUCCESS {
-						vbLocked.items = filteredTreeCopy(src.items, llrb.New(KeyLess),
-							src.items.Min(), // TODO: inefficient.
+						v.rangeCopyTo(vbLocked,
 							splits[splitIdx].MinKeyInclusive,
 							splits[splitIdx].MaxKeyExclusive)
-						vbLocked.changes = filteredTreeCopy(src.changes, llrb.New(CASLess),
-							src.changes.Min(), // TODO: inefficient.
-							splits[splitIdx].MinKeyInclusive,
-							splits[splitIdx].MaxKeyExclusive)
-						vbLocked.cas = src.cas
-						vbLocked.state = src.state // TODO: poke observers.
-						vbLocked.config = &VBConfig{
-							MinKeyInclusive: splits[splitIdx].MinKeyInclusive,
-							MaxKeyExclusive: splits[splitIdx].MaxKeyExclusive,
-						}
+						// TODO: poke observers on vbLocked's changed state.
 					}
 				} else {
 					res = &gomemcached.MCResponse{
@@ -700,6 +687,9 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 					}
 				}
 			})
+			if res.Status != gomemcached.SUCCESS && created {
+				// TODO: Cleanup the vbucket that we created.
+			}
 		} else {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
@@ -720,7 +710,24 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 	return
 }
 
-func filteredTreeCopy(src *llrb.Tree, dst *llrb.Tree, minItem llrb.Item,
+func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
+	dst.items = treeRangeCopy(v.items, llrb.New(KeyLess),
+		v.items.Min(), // TODO: inefficient.
+		minKeyInclusive,
+		maxKeyExclusive)
+	dst.changes = treeRangeCopy(v.changes, llrb.New(CASLess),
+		v.changes.Min(), // TODO: inefficient.
+		minKeyInclusive,
+		maxKeyExclusive)
+	dst.cas = v.cas
+	dst.state = v.state
+	dst.config = &VBConfig{
+		MinKeyInclusive: minKeyInclusive,
+		MaxKeyExclusive: maxKeyExclusive,
+	}
+}
+
+func treeRangeCopy(src *llrb.Tree, dst *llrb.Tree, minItem llrb.Item,
 	minKeyInclusive []byte, maxKeyExclusive []byte) *llrb.Tree {
 	visitor := func(x llrb.Item) bool {
 		i := x.(*item)
