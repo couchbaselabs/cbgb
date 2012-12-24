@@ -16,7 +16,7 @@ import (
 
 // Don't do any normal logging while running tests.
 func init() {
-    log.SetOutput(ioutil.Discard)
+	log.SetOutput(ioutil.Discard)
 }
 
 func TestBasicOps(t *testing.T) {
