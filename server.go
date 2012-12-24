@@ -110,6 +110,9 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 
 				vb := rh.currentBucket.getVBucket(m.vb)
 				if vb != nil {
+					// TODO: if vb is suspended, the get() will freeze
+					// the TAP stream until vb is resumed; that may be
+					// or may not be what we want.
 					res := vb.get(m.key)
 					if res.Status != gomemcached.SUCCESS {
 						log.Printf("Tapped a missing item, skipping: %s",
