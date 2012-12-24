@@ -136,8 +136,14 @@ var dispatchTable = [256]dispatchFun{
 	// TODO: Move new command codes to gomemcached one day.
 	GET_VBUCKET_CONFIG: vbGetConfig,
 	SET_VBUCKET_CONFIG: vbSetConfig,
+}
 
-	SPLIT_RANGE: vbSplitRange,
+func init() {
+	// This handler references the initialized dispatch table
+	// cyclically, so I'm initializing this particular handler
+	// slightly later to break the cycle.  A refactoring might
+	// make this unnecessary.
+	dispatchTable[SPLIT_RANGE] = vbSplitRange
 }
 
 func newVBucket(parent *bucket, vbid uint16) *vbucket {
