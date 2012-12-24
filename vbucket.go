@@ -244,10 +244,6 @@ func (v *vbucket) Visit(cb func(*vbucket)) {
 func (v *vbucket) service() {
 	for {
 		select {
-		case req := <-v.ch:
-			res := v.dispatch(req.w, req.req)
-			req.resch <- res
-
 		case i, ok := <-v.ich:
 			if !ok {
 				return
@@ -260,6 +256,10 @@ func (v *vbucket) service() {
 					v.serviceSuspended()
 				}
 			}
+
+		case req := <-v.ch:
+			res := v.dispatch(req.w, req.req)
+			req.resch <- res
 		}
 	}
 }
