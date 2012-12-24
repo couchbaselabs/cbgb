@@ -203,18 +203,13 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 		}
 	}
 
-	res, msg := func() (*gomemcached.MCResponse, *mutation) {
-		if w != nil {
-			v.stats.Ops++
-		}
-
-		return f(v, w, req)
-	}()
-
+	if w != nil {
+		v.stats.Ops++
+	}
+	res, msg := f(v, w, req)
 	if msg != nil {
 		v.observer.Submit(*msg)
 	}
-
 	return res
 }
 
