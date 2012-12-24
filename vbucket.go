@@ -75,31 +75,24 @@ type vbreq struct {
 	resch chan *gomemcached.MCResponse
 }
 
-type vbstatereq struct {
-	cb        func(VBState)
-	newState  VBState
-	update    bool
-	suspended *bool        // trinary  (yes, no, don't care)
-	res       chan VBState // previous state
-}
-
 type vbvisitreq struct {
 	cb  func(*vbucket)
 	res chan bool
 }
 
 type vbucket struct {
-	parent   *bucket
-	items    *llrb.Tree
-	changes  *llrb.Tree
-	cas      uint64
-	observer *broadcaster
-	vbid     uint16
-	state    VBState
-	config   *VBConfig
-	stats    Stats
-	ch       chan vbreq
-	ich      chan interface{} // Channel of interface{}-based requests.
+	parent    *bucket
+	items     *llrb.Tree
+	changes   *llrb.Tree
+	cas       uint64
+	observer  *broadcaster
+	vbid      uint16
+	state     VBState
+	config    *VBConfig
+	stats     Stats
+	suspended bool
+	ch        chan vbreq
+	ich       chan interface{} // Channel of interface{}-based requests.
 }
 
 // Message sent on object change
@@ -177,17 +170,23 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 	})
 }
 
-func (v *vbucket) GetVBState() VBState {
-	req := vbstatereq{update: false, res: make(chan VBState)}
-	v.ich <- req
-	return <-req.res
+func (v *vbucket) GetVBState() (res VBState) {
+	v.Visit(func(vbLocked *vbucket) {
+		res = vbLocked.state
+	})
+	return
 }
 
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
-	req := vbstatereq{cb, newState, true, nil, make(chan VBState)}
-	v.ich <- req
-	return <-req.res
+	v.Visit(func(vbLocked *vbucket) {
+		oldState = vbLocked.state
+		vbLocked.state = newState
+		if cb != nil {
+			cb(oldState)
+		}
+	})
+	return
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
@@ -225,34 +224,21 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 }
 
 func (v *vbucket) Suspend() {
-	sus := true
-	req := vbstatereq{suspended: &sus, res: make(chan VBState)}
-	v.ich <- req
-	<-req.res
+	v.Visit(func(vbLocked *vbucket) {
+		vbLocked.suspended = true
+	})
 }
 
 func (v *vbucket) Resume() {
-	sus := false
-	req := vbstatereq{suspended: &sus, res: make(chan VBState)}
-	v.ich <- req
-	<-req.res
+	v.Visit(func(vbLocked *vbucket) {
+		vbLocked.suspended = false
+	})
 }
 
 func (v *vbucket) Visit(cb func(*vbucket)) {
 	req := vbvisitreq{cb: cb, res: make(chan bool)}
 	v.ich <- req
 	<-req.res
-}
-
-func (v *vbucket) changeState(req vbstatereq) {
-	oldState := v.state
-	if req.update {
-		v.state = req.newState
-		if req.cb != nil {
-			req.cb(oldState)
-		}
-	}
-	req.res <- oldState
 }
 
 func (v *vbucket) service() {
@@ -267,14 +253,12 @@ func (v *vbucket) service() {
 				return
 			}
 			switch o := i.(type) {
-			case vbstatereq:
-				v.changeState(o)
-				if o.suspended != nil && *o.suspended {
-					v.serviceSuspended()
-				}
 			case vbvisitreq:
 				o.cb(v)
 				close(o.res)
+				if v.suspended {
+					v.serviceSuspended()
+				}
 			}
 		}
 	}
@@ -283,14 +267,12 @@ func (v *vbucket) service() {
 func (v *vbucket) serviceSuspended() {
 	for i := range v.ich {
 		switch o := i.(type) {
-		case vbstatereq:
-			v.changeState(o)
-			if o.suspended != nil && !(*o.suspended) {
-				return
-			}
 		case vbvisitreq:
 			o.cb(v)
 			close(o.res)
+			if !v.suspended {
+				return
+			}
 		}
 	}
 }
