@@ -609,21 +609,13 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 		}
 	}
 
-	// Copy the splits, but have one more entry to represent current
-	// vbucket v, so that v also gets sorted.  We sort by vbucket-id's
-	// so we can easily check for duplicate vbucket-id's and so that
-	// our upcoming "lock" acquisitions will avoid deadlocking.
-	splits := make([]VBSplitRangePart, len(sr.Splits)+1)
-	for i, v := range sr.Splits {
-		splits[i] = v
-	}
-	splits[len(sr.Splits)] = VBSplitRangePart{VBucketId: int(v.vbid)}
-
-	sort.Sort(VBSplitRangeParts(splits))
+	// Sort the splits by vbucket-id so that duplicate checks are easy
+	// and so that our upcoming "lock" visits will avoid deadlocking.
+	sort.Sort(VBSplitRangeParts(sr.Splits))
 
 	// Validate the splits.
 	max := -1
-	for _, split := range splits {
+	for _, split := range sr.Splits {
 		if split.VBucketId < 0 || split.VBucketId >= MAX_VBUCKET {
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
@@ -631,7 +623,7 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 					split.VBucketId)),
 			}
 		}
-		if split.VBucketId <= max { // Checks for duplicate vbucket-id's.
+		if split.VBucketId <= max || uint16(split.VBucketId) == v.vbid {
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("vbucket id %v is duplicate",
@@ -644,7 +636,7 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 	// TODO: Validate that split ranges are non-overlapping and fully
 	// covering v's existing range.
 
-	return v.splitRangeActual(splits)
+	return v.splitRangeActual(sr.Splits)
 }
 
 func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.MCResponse) {
@@ -672,17 +664,6 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 		}
 
 		vbid := uint16(splits[splitIdx].VBucketId)
-		if vbid == v.vbid {
-			transferSplits(splitIdx + 1)
-			if res.Status == gomemcached.SUCCESS {
-				v.items = llrb.New(KeyLess)
-				v.changes = llrb.New(CASLess)
-				v.state = VBDead
-				v.config = &VBConfig{}
-			}
-			return
-		}
-
 		var vb *vbucket
 		if vbid != v.vbid {
 			vb = v.parent.CreateVBucket(vbid)
@@ -730,6 +711,12 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 	}
 
 	transferSplits(0)
+	if res.Status == gomemcached.SUCCESS {
+		v.items = llrb.New(KeyLess)
+		v.changes = llrb.New(CASLess)
+		v.state = VBDead
+		v.config = &VBConfig{}
+	}
 	return
 }
 
