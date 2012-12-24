@@ -191,14 +191,11 @@ func (v *vbucket) SetVBState(newState VBState,
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	cb := func(vbLocked *vbucket) {
+	v.Visit(func(vbLocked *vbucket) {
 		if v.state == VBActive { // TODO: handle key
 			dest.Add(&vbLocked.stats)
 		}
-	}
-	req := vbvisitreq{cb: cb, res: make(chan bool)}
-	v.ich <- req
-	<-req.res
+	})
 }
 
 func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
