@@ -92,7 +92,7 @@ type vbucket struct {
 	config   *VBConfig
 	stats    Stats
 	ch       chan vbreq
-	statech  chan vbstatereq
+	ich      chan interface{} // Channel of interface{}-based requests.
 }
 
 // Message sent on object change
@@ -147,7 +147,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 		vbid:     vbid,
 		state:    VBDead,
 		ch:       make(chan vbreq),
-		statech:  make(chan vbstatereq),
+		ich:      make(chan interface{}),
 	}
 
 	go rv.service()
@@ -156,7 +156,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 }
 
 func (v *vbucket) Close() error {
-	close(v.statech)
+	close(v.ich)
 	return v.observer.Close()
 }
 
@@ -170,14 +170,14 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 
 func (v *vbucket) GetVBState() VBState {
 	req := vbstatereq{update: false, res: make(chan VBState)}
-	v.statech <- req
+	v.ich <- req
 	return <-req.res
 }
 
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
 	req := vbstatereq{cb, newState, true, nil, make(chan VBState)}
-	v.statech <- req
+	v.ich <- req
 	return <-req.res
 }
 
@@ -216,14 +216,14 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 func (v *vbucket) Suspend() {
 	sus := true
 	req := vbstatereq{suspended: &sus, res: make(chan VBState)}
-	v.statech <- req
+	v.ich <- req
 	<-req.res
 }
 
 func (v *vbucket) Resume() {
 	sus := false
 	req := vbstatereq{suspended: &sus, res: make(chan VBState)}
-	v.statech <- req
+	v.ich <- req
 	<-req.res
 }
 
@@ -245,23 +245,29 @@ func (v *vbucket) service() {
 			res := v.dispatch(req.w, req.req)
 			req.resch <- res
 
-		case statereq, ok := <-v.statech:
+		case i, ok := <-v.ich:
 			if !ok {
 				return
 			}
-			v.changeState(statereq)
-			if statereq.suspended != nil && *statereq.suspended {
-				v.serviceSuspended()
+			switch o := i.(type) {
+			case vbstatereq:
+				v.changeState(o)
+				if o.suspended != nil && *o.suspended {
+					v.serviceSuspended()
+				}
 			}
 		}
 	}
 }
 
 func (v *vbucket) serviceSuspended() {
-	for st := range v.statech {
-		v.changeState(st)
-		if st.suspended != nil && !(*st.suspended) {
-			return
+	for i := range v.ich {
+		switch o := i.(type) {
+		case vbstatereq:
+			v.changeState(o)
+			if o.suspended != nil && !(*o.suspended) {
+				return
+			}
 		}
 	}
 }
