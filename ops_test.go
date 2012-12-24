@@ -1037,11 +1037,11 @@ func TestSplitRange(t *testing.T) {
 			gomemcached.SUCCESS, vb1},
 		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":1}]}`,
 			gomemcached.EINVAL, vb1},
-		{1, SPLIT_RANGE, "", `{"splits":[{"vbucketId":0},{"vBucketID":2}]}`,
+		{1, SPLIT_RANGE, "", `{"splits":[{"vbucketId":0},{"vbucketId":2}]}`,
 			gomemcached.SUCCESS, []int{0, 2}},
-		{1, SPLIT_RANGE, "", `{"splits":[{"vbucketId":0},{"vBucketID":2}]}`,
+		{1, SPLIT_RANGE, "", `{"splits":[{"vbucketId":0},{"vbucketId":2}]}`,
 			gomemcached.EINVAL, []int{0, 2}},
-		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":1},{"vBucketID":2}]}`,
+		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":1},{"vbucketId":2}]}`,
 			gomemcached.EINVAL, []int{0, 2}},
 	}
 
