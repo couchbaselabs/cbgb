@@ -34,6 +34,8 @@ func TestBasicOps(t *testing.T) {
 		expStatus gomemcached.Status
 		expValue  []byte
 	}{
+		{255, active, "", "",
+			gomemcached.UNKNOWN_COMMAND, nil},
 		{gomemcached.SET, active, "a", "aye",
 			gomemcached.SUCCESS, empty},
 		{gomemcached.GET, active, "a", "",
@@ -70,6 +72,7 @@ func TestBasicOps(t *testing.T) {
 		Sets:               2,
 		Deletes:            3,
 		Creates:            2,
+		Unknowns:           1,
 		ValueBytesIncoming: 6,
 		ValueBytesOutgoing: 9,
 	}
@@ -100,7 +103,7 @@ func TestBasicOps(t *testing.T) {
 				x.expStatus, x.op, x.vb, x.key, res.Status)
 		}
 
-		if !bytes.Equal(x.expValue, res.Body) {
+		if x.expValue != nil && !bytes.Equal(x.expValue, res.Body) {
 			t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
 				x.op, x.vb, x.key, x.expValue, res.Body)
 		}

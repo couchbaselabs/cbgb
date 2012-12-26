@@ -210,8 +210,15 @@ func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 }
 
 func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	if w != nil {
+		v.stats.Ops++
+	}
+
 	f := dispatchTable[req.Opcode]
 	if f == nil {
+		if w != nil {
+			v.stats.Unknowns++
+		}
 		return &gomemcached.MCResponse{
 			Status: gomemcached.UNKNOWN_COMMAND,
 			Body: []byte(fmt.Sprintf("Unknown command %v",
@@ -219,9 +226,6 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 		}
 	}
 
-	if w != nil {
-		v.stats.Ops++
-	}
 	res, msg := f(v, w, req)
 	if msg != nil {
 		v.observer.Submit(*msg)

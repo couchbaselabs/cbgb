@@ -27,6 +27,7 @@ type Stats struct {
 	Updates     uint64
 	RGets       uint64
 	RGetResults uint64
+	Unknowns    uint64
 
 	ValueBytesIncoming uint64
 	ValueBytesOutgoing uint64
@@ -45,6 +46,7 @@ func (s *Stats) Add(in *Stats) {
 	s.Updates += in.Updates
 	s.RGets += in.RGets
 	s.RGetResults += in.RGetResults
+	s.Unknowns += in.Unknowns
 	s.ValueBytesIncoming += in.ValueBytesIncoming
 	s.ValueBytesOutgoing += in.ValueBytesOutgoing
 	s.ErrNotMyRange += in.ErrNotMyRange
@@ -61,6 +63,7 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"updates", strconv.FormatUint(s.Updates, 10)}
 	ch <- statItem{"rgets", strconv.FormatUint(s.RGets, 10)}
 	ch <- statItem{"rget_results", strconv.FormatUint(s.RGetResults, 10)}
+	ch <- statItem{"unknowns", strconv.FormatUint(s.Unknowns, 10)}
 	ch <- statItem{"value_bytes_incoming", strconv.FormatUint(s.ValueBytesIncoming, 10)}
 	ch <- statItem{"value_bytes_outgoing", strconv.FormatUint(s.ValueBytesOutgoing, 10)}
 	ch <- statItem{"err_not_my_range", strconv.FormatUint(s.ErrNotMyRange, 10)}
