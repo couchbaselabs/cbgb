@@ -57,7 +57,7 @@ func TestSessionLoop(t *testing.T) {
 }
 
 func TestListener(t *testing.T) {
-	b := NewBucket()
+	b := NewBuckets()
 	l, err := StartServer("0.0.0.0:0", b)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
@@ -78,7 +78,7 @@ func TestListener(t *testing.T) {
 }
 
 func TestListenerFail(t *testing.T) {
-	b := NewBucket()
+	b := NewBuckets()
 	l, err := StartServer("1.1.1.1:22", b)
 	if err == nil {
 		t.Fatalf("Error failing to listen: %v", l.Addr())

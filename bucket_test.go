@@ -7,6 +7,45 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+func TestBucketRegistry(t *testing.T) {
+	bs := NewBuckets()
+	newb := bs.New(DEFAULT_BUCKET_KEY)
+	if newb == nil {
+		t.Fatalf("Failed to create default bucket")
+	}
+	if !newb.Available() {
+		t.Fatalf("New bucket is not available.")
+	}
+
+	if bs.New(DEFAULT_BUCKET_KEY) != nil {
+		t.Fatalf("Created default bucket twice?")
+	}
+
+	b2 := bs.Get(DEFAULT_BUCKET_KEY)
+	if b2 != newb {
+		t.Fatalf("Didn't get my default bucket back.")
+	}
+
+	bs.Destroy(DEFAULT_BUCKET_KEY)
+	if b2.Available() {
+		t.Fatalf("Destroyed bucket is available.")
+	}
+
+	if bs.Get(DEFAULT_BUCKET_KEY) != nil {
+		t.Fatalf("Got the default bucket after destroying it")
+	}
+
+	bs.Destroy(DEFAULT_BUCKET_KEY) // just verify we can do it again
+
+	newb2 := bs.New(DEFAULT_BUCKET_KEY)
+	if newb2 == nil {
+		t.Fatalf("Failed to create default bucket again")
+	}
+	if newb == newb2 {
+		t.Fatalf("Returned the bucket again.")
+	}
+}
+
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
 	b := NewBucket()
@@ -124,6 +163,28 @@ func TestVBString(t *testing.T) {
 					int(in), got)
 			}
 		}
+	}
+}
+
+func TestBucketClose(t *testing.T) {
+	nb := NewBucket()
+
+	if nb.CreateVBucket(300) == nil {
+		t.Fatalf("Expected successful CreateVBucket")
+	}
+	defer nb.destroyVBucket(300)
+
+	vb := nb.getVBucket(300)
+
+	if vb == nil {
+		t.Fatalf("Expected vb not returned")
+	}
+
+	nb.Close()
+
+	vb2 := nb.getVBucket(300)
+	if vb2 != nil {
+		t.Fatalf("Got a vbucket from a closed bucket: %v", vb2)
 	}
 }
 

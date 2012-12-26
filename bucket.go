@@ -2,12 +2,14 @@ package cbgb
 
 import (
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 )
 
 const (
-	MAX_VBUCKET = 1024
+	MAX_VBUCKET        = 1024
+	DEFAULT_BUCKET_KEY = "default"
 )
 
 type vbucketChange struct {
@@ -26,13 +28,61 @@ func (c vbucketChange) String() string {
 }
 
 type bucket struct {
-	vbuckets [MAX_VBUCKET]unsafe.Pointer
-	observer *broadcaster
+	vbuckets    [MAX_VBUCKET]unsafe.Pointer
+	availablech chan bool
+	observer    *broadcaster
 }
 
 func NewBucket() *bucket {
 	return &bucket{
-		observer: newBroadcaster(0),
+		observer:    newBroadcaster(0),
+		availablech: make(chan bool),
+	}
+}
+
+// Holder of buckets
+type Buckets struct {
+	buckets map[string]*bucket
+	lock    sync.Mutex
+}
+
+// Build a new holder of buckets.
+func NewBuckets() *Buckets {
+	return &Buckets{buckets: map[string]*bucket{}}
+}
+
+// Create a new named bucket.
+// Return the new bucket, or nil if the bucket already exists.
+func (b *Buckets) New(name string) *bucket {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	if b.buckets[name] != nil {
+		return nil
+	}
+
+	rv := NewBucket()
+	b.buckets[name] = rv
+	return rv
+}
+
+// Get the named bucket (or nil if it doesn't exist).
+func (b *Buckets) Get(name string) *bucket {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	return b.buckets[name]
+}
+
+// Destroy the named bucket.
+func (b *Buckets) Destroy(name string) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	bucket := b.buckets[name]
+	if bucket != nil {
+		bucket.Close()
+		delete(b.buckets, name)
 	}
 }
 
@@ -63,8 +113,22 @@ func (b *bucket) Subscribe(ch chan<- interface{}) {
 	}()
 }
 
+func (b *bucket) Close() error {
+	close(b.availablech)
+	return nil
+}
+
+func (b *bucket) Available() bool {
+	select {
+	default:
+	case <-b.availablech:
+		return false
+	}
+	return true
+}
+
 func (b *bucket) getVBucket(vbid uint16) *vbucket {
-	if b == nil {
+	if b == nil || !b.Available() {
 		return nil
 	}
 	vbp := atomic.LoadPointer(&b.vbuckets[vbid])

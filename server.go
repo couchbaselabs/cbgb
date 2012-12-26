@@ -184,13 +184,14 @@ func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
 	memcached.HandleIO(s, handler)
 }
 
-func waitForConnections(ls net.Listener, defaultBucket *bucket) {
+func waitForConnections(ls net.Listener, buckets *Buckets) {
 	for {
 		s, e := ls.Accept()
 		if e == nil {
 			log.Printf("Got a connection from %v", s.RemoteAddr())
+			bucket := buckets.Get(DEFAULT_BUCKET_KEY)
 			handler := &reqHandler{
-				currentBucket: defaultBucket,
+				currentBucket: bucket,
 			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler)
 		} else {
@@ -202,12 +203,12 @@ func waitForConnections(ls net.Listener, defaultBucket *bucket) {
 	}
 }
 
-func StartServer(addr string, defaultBucket *bucket) (net.Listener, error) {
+func StartServer(addr string, buckets *Buckets) (net.Listener, error) {
 	ls, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 
-	go waitForConnections(ls, defaultBucket)
+	go waitForConnections(ls, buckets)
 	return ls, nil
 }
