@@ -177,7 +177,7 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 }
 
 func (v *vbucket) GetVBState() (res VBState) {
-	v.Visit(func(vbLocked *vbucket) {
+	v.Apply(func(vbLocked *vbucket) {
 		res = vbLocked.state
 	})
 	return
@@ -185,7 +185,7 @@ func (v *vbucket) GetVBState() (res VBState) {
 
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
-	v.Visit(func(vbLocked *vbucket) {
+	v.Apply(func(vbLocked *vbucket) {
 		oldState = vbLocked.state
 		vbLocked.state = newState
 		if cb != nil {
@@ -196,7 +196,7 @@ func (v *vbucket) SetVBState(newState VBState,
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	v.Visit(func(vbLocked *vbucket) {
+	v.Apply(func(vbLocked *vbucket) {
 		if v.state == VBActive { // TODO: handle key
 			dest.Add(&vbLocked.stats)
 		}
@@ -230,18 +230,18 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 }
 
 func (v *vbucket) Suspend() {
-	v.Visit(func(vbLocked *vbucket) {
+	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.suspended = true
 	})
 }
 
 func (v *vbucket) Resume() {
-	v.Visit(func(vbLocked *vbucket) {
+	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.suspended = false
 	})
 }
 
-func (v *vbucket) Visit(cb func(*vbucket)) {
+func (v *vbucket) Apply(cb func(*vbucket)) {
 	req := vbvisitreq{cb: cb, res: make(chan bool)}
 	v.vch <- req
 	<-req.res
@@ -667,7 +667,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 			vb = v.parent.getVBucket(vbid)
 		}
 		if vb != nil {
-			vb.Visit(func(vbLocked *vbucket) {
+			vb.Apply(func(vbLocked *vbucket) {
 				if vbLocked.state == VBDead {
 					transferSplits(splitIdx + 1)
 					if res.Status == gomemcached.SUCCESS {
