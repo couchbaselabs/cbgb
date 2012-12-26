@@ -1048,6 +1048,8 @@ func TestSplitRange(t *testing.T) {
 			gomemcached.EINVAL, []int{0, 2}},
 		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":1},{"vbucketId":2}]}`,
 			gomemcached.EINVAL, []int{0, 2}},
+		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":3},{"vbucketId":1}]}`,
+			gomemcached.SUCCESS, []int{1, 2, 3}},
 	}
 
 	for testNum, x := range tests {
