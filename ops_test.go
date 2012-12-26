@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -1032,6 +1033,8 @@ func TestSplitRange(t *testing.T) {
 		{0, SPLIT_RANGE, "", `{"splits":[]}`,
 			gomemcached.EINVAL, vb0},
 		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":0}]}`,
+			gomemcached.EINVAL, vb0},
+		{0, SPLIT_RANGE, "", fmt.Sprintf(`{"splits":[{"vbucketId":%v}]}`, MAX_VBUCKET+1),
 			gomemcached.EINVAL, vb0},
 		{0, SPLIT_RANGE, "", `{"splits":[{"vbucketId":1}]}`,
 			gomemcached.SUCCESS, vb1},
