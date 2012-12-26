@@ -1022,6 +1022,8 @@ func TestSplitRange(t *testing.T) {
 		expStatus gomemcached.Status
 		expActive []int
 	}{
+		{0, SPLIT_RANGE, "", "NO_BODY",
+			gomemcached.EINVAL, vb0},
 		{0, SPLIT_RANGE, "", ``,
 			gomemcached.EINVAL, vb0},
 		{0, SPLIT_RANGE, "", `{`,
@@ -1054,6 +1056,9 @@ func TestSplitRange(t *testing.T) {
 			VBucket: uint16(x.vbid),
 			Key:     []byte(x.key),
 			Body:    []byte(x.val),
+		}
+		if x.val == "NO_BODY" {
+			req.Body = nil
 		}
 		res := rh.HandleMessage(nil, req)
 		if res.Status != x.expStatus {
