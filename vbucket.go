@@ -577,9 +577,7 @@ func (sr VBSplitRangeParts) Less(i, j int) bool {
 }
 
 func (sr VBSplitRangeParts) Swap(i, j int) {
-	x := sr[i]
-	sr[i] = sr[j]
-	sr[j] = x
+	sr[i], sr[j] = sr[j], sr[i]
 }
 
 func vbSplitRange(v *vbucket, w io.Writer,
