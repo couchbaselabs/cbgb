@@ -120,8 +120,7 @@ func (m mutation) String() string {
 
 const dataBroadcastBufLen = 100
 
-type dispatchFun func(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation)
+type dispatchFun func(v *vbucket, vr *vbreq)
 
 var dispatchTable = [256]dispatchFun{
 	gomemcached.GET:   vbGet,
@@ -185,8 +184,7 @@ func (v *vbucket) service() {
 			}
 
 		case req := <-v.ch:
-			res := v.dispatch(req.w, req.req)
-			req.resch <- res
+			v.dispatch(&req)
 		}
 	}
 }
@@ -212,28 +210,32 @@ func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	return <-resch
 }
 
-func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
-	if w != nil {
+func (v *vbucket) dispatch(vr *vbreq) {
+	if vr.w != nil {
 		v.stats.Ops++
 	}
 
-	f := dispatchTable[req.Opcode]
+	f := dispatchTable[vr.req.Opcode]
 	if f == nil {
-		if w != nil {
+		if vr.w != nil {
 			v.stats.Unknowns++
 		}
-		return &gomemcached.MCResponse{
+		v.respond(vr, &gomemcached.MCResponse{
 			Status: gomemcached.UNKNOWN_COMMAND,
 			Body: []byte(fmt.Sprintf("Unknown command %v",
-				req.Opcode)),
-		}
+				vr.req.Opcode)),
+		}, nil)
+		return
 	}
 
-	res, msg := f(v, w, req)
-	if msg != nil {
-		v.observer.Submit(*msg)
+	f(v, vr)
+}
+
+func (v *vbucket) respond(vr *vbreq, res *gomemcached.MCResponse, m *mutation) {
+	vr.resch <- res
+	if m != nil {
+		v.observer.Submit(*m)
 	}
-	return res
 }
 
 func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
@@ -305,12 +307,14 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 	return nil
 }
 
-func vbSet(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbSet(v *vbucket, vr *vbreq) {
+	req := vr.req
+
 	v.stats.Sets++
 
 	if rangeErr := v.checkRange(req); rangeErr != nil {
-		return rangeErr, nil
+		v.respond(vr, rangeErr, nil)
+		return
 	}
 
 	old := v.items.Get(&item{key: req.Key})
@@ -322,9 +326,10 @@ func vbSet(v *vbucket, w io.Writer,
 		}
 
 		if oldcas != req.Cas {
-			return &gomemcached.MCResponse{
+			v.respond(vr, &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
-			}, nil
+			}, nil)
+			return
 		}
 	}
 
@@ -354,23 +359,27 @@ func vbSet(v *vbucket, w io.Writer,
 	toBroadcast := &mutation{v.vbid, req.Key, itemCas, false}
 
 	if req.Opcode.IsQuiet() {
-		return nil, toBroadcast
+		v.respond(vr, nil, toBroadcast)
+		return
 	}
 
-	return &gomemcached.MCResponse{
+	v.respond(vr, &gomemcached.MCResponse{
 		Cas: itemCas,
-	}, toBroadcast
+	}, toBroadcast)
 }
 
-func vbGet(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbGet(v *vbucket, vr *vbreq) {
+	req := vr.req
+	w := vr.w
+
 	// Only update stats for requests that came from the "outside".
 	if w != nil {
 		v.stats.Gets++
 	}
 
 	if rangeErr := v.checkRange(req); rangeErr != nil {
-		return rangeErr, nil
+		v.respond(vr, rangeErr, nil)
+		return
 	}
 
 	x := v.items.Get(&item{key: req.Key})
@@ -379,11 +388,13 @@ func vbGet(v *vbucket, w io.Writer,
 			v.stats.GetMisses++
 		}
 		if req.Opcode.IsQuiet() {
-			return nil, nil
+			v.respond(vr, nil, nil)
+			return
 		}
-		return &gomemcached.MCResponse{
+		v.respond(vr, &gomemcached.MCResponse{
 			Status: gomemcached.KEY_ENOENT,
-		}, nil
+		}, nil)
+		return
 	}
 
 	i := x.(*item)
@@ -403,15 +414,17 @@ func vbGet(v *vbucket, w io.Writer,
 		res.Key = req.Key
 	}
 
-	return res, nil
+	v.respond(vr, res, nil)
 }
 
-func vbDelete(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbDelete(v *vbucket, vr *vbreq) {
+	req := vr.req
+
 	v.stats.Deletes++
 
 	if rangeErr := v.checkRange(req); rangeErr != nil {
-		return rangeErr, nil
+		v.respond(vr, rangeErr, nil)
+		return
 	}
 
 	t := &item{key: req.Key}
@@ -421,18 +434,21 @@ func vbDelete(v *vbucket, w io.Writer,
 		i := x.(*item)
 		if req.Cas != 0 {
 			if req.Cas != i.cas {
-				return &gomemcached.MCResponse{
+				v.respond(vr, &gomemcached.MCResponse{
 					Status: gomemcached.EINVAL,
-				}, nil
+				}, nil)
+				return
 			}
 		}
 	} else {
 		if req.Opcode.IsQuiet() {
-			return nil, nil
+			v.respond(vr, nil, nil)
+			return
 		}
-		return &gomemcached.MCResponse{
+		v.respond(vr, &gomemcached.MCResponse{
 			Status: gomemcached.KEY_ENOENT,
-		}, nil
+		}, nil)
+		return
 	}
 
 	cas := v.cas
@@ -448,15 +464,17 @@ func vbDelete(v *vbucket, w io.Writer,
 
 	toBroadcast := &mutation{v.vbid, req.Key, cas, true}
 
-	return &gomemcached.MCResponse{}, toBroadcast
+	v.respond(vr, &gomemcached.MCResponse{}, toBroadcast)
 }
 
 // Responds with the changes since the req.Cas, with the last response
 // in the response stream having no key.
 // TODO: Support a limit on changes-since, perhaps in the req.Extras.
-func vbChangesSince(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (res *gomemcached.MCResponse, m *mutation) {
-	res = &gomemcached.MCResponse{
+func vbChangesSince(v *vbucket, vr *vbreq) {
+	req := vr.req
+	w := vr.w
+
+	res := &gomemcached.MCResponse{
 		Opcode: req.Opcode,
 		Cas:    req.Cas,
 	}
@@ -493,37 +511,41 @@ func vbChangesSince(v *vbucket, w io.Writer,
 		res = &gomemcached.MCResponse{Fatal: true}
 	}
 
-	return
+	v.respond(vr, res, nil)
 }
 
-func vbGetConfig(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbGetConfig(v *vbucket, vr *vbreq) {
 	if v.config != nil {
 		if j, err := json.Marshal(v.config); err == nil {
-			return &gomemcached.MCResponse{Body: j}, nil
+			v.respond(vr, &gomemcached.MCResponse{Body: j}, nil)
+			return
 		}
 	}
-	return &gomemcached.MCResponse{Body: []byte("{}")}, nil
+	v.respond(vr, &gomemcached.MCResponse{Body: []byte("{}")}, nil)
 }
 
-func vbSetConfig(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbSetConfig(v *vbucket, vr *vbreq) {
+	req := vr.req
+
 	if req.Body != nil {
 		config := &VBConfig{}
 		err := json.Unmarshal(req.Body, config)
 		if err == nil {
 			v.config = config
-			return &gomemcached.MCResponse{}, nil
+			v.respond(vr, &gomemcached.MCResponse{}, nil)
+			return
 		} else {
 			log.Printf("Error decoding vbucket config: %v, err: %v",
 				string(req.Body), err)
 		}
 	}
-	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
+	v.respond(vr, &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil)
 }
 
-func vbRGet(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbRGet(v *vbucket, vr *vbreq) {
+	req := vr.req
+	w := vr.w
+
 	// From http://code.google.com/p/memcached/wiki/RangeOps
 	// Extras field  Bits
 	// ------------------
@@ -563,7 +585,7 @@ func vbRGet(v *vbucket, w io.Writer,
 	}
 
 	v.items.VisitAscend(&item{key: req.Key}, visitor)
-	return res, nil
+	v.respond(vr, res, nil)
 }
 
 type VBSplitRangePart struct {
@@ -590,22 +612,25 @@ func (sr VBSplitRangeParts) Swap(i, j int) {
 	sr[i], sr[j] = sr[j], sr[i]
 }
 
-func vbSplitRange(v *vbucket, w io.Writer,
-	req *gomemcached.MCRequest) (*gomemcached.MCResponse, *mutation) {
+func vbSplitRange(v *vbucket, vr *vbreq) {
+	req := vr.req
+
 	if req.Body != nil {
 		sr := &VBSplitRange{}
 		err := json.Unmarshal(req.Body, sr)
 		if err == nil {
-			return v.splitRange(sr), nil
+			v.respond(vr, v.splitRange(sr), nil)
+			return
 		} else {
-			return &gomemcached.MCResponse{
+			v.respond(vr, &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("Error decoding split-range json: %v, err: %v",
 					string(req.Body), err)),
-			}, nil
+			}, nil)
+			return
 		}
 	}
-	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
+	v.respond(vr, &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil)
 }
 
 func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
