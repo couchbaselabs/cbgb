@@ -186,6 +186,11 @@ func TestBucketClose(t *testing.T) {
 	if vb2 != nil {
 		t.Fatalf("Got a vbucket from a closed bucket: %v", vb2)
 	}
+
+	vb3 := nb.CreateVBucket(200)
+	if vb3 != nil {
+		t.Fatalf("Created a vbucket on a closed bucket: %v", vb3)
+	}
 }
 
 func TestVBSuspend(t *testing.T) {
