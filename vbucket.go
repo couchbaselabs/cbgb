@@ -75,7 +75,7 @@ type vbreq struct {
 	resch chan *gomemcached.MCResponse
 }
 
-type vbvisitreq struct {
+type vbapplyreq struct {
 	cb  func(*vbucket)
 	res chan bool
 }
@@ -92,7 +92,7 @@ type vbucket struct {
 	stats     Stats
 	suspended bool
 	ch        chan vbreq
-	vch       chan vbvisitreq
+	ach       chan vbapplyreq
 }
 
 // Message sent on object change
@@ -155,7 +155,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 		vbid:     vbid,
 		state:    VBDead,
 		ch:       make(chan vbreq),
-		vch:      make(chan vbvisitreq),
+		ach:      make(chan vbapplyreq),
 	}
 
 	go rv.service()
@@ -164,7 +164,7 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 }
 
 func (v *vbucket) Close() error {
-	close(v.vch)
+	close(v.ach)
 	return v.observer.Close()
 }
 
@@ -246,21 +246,21 @@ func (v *vbucket) Resume() {
 }
 
 func (v *vbucket) Apply(cb func(*vbucket)) {
-	req := vbvisitreq{cb: cb, res: make(chan bool)}
-	v.vch <- req
+	req := vbapplyreq{cb: cb, res: make(chan bool)}
+	v.ach <- req
 	<-req.res
 }
 
 func (v *vbucket) service() {
 	for {
 		select {
-		case vr, ok := <-v.vch:
+		case ar, ok := <-v.ach:
 			if !ok {
 				// TODO: shall we unregister from bucket if we reach here?
 				return
 			}
-			vr.cb(v)
-			close(vr.res)
+			ar.cb(v)
+			close(ar.res)
 			if v.suspended {
 				v.serviceSuspended()
 			}
@@ -273,9 +273,9 @@ func (v *vbucket) service() {
 }
 
 func (v *vbucket) serviceSuspended() {
-	for vr := range v.vch {
-		vr.cb(v)
-		close(vr.res)
+	for ar := range v.ach {
+		ar.cb(v)
+		close(ar.res)
 		if !v.suspended {
 			return
 		}
