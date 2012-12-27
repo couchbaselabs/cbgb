@@ -730,20 +730,13 @@ func TestChangesSinceTransmitError(t *testing.T) {
 				Opcode: gomemcached.SET,
 				Key:    []byte(k),
 				Body:   []byte(k),
-			},
-			resch: make(chan *gomemcached.MCResponse, 1),
-		})
+			}})
 	}
-	resch := make(chan *gomemcached.MCResponse, 1)
-	vbChangesSince(v, &vbreq{
-		w: w,
+	res, _ := vbChangesSince(v, &vbreq{w: w,
 		req: &gomemcached.MCRequest{
 			Opcode: CHANGES_SINCE,
 			Cas:    0,
-		},
-		resch: resch,
-	})
-	res := <-resch
+		}})
 	if !res.Fatal {
 		t.Errorf("Expected fatal response due to transmit error, %v", res)
 	}
