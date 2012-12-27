@@ -170,44 +170,40 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 	return rv
 }
 
+func (v *vbucket) service() {
+	for {
+		select {
+		case ar, ok := <-v.ach:
+			if !ok {
+				// TODO: shall we unregister from bucket if we reach here?
+				return
+			}
+			ar.cb(v)
+			close(ar.res)
+			if v.suspended {
+				v.serviceSuspended()
+			}
+
+		case req := <-v.ch:
+			res := v.dispatch(req.w, req.req)
+			req.resch <- res
+		}
+	}
+}
+
+func (v *vbucket) serviceSuspended() {
+	for ar := range v.ach {
+		ar.cb(v)
+		close(ar.res)
+		if !v.suspended {
+			return
+		}
+	}
+}
+
 func (v *vbucket) Close() error {
 	close(v.ach)
 	return v.observer.Close()
-}
-
-func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
-	return v.Dispatch(nil, &gomemcached.MCRequest{
-		Opcode:  gomemcached.GET,
-		Key:     key,
-		VBucket: v.vbid,
-	})
-}
-
-func (v *vbucket) GetVBState() (res VBState) {
-	v.Apply(func(vbLocked *vbucket) {
-		res = vbLocked.state
-	})
-	return
-}
-
-func (v *vbucket) SetVBState(newState VBState,
-	cb func(oldState VBState)) (oldState VBState) {
-	v.Apply(func(vbLocked *vbucket) {
-		oldState = vbLocked.state
-		vbLocked.state = newState
-		if cb != nil {
-			cb(oldState)
-		}
-	})
-	return
-}
-
-func (v *vbucket) AddStats(dest *Stats, key string) {
-	v.Apply(func(vbLocked *vbucket) {
-		if v.state == VBActive { // TODO: handle key
-			dest.Add(&vbLocked.stats)
-		}
-	})
 }
 
 func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
@@ -240,6 +236,20 @@ func (v *vbucket) dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	return res
 }
 
+func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
+	return v.Dispatch(nil, &gomemcached.MCRequest{
+		Opcode:  gomemcached.GET,
+		Key:     key,
+		VBucket: v.vbid,
+	})
+}
+
+func (v *vbucket) Apply(cb func(*vbucket)) {
+	req := vbapplyreq{cb: cb, res: make(chan bool)}
+	v.ach <- req
+	<-req.res
+}
+
 func (v *vbucket) Suspend() {
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.suspended = true
@@ -252,41 +262,31 @@ func (v *vbucket) Resume() {
 	})
 }
 
-func (v *vbucket) Apply(cb func(*vbucket)) {
-	req := vbapplyreq{cb: cb, res: make(chan bool)}
-	v.ach <- req
-	<-req.res
+func (v *vbucket) GetVBState() (res VBState) {
+	v.Apply(func(vbLocked *vbucket) {
+		res = vbLocked.state
+	})
+	return
 }
 
-func (v *vbucket) service() {
-	for {
-		select {
-		case ar, ok := <-v.ach:
-			if !ok {
-				// TODO: shall we unregister from bucket if we reach here?
-				return
-			}
-			ar.cb(v)
-			close(ar.res)
-			if v.suspended {
-				v.serviceSuspended()
-			}
-
-		case req := <-v.ch:
-			res := v.dispatch(req.w, req.req)
-			req.resch <- res
+func (v *vbucket) SetVBState(newState VBState,
+	cb func(oldState VBState)) (oldState VBState) {
+	v.Apply(func(vbLocked *vbucket) {
+		oldState = vbLocked.state
+		vbLocked.state = newState
+		if cb != nil {
+			cb(oldState)
 		}
-	}
+	})
+	return
 }
 
-func (v *vbucket) serviceSuspended() {
-	for ar := range v.ach {
-		ar.cb(v)
-		close(ar.res)
-		if !v.suspended {
-			return
+func (v *vbucket) AddStats(dest *Stats, key string) {
+	v.Apply(func(vbLocked *vbucket) {
+		if v.state == VBActive { // TODO: handle key
+			dest.Add(&vbLocked.stats)
 		}
-	}
+	})
 }
 
 func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
