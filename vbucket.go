@@ -256,6 +256,7 @@ func (v *vbucket) service() {
 		select {
 		case vr, ok := <-v.vch:
 			if !ok {
+				// TODO: shall we unregister from bucket if we reach here?
 				return
 			}
 			vr.cb(v)
@@ -269,8 +270,6 @@ func (v *vbucket) service() {
 			req.resch <- res
 		}
 	}
-
-	// TODO: shall we unregister from bucket if we reach here?
 }
 
 func (v *vbucket) serviceSuspended() {
