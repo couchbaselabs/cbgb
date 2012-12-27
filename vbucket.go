@@ -563,6 +563,9 @@ func vbRGet(v *vbucket, vr *vbreq) {
 		Cas:    req.Cas,
 	}
 
+	visitRGetResults := uint64(0)
+	visitValueBytesOutgoing := uint64(0)
+
 	visitor := func(x gtreap.Item) bool {
 		i := x.(*item)
 		if bytes.Compare(i.key, req.Key) >= 0 {
@@ -578,14 +581,18 @@ func vbRGet(v *vbucket, vr *vbreq) {
 				res = &gomemcached.MCResponse{Fatal: true}
 				return false
 			}
-			v.stats.RGetResults++
-			v.stats.ValueBytesOutgoing += uint64(len(i.data))
+			visitRGetResults++
+			visitValueBytesOutgoing += uint64(len(i.data))
 		}
 		return true
 	}
 
 	go func() {
 		v.items.VisitAscend(&item{key: req.Key}, visitor)
+		v.Apply(func(vbLocked *vbucket) {
+			vbLocked.stats.RGetResults += visitRGetResults
+			vbLocked.stats.ValueBytesOutgoing += visitValueBytesOutgoing
+		})
 		v.respond(vr, res, nil)
 	}()
 }

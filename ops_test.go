@@ -1141,7 +1141,7 @@ func TestSlowClient(t *testing.T) {
 		}
 		res := rh.HandleMessage(sw, req)
 		if res.Status != gomemcached.SUCCESS {
-			t.Errorf("Expected success but was unsuccessful.")
+			t.Errorf("Expected success but was unsuccessful")
 		}
 		done <- "slow-client"
 	}()
@@ -1153,7 +1153,7 @@ func TestSlowClient(t *testing.T) {
 		}
 		res = rh.HandleMessage(nil, req)
 		if res.Status != gomemcached.SUCCESS {
-			t.Errorf("Expected success but was unsuccessful.")
+			t.Errorf("Expected success but was unsuccessful")
 		}
 		done <- "fast-client"
 	}()
@@ -1161,13 +1161,17 @@ func TestSlowClient(t *testing.T) {
 	var s string
 	s = <-done
 	if s != "fast-client" {
-		t.Errorf("Expected fast-client to be faster than slow-client.")
+		t.Errorf("Expected fast-client to be faster than slow-client")
 	}
 	s = <-done
 	if s != "slow-client" {
-		t.Errorf("Expected slow-client to be slower than fast-client.")
+		t.Errorf("Expected slow-client to be slower than fast-client")
 	}
 	if sw.numWritten != 1 {
-		t.Errorf("Expected slow-client to actually have written one thing.")
+		t.Errorf("Expected slow-client to actually have written one thing")
+	}
+	if vb.stats.RGetResults != 1 {
+		t.Errorf("Expected 1 RGetResults, got: %v",
+			vb.stats.RGetResults)
 	}
 }
