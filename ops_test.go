@@ -20,6 +20,19 @@ func init() {
 	log.SetOutput(ioutil.Discard)
 }
 
+type slowWriter struct {
+	numWritten  int
+	slowWriteAt int // The nth write will be slow.
+}
+
+func (s *slowWriter) Write([]byte) (int, error) {
+	if s.numWritten == s.slowWriteAt {
+		time.Sleep(50 * time.Millisecond)
+	}
+	s.numWritten++
+	return 0, nil
+}
+
 func TestBasicOps(t *testing.T) {
 	empty := []byte{}
 	active := uint16(3)
@@ -1101,5 +1114,60 @@ func TestSplitRange(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestSlowClient(t *testing.T) {
+	testBucket := &bucket{}
+	rh := reqHandler{testBucket}
+	vb := testBucket.CreateVBucket(0)
+	defer vb.Close()
+	testBucket.SetVBState(0, VBActive)
+
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("hi"),
+		Body:   []byte("world"),
+	}
+	res := rh.HandleMessage(nil, req)
+
+	sw := &slowWriter{slowWriteAt: 0}
+	done := make(chan string)
+
+	go func() { // A concurrent slow client.
+		req := &gomemcached.MCRequest{
+			Opcode: gomemcached.RGET,
+			Key:    []byte("a"),
+		}
+		res := rh.HandleMessage(sw, req)
+		if res.Status != gomemcached.SUCCESS {
+			t.Errorf("Expected success but was unsuccessful.")
+		}
+		done <- "slow-client"
+	}()
+
+	go func() { // A concurrent fast client.
+		req = &gomemcached.MCRequest{
+			Opcode: gomemcached.GET,
+			Key:    []byte("hi"),
+		}
+		res = rh.HandleMessage(nil, req)
+		if res.Status != gomemcached.SUCCESS {
+			t.Errorf("Expected success but was unsuccessful.")
+		}
+		done <- "fast-client"
+	}()
+
+	var s string
+	s = <-done
+	if s != "fast-client" {
+		t.Errorf("Expected fast-client to be faster than slow-client.")
+	}
+	s = <-done
+	if s != "slow-client" {
+		t.Errorf("Expected slow-client to be slower than fast-client.")
+	}
+	if sw.numWritten != 1 {
+		t.Errorf("Expected slow-client to actually have written one thing.")
 	}
 }

@@ -584,8 +584,10 @@ func vbRGet(v *vbucket, vr *vbreq) {
 		return true
 	}
 
-	v.items.VisitAscend(&item{key: req.Key}, visitor)
-	v.respond(vr, res, nil)
+	go func() {
+		v.items.VisitAscend(&item{key: req.Key}, visitor)
+		v.respond(vr, res, nil)
+	}()
 }
 
 type VBSplitRangePart struct {
