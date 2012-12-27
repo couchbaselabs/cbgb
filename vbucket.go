@@ -6,10 +6,11 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"math/rand"
 	"sort"
 
 	"github.com/dustin/gomemcached"
-	"github.com/petar/GoLLRB/llrb"
+	"github.com/steveyen/gtreap"
 )
 
 const (
@@ -51,12 +52,18 @@ type item struct {
 	data      []byte
 }
 
-func KeyLess(p, q interface{}) bool {
-	return bytes.Compare(p.(*item).key, q.(*item).key) < 0
+func KeyLess(p, q interface{}) int {
+	return bytes.Compare(p.(*item).key, q.(*item).key)
 }
 
-func CASLess(p, q interface{}) bool {
-	return p.(*item).cas < q.(*item).cas
+func CASLess(p, q interface{}) int {
+	if p.(*item).cas < q.(*item).cas {
+		return -1
+	}
+	if p.(*item).cas == q.(*item).cas {
+		return 0
+	}
+	return 1
 }
 
 type VBConfig struct {
@@ -82,8 +89,8 @@ type vbapplyreq struct {
 
 type vbucket struct {
 	parent    *bucket
-	items     *llrb.Tree
-	changes   *llrb.Tree
+	items     *gtreap.Treap
+	changes   *gtreap.Treap
 	cas       uint64
 	observer  *broadcaster
 	vbid      uint16
@@ -149,8 +156,8 @@ func init() {
 func newVBucket(parent *bucket, vbid uint16) *vbucket {
 	rv := &vbucket{
 		parent:   parent,
-		items:    llrb.New(KeyLess),
-		changes:  llrb.New(CASLess),
+		items:    gtreap.NewTreap(KeyLess),
+		changes:  gtreap.NewTreap(CASLess),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
 		state:    VBDead,
@@ -333,9 +340,9 @@ func vbSet(v *vbucket, w io.Writer,
 
 	v.stats.ValueBytesIncoming += uint64(len(req.Body))
 
-	v.items.ReplaceOrInsert(itemNew)
+	v.items = v.items.Upsert(itemNew, rand.Int())
 
-	v.changes.ReplaceOrInsert(itemNew)
+	v.changes = v.changes.Upsert(itemNew, rand.Int())
 	if old != nil {
 		v.changes.Delete(old)
 		v.stats.Updates++
@@ -431,13 +438,13 @@ func vbDelete(v *vbucket, w io.Writer,
 	cas := v.cas
 	v.cas++
 
-	v.items.Delete(t)
+	v.items = v.items.Delete(t)
 
-	v.changes.ReplaceOrInsert(&item{
+	v.changes = v.changes.Upsert(&item{
 		key:  req.Key,
 		cas:  cas,
 		data: nil, // A nil data represents a delete mutation.
-	})
+	}, rand.Int())
 
 	toBroadcast := &mutation{v.vbid, req.Key, cas, true}
 
@@ -457,7 +464,7 @@ func vbChangesSince(v *vbucket, w io.Writer,
 	ch, errs := transmitPackets(w)
 	var err error
 
-	visitor := func(x llrb.Item) bool {
+	visitor := func(x gtreap.Item) bool {
 		i := x.(*item)
 		if i.cas > req.Cas {
 			ch <- &gomemcached.MCResponse{
@@ -476,7 +483,7 @@ func vbChangesSince(v *vbucket, w io.Writer,
 		return true
 	}
 
-	v.changes.AscendGreaterOrEqual(&item{cas: req.Cas}, visitor)
+	v.changes.VisitAscend(&item{cas: req.Cas}, visitor)
 	close(ch)
 	if err == nil {
 		err = <-errs
@@ -534,7 +541,7 @@ func vbRGet(v *vbucket, w io.Writer,
 		Cas:    req.Cas,
 	}
 
-	visitor := func(x llrb.Item) bool {
+	visitor := func(x gtreap.Item) bool {
 		i := x.(*item)
 		if bytes.Compare(i.key, req.Key) >= 0 {
 			err := (&gomemcached.MCResponse{
@@ -555,7 +562,7 @@ func vbRGet(v *vbucket, w io.Writer,
 		return true
 	}
 
-	v.items.AscendGreaterOrEqual(&item{key: req.Key}, visitor)
+	v.items.VisitAscend(&item{key: req.Key}, visitor)
 	return res, nil
 }
 
@@ -703,8 +710,8 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 	transferSplits(0)
 	if res.Status == gomemcached.SUCCESS {
-		v.items = llrb.New(KeyLess)
-		v.changes = llrb.New(CASLess)
+		v.items = gtreap.NewTreap(KeyLess)
+		v.changes = gtreap.NewTreap(CASLess)
 		v.state = VBDead
 		v.config = &VBConfig{}
 	}
@@ -712,11 +719,11 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 }
 
 func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
-	dst.items = treeRangeCopy(v.items, llrb.New(KeyLess),
+	dst.items = treeRangeCopy(v.items, gtreap.NewTreap(KeyLess),
 		v.items.Min(), // TODO: inefficient.
 		minKeyInclusive,
 		maxKeyExclusive)
-	dst.changes = treeRangeCopy(v.changes, llrb.New(CASLess),
+	dst.changes = treeRangeCopy(v.changes, gtreap.NewTreap(CASLess),
 		v.changes.Min(), // TODO: inefficient.
 		minKeyInclusive,
 		maxKeyExclusive)
@@ -728,9 +735,9 @@ func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclus
 	}
 }
 
-func treeRangeCopy(src *llrb.Tree, dst *llrb.Tree, minItem llrb.Item,
-	minKeyInclusive []byte, maxKeyExclusive []byte) *llrb.Tree {
-	visitor := func(x llrb.Item) bool {
+func treeRangeCopy(src *gtreap.Treap, dst *gtreap.Treap, minItem gtreap.Item,
+	minKeyInclusive []byte, maxKeyExclusive []byte) *gtreap.Treap {
+	visitor := func(x gtreap.Item) bool {
 		i := x.(*item)
 		if len(minKeyInclusive) > 0 &&
 			bytes.Compare(i.key, minKeyInclusive) < 0 {
@@ -740,9 +747,9 @@ func treeRangeCopy(src *llrb.Tree, dst *llrb.Tree, minItem llrb.Item,
 			bytes.Compare(i.key, maxKeyExclusive) >= 0 {
 			return true
 		}
-		dst.ReplaceOrInsert(x)
+		dst.Upsert(x, rand.Int())
 		return true
 	}
-	src.AscendGreaterOrEqual(minItem, visitor)
+	src.VisitAscend(minItem, visitor)
 	return dst
 }
