@@ -190,7 +190,7 @@ func (v *vbucket) service() {
 		case req := <-v.ch:
 			res := v.dispatch(&req)
 			if res != overrideResponse {
-				v.respond(&req, res, nil)
+				v.respond(&req, res)
 			}
 		}
 	}
@@ -241,11 +241,8 @@ func (v *vbucket) dispatch(vbr *vbreq) *gomemcached.MCResponse {
 	return res
 }
 
-func (v *vbucket) respond(vr *vbreq, res *gomemcached.MCResponse, m *mutation) {
+func (v *vbucket) respond(vr *vbreq, res *gomemcached.MCResponse) {
 	vr.resch <- res
-	if m != nil {
-		v.observer.Submit(*m)
-	}
 }
 
 func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
@@ -582,7 +579,7 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 			vbLocked.stats.RGetResults += visitRGetResults
 			vbLocked.stats.ValueBytesOutgoing += visitValueBytesOutgoing
 		})
-		v.respond(vbr, res, nil)
+		v.respond(vbr, res)
 	}()
 	return overrideResponse, nil
 }
