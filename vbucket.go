@@ -543,37 +543,37 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	v.stats.RGets++
 
-	req := vbr.req
-	res := &gomemcached.MCResponse{
-		Opcode: req.Opcode,
-		Cas:    req.Cas,
-	}
-
-	visitRGetResults := uint64(0)
-	visitValueBytesOutgoing := uint64(0)
-
-	visitor := func(x gtreap.Item) bool {
-		i := x.(*item)
-		if bytes.Compare(i.key, req.Key) >= 0 {
-			err := (&gomemcached.MCResponse{
-				Opcode: req.Opcode,
-				Key:    i.key,
-				Cas:    i.cas,
-				Body:   i.data,
-				// TODO: Extras.
-			}).Transmit(vbr.w)
-			if err != nil {
-				log.Printf("Error sending RGET values: %v", err)
-				res = &gomemcached.MCResponse{Fatal: true}
-				return false
-			}
-			visitRGetResults++
-			visitValueBytesOutgoing += uint64(len(i.data))
-		}
-		return true
-	}
-
 	go func() {
+		req := vbr.req
+		res := &gomemcached.MCResponse{
+			Opcode: req.Opcode,
+			Cas:    req.Cas,
+		}
+
+		visitRGetResults := uint64(0)
+		visitValueBytesOutgoing := uint64(0)
+
+		visitor := func(x gtreap.Item) bool {
+			i := x.(*item)
+			if bytes.Compare(i.key, req.Key) >= 0 {
+				err := (&gomemcached.MCResponse{
+					Opcode: req.Opcode,
+					Key:    i.key,
+					Cas:    i.cas,
+					Body:   i.data,
+					// TODO: Extras.
+				}).Transmit(vbr.w)
+				if err != nil {
+					log.Printf("Error sending RGET values: %v", err)
+					res = &gomemcached.MCResponse{Fatal: true}
+					return false
+				}
+				visitRGetResults++
+				visitValueBytesOutgoing += uint64(len(i.data))
+			}
+			return true
+		}
+
 		v.items.VisitAscend(&item{key: req.Key}, visitor)
 		v.Apply(func(vbLocked *vbucket) {
 			vbLocked.stats.RGetResults += visitRGetResults
