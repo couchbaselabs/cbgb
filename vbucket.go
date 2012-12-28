@@ -90,17 +90,18 @@ type vbapplyreq struct {
 }
 
 type vbucket struct {
-	parent    *bucket
-	store     store
-	cas       uint64
-	observer  *broadcaster
-	vbid      uint16
-	state     VBState
-	config    *VBConfig
-	stats     Stats
-	suspended bool
-	ch        chan vbreq
-	ach       chan vbapplyreq
+	parent     *bucket
+	storeFront store
+	storeBack  store
+	cas        uint64
+	observer   *broadcaster
+	vbid       uint16
+	state      VBState
+	config     *VBConfig
+	stats      Stats
+	suspended  bool
+	ch         chan vbreq
+	ach        chan vbapplyreq
 }
 
 // Message sent on object change
@@ -155,13 +156,14 @@ func init() {
 
 func newVBucket(parent *bucket, vbid uint16) *vbucket {
 	rv := &vbucket{
-		parent:   parent,
-		store:    newStoreMem(),
-		observer: newBroadcaster(dataBroadcastBufLen),
-		vbid:     vbid,
-		state:    VBDead,
-		ch:       make(chan vbreq),
-		ach:      make(chan vbapplyreq),
+		parent:     parent,
+		storeFront: newStoreMem(),
+		storeBack:  newStoreMem(),
+		observer:   newBroadcaster(dataBroadcastBufLen),
+		vbid:       vbid,
+		state:      VBDead,
+		ch:         make(chan vbreq),
+		ach:        make(chan vbapplyreq),
 	}
 
 	go rv.service()
@@ -318,7 +320,7 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	metaOld := v.store.getMeta(req.Key)
+	metaOld := v.storeFront.getMeta(req.Key)
 
 	if req.Cas != 0 {
 		var oldcas uint64
@@ -344,7 +346,7 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	v.stats.ValueBytesIncoming += uint64(len(req.Body))
 
-	v.store.set(itemNew, metaOld)
+	v.storeFront.set(itemNew, metaOld)
 	if metaOld != nil {
 		v.stats.Updates++
 	} else {
@@ -374,7 +376,7 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	i := v.store.get(req.Key)
+	i := v.storeFront.get(req.Key)
 	if i == nil {
 		if vbr.w != nil {
 			v.stats.GetMisses++
@@ -414,7 +416,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	meta := v.store.getMeta(req.Key)
+	meta := v.storeFront.getMeta(req.Key)
 	if meta != nil {
 		if req.Cas != 0 {
 			if req.Cas != meta.cas {
@@ -436,7 +438,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	cas := v.cas
 	v.cas++
 
-	v.store.del(req.Key, cas)
+	v.storeFront.del(req.Key, cas)
 
 	toBroadcast := &mutation{v.vbid, req.Key, cas, true}
 
@@ -474,7 +476,7 @@ func vbChangesSince(v *vbucket, vbr *vbreq) (res *gomemcached.MCResponse, m *mut
 		return true
 	}
 
-	v.store.visitChanges(req.Cas, visitor)
+	v.storeFront.visitChanges(req.Cas, visitor)
 	close(ch)
 	if err == nil {
 		err = <-errs
@@ -526,7 +528,7 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.stats.RGets++
 
 	// Snapshot during the vbucket service() "lock".
-	storeSnapshot := v.store.snapshot()
+	storeSnapshot := v.storeFront.snapshot()
 
 	go func() {
 		req := vbr.req
@@ -713,7 +715,8 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 	transferSplits(0)
 	if res.Status == gomemcached.SUCCESS {
-		v.store = newStoreMem()
+		v.storeFront = newStoreMem()
+		v.storeBack = newStoreMem()
 		v.state = VBDead
 		v.config = &VBConfig{}
 	}
@@ -721,7 +724,8 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 }
 
 func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
-	dst.store = v.store.rangeCopy(minKeyInclusive, maxKeyExclusive)
+	dst.storeFront = v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive)
+	dst.storeBack = v.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
 	dst.cas = v.cas
 	dst.state = v.state
 	dst.config = &VBConfig{
