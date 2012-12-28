@@ -1168,3 +1168,75 @@ func TestSlowClient(t *testing.T) {
 			vb.stats.RGetResults)
 	}
 }
+
+func TestStoreFrontBack(t *testing.T) {
+	empty := []byte{}
+	active := uint16(3)
+
+	tests := []struct {
+		op  gomemcached.CommandCode
+		vb  uint16
+		key string
+		val string
+
+		expStatus gomemcached.Status
+		expValue  []byte
+	}{
+		{gomemcached.SET, active, "a", "aye",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.SET, active, "b", "bye",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.SET, active, "c", "cye",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.DELETE, active, "c", "",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.SET, active, "a", "aaa",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("aaa")},
+		{gomemcached.GET, active, "b", "",
+			gomemcached.SUCCESS, []byte("bye")},
+		{gomemcached.GET, active, "c", "",
+			gomemcached.KEY_ENOENT, empty},
+	}
+
+	testBucket := NewBucket()
+	rh := reqHandler{testBucket}
+	vb := testBucket.CreateVBucket(3)
+	defer vb.Close()
+	testBucket.SetVBState(3, VBActive)
+
+	runTestsFrom := func(start int) {
+		for i := start; i < len(tests); i++ {
+			x := tests[i]
+			req := &gomemcached.MCRequest{
+				Opcode:  x.op,
+				VBucket: x.vb,
+				Key:     []byte(x.key),
+				Body:    []byte(x.val),
+			}
+			res := rh.HandleMessage(ioutil.Discard, req)
+			if res.Status != x.expStatus {
+				t.Errorf("Expected %v for %v:%v/%v, got %v",
+					x.expStatus, x.op, x.vb, x.key, res.Status)
+			}
+			if x.expValue != nil && !bytes.Equal(x.expValue, res.Body) {
+				t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
+					x.op, x.vb, x.key, x.expValue, res.Body)
+			}
+		}
+	}
+
+	runTestsFrom(0)
+
+	// Clear the storeFront's item.data so that vbucket has to fetch
+	// from the storeBack.
+	vb.Apply(func(vbLocked *vbucket) {
+		vbLocked.storeFront.visitItems([]byte("a"), func(i *item) bool {
+			i.data = nil
+			return true
+		})
+	})
+
+	runTestsFrom(5)
+}

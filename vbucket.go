@@ -54,6 +54,16 @@ type item struct {
 	data      []byte
 }
 
+func (i *item) clone() *item {
+	return &item{
+		key:  i.key,
+		exp:  i.exp,
+		flag: i.flag,
+		cas:  i.cas,
+		data: i.data,
+	}
+}
+
 func KeyLess(p, q interface{}) int {
 	return bytes.Compare(p.(*item).key, q.(*item).key)
 }
@@ -183,7 +193,9 @@ func (v *vbucket) service() {
 				return
 			}
 			ar.cb(v)
-			close(ar.res)
+			if ar.res != nil {
+				close(ar.res)
+			}
 			if v.suspended {
 				v.serviceSuspended()
 			}
@@ -200,7 +212,9 @@ func (v *vbucket) service() {
 func (v *vbucket) serviceSuspended() {
 	for ar := range v.ach {
 		ar.cb(v)
-		close(ar.res)
+		if ar.res != nil {
+			close(ar.res)
+		}
 		if !v.suspended {
 			return
 		}
@@ -210,12 +224,15 @@ func (v *vbucket) serviceSuspended() {
 func (v *vbucket) serviceBack() {
 	for ar := range v.backch {
 		ar.cb(v)
-		close(ar.res)
+		if ar.res != nil {
+			close(ar.res)
+		}
 	}
 }
 
 func (v *vbucket) Close() error {
 	close(v.ach)
+	close(v.backch)
 	return v.observer.Close()
 }
 
@@ -265,6 +282,14 @@ func (v *vbucket) Apply(cb func(*vbucket)) {
 	req := vbapplyreq{cb: cb, res: make(chan bool)}
 	v.ach <- req
 	<-req.res
+}
+
+func (v *vbucket) ApplyAsync(cb func(*vbucket)) {
+	v.ach <- vbapplyreq{cb: cb, res: nil}
+}
+
+func (v *vbucket) ApplyBackAsync(cb func(*vbucket)) {
+	v.backch <- vbapplyreq{cb: cb, res: nil}
 }
 
 func (v *vbucket) Suspend() {
@@ -366,6 +391,11 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	toBroadcast := &mutation{v.vbid, req.Key, itemCas, false}
 
+	itemNewBack := itemNew.clone()
+	v.ApplyBackAsync(func(vbBack *vbucket) {
+		vbBack.storeBack.set(itemNewBack, metaOld)
+	})
+
 	if req.Opcode.IsQuiet() {
 		return nil, toBroadcast
 	}
@@ -397,6 +427,33 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.KEY_ENOENT,
 		}, nil
+	}
+
+	if i.data == nil { // Need to do a background fetch.
+		v.ApplyBackAsync(func(vbBack *vbucket) {
+			fetchedItem := v.storeBack.get(req.Key)
+
+			// After fetching, call "through the top" so the
+			// storeFront update is synchronous.
+			v.ApplyAsync(func(vbLocked *vbucket) {
+				if fetchedItem != nil {
+					currMeta := v.storeFront.getMeta(fetchedItem.key)
+					if currMeta != nil {
+						if currMeta.cas == i.cas {
+							v.storeFront.set(fetchedItem, nil)
+						} // else, item was recently modified & storeBack is behind.
+					} // else, item was recently deleted & storeBack is behind.
+				} // TODO: handle the else case here.
+
+				// TODO: not sure if we should recurse here.
+				res, _ := vbGet(v, vbr)
+				if res != overrideResponse {
+					v.respond(vbr, res)
+				}
+			})
+		})
+
+		return overrideResponse, nil
 	}
 
 	res := &gomemcached.MCResponse{
@@ -451,6 +508,10 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.storeFront.del(req.Key, cas)
 
 	toBroadcast := &mutation{v.vbid, req.Key, cas, true}
+
+	v.ApplyBackAsync(func(vbBack *vbucket) {
+		vbBack.storeBack.del(req.Key, cas)
+	})
 
 	return &gomemcached.MCResponse{}, toBroadcast
 }
@@ -734,6 +795,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 }
 
 func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
+	// TODO: storeBack.rangeCopy() needs ApplyBackAsync() protection?
 	dst.storeFront = v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive)
 	dst.storeBack = v.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
 	dst.cas = v.cas
