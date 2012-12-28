@@ -9,7 +9,11 @@ import (
 
 type storeVisitor func(*item) bool
 
-// The store abstraction provides a items and changes-feed storage container.
+// The store abstraction provides a simple, synchronous,
+// single-threaded items and changes-feed storage container.  Users
+// that need asynchronous behavior should handle it themselves (such
+// as by spawning their own goroutines) and by using
+// store.snapshot()'s.
 //
 // The storeMem implementation is in-memory, based on immutable treaps.
 type storeMem struct {
@@ -21,6 +25,16 @@ func newStoreMem() *storeMem {
 	return &storeMem{
 		items:   gtreap.NewTreap(KeyLess),
 		changes: gtreap.NewTreap(CASLess),
+	}
+}
+
+// The snapshot() method allows users to get a stable, immutable
+// snapshot of a store, which they can safely access while others are
+// concurrently accessing and modifying the original store.
+func (s *storeMem) snapshot() *storeMem {
+	return &storeMem{
+		items:   s.items,
+		changes: s.changes,
 	}
 }
 

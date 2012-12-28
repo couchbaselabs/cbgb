@@ -525,6 +525,9 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	v.stats.RGets++
 
+	// Snapshot during the vbucket service() "lock".
+	storeSnapshot := v.store.snapshot()
+
 	go func() {
 		req := vbr.req
 		res := &gomemcached.MCResponse{
@@ -555,7 +558,7 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 			return true
 		}
 
-		v.store.visitItems(req.Key, visitor)
+		storeSnapshot.visitItems(req.Key, visitor)
 		v.Apply(func(vbLocked *vbucket) {
 			vbLocked.stats.RGetResults += visitRGetResults
 			vbLocked.stats.ValueBytesOutgoing += visitValueBytesOutgoing
