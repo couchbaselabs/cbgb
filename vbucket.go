@@ -416,7 +416,6 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	meta := v.store.getMeta(req.Key)
 	if meta != nil {
-		v.stats.Items--
 		if req.Cas != 0 {
 			if req.Cas != meta.cas {
 				return &gomemcached.MCResponse{
@@ -424,6 +423,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 				}, nil
 			}
 		}
+		v.stats.Items--
 	} else {
 		if req.Opcode.IsQuiet() {
 			return nil, nil
