@@ -14,14 +14,24 @@ type storeVisitor func(*item) bool
 // that need asynchronous behavior should handle it themselves (such
 // as by spawning their own goroutines) and by using
 // store.snapshot()'s.
-//
+type store interface {
+	snapshot() store
+	getMeta(key []byte) *item
+	get(key []byte) *item
+	set(newItem *item, oldMeta *item)
+	del(key []byte, cas uint64)
+	visitItems(key []byte, visitor storeVisitor)
+	visitChanges(cas uint64, visitor storeVisitor)
+	rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) store
+}
+
 // The storeMem implementation is in-memory, based on immutable treaps.
 type storeMem struct {
 	items   *gtreap.Treap
 	changes *gtreap.Treap
 }
 
-func newStoreMem() *storeMem {
+func newStoreMem() store {
 	return &storeMem{
 		items:   gtreap.NewTreap(KeyLess),
 		changes: gtreap.NewTreap(CASLess),
@@ -31,7 +41,7 @@ func newStoreMem() *storeMem {
 // The snapshot() method allows users to get a stable, immutable
 // snapshot of a store, which they can safely access while others are
 // concurrently accessing and modifying the original store.
-func (s *storeMem) snapshot() *storeMem {
+func (s *storeMem) snapshot() store {
 	return &storeMem{
 		items:   s.items,
 		changes: s.changes,
@@ -85,7 +95,7 @@ func (s *storeMem) visitChanges(cas uint64, visitor storeVisitor) {
 	})
 }
 
-func (s *storeMem) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) *storeMem {
+func (s *storeMem) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) store {
 	return &storeMem{
 		items: treapRangeCopy(s.items, gtreap.NewTreap(KeyLess),
 			s.items.Min(), // TODO: inefficient.

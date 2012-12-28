@@ -91,7 +91,7 @@ type vbapplyreq struct {
 
 type vbucket struct {
 	parent    *bucket
-	store     *storeMem
+	store     store
 	cas       uint64
 	observer  *broadcaster
 	vbid      uint16
