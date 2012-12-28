@@ -10,6 +10,7 @@ import (
 type storeVisitor func(*item) bool
 
 // The store abstraction provides a items and changes-feed storage container.
+//
 // The storeMem implementation is in-memory, based on immutable treaps.
 type storeMem struct {
 	items   *gtreap.Treap
@@ -31,12 +32,19 @@ func (s *storeMem) get(key []byte) *item {
 	return nil
 }
 
-func (s *storeMem) set(newItem *item, oldItem *item) {
+// The getMeta() method is just like get(), except is might return
+// item.data of nil.
+func (s *storeMem) getMeta(key []byte) *item {
+	// This storeMem implementation, though, just uses get().
+	return s.get(key)
+}
+
+func (s *storeMem) set(newItem *item, oldMeta *item) {
 	s.items = s.items.Upsert(newItem, rand.Int())
 	s.changes = s.changes.Upsert(newItem, rand.Int())
-	if oldItem != nil {
-		// TODO: Should we be de-duplicating oldItem from the changes feed?
-		s.changes.Delete(oldItem)
+	if oldMeta != nil {
+		// TODO: Should we be de-duplicating oldMeta from the changes feed?
+		s.changes.Delete(oldMeta)
 	}
 }
 

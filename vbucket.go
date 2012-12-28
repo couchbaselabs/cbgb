@@ -318,14 +318,13 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	itemOld := v.store.get(req.Key)
+	metaOld := v.store.getMeta(req.Key)
 
 	if req.Cas != 0 {
 		var oldcas uint64
-		if itemOld != nil {
-			oldcas = itemOld.cas
+		if metaOld != nil {
+			oldcas = metaOld.cas
 		}
-
 		if oldcas != req.Cas {
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
@@ -345,8 +344,8 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	v.stats.ValueBytesIncoming += uint64(len(req.Body))
 
-	v.store.set(itemNew, itemOld)
-	if itemOld != nil {
+	v.store.set(itemNew, metaOld)
+	if metaOld != nil {
 		v.stats.Updates++
 	} else {
 		v.stats.Creates++
@@ -415,11 +414,11 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	i := v.store.get(req.Key)
-	if i != nil {
+	meta := v.store.getMeta(req.Key)
+	if meta != nil {
 		v.stats.Items--
 		if req.Cas != 0 {
-			if req.Cas != i.cas {
+			if req.Cas != meta.cas {
 				return &gomemcached.MCResponse{
 					Status: gomemcached.EINVAL,
 				}, nil
