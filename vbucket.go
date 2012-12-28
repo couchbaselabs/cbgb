@@ -102,6 +102,7 @@ type vbucket struct {
 	suspended  bool
 	ch         chan vbreq
 	ach        chan vbapplyreq
+	backch     chan vbapplyreq
 }
 
 // Message sent on object change
@@ -164,9 +165,11 @@ func newVBucket(parent *bucket, vbid uint16) *vbucket {
 		state:      VBDead,
 		ch:         make(chan vbreq),
 		ach:        make(chan vbapplyreq),
+		backch:     make(chan vbapplyreq),
 	}
 
 	go rv.service()
+	go rv.serviceBack()
 
 	return rv
 }
@@ -201,6 +204,13 @@ func (v *vbucket) serviceSuspended() {
 		if !v.suspended {
 			return
 		}
+	}
+}
+
+func (v *vbucket) serviceBack() {
+	for ar := range v.backch {
+		ar.cb(v)
+		close(ar.res)
 	}
 }
 
