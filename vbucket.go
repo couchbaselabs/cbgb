@@ -6,11 +6,9 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"math/rand"
 	"sort"
 
 	"github.com/dustin/gomemcached"
-	"github.com/steveyen/gtreap"
 )
 
 const (
@@ -93,8 +91,7 @@ type vbapplyreq struct {
 
 type vbucket struct {
 	parent    *bucket
-	items     *gtreap.Treap
-	changes   *gtreap.Treap
+	store     *storeMem
 	cas       uint64
 	observer  *broadcaster
 	vbid      uint16
@@ -159,8 +156,7 @@ func init() {
 func newVBucket(parent *bucket, vbid uint16) *vbucket {
 	rv := &vbucket{
 		parent:   parent,
-		items:    gtreap.NewTreap(KeyLess),
-		changes:  gtreap.NewTreap(CASLess),
+		store:    newStoreMem(),
 		observer: newBroadcaster(dataBroadcastBufLen),
 		vbid:     vbid,
 		state:    VBDead,
@@ -322,12 +318,12 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	old := v.items.Get(&item{key: req.Key})
+	itemOld := v.store.get(req.Key)
 
 	if req.Cas != 0 {
 		var oldcas uint64
-		if old != nil {
-			oldcas = old.(*item).cas
+		if itemOld != nil {
+			oldcas = itemOld.cas
 		}
 
 		if oldcas != req.Cas {
@@ -349,11 +345,8 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	v.stats.ValueBytesIncoming += uint64(len(req.Body))
 
-	v.items = v.items.Upsert(itemNew, rand.Int())
-
-	v.changes = v.changes.Upsert(itemNew, rand.Int())
-	if old != nil {
-		v.changes.Delete(old)
+	v.store.set(itemNew, itemOld)
+	if itemOld != nil {
 		v.stats.Updates++
 	} else {
 		v.stats.Creates++
@@ -382,8 +375,8 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	x := v.items.Get(&item{key: req.Key})
-	if x == nil {
+	i := v.store.get(req.Key)
+	if i == nil {
 		if vbr.w != nil {
 			v.stats.GetMisses++
 		}
@@ -395,7 +388,6 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		}, nil
 	}
 
-	i := x.(*item)
 	res := &gomemcached.MCResponse{
 		Cas:    i.cas,
 		Extras: make([]byte, 4),
@@ -423,11 +415,9 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	t := &item{key: req.Key}
-	x := v.items.Get(t)
-	if x != nil {
+	i := v.store.get(req.Key)
+	if i != nil {
 		v.stats.Items--
-		i := x.(*item)
 		if req.Cas != 0 {
 			if req.Cas != i.cas {
 				return &gomemcached.MCResponse{
@@ -447,13 +437,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	cas := v.cas
 	v.cas++
 
-	v.items = v.items.Delete(t)
-
-	v.changes = v.changes.Upsert(&item{
-		key:  req.Key,
-		cas:  cas,
-		data: nil, // A nil data represents a delete mutation.
-	}, rand.Int())
+	v.store.del(req.Key, cas)
 
 	toBroadcast := &mutation{v.vbid, req.Key, cas, true}
 
@@ -473,8 +457,7 @@ func vbChangesSince(v *vbucket, vbr *vbreq) (res *gomemcached.MCResponse, m *mut
 	ch, errs := transmitPackets(vbr.w)
 	var err error
 
-	visitor := func(x gtreap.Item) bool {
-		i := x.(*item)
+	visitor := func(i *item) bool {
 		if i.cas > req.Cas {
 			ch <- &gomemcached.MCResponse{
 				Opcode: req.Opcode,
@@ -492,7 +475,7 @@ func vbChangesSince(v *vbucket, vbr *vbreq) (res *gomemcached.MCResponse, m *mut
 		return true
 	}
 
-	v.changes.VisitAscend(&item{cas: req.Cas}, visitor)
+	v.store.visitChanges(req.Cas, visitor)
 	close(ch)
 	if err == nil {
 		err = <-errs
@@ -553,8 +536,7 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		visitRGetResults := uint64(0)
 		visitValueBytesOutgoing := uint64(0)
 
-		visitor := func(x gtreap.Item) bool {
-			i := x.(*item)
+		visitor := func(i *item) bool {
 			if bytes.Compare(i.key, req.Key) >= 0 {
 				err := (&gomemcached.MCResponse{
 					Opcode: req.Opcode,
@@ -574,13 +556,14 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 			return true
 		}
 
-		v.items.VisitAscend(&item{key: req.Key}, visitor)
+		v.store.visitItems(req.Key, visitor)
 		v.Apply(func(vbLocked *vbucket) {
 			vbLocked.stats.RGetResults += visitRGetResults
 			vbLocked.stats.ValueBytesOutgoing += visitValueBytesOutgoing
 		})
 		v.respond(vbr, res)
 	}()
+
 	return overrideResponse, nil
 }
 
@@ -728,8 +711,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 	transferSplits(0)
 	if res.Status == gomemcached.SUCCESS {
-		v.items = gtreap.NewTreap(KeyLess)
-		v.changes = gtreap.NewTreap(CASLess)
+		v.store = newStoreMem()
 		v.state = VBDead
 		v.config = &VBConfig{}
 	}
@@ -737,37 +719,11 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 }
 
 func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
-	dst.items = treeRangeCopy(v.items, gtreap.NewTreap(KeyLess),
-		v.items.Min(), // TODO: inefficient.
-		minKeyInclusive,
-		maxKeyExclusive)
-	dst.changes = treeRangeCopy(v.changes, gtreap.NewTreap(CASLess),
-		v.changes.Min(), // TODO: inefficient.
-		minKeyInclusive,
-		maxKeyExclusive)
+	dst.store = v.store.rangeCopy(minKeyInclusive, maxKeyExclusive)
 	dst.cas = v.cas
 	dst.state = v.state
 	dst.config = &VBConfig{
 		MinKeyInclusive: minKeyInclusive,
 		MaxKeyExclusive: maxKeyExclusive,
 	}
-}
-
-func treeRangeCopy(src *gtreap.Treap, dst *gtreap.Treap, minItem gtreap.Item,
-	minKeyInclusive []byte, maxKeyExclusive []byte) *gtreap.Treap {
-	visitor := func(x gtreap.Item) bool {
-		i := x.(*item)
-		if len(minKeyInclusive) > 0 &&
-			bytes.Compare(i.key, minKeyInclusive) < 0 {
-			return true
-		}
-		if len(maxKeyExclusive) > 0 &&
-			bytes.Compare(i.key, maxKeyExclusive) >= 0 {
-			return true
-		}
-		dst.Upsert(x, rand.Int())
-		return true
-	}
-	src.VisitAscend(minItem, visitor)
-	return dst
 }
