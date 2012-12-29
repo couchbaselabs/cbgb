@@ -110,6 +110,10 @@ func (s *storeMem) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) sto
 
 func treapRangeCopy(src *gtreap.Treap, dst *gtreap.Treap, minItem gtreap.Item,
 	minKeyInclusive []byte, maxKeyExclusive []byte) *gtreap.Treap {
+	// TODO: should instead use the treap's split capability, which
+	// would be O(log N) instead of an O(N) visit, and should also use
+	// its snapshot feature so that this can be done asynchronously
+	// outside of the vbucket's service() loop.
 	visitor := func(x gtreap.Item) bool {
 		i := x.(*item)
 		if len(minKeyInclusive) > 0 &&
