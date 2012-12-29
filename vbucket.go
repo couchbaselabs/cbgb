@@ -278,9 +278,27 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 	})
 }
 
+func (v *vbucket) backgroundFetch(key []byte, maxTries int) (res *item) {
+	for tries := 0; tries < maxTries; tries++ {
+		if res != nil {
+			return
+		}
+		v.ApplyBack(func(vbBack *vbucket) {
+			res = v.storeBack.get(key)
+		})
+	}
+	return
+}
+
 func (v *vbucket) Apply(cb func(*vbucket)) {
 	req := vbapplyreq{cb: cb, res: make(chan bool)}
 	v.ach <- req
+	<-req.res
+}
+
+func (v *vbucket) ApplyBack(cb func(*vbucket)) {
+	req := vbapplyreq{cb: cb, res: make(chan bool)}
+	v.backch <- req
 	<-req.res
 }
 
@@ -627,6 +645,15 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 		visitor := func(i *item) bool {
 			if bytes.Compare(i.key, req.Key) >= 0 {
+				if i.data == nil {
+					i = v.backgroundFetch(i.key, 5)
+					// TODO: track stats for RGET bg-fetches?
+				}
+				if i == nil || i.data == nil {
+					// TODO: need a stat for this case?
+					return true
+				}
+
 				err := (&gomemcached.MCResponse{
 					Opcode: req.Opcode,
 					Key:    i.key,

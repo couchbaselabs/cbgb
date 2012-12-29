@@ -1206,6 +1206,17 @@ func TestStoreFrontBack(t *testing.T) {
 	defer vb.Close()
 	testBucket.SetVBState(3, VBActive)
 
+	clearStoreFront := func() {
+		// Clear the storeFront's item.data so that vbucket has to fetch
+		// from the storeBack.
+		vb.Apply(func(vbLocked *vbucket) {
+			vbLocked.storeFront.visitItems([]byte("a"), func(i *item) bool {
+				i.data = nil
+				return true
+			})
+		})
+	}
+
 	runTestsFrom := func(start int) {
 		for i := start; i < len(tests); i++ {
 			x := tests[i]
@@ -1228,16 +1239,7 @@ func TestStoreFrontBack(t *testing.T) {
 	}
 
 	runTestsFrom(0)
-
-	// Clear the storeFront's item.data so that vbucket has to fetch
-	// from the storeBack.
-	vb.Apply(func(vbLocked *vbucket) {
-		vbLocked.storeFront.visitItems([]byte("a"), func(i *item) bool {
-			i.data = nil
-			return true
-		})
-	})
-
+	clearStoreFront()
 	runTestsFrom(5)
 
 	if vb.stats.StoreBackFetchedItems != 2 {
@@ -1259,5 +1261,41 @@ func TestStoreFrontBack(t *testing.T) {
 	if vb.stats.StoreBackFetchedAgain != 0 {
 		t.Errorf("Expected vb.stats.StoreBackFetchedAgain of 0, got: %v",
 			vb.stats.StoreBackFetchedAgain)
+	}
+
+	// Test RGET's background fetching.
+	runTestsFrom(0)
+	clearStoreFront()
+	req := &gomemcached.MCRequest{
+		Opcode:  gomemcached.RGET,
+		Key:     []byte("a"),
+		VBucket: active,
+	}
+	w := &bytes.Buffer{}
+	res := rh.HandleMessage(w, req)
+	if res.Status != gomemcached.SUCCESS {
+		t.Errorf("Expected RGET success, got: %v", res)
+	}
+	results := decodeResponses(t, w.Bytes())
+	if len(results) != 2 {
+		t.Errorf("Expected to see %v results, got: %v",
+			2, len(results))
+	}
+	rgetExpecteds := []struct {
+		key string
+		val string
+	}{
+		{"a", "aaa"},
+		{"b", "bye"},
+	}
+	for i, rgetExpected := range rgetExpecteds {
+		if !bytes.Equal(results[i].Key, []byte(rgetExpected.key)) {
+			t.Errorf("Expected rget result key: %v, got: %v",
+				rgetExpected.key, string(results[i].Key))
+		}
+		if !bytes.Equal(results[i].Body, []byte(rgetExpected.val)) {
+			t.Errorf("Expected rget result val: %v, got: %v",
+				rgetExpected.val, string(results[i].Body))
+		}
 	}
 }
