@@ -1244,7 +1244,7 @@ func TestStoreFrontBack(t *testing.T) {
 		t.Errorf("Expected vb.stats.StoreBackFetchedItems of 2, got: %v",
 			vb.stats.StoreBackFetchedItems)
 	}
-	if vb.stats.StoreBackFetchedModified == 0 {
+	if vb.stats.StoreBackFetchedModified != 0 {
 		t.Errorf("Expected vb.stats.StoreBackFetchedModified of 0, got: %v",
 			vb.stats.StoreBackFetchedModified)
 	}
