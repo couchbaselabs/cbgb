@@ -836,9 +836,10 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 }
 
 func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
-	// TODO: storeBack.rangeCopy() needs ApplyBackAsync() protection?
 	dst.storeFront = v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive)
-	dst.storeBack = v.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
+	v.ApplyBack(func(vb *vbucket) {
+		dst.storeBack = vb.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
+	})
 	dst.cas = v.cas
 	dst.state = v.state
 	dst.config = &VBConfig{
