@@ -437,18 +437,29 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 			// storeFront update is synchronous.
 			v.ApplyAsync(func(vbLocked *vbucket) {
 				if fetchedItem != nil {
+					v.stats.StoreBackFetchedItems++
 					currMeta := v.storeFront.getMeta(fetchedItem.key)
 					if currMeta != nil {
 						if currMeta.cas == i.cas {
 							v.storeFront.set(fetchedItem, nil)
-						} // else, item was recently modified & storeBack is behind.
-					} // else, item was recently deleted & storeBack is behind.
-				} // TODO: handle the else case here.
+						} else {
+							// Item was recently modified & storeBack is behind.
+							v.stats.StoreBackFetchedModified++
+						}
+					} else {
+						// Item was recently deleted & storeBack is behind.
+						v.stats.StoreBackFetchedDeleted++
+					}
+				} else {
+					v.stats.StoreBackFetchedNil++
+				}
 
 				// TODO: not sure if we should recurse here.
 				res, _ := vbGet(v, vbr)
 				if res != overrideResponse {
 					v.respond(vbr, res)
+				} else {
+					v.stats.StoreBackFetchedAgain++
 				}
 			})
 		})

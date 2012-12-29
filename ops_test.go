@@ -1239,4 +1239,25 @@ func TestStoreFrontBack(t *testing.T) {
 	})
 
 	runTestsFrom(5)
+
+	if vb.stats.StoreBackFetchedItems != 2 {
+		t.Errorf("Expected vb.stats.StoreBackFetchedItems of 2, got: %v",
+			vb.stats.StoreBackFetchedItems)
+	}
+	if vb.stats.StoreBackFetchedModified == 0 {
+		t.Errorf("Expected vb.stats.StoreBackFetchedModified of 0, got: %v",
+			vb.stats.StoreBackFetchedModified)
+	}
+	if vb.stats.StoreBackFetchedDeleted != 0 {
+		t.Errorf("Expected vb.stats.StoreBackFetchedDeleted of 0, got: %v",
+			vb.stats.StoreBackFetchedDeleted)
+	}
+	if vb.stats.StoreBackFetchedNil != 0 {
+		t.Errorf("Expected vb.stats.StoreBackFetchedNil of 0, got: %v",
+			vb.stats.StoreBackFetchedNil)
+	}
+	if vb.stats.StoreBackFetchedAgain != 0 {
+		t.Errorf("Expected vb.stats.StoreBackFetchedAgain of 0, got: %v",
+			vb.stats.StoreBackFetchedAgain)
+	}
 }
