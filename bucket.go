@@ -12,13 +12,29 @@ const (
 	DEFAULT_BUCKET_KEY = "default"
 )
 
+// That in which everything is bucketized.
+type bucket interface {
+	getVBucket(vbid uint16) *vbucket
+	Close() error
+	Observer() *broadcaster
+	Subscribe(ch chan<- interface{})
+	Unsubscribe(ch chan<- interface{})
+	CreateVBucket(vbid uint16) *vbucket
+	SetVBState(vbid uint16, newState VBState) *vbucket
+	destroyVBucket(vbid uint16) (destroyed bool)
+	Available() bool
+}
+
 type vbucketChange struct {
-	bucket             *bucket
+	bucket             bucket
 	vbid               uint16
 	oldState, newState VBState
 }
 
 func (c vbucketChange) getVBucket() *vbucket {
+	if c.bucket == nil {
+		return nil
+	}
 	return c.bucket.getVBucket(c.vbid)
 }
 
@@ -27,14 +43,14 @@ func (c vbucketChange) String() string {
 		c.vbid, c.oldState, c.newState)
 }
 
-type bucket struct {
+type livebucket struct {
 	vbuckets    [MAX_VBUCKET]unsafe.Pointer
 	availablech chan bool
 	observer    *broadcaster
 }
 
-func NewBucket() *bucket {
-	return &bucket{
+func NewBucket() bucket {
+	return &livebucket{
 		observer:    newBroadcaster(0),
 		availablech: make(chan bool),
 	}
@@ -42,18 +58,18 @@ func NewBucket() *bucket {
 
 // Holder of buckets
 type Buckets struct {
-	buckets map[string]*bucket
+	buckets map[string]bucket
 	lock    sync.Mutex
 }
 
 // Build a new holder of buckets.
 func NewBuckets() *Buckets {
-	return &Buckets{buckets: map[string]*bucket{}}
+	return &Buckets{buckets: map[string]bucket{}}
 }
 
 // Create a new named bucket.
 // Return the new bucket, or nil if the bucket already exists.
-func (b *Buckets) New(name string) *bucket {
+func (b *Buckets) New(name string) bucket {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -67,7 +83,7 @@ func (b *Buckets) New(name string) *bucket {
 }
 
 // Get the named bucket (or nil if it doesn't exist).
-func (b *Buckets) Get(name string) *bucket {
+func (b *Buckets) Get(name string) bucket {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -86,14 +102,14 @@ func (b *Buckets) Destroy(name string) {
 	}
 }
 
-func (b *bucket) Observer() *broadcaster {
+func (b *livebucket) Observer() *broadcaster {
 	return b.observer
 }
 
 // Subscribe to bucket events.
 //
 // Note that this is retroactive -- it will send existing states.
-func (b *bucket) Subscribe(ch chan<- interface{}) {
+func (b *livebucket) Subscribe(ch chan<- interface{}) {
 	b.observer.Register(ch)
 	go func() {
 		for i := uint16(0); i < MAX_VBUCKET; i++ {
@@ -113,12 +129,16 @@ func (b *bucket) Subscribe(ch chan<- interface{}) {
 	}()
 }
 
-func (b *bucket) Close() error {
+func (b *livebucket) Unsubscribe(ch chan<- interface{}) {
+	b.observer.Unregister(ch)
+}
+
+func (b *livebucket) Close() error {
 	close(b.availablech)
 	return nil
 }
 
-func (b *bucket) Available() bool {
+func (b *livebucket) Available() bool {
 	select {
 	default:
 	case <-b.availablech:
@@ -127,7 +147,7 @@ func (b *bucket) Available() bool {
 	return true
 }
 
-func (b *bucket) getVBucket(vbid uint16) *vbucket {
+func (b *livebucket) getVBucket(vbid uint16) *vbucket {
 	if b == nil || !b.Available() {
 		return nil
 	}
@@ -135,12 +155,12 @@ func (b *bucket) getVBucket(vbid uint16) *vbucket {
 	return (*vbucket)(vbp)
 }
 
-func (b *bucket) casVBucket(vbid uint16, vb *vbucket, vbPrev *vbucket) bool {
+func (b *livebucket) casVBucket(vbid uint16, vb *vbucket, vbPrev *vbucket) bool {
 	return atomic.CompareAndSwapPointer(&b.vbuckets[vbid],
 		unsafe.Pointer(vbPrev), unsafe.Pointer(vb))
 }
 
-func (b *bucket) CreateVBucket(vbid uint16) *vbucket {
+func (b *livebucket) CreateVBucket(vbid uint16) *vbucket {
 	if b == nil || !b.Available() {
 		return nil
 	}
@@ -151,7 +171,7 @@ func (b *bucket) CreateVBucket(vbid uint16) *vbucket {
 	return nil
 }
 
-func (b *bucket) destroyVBucket(vbid uint16) (destroyed bool) {
+func (b *livebucket) destroyVBucket(vbid uint16) (destroyed bool) {
 	destroyed = false
 	vb := b.getVBucket(vbid)
 	if vb != nil {
@@ -165,7 +185,7 @@ func (b *bucket) destroyVBucket(vbid uint16) (destroyed bool) {
 	return
 }
 
-func (b *bucket) SetVBState(vbid uint16, newState VBState) *vbucket {
+func (b *livebucket) SetVBState(vbid uint16, newState VBState) *vbucket {
 	vb := b.getVBucket(vbid)
 	if vb != nil {
 		vb.SetVBState(newState, func(oldState VBState) {

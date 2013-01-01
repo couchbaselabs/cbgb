@@ -19,10 +19,16 @@ func TestMutationLogger(t *testing.T) {
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: true, key: []byte("a"), cas: 0}
 	ch <- mutation{deleted: false, key: []byte("a"), cas: 2}
+	ch <- vbucketChange{oldState: VBDead, newState: VBActive} // invalid bucket
 	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBActive, newState: VBDead}
 	close(ch)
 
 	MutationLogger(ch)
+
+	// Should've eaten all the things
+	if len(ch) != 0 {
+		t.Fatalf("Failed to consume all the messages")
+	}
 }
 
 func TestMutationInvalid(t *testing.T) {
@@ -32,13 +38,21 @@ func TestMutationInvalid(t *testing.T) {
 		}
 	}()
 
+	b := NewBucket()
+	b.CreateVBucket(0)
+
 	ch := make(chan interface{}, 5)
 	// Notification of a non-existence bucket is a null lookup.
-	ch <- vbucketChange{vbid: 0, oldState: VBDead, newState: VBActive}
+	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBDead, newState: VBActive}
 	// But this is crazy stupid and will crash the logger.
 	ch <- 19
 
 	MutationLogger(ch)
+
+	// Should've eaten all the things
+	if len(ch) != 0 {
+		t.Fatalf("Failed to consume all the messages")
+	}
 }
 
 // Run through the sessionLoop code with a quit command.

@@ -85,7 +85,7 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"err_not_my_range", strconv.FormatUint(s.ErrNotMyRange, 10)}
 }
 
-func aggregateStats(b *bucket, key string) (agg *Stats) {
+func aggregateStats(b bucket, key string) (agg *Stats) {
 	agg = &Stats{}
 	for i := uint16(0); i < uint16(MAX_VBUCKET); i++ {
 		vb := b.getVBucket(i)
@@ -117,7 +117,7 @@ func transmitStats(w io.Writer) (chan<- statItem, <-chan error) {
 	return ch, errs
 }
 
-func doStats(b *bucket, w io.Writer, key string) error {
+func doStats(b bucket, w io.Writer, key string) error {
 	log.Printf("Doing stats for %#v", key)
 
 	ch, errs := transmitStats(w)

@@ -90,7 +90,7 @@ func TestBasicOps(t *testing.T) {
 		ValueBytesOutgoing: 9,
 	}
 
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
@@ -152,7 +152,7 @@ func TestBasicOps(t *testing.T) {
 }
 
 func TestMutationBroadcast(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
@@ -237,7 +237,7 @@ func testGet(rh *reqHandler, vbid uint16, key string) *gomemcached.MCResponse {
 }
 
 func TestCASDelete(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
@@ -277,7 +277,7 @@ func TestCASDelete(t *testing.T) {
 }
 
 func TestCASSet(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
@@ -318,7 +318,7 @@ func TestCASSet(t *testing.T) {
 }
 
 func TestVersionCommand(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -337,7 +337,7 @@ func TestVersionCommand(t *testing.T) {
 }
 
 func TestVersionNOOP(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -352,7 +352,7 @@ func TestVersionNOOP(t *testing.T) {
 }
 
 func TestQuit(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -485,7 +485,7 @@ func TestTapChanges(t *testing.T) {
 }
 
 func TestStats(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -506,7 +506,7 @@ func TestStats(t *testing.T) {
 }
 
 func TestInvalidCommand(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
 	rh := reqHandler{testBucket}
@@ -523,7 +523,7 @@ func TestInvalidCommand(t *testing.T) {
 }
 
 func BenchmarkInvalidCommand(b *testing.B) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
 	rh := reqHandler{testBucket}
@@ -540,7 +540,7 @@ func BenchmarkInvalidCommand(b *testing.B) {
 // This test doesn't assert much, but relies on the race detector to
 // determine whether anything bad is happening.
 func TestParallelMutations(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
@@ -576,7 +576,7 @@ func TestParallelMutations(t *testing.T) {
 
 // Parallel dispatcher invocation timing.
 func BenchmarkParallelGet(b *testing.B) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
@@ -608,7 +608,7 @@ func BenchmarkParallelGet(b *testing.B) {
 
 // Best case dispatcher timing.
 func BenchmarkDispatch(b *testing.B) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
 
@@ -635,7 +635,7 @@ func TestChangesSince(t *testing.T) {
 }
 
 func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
@@ -814,7 +814,7 @@ func TestVBucketConfig(t *testing.T) {
 		},
 	}
 
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
@@ -855,7 +855,7 @@ func TestVBucketConfig(t *testing.T) {
 func TestMinMaxRange(t *testing.T) {
 	empty := []byte{}
 
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()
@@ -940,7 +940,7 @@ func TestRGet(t *testing.T) {
 }
 
 func testRGet(t *testing.T, startKey int, numItems int) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()
@@ -1026,7 +1026,7 @@ func TestSplitRange(t *testing.T) {
 	vb0 := []int{0}
 	vb1 := []int{1}
 
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
@@ -1111,7 +1111,7 @@ func TestSplitRange(t *testing.T) {
 }
 
 func TestSlowClient(t *testing.T) {
-	testBucket := &bucket{}
+	testBucket := &livebucket{}
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(0)
 	defer vb.Close()

@@ -15,7 +15,7 @@ const (
 )
 
 type reqHandler struct {
-	currentBucket *bucket
+	currentBucket bucket
 }
 
 type transmissible interface {
@@ -65,7 +65,7 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 	mch := make(chan interface{}, 1000)
 
 	rh.currentBucket.Subscribe(bch)
-	defer rh.currentBucket.observer.Unregister(bch)
+	defer rh.currentBucket.Unsubscribe(bch)
 
 	ticker := time.NewTicker(tapTickFreq)
 	defer ticker.Stop()

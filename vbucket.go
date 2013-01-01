@@ -100,7 +100,7 @@ type vbapplyreq struct {
 }
 
 type vbucket struct {
-	parent     *bucket
+	parent     bucket
 	storeFront store
 	storeBack  store
 	cas        uint64
@@ -165,7 +165,7 @@ func init() {
 	dispatchTable[SPLIT_RANGE] = vbSplitRange
 }
 
-func newVBucket(parent *bucket, vbid uint16) *vbucket {
+func newVBucket(parent bucket, vbid uint16) *vbucket {
 	rv := &vbucket{
 		parent:     parent,
 		storeFront: newStoreMem(),

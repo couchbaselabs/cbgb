@@ -19,7 +19,7 @@ func main() {
 	buckets := cbgb.NewBuckets()
 	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_KEY)
 
-	defaultBucket.Observer().Register(mutationLogCh)
+	defaultBucket.Subscribe(mutationLogCh)
 	defaultBucket.CreateVBucket(0)
 	defaultBucket.SetVBState(0, cbgb.VBActive)
 
