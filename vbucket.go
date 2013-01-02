@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -62,6 +63,47 @@ func (i *item) clone() *item {
 		cas:  i.cas,
 		data: i.data,
 	}
+}
+
+// Serialize everything but the key.
+func (i *item) toValueBytes() []byte {
+	buf := &bytes.Buffer{}
+	if err := binary.Write(buf, binary.BigEndian, i.exp); err != nil {
+		return nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, i.flag); err != nil {
+		return nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, i.cas); err != nil {
+		return nil
+	}
+	if err := binary.Write(buf, binary.BigEndian, uint32(len(i.data))); err != nil {
+		return nil
+	}
+	if _, err := buf.Write(i.data); err != nil {
+		return nil
+	}
+	return buf.Bytes()
+}
+
+func (i *item) fromValueBytes(b []byte) (err error) {
+	buf := bytes.NewBuffer(b)
+	if err = binary.Read(buf, binary.BigEndian, &i.exp); err != nil {
+		return err
+	}
+	if err = binary.Read(buf, binary.BigEndian, &i.flag); err != nil {
+		return err
+	}
+	if err = binary.Read(buf, binary.BigEndian, &i.cas); err != nil {
+		return err
+	}
+	var length uint32
+	if err = binary.Read(buf, binary.BigEndian, &length); err != nil {
+		return err
+	}
+	start := 4 + 4 + 8 + 4
+	i.data = b[start : start + int(length)]
+	return nil
 }
 
 func KeyLess(p, q interface{}) int {
