@@ -102,7 +102,7 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 		return err
 	}
 	start := 4 + 4 + 8 + 4
-	i.data = b[start : start + int(length)]
+	i.data = b[start : start+int(length)]
 	return nil
 }
 
@@ -417,9 +417,9 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	metaOld, err := v.storeFront.getMeta(req.Key)
 	if err != nil {
-		// TODO: better error message.
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
+			Body:   []byte(fmt.Sprintf("Store error %v", err)),
 		}, nil
 	}
 
@@ -484,9 +484,9 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	i, err := v.storeFront.get(req.Key)
 	if err != nil {
-		// TODO: better error message.
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
+			Body:   []byte(fmt.Sprintf("Store error %v", err)),
 		}, nil
 	}
 
@@ -535,9 +535,9 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 		v.ApplyAsync(func(vbLocked *vbucket) {
 			if err != nil {
 				v.stats.StoreBackFetchedErr++
- 				// TODO: better error message.
 				v.respond(vbr, &gomemcached.MCResponse{
 					Status: gomemcached.TMPFAIL,
+					Body:   []byte(fmt.Sprintf("Store error %v", err)),
 				})
 				return
 			}
@@ -547,9 +547,9 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 				currMeta, err := v.storeFront.getMeta(fetchedItem.key)
 				if err != nil {
 					v.stats.StoreBackFetchedErr++
- 					// TODO: better error message.
 					v.respond(vbr, &gomemcached.MCResponse{
 						Status: gomemcached.TMPFAIL,
+						Body:   []byte(fmt.Sprintf("Store error %v", err)),
 					})
 					return
 				}
@@ -590,9 +590,9 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	meta, err := v.storeFront.getMeta(req.Key)
 	if err != nil {
- 		// TODO: better error message.
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
+			Body:   []byte(fmt.Sprintf("Store error %v", err)),
 		}, nil
 	}
 
@@ -713,9 +713,9 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	// Snapshot during the vbucket service() "lock".
 	storeSnapshot, err := v.storeFront.snapshot()
 	if err != nil {
- 		// TODO: better error message.
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
+			Body:   []byte(fmt.Sprintf("Store error %v", err)),
 		}, nil
 	}
 
@@ -731,17 +731,32 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 		visitor := func(i *item) bool {
 			if bytes.Compare(i.key, req.Key) >= 0 {
+				var err error
+
 				if i.data == nil {
-					i, _ = v.backgroundFetch(i.key, 5)
 					// TODO: track stats for RGET bg-fetches?
-					// TODO: error handling
+					// TODO: should we fetch from snapshot?
+					i, err = v.backgroundFetch(i.key, 5)
 				}
-				if i == nil || i.data == nil {
-					// TODO: need a stat for this case?
-					return true
+				if err != nil {
+					res = &gomemcached.MCResponse{
+						Status: gomemcached.TMPFAIL,
+						Body:   []byte(fmt.Sprintf("Store error %v", err)),
+					}
+					return false
+				}
+				if i == nil {
+					return true // Item was deleted while we were iterating.
+				}
+				if i.data == nil {
+					res = &gomemcached.MCResponse{
+						Status: gomemcached.TMPFAIL,
+						Body:   []byte("Missing data"),
+					}
+					return false
 				}
 
-				err := (&gomemcached.MCResponse{
+				err = (&gomemcached.MCResponse{
 					Opcode: req.Opcode,
 					Key:    i.key,
 					Cas:    i.cas,
