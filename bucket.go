@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"fmt"
+	"os"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -47,10 +48,12 @@ type livebucket struct {
 	vbuckets    [MAX_VBUCKET]unsafe.Pointer
 	availablech chan bool
 	observer    *broadcaster
+	dir         string
 }
 
-func NewBucket() bucket {
+func NewBucket(dirForBucket string) bucket {
 	return &livebucket{
+		dir:         dirForBucket,
 		observer:    newBroadcaster(0),
 		availablech: make(chan bool),
 	}
@@ -59,12 +62,14 @@ func NewBucket() bucket {
 // Holder of buckets
 type Buckets struct {
 	buckets map[string]bucket
+	dir     string // Directory where all buckets are stored.
 	lock    sync.Mutex
 }
 
 // Build a new holder of buckets.
-func NewBuckets() *Buckets {
-	return &Buckets{buckets: map[string]bucket{}}
+func NewBuckets(dirForBuckets string) *Buckets {
+	// TODO: Need to load existing buckets from the dir.
+	return &Buckets{buckets: map[string]bucket{}, dir: dirForBuckets}
 }
 
 // Create a new named bucket.
@@ -77,7 +82,9 @@ func (b *Buckets) New(name string) bucket {
 		return nil
 	}
 
-	rv := NewBucket()
+	// The suffix allows non-buckets to be ignored in that directory.
+	// TODO: Encode the bucket name for safety.
+	rv := NewBucket(b.dir + string(os.PathSeparator) + name + "-bucket")
 	b.buckets[name] = rv
 	return rv
 }

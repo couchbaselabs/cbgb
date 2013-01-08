@@ -8,7 +8,7 @@ import (
 )
 
 func TestBucketRegistry(t *testing.T) {
-	bs := NewBuckets()
+	bs := NewBuckets("tmp")
 	newb := bs.New(DEFAULT_BUCKET_KEY)
 	if newb == nil {
 		t.Fatalf("Failed to create default bucket")
@@ -48,7 +48,7 @@ func TestBucketRegistry(t *testing.T) {
 
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
-	b := NewBucket()
+	b := NewBucket("tmp")
 	b.CreateVBucket(0)
 	b.SetVBState(0, VBActive)
 
@@ -96,7 +96,7 @@ func TestBucketNotifications(t *testing.T) {
 }
 
 func TestNewBucket(t *testing.T) {
-	nb := NewBucket()
+	nb := NewBucket("tmp")
 
 	ch := make(chan interface{}, 2)
 
@@ -118,7 +118,7 @@ func TestNewBucket(t *testing.T) {
 }
 
 func TestCreateDestroyVBucket(t *testing.T) {
-	nb := NewBucket()
+	nb := NewBucket("tmp")
 
 	if nb.CreateVBucket(300) == nil {
 		t.Fatalf("Expected successful CreateVBucket")
@@ -167,7 +167,7 @@ func TestVBString(t *testing.T) {
 }
 
 func TestBucketClose(t *testing.T) {
-	nb := NewBucket()
+	nb := NewBucket("tmp")
 
 	if nb.CreateVBucket(300) == nil {
 		t.Fatalf("Expected successful CreateVBucket")
@@ -194,7 +194,7 @@ func TestBucketClose(t *testing.T) {
 }
 
 func TestVBSuspend(t *testing.T) {
-	nb := NewBucket()
+	nb := NewBucket("tmp")
 
 	if nb.CreateVBucket(300) == nil {
 		t.Fatalf("Expected successful CreateVBucket")

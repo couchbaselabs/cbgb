@@ -11,12 +11,13 @@ var mutationLogCh = make(chan interface{})
 
 func main() {
 	addr := flag.String("bind", ":11211", "memcached listen port")
+	data := flag.String("data", "./tmp", "data directory")
 
 	flag.Parse()
 
 	go cbgb.MutationLogger(mutationLogCh)
 
-	buckets := cbgb.NewBuckets()
+	buckets := cbgb.NewBuckets(*data)
 	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_KEY)
 
 	defaultBucket.Subscribe(mutationLogCh)

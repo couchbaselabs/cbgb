@@ -11,7 +11,7 @@ import (
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {
-	b := NewBucket()
+	b := NewBucket("tmp")
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 10)
@@ -38,7 +38,7 @@ func TestMutationInvalid(t *testing.T) {
 		}
 	}()
 
-	b := NewBucket()
+	b := NewBucket("tmp")
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 5)
@@ -71,7 +71,7 @@ func TestSessionLoop(t *testing.T) {
 }
 
 func TestListener(t *testing.T) {
-	b := NewBuckets()
+	b := NewBuckets("tmp")
 	l, err := StartServer("0.0.0.0:0", b)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
@@ -92,7 +92,7 @@ func TestListener(t *testing.T) {
 }
 
 func TestListenerFail(t *testing.T) {
-	b := NewBuckets()
+	b := NewBuckets("tmp")
 	l, err := StartServer("1.1.1.1:22", b)
 	if err == nil {
 		t.Fatalf("Error failing to listen: %v", l.Addr())
