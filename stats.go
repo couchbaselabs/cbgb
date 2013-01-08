@@ -34,6 +34,7 @@ type Stats struct {
 	StoreBackFetchedDeleted  uint64
 	StoreBackFetchedNil      uint64
 	StoreBackFetchedAgain    uint64
+	StoreBackFetchedErr      uint64
 
 	ValueBytesIncoming uint64
 	ValueBytesOutgoing uint64
@@ -58,6 +59,7 @@ func (s *Stats) Add(in *Stats) {
 	s.StoreBackFetchedDeleted += in.StoreBackFetchedDeleted
 	s.StoreBackFetchedNil += in.StoreBackFetchedNil
 	s.StoreBackFetchedAgain += in.StoreBackFetchedAgain
+	s.StoreBackFetchedErr += in.StoreBackFetchedErr
 	s.ValueBytesIncoming += in.ValueBytesIncoming
 	s.ValueBytesOutgoing += in.ValueBytesOutgoing
 	s.ErrNotMyRange += in.ErrNotMyRange
@@ -80,6 +82,7 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"store_back_fetched_deleted", strconv.FormatUint(s.StoreBackFetchedDeleted, 10)}
 	ch <- statItem{"store_back_fetched_nil", strconv.FormatUint(s.StoreBackFetchedNil, 10)}
 	ch <- statItem{"store_back_fetched_again", strconv.FormatUint(s.StoreBackFetchedAgain, 10)}
+	ch <- statItem{"store_back_fetched_err", strconv.FormatUint(s.StoreBackFetchedErr, 10)}
 	ch <- statItem{"value_bytes_incoming", strconv.FormatUint(s.ValueBytesIncoming, 10)}
 	ch <- statItem{"value_bytes_outgoing", strconv.FormatUint(s.ValueBytesOutgoing, 10)}
 	ch <- statItem{"err_not_my_range", strconv.FormatUint(s.ErrNotMyRange, 10)}

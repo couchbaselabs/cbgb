@@ -31,88 +31,103 @@ func newStorePersistFromFile(f *os.File) (res store, err error) {
 	return nil, err
 }
 
-func (s *storePersist) snapshot() store {
+func (s *storePersist) snapshot() (store, error) {
 	panic("TODO: storePersist.snapshot()")
-	return nil
+	return nil, nil
 }
 
-func (s *storePersist) get(key []byte) *item {
+func (s *storePersist) get(key []byte) (*item, error) {
 	return s.getItem(key, true)
 }
 
-func (s *storePersist) getMeta(key []byte) *item {
+func (s *storePersist) getMeta(key []byte) (*item, error) {
 	return s.getItem(key, false)
 }
 
-func (s *storePersist) getItem(key []byte, withValue bool) *item {
+func (s *storePersist) getItem(key []byte, withValue bool) (i *item, err error) {
 	if v, err := s.items.GetItem(key, withValue); err == nil && v != nil {
 		i := &item{key: key}
-		if err := i.fromValueBytes(v.Val); err == nil {
-			return i
+		if err = i.fromValueBytes(v.Val); err == nil {
+			return i, nil
 		}
 	}
-	// TODO: error propagation.
-	return nil
+	return nil, err
 }
 
-func (s *storePersist) set(newItem *item, oldMeta *item) {
-	if err := s.items.Set(newItem.key, newItem.toValueBytes()); err == nil {
-		if err := s.changes.Set(casBytes(newItem.cas), newItem.key); err == nil {
-			if oldMeta != nil {
-				s.changes.Delete(casBytes(oldMeta.cas))
-			}
-			s.s.Flush() // TODO: flush less often.
+func (s *storePersist) set(newItem *item, oldMeta *item) error {
+	if err := s.items.Set(newItem.key, newItem.toValueBytes()); err != nil {
+		return err
+	}
+	if err := s.changes.Set(casBytes(newItem.cas), newItem.key); err != nil {
+		return err
+	}
+	if oldMeta != nil {
+		if err := s.changes.Delete(casBytes(oldMeta.cas)); err != nil {
+			return err
 		}
 	}
-	// TODO: error propagation.
+	return s.s.Flush() // TODO: flush less often.
 }
 
-func (s *storePersist) del(key []byte, cas uint64) {
-	if err := s.items.Delete(key); err == nil {
-		// Empty value represents a deletion.
-		if err := s.changes.Set(casBytes(cas), []byte{}); err == nil {
-			s.s.Flush() // TODO: flush less often.
-		}
+func (s *storePersist) del(key []byte, cas uint64) error {
+	if err := s.items.Delete(key); err != nil {
+		return err
+	}
+	// Empty value represents a deletion.
+	if err := s.changes.Set(casBytes(cas), []byte{}); err != nil {
+		return err
 	}
 	// TODO: should we be deleting older changes from the changes feed?
-	// TODO: error propagation.
+	return s.s.Flush() // TODO: flush less often.
 }
 
-func (s *storePersist) visitItems(key []byte, visitor storeVisitor) {
-	s.items.VisitItemsAscend(key, true, func(x *gkvlite.Item) bool {
+func (s *storePersist) visitItems(key []byte, visitor storeVisitor) error {
+	return s.items.VisitItemsAscend(key, true, func(x *gkvlite.Item) bool {
 		i := &item{key: x.Key}
 		if err := i.fromValueBytes(x.Val); err == nil {
 			return visitor(i)
 		}
 		return false
 	})
-	// TODO: error propagation.
 }
 
-func (s *storePersist) visitChanges(cas uint64, visitor storeVisitor) {
-	s.changes.VisitItemsAscend(casBytes(cas), true, func(x *gkvlite.Item) bool {
+func (s *storePersist) visitChanges(cas uint64, visitor storeVisitor) error {
+	return s.changes.VisitItemsAscend(casBytes(cas), true, func(x *gkvlite.Item) bool {
 		i := &item{key: x.Key}
 		if err := i.fromValueBytes(x.Val); err == nil {
 			return visitor(i)
 		}
 		return false
 	})
-	// TODO: error propagation.
 }
 
-func (s *storePersist) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) store {
-	// TODO: error handling.
-	res, _ := newStorePersist("TODO.tmp")
+func (s *storePersist) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) (store, error) {
+	res, err := newStorePersist("TODO.tmp")
+	if err != nil { // TODO: fake file.
+		return nil, err
+	}
 	dst := res.(*storePersist)
-	minItem, _ := dst.items.MinItem(false)
-	minChange, _ := dst.items.MaxItem(false)
 
-	collRangeCopy(s.items, dst.items, minItem.Key,
-		minKeyInclusive, maxKeyExclusive)
-	collRangeCopy(s.changes, dst.changes, minChange.Key,
-		minKeyInclusive, maxKeyExclusive)
+	minItem, err := dst.items.MinItem(false)
+	if err != nil {
+		return nil, err
+	}
+	minChange, err := dst.items.MaxItem(false)
+	if err != nil {
+		return nil, err
+	}
 
-	return res
+	if err := collRangeCopy(s.items, dst.items, minItem.Key,
+		minKeyInclusive, maxKeyExclusive); err != nil {
+		return nil, err
+	}
+
+	if err := collRangeCopy(s.changes, dst.changes, minChange.Key,
+		minKeyInclusive, maxKeyExclusive); err != nil {
+		return nil, err
+	}
+
+	return res, nil
 }
 
 func collRangeCopy(src *gkvlite.Collection, dst *gkvlite.Collection,

@@ -320,13 +320,13 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 	})
 }
 
-func (v *vbucket) backgroundFetch(key []byte, maxTries int) (res *item) {
+func (v *vbucket) backgroundFetch(key []byte, maxTries int) (res *item, err error) {
 	for tries := 0; tries < maxTries; tries++ {
-		if res != nil {
-			return
+		if res != nil || err != nil {
+			return res, err
 		}
 		v.ApplyBack(func(vbBack *vbucket) {
-			res = v.storeBack.get(key)
+			res, err = v.storeBack.get(key)
 		})
 	}
 	return
@@ -415,7 +415,13 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	metaOld := v.storeFront.getMeta(req.Key)
+	metaOld, err := v.storeFront.getMeta(req.Key)
+	if err != nil {
+		// TODO: better error message.
+		return &gomemcached.MCResponse{
+			Status: gomemcached.TMPFAIL,
+		}, nil
+	}
 
 	if req.Cas != 0 {
 		var oldcas uint64
@@ -476,7 +482,14 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	i := v.storeFront.get(req.Key)
+	i, err := v.storeFront.get(req.Key)
+	if err != nil {
+		// TODO: better error message.
+		return &gomemcached.MCResponse{
+			Status: gomemcached.TMPFAIL,
+		}, nil
+	}
+
 	if i == nil {
 		if vbr.w != nil {
 			v.stats.GetMisses++
@@ -515,14 +528,32 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 	v.ApplyBackAsync(func(vbBack *vbucket) {
-		fetchedItem := v.storeBack.get(vbr.req.Key)
+		fetchedItem, err := v.storeBack.get(vbr.req.Key)
 
 		// After fetching, call "through the top" so the
 		// storeFront update is synchronous.
 		v.ApplyAsync(func(vbLocked *vbucket) {
+			if err != nil {
+				v.stats.StoreBackFetchedErr++
+ 				// TODO: better error message.
+				v.respond(vbr, &gomemcached.MCResponse{
+					Status: gomemcached.TMPFAIL,
+				})
+				return
+			}
+
 			if fetchedItem != nil {
 				v.stats.StoreBackFetchedItems++
-				currMeta := v.storeFront.getMeta(fetchedItem.key)
+				currMeta, err := v.storeFront.getMeta(fetchedItem.key)
+				if err != nil {
+					v.stats.StoreBackFetchedErr++
+ 					// TODO: better error message.
+					v.respond(vbr, &gomemcached.MCResponse{
+						Status: gomemcached.TMPFAIL,
+					})
+					return
+				}
+
 				if currMeta != nil {
 					if currMeta.cas == cas {
 						v.storeFront.set(fetchedItem, nil)
@@ -557,7 +588,14 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	meta := v.storeFront.getMeta(req.Key)
+	meta, err := v.storeFront.getMeta(req.Key)
+	if err != nil {
+ 		// TODO: better error message.
+		return &gomemcached.MCResponse{
+			Status: gomemcached.TMPFAIL,
+		}, nil
+	}
+
 	if meta != nil {
 		if req.Cas != 0 {
 			if req.Cas != meta.cas {
@@ -673,7 +711,13 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.stats.RGets++
 
 	// Snapshot during the vbucket service() "lock".
-	storeSnapshot := v.storeFront.snapshot()
+	storeSnapshot, err := v.storeFront.snapshot()
+	if err != nil {
+ 		// TODO: better error message.
+		return &gomemcached.MCResponse{
+			Status: gomemcached.TMPFAIL,
+		}, nil
+	}
 
 	go func() {
 		req := vbr.req
@@ -688,8 +732,9 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		visitor := func(i *item) bool {
 			if bytes.Compare(i.key, req.Key) >= 0 {
 				if i.data == nil {
-					i = v.backgroundFetch(i.key, 5)
+					i, _ = v.backgroundFetch(i.key, 5)
 					// TODO: track stats for RGET bg-fetches?
+					// TODO: error handling
 				}
 				if i == nil || i.data == nil {
 					// TODO: need a stat for this case?
@@ -840,9 +885,14 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 				if vbLocked.state == VBDead {
 					transferSplits(splitIdx + 1)
 					if res.Status == gomemcached.SUCCESS {
-						v.rangeCopyTo(vbLocked,
+						err := v.rangeCopyTo(vbLocked,
 							splits[splitIdx].MinKeyInclusive,
 							splits[splitIdx].MaxKeyExclusive)
+						if err != nil {
+							res = &gomemcached.MCResponse{
+								Status: gomemcached.TMPFAIL,
+							}
+						}
 						// TODO: poke observers on vbLocked's changed state.
 					}
 				} else {
@@ -877,15 +927,26 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 	return
 }
 
-func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) {
-	dst.storeFront = v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive)
-	v.ApplyBack(func(vb *vbucket) {
-		dst.storeBack = vb.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
-	})
-	dst.cas = v.cas
-	dst.state = v.state
-	dst.config = &VBConfig{
-		MinKeyInclusive: minKeyInclusive,
-		MaxKeyExclusive: maxKeyExclusive,
+func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) error {
+	s, err := v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive)
+	if err == nil {
+		dst.storeFront = s
+
+		v.ApplyBack(func(vb *vbucket) {
+			s, err = vb.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
+			if err == nil {
+				dst.storeBack = s
+			}
+		})
+
+		if err == nil && dst.storeFront != nil && dst.storeBack != nil {
+			dst.cas = v.cas
+			dst.state = v.state
+			dst.config = &VBConfig{
+				MinKeyInclusive: minKeyInclusive,
+				MaxKeyExclusive: maxKeyExclusive,
+			}
+		}
 	}
+	return err
 }
