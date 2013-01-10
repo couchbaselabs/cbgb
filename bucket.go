@@ -1,6 +1,7 @@
 package cbgb
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -67,12 +68,12 @@ type Buckets struct {
 }
 
 // Build a new holder of buckets.
-func NewBuckets(dirForBuckets string) *Buckets {
+func NewBuckets(dirForBuckets string) (*Buckets, error) {
 	// TODO: Need to load existing buckets from the dir.
 	if !isDir(dirForBuckets) {
-		return nil
+		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
-	return &Buckets{buckets: map[string]bucket{}, dir: dirForBuckets}
+	return &Buckets{buckets: map[string]bucket{}, dir: dirForBuckets}, nil
 }
 
 // Create a new named bucket.

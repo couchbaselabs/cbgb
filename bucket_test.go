@@ -8,7 +8,14 @@ import (
 )
 
 func TestBucketRegistry(t *testing.T) {
-	bs := NewBuckets("tmp")
+	_, err := NewBuckets("./this-is-not-a-directory")
+	if err == nil {
+		t.Fatalf("Expected NewBuckets to fail")
+	}
+	bs, err := NewBuckets("tmp")
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
 	newb := bs.New(DEFAULT_BUCKET_KEY)
 	if newb == nil {
 		t.Fatalf("Failed to create default bucket")

@@ -17,7 +17,11 @@ func main() {
 
 	go cbgb.MutationLogger(mutationLogCh)
 
-	buckets := cbgb.NewBuckets(*data)
+	buckets, err := cbgb.NewBuckets(*data)
+	if err != nil {
+		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
+	}
+
 	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_KEY)
 
 	defaultBucket.Subscribe(mutationLogCh)
