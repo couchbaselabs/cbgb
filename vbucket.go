@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"os"
 	"sort"
 
 	"github.com/dustin/gomemcached"
@@ -72,6 +73,7 @@ type vbucket struct {
 	parent     bucket
 	storeFront store
 	storeBack  store
+	path       string
 	cas        uint64
 	observer   *broadcaster
 	vbid       uint16
@@ -134,11 +136,20 @@ func init() {
 	dispatchTable[SPLIT_RANGE] = vbSplitRange
 }
 
-func newVBucket(parent bucket, vbid uint16) *vbucket {
+func newVBucket(parent bucket, vbid uint16, bucketDir string) (*vbucket, error) {
+	path := ""
+	if bucketDir != "" {
+		path = fmt.Sprintf("%v%cvbucket-%v", bucketDir, os.PathSeparator, vbid)
+	}
+	storeBack, err := newStorePersist(path)
+	if err != nil {
+		return nil, err
+	}
 	rv := &vbucket{
 		parent:     parent,
 		storeFront: newStoreMem(),
-		storeBack:  newStoreMem(),
+		storeBack:  storeBack,
+		path:       path,
 		observer:   newBroadcaster(dataBroadcastBufLen),
 		vbid:       vbid,
 		state:      VBDead,
@@ -150,7 +161,7 @@ func newVBucket(parent bucket, vbid uint16) *vbucket {
 	go rv.service()
 	go rv.serviceBack()
 
-	return rv
+	return rv, nil
 }
 
 func (v *vbucket) service() {
@@ -869,13 +880,14 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 	return
 }
 
-func (v *vbucket) rangeCopyTo(dst *vbucket, minKeyInclusive []byte, maxKeyExclusive []byte) error {
-	s, err := v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive)
+func (v *vbucket) rangeCopyTo(dst *vbucket,
+	minKeyInclusive []byte, maxKeyExclusive []byte) error {
+	s, err := v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive, "")
 	if err == nil {
 		dst.storeFront = s
 
 		v.ApplyBack(func(vb *vbucket) {
-			s, err = vb.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive)
+			s, err = vb.storeBack.rangeCopy(minKeyInclusive, maxKeyExclusive, dst.path)
 			if err == nil {
 				dst.storeBack = s
 			}

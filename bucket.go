@@ -171,7 +171,10 @@ func (b *livebucket) CreateVBucket(vbid uint16) *vbucket {
 	if b == nil || !b.Available() {
 		return nil
 	}
-	vb := newVBucket(b, vbid)
+	vb, err := newVBucket(b, vbid, b.dir)
+	if err != nil {
+		return nil // TODO: Error propagation / logging.
+	}
 	if b.casVBucket(vbid, vb, nil) {
 		return vb
 	}

@@ -722,7 +722,7 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 
 func TestChangesSinceTransmitError(t *testing.T) {
 	w := errWriter{io.EOF}
-	v := newVBucket(nil, 0)
+	v, _ := newVBucket(nil, 0, "./tmp")
 	for _, k := range []string{"a", "b"} {
 		vbSet(v, &vbreq{
 			w: nil,

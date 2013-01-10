@@ -22,7 +22,7 @@ type store interface {
 	del(key []byte, cas uint64) error
 	visitItems(key []byte, visitor storeVisitor) error
 	visitChanges(cas uint64, visitor storeVisitor) error
-	rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) (store, error)
+	rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte, path string) (store, error)
 }
 
 // The storeMem implementation is in-memory, based on immutable treaps.
@@ -99,7 +99,8 @@ func (s *storeMem) visitChanges(cas uint64, visitor storeVisitor) error {
 	return nil
 }
 
-func (s *storeMem) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) (store, error) {
+func (s *storeMem) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte,
+	path string) (store, error) {
 	return &storeMem{
 		items: treapRangeCopy(s.items, gtreap.NewTreap(KeyLess),
 			s.items.Min(), // TODO: inefficient.

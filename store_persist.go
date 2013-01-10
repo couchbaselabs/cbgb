@@ -3,19 +3,23 @@ package cbgb
 import (
 	"bytes"
 	"encoding/binary"
+	"log"
 	"os"
 
 	"github.com/steveyen/gkvlite"
 )
 
-// The storeMem implementation is in-memory, based on immutable treaps.
 type storePersist struct {
+	file    *os.File // May be nil for in-memory only (e.g., for unit tests).
 	s       *gkvlite.Store
 	items   *gkvlite.Collection
 	changes *gkvlite.Collection
 }
 
 func newStorePersist(path string) (res store, err error) {
+	if len(path) <= 0 {
+		return newStorePersistFromFile(nil) // In-memory only.
+	}
 	if f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666); err == nil {
 		return newStorePersistFromFile(f)
 	}
@@ -23,10 +27,13 @@ func newStorePersist(path string) (res store, err error) {
 }
 
 func newStorePersistFromFile(f *os.File) (res store, err error) {
+	log.Printf("newStorePersistFromFile %v", f)
 	if s, err := gkvlite.NewStore(f); err == nil {
-		res := &storePersist{s: s}
+		// TODO: Nobody closes the file.
+		res := &storePersist{s: s, file: f}
 		res.items = s.SetCollection("i", nil)
 		res.changes = s.SetCollection("c", nil)
+		return res, nil
 	}
 	return nil, err
 }
@@ -101,9 +108,10 @@ func (s *storePersist) visitChanges(cas uint64, visitor storeVisitor) error {
 	})
 }
 
-func (s *storePersist) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte) (store, error) {
-	res, err := newStorePersist("TODO.tmp")
-	if err != nil { // TODO: fake file.
+func (s *storePersist) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte,
+	path string) (store, error) {
+	res, err := newStorePersist(path)
+	if err != nil {
 		return nil, err
 	}
 	dst := res.(*storePersist)
@@ -112,19 +120,22 @@ func (s *storePersist) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte)
 	if err != nil {
 		return nil, err
 	}
+	if minItem != nil {
+		if err := collRangeCopy(s.items, dst.items, minItem.Key,
+			minKeyInclusive, maxKeyExclusive); err != nil {
+			return nil, err
+		}
+	}
+
 	minChange, err := dst.items.MaxItem(false)
 	if err != nil {
 		return nil, err
 	}
-
-	if err := collRangeCopy(s.items, dst.items, minItem.Key,
-		minKeyInclusive, maxKeyExclusive); err != nil {
-		return nil, err
-	}
-
-	if err := collRangeCopy(s.changes, dst.changes, minChange.Key,
-		minKeyInclusive, maxKeyExclusive); err != nil {
-		return nil, err
+	if minChange != nil {
+		if err := collRangeCopy(s.changes, dst.changes, minChange.Key,
+			minKeyInclusive, maxKeyExclusive); err != nil {
+			return nil, err
+		}
 	}
 
 	return res, nil
