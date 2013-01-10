@@ -16,7 +16,7 @@ import (
 const (
 	MAX_VBUCKET               = 1024
 	BUCKET_DIR_SUFFIX         = "-bucket" // Suffix allows non-buckets to be ignored.
-	DEFAULT_BUCKET_KEY        = "default"
+	DEFAULT_BUCKET_NAME       = "default"
 	DEFAULT_STORES_PER_BUCKET = 1
 )
 

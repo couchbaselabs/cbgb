@@ -22,7 +22,7 @@ func main() {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
 
-	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_KEY)
+	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_NAME)
 	defaultBucket.Subscribe(mutationLogCh)
 	defaultBucket.CreateVBucket(0)
 	defaultBucket.SetVBState(0, cbgb.VBActive)

@@ -189,7 +189,7 @@ func waitForConnections(ls net.Listener, buckets *Buckets) {
 		s, e := ls.Accept()
 		if e == nil {
 			log.Printf("Got a connection from %v", s.RemoteAddr())
-			bucket := buckets.Get(DEFAULT_BUCKET_KEY)
+			bucket := buckets.Get(DEFAULT_BUCKET_NAME)
 			handler := &reqHandler{
 				currentBucket: bucket,
 			}

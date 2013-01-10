@@ -18,8 +18,8 @@ func TestBucketRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
-	newb, err := bs.New(DEFAULT_BUCKET_KEY)
-	defer bs.Destroy(DEFAULT_BUCKET_KEY)
+	newb, err := bs.New(DEFAULT_BUCKET_NAME)
+	defer bs.Destroy(DEFAULT_BUCKET_NAME)
 	if err != nil || newb == nil {
 		t.Fatalf("Failed to create default bucket")
 	}
@@ -27,28 +27,28 @@ func TestBucketRegistry(t *testing.T) {
 		t.Fatalf("New bucket is not available.")
 	}
 
-	if b2, err := bs.New(DEFAULT_BUCKET_KEY); err == nil || b2 != nil {
+	if b2, err := bs.New(DEFAULT_BUCKET_NAME); err == nil || b2 != nil {
 		t.Fatalf("Created default bucket twice?")
 	}
 
-	b2 := bs.Get(DEFAULT_BUCKET_KEY)
+	b2 := bs.Get(DEFAULT_BUCKET_NAME)
 	if b2 != newb {
 		t.Fatalf("Didn't get my default bucket back.")
 	}
 
-	bs.Destroy(DEFAULT_BUCKET_KEY)
+	bs.Destroy(DEFAULT_BUCKET_NAME)
 	if b2.Available() {
 		t.Fatalf("Destroyed bucket is available.")
 	}
 
-	if bs.Get(DEFAULT_BUCKET_KEY) != nil {
+	if bs.Get(DEFAULT_BUCKET_NAME) != nil {
 		t.Fatalf("Got the default bucket after destroying it")
 	}
 
-	bs.Destroy(DEFAULT_BUCKET_KEY) // just verify we can do it again
+	bs.Destroy(DEFAULT_BUCKET_NAME) // just verify we can do it again
 
-	newb2, err := bs.New(DEFAULT_BUCKET_KEY)
-	defer bs.Destroy(DEFAULT_BUCKET_KEY)
+	newb2, err := bs.New(DEFAULT_BUCKET_NAME)
+	defer bs.Destroy(DEFAULT_BUCKET_NAME)
 	if err != nil || newb2 == nil {
 		t.Fatalf("Failed to create default bucket again")
 	}
