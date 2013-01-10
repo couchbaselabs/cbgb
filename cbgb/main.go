@@ -23,13 +23,11 @@ func main() {
 	}
 
 	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_KEY)
-
 	defaultBucket.Subscribe(mutationLogCh)
 	defaultBucket.CreateVBucket(0)
 	defaultBucket.SetVBState(0, cbgb.VBActive)
 
-	_, err := cbgb.StartServer(*addr, buckets)
-	if err != nil {
+	if _, err := cbgb.StartServer(*addr, buckets); err != nil {
 		log.Fatalf("Got an error:  %s", err)
 	}
 

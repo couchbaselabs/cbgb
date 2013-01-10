@@ -1,7 +1,6 @@
 #*
 *~
 *.test
-index-server/index-server
-kv-server/kv-server
+cbgb/cbgb
 tmp
 _*
