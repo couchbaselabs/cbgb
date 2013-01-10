@@ -1,6 +1,8 @@
 package cbgb
 
 import (
+	"io/ioutil"
+	"os"
 	"testing"
 	"time"
 
@@ -266,5 +268,40 @@ func TestVBSuspend(t *testing.T) {
 	x = <-ch
 	if x != nil {
 		t.Fatalf("Expected nil in x req, got %v", x)
+	}
+}
+
+func TestBucketLoadNames(t *testing.T) {
+	d, err := ioutil.TempDir(os.TempDir(), "cbgb-TestBucketLoadNames")
+	if err != nil {
+		t.Fatalf("Expected TempDir to work, got: %v", err)
+	}
+
+	t.Logf("tmpdir %v", d)
+	b, err := NewBuckets(d)
+	if err != nil {
+		t.Fatalf("Expected NewBuckets() to work on temp dir")
+	}
+	names, err := b.LoadNames()
+	if err != nil || len(names) != 0 {
+		t.Fatalf("Expected names to be empty")
+	}
+
+	if err = os.Mkdir(d+string(os.PathSeparator)+"foo", 0777); err != nil {
+		t.Fatalf("Expected mkdir to work, got: %v", err)
+	}
+	if err = os.Mkdir(d+string(os.PathSeparator)+"foo-bucket-NOT", 0777); err != nil {
+		t.Fatalf("Expected mkdir to work, got: %v", err)
+	}
+	names, err = b.LoadNames()
+	if err != nil || len(names) != 0 {
+		t.Fatalf("Expected names to be empty")
+	}
+
+	os.Mkdir(d+string(os.PathSeparator)+"foo-bucket", 0777)
+	os.Mkdir(d+string(os.PathSeparator)+"bar-bucket", 0777)
+	names, err = b.LoadNames()
+	if err != nil || len(names) != 2 {
+		t.Fatalf("Expected names to be len(2), got: %v", names)
 	}
 }

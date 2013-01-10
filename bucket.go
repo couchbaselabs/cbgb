@@ -3,7 +3,9 @@ package cbgb
 import (
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -12,6 +14,7 @@ import (
 const (
 	MAX_VBUCKET        = 1024
 	DEFAULT_BUCKET_KEY = "default"
+	BUCKET_DIR_SUFFIX  = "-bucket" // Suffix allows non-buckets to be ignored.
 )
 
 type bucket interface {
@@ -35,7 +38,6 @@ type Buckets struct {
 
 // Build a new holder of buckets.
 func NewBuckets(dirForBuckets string) (*Buckets, error) {
-	// TODO: Need to load existing buckets from the dir.
 	if !isDir(dirForBuckets) {
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
@@ -52,8 +54,8 @@ func (b *Buckets) New(name string) bucket {
 		return nil
 	}
 
-	// The suffix allows non-buckets to be ignored in that directory.
-	bdir := b.dir + string(os.PathSeparator) + name + "-bucket"
+	// TODO: Need name checking & encoding for safety/security.
+	bdir := b.dir + string(os.PathSeparator) + name + BUCKET_DIR_SUFFIX
 	os.Mkdir(bdir, 0777)
 	if !isDir(bdir) {
 		return nil
@@ -82,6 +84,42 @@ func (b *Buckets) Destroy(name string) {
 		bucket.Close()
 		delete(b.buckets, name)
 	}
+}
+
+// Reads the buckets directory and returns list of bucket names.
+func (b *Buckets) LoadNames() ([]string, error) {
+	list, err := ioutil.ReadDir(b.dir)
+	if err == nil {
+		res := make([]string, 0, len(list))
+		for _, entry := range list {
+			if entry.IsDir() &&
+				strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
+				res = append(res,
+					entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
+			}
+		}
+		return res, nil
+	}
+	return nil, err
+}
+
+// Loads all buckets from the buckets directory.
+func (b *Buckets) Load() error {
+	bucketNames, err := b.LoadNames()
+	if err != nil {
+		return err
+	}
+	for _, bucketName := range bucketNames {
+		b := b.New(bucketName)
+		if b == nil {
+			return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
+				bucketName))
+		}
+		// if err = b.Load(); err != nil {
+		// 	return err
+		// }
+	}
+	return nil
 }
 
 type livebucket struct {
