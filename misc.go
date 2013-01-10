@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/url"
+	"os"
 )
 
 type Bytes []byte
@@ -49,4 +50,11 @@ func MutationLogger(ch chan interface{}) {
 			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
 		}
 	}
+}
+
+func isDir(path string) bool {
+	if finfo, err := os.Stat(path); err != nil || !finfo.IsDir() {
+		return false
+	}
+	return true // TODO: check for writability.
 }

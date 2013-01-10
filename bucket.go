@@ -69,6 +69,9 @@ type Buckets struct {
 // Build a new holder of buckets.
 func NewBuckets(dirForBuckets string) *Buckets {
 	// TODO: Need to load existing buckets from the dir.
+	if !isDir(dirForBuckets) {
+		return nil
+	}
 	return &Buckets{buckets: map[string]bucket{}, dir: dirForBuckets}
 }
 
@@ -85,13 +88,7 @@ func (b *Buckets) New(name string) bucket {
 	// The suffix allows non-buckets to be ignored in that directory.
 	bdir := b.dir + string(os.PathSeparator) + name + "-bucket"
 	os.Mkdir(bdir, 0777)
-
-	f, err := os.Open(bdir)
-	if err != nil {
-		return nil
-	}
-	defer f.Close()
-	if finfo, err := f.Stat(); err != nil || !finfo.IsDir() {
+	if !isDir(bdir) {
 		return nil
 	}
 
