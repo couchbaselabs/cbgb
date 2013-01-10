@@ -14,7 +14,6 @@ const (
 	DEFAULT_BUCKET_KEY = "default"
 )
 
-// That in which everything is bucketized.
 type bucket interface {
 	getVBucket(vbid uint16) *vbucket
 	Close() error
@@ -27,40 +26,7 @@ type bucket interface {
 	Available() bool
 }
 
-type vbucketChange struct {
-	bucket             bucket
-	vbid               uint16
-	oldState, newState VBState
-}
-
-func (c vbucketChange) getVBucket() *vbucket {
-	if c.bucket == nil {
-		return nil
-	}
-	return c.bucket.getVBucket(c.vbid)
-}
-
-func (c vbucketChange) String() string {
-	return fmt.Sprintf("vbucket %v %v -> %v",
-		c.vbid, c.oldState, c.newState)
-}
-
-type livebucket struct {
-	vbuckets    [MAX_VBUCKET]unsafe.Pointer
-	availablech chan bool
-	observer    *broadcaster
-	dir         string
-}
-
-func NewBucket(dirForBucket string) bucket {
-	return &livebucket{
-		dir:         dirForBucket,
-		observer:    newBroadcaster(0),
-		availablech: make(chan bool),
-	}
-}
-
-// Holder of buckets
+// Holder of buckets.
 type Buckets struct {
 	buckets map[string]bucket
 	dir     string // Directory where all buckets are stored.
@@ -115,6 +81,21 @@ func (b *Buckets) Destroy(name string) {
 	if bucket != nil {
 		bucket.Close()
 		delete(b.buckets, name)
+	}
+}
+
+type livebucket struct {
+	vbuckets    [MAX_VBUCKET]unsafe.Pointer
+	availablech chan bool
+	observer    *broadcaster
+	dir         string
+}
+
+func NewBucket(dirForBucket string) bucket {
+	return &livebucket{
+		dir:         dirForBucket,
+		observer:    newBroadcaster(0),
+		availablech: make(chan bool),
 	}
 }
 
@@ -216,4 +197,22 @@ func (b *livebucket) SetVBState(vbid uint16, newState VBState) *vbucket {
 		})
 	}
 	return vb
+}
+
+type vbucketChange struct {
+	bucket             bucket
+	vbid               uint16
+	oldState, newState VBState
+}
+
+func (c vbucketChange) getVBucket() *vbucket {
+	if c.bucket == nil {
+		return nil
+	}
+	return c.bucket.getVBucket(c.vbid)
+}
+
+func (c vbucketChange) String() string {
+	return fmt.Sprintf("vbucket %v %v -> %v",
+		c.vbid, c.oldState, c.newState)
 }
