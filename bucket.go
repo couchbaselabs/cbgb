@@ -83,8 +83,19 @@ func (b *Buckets) New(name string) bucket {
 	}
 
 	// The suffix allows non-buckets to be ignored in that directory.
-	// TODO: Encode the bucket name for safety.
-	rv := NewBucket(b.dir + string(os.PathSeparator) + name + "-bucket")
+	bdir := b.dir + string(os.PathSeparator) + name + "-bucket"
+	os.Mkdir(bdir, 0777)
+
+	f, err := os.Open(bdir)
+	if err != nil {
+		return nil
+	}
+	defer f.Close()
+	if finfo, err := f.Stat(); err != nil || !finfo.IsDir() {
+		return nil
+	}
+
+	rv := NewBucket(bdir)
 	b.buckets[name] = rv
 	return rv
 }
