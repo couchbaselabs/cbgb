@@ -14,19 +14,20 @@ func TestBucketRegistry(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected NewBuckets to fail")
 	}
-	bs, err := NewBuckets("tmp")
+	bs, err := NewBuckets("./tmp")
 	if err != nil {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
-	newb := bs.New(DEFAULT_BUCKET_KEY)
-	if newb == nil {
+	newb, err := bs.New(DEFAULT_BUCKET_KEY)
+	defer bs.Destroy(DEFAULT_BUCKET_KEY)
+	if err != nil || newb == nil {
 		t.Fatalf("Failed to create default bucket")
 	}
 	if !newb.Available() {
 		t.Fatalf("New bucket is not available.")
 	}
 
-	if bs.New(DEFAULT_BUCKET_KEY) != nil {
+	if b2, err := bs.New(DEFAULT_BUCKET_KEY); err == nil || b2 != nil {
 		t.Fatalf("Created default bucket twice?")
 	}
 
@@ -46,8 +47,9 @@ func TestBucketRegistry(t *testing.T) {
 
 	bs.Destroy(DEFAULT_BUCKET_KEY) // just verify we can do it again
 
-	newb2 := bs.New(DEFAULT_BUCKET_KEY)
-	if newb2 == nil {
+	newb2, err := bs.New(DEFAULT_BUCKET_KEY)
+	defer bs.Destroy(DEFAULT_BUCKET_KEY)
+	if err != nil || newb2 == nil {
 		t.Fatalf("Failed to create default bucket again")
 	}
 	if newb == newb2 {

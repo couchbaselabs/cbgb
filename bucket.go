@@ -19,6 +19,7 @@ const (
 
 type bucket interface {
 	Available() bool
+	Dir() string
 	Close() error
 	Load() error
 
@@ -49,24 +50,26 @@ func NewBuckets(dirForBuckets string) (*Buckets, error) {
 
 // Create a new named bucket.
 // Return the new bucket, or nil if the bucket already exists.
-func (b *Buckets) New(name string) bucket {
+func (b *Buckets) New(name string) (bucket, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	if b.buckets[name] != nil {
-		return nil
+		return nil, errors.New(fmt.Sprintf("bucket already exists: %v", name))
 	}
 
 	// TODO: Need name checking & encoding for safety/security.
 	bdir := b.dir + string(os.PathSeparator) + name + BUCKET_DIR_SUFFIX
-	os.Mkdir(bdir, 0777)
+	if err := os.Mkdir(bdir, 0777); err != nil {
+		return nil, err
+	}
 	if !isDir(bdir) {
-		return nil
+		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
 	rv := NewBucket(bdir)
 	b.buckets[name] = rv
-	return rv
+	return rv, nil
 }
 
 // Get the named bucket (or nil if it doesn't exist).
@@ -86,6 +89,7 @@ func (b *Buckets) Destroy(name string) {
 	if bucket != nil {
 		bucket.Close()
 		delete(b.buckets, name)
+		os.RemoveAll(bucket.Dir())
 	}
 }
 
@@ -113,7 +117,10 @@ func (b *Buckets) Load() error {
 		return err
 	}
 	for _, bucketName := range bucketNames {
-		b := b.New(bucketName)
+		b, err := b.New(bucketName)
+		if err != nil {
+			return err
+		}
 		if b == nil {
 			return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
 				bucketName))
@@ -171,11 +178,6 @@ func (b *livebucket) Unsubscribe(ch chan<- interface{}) {
 	b.observer.Unregister(ch)
 }
 
-func (b *livebucket) Close() error {
-	close(b.availablech)
-	return nil
-}
-
 func (b *livebucket) Available() bool {
 	select {
 	default:
@@ -183,6 +185,15 @@ func (b *livebucket) Available() bool {
 		return false
 	}
 	return true
+}
+
+func (b *livebucket) Close() error {
+	close(b.availablech)
+	return nil
+}
+
+func (b *livebucket) Dir() string {
+	return b.dir
 }
 
 func (b *livebucket) Load() error {
