@@ -9,12 +9,15 @@ import (
 	"sync"
 	"sync/atomic"
 	"unsafe"
+
+	"github.com/steveyen/gkvlite"
 )
 
 const (
-	MAX_VBUCKET        = 1024
-	DEFAULT_BUCKET_KEY = "default"
-	BUCKET_DIR_SUFFIX  = "-bucket" // Suffix allows non-buckets to be ignored.
+	MAX_VBUCKET               = 1024
+	BUCKET_DIR_SUFFIX         = "-bucket" // Suffix allows non-buckets to be ignored.
+	DEFAULT_BUCKET_KEY        = "default"
+	DEFAULT_STORES_PER_BUCKET = 1
 )
 
 type bucket interface {
@@ -132,19 +135,42 @@ func (b *Buckets) Load() error {
 	return nil
 }
 
+type bucketstorereq struct {
+	cb  func(*bucketstore)
+	res chan error
+}
+
+type bucketstore struct {
+	ident int
+	dir   string
+	file  *os.File // May be nil for in-memory only (e.g., for unit tests).
+	store *gkvlite.Store
+	ch    chan bucketstorereq
+}
+
 type livebucket struct {
-	vbuckets    [MAX_VBUCKET]unsafe.Pointer
-	availablech chan bool
-	observer    *broadcaster
-	dir         string
+	vbuckets     [MAX_VBUCKET]unsafe.Pointer
+	availablech  chan bool
+	observer     *broadcaster
+	dir          string
+	bucketstores map[int]*bucketstore
 }
 
 func NewBucket(dirForBucket string) bucket {
-	return &livebucket{
-		dir:         dirForBucket,
-		observer:    newBroadcaster(0),
-		availablech: make(chan bool),
+	res := &livebucket{
+		dir:          dirForBucket,
+		observer:     newBroadcaster(0),
+		availablech:  make(chan bool),
+		bucketstores: make(map[int]*bucketstore),
 	}
+	for i := 0; i < DEFAULT_STORES_PER_BUCKET; i++ {
+		res.bucketstores[i] = &bucketstore{
+			ident: i,
+			dir:   dirForBucket,
+			ch:    make(chan bucketstorereq),
+		}
+	}
+	return res
 }
 
 func (b *livebucket) Observer() *broadcaster {
