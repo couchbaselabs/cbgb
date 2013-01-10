@@ -18,15 +18,18 @@ const (
 )
 
 type bucket interface {
-	getVBucket(vbid uint16) *vbucket
+	Available() bool
 	Close() error
+	Load() error
+
 	Observer() *broadcaster
 	Subscribe(ch chan<- interface{})
 	Unsubscribe(ch chan<- interface{})
+
 	CreateVBucket(vbid uint16) *vbucket
-	SetVBState(vbid uint16, newState VBState) *vbucket
 	destroyVBucket(vbid uint16) (destroyed bool)
-	Available() bool
+	getVBucket(vbid uint16) *vbucket
+	SetVBState(vbid uint16, newState VBState) *vbucket
 }
 
 // Holder of buckets.
@@ -115,9 +118,9 @@ func (b *Buckets) Load() error {
 			return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
 				bucketName))
 		}
-		// if err = b.Load(); err != nil {
-		// 	return err
-		// }
+		if err = b.Load(); err != nil {
+			return err
+		}
 	}
 	return nil
 }
@@ -180,6 +183,10 @@ func (b *livebucket) Available() bool {
 		return false
 	}
 	return true
+}
+
+func (b *livebucket) Load() error {
+	return nil // TODO: need to do a real load here.
 }
 
 func (b *livebucket) getVBucket(vbid uint16) *vbucket {

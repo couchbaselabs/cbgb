@@ -298,6 +298,10 @@ func TestBucketLoadNames(t *testing.T) {
 		t.Fatalf("Expected names to be empty")
 	}
 
+	if err = b.Load(); err != nil {
+		t.Fatalf("Expected Buckets.Load() on empty directory to work")
+	}
+
 	os.Mkdir(d+string(os.PathSeparator)+"foo-bucket", 0777)
 	os.Mkdir(d+string(os.PathSeparator)+"bar-bucket", 0777)
 	names, err = b.LoadNames()
