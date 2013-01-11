@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/ioutil"
 	"log"
+	"os"
 	"reflect"
 	"strconv"
 	"sync"
@@ -90,10 +91,12 @@ func TestBasicOps(t *testing.T) {
 		ValueBytesOutgoing: 9,
 	}
 
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
 	testBucket.SetVBState(3, VBActive)
 
 	for _, x := range tests {
@@ -152,10 +155,12 @@ func TestBasicOps(t *testing.T) {
 }
 
 func TestMutationBroadcast(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
 
 	ch := make(chan interface{}, 16)
 
@@ -199,11 +204,11 @@ func TestMutationBroadcast(t *testing.T) {
 			gomemcached.SUCCESS, true},
 	}
 
-	for _, x := range tests {
+	for idx, x := range tests {
 		x.prep()
 		res = rh.HandleMessage(nil, req)
 		if res.Status != x.exp {
-			t.Errorf("%v: expected %v, got %v", x.name, x.exp, res)
+			t.Errorf("%v - %v: expected %v, got %v", idx, x.name, x.exp, res)
 		}
 
 		// Verify delete did *not* send a notification
@@ -237,10 +242,12 @@ func testGet(rh *reqHandler, vbid uint16, key string) *gomemcached.MCResponse {
 }
 
 func TestCASDelete(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
+	testBucket.CreateVBucket(3)
 
 	testKey := "x"
 
@@ -277,10 +284,12 @@ func TestCASDelete(t *testing.T) {
 }
 
 func TestCASSet(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
+	testBucket.CreateVBucket(3)
 
 	testKey := "x"
 
@@ -318,7 +327,10 @@ func TestCASSet(t *testing.T) {
 }
 
 func TestVersionCommand(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -337,7 +349,10 @@ func TestVersionCommand(t *testing.T) {
 }
 
 func TestVersionNOOP(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -352,7 +367,10 @@ func TestVersionNOOP(t *testing.T) {
 }
 
 func TestQuit(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -367,7 +385,10 @@ func TestQuit(t *testing.T) {
 }
 
 func TestTapSetup(t *testing.T) {
-	testBucket, _ := NewBucket("tmp")
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
 	rh := reqHandler{testBucket}
@@ -399,7 +420,10 @@ func TestTapChanges(t *testing.T) {
 	// starts spuriously failing, that's why, and we'll make it
 	// better.
 
-	testBucket, _ := NewBucket("tmp")
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
 	chpkt := make(chan transmissible, 128)
@@ -485,7 +509,10 @@ func TestTapChanges(t *testing.T) {
 }
 
 func TestStats(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -506,9 +533,11 @@ func TestStats(t *testing.T) {
 }
 
 func TestInvalidCommand(t *testing.T) {
-	testBucket := &livebucket{}
-	vb := testBucket.CreateVBucket(0)
-	defer vb.Close()
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
+	testBucket.CreateVBucket(0)
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -523,9 +552,11 @@ func TestInvalidCommand(t *testing.T) {
 }
 
 func BenchmarkInvalidCommand(b *testing.B) {
-	testBucket := &livebucket{}
-	vb := testBucket.CreateVBucket(0)
-	defer vb.Close()
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
+	testBucket.CreateVBucket(0)
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -540,9 +571,11 @@ func BenchmarkInvalidCommand(b *testing.B) {
 // This test doesn't assert much, but relies on the race detector to
 // determine whether anything bad is happening.
 func TestParallelMutations(t *testing.T) {
-	testBucket := &livebucket{}
-	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
+	testBucket.CreateVBucket(3)
 
 	keys := []string{"a", "b", "c"}
 
@@ -576,9 +609,11 @@ func TestParallelMutations(t *testing.T) {
 
 // Parallel dispatcher invocation timing.
 func BenchmarkParallelGet(b *testing.B) {
-	testBucket := &livebucket{}
-	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
+	testBucket.CreateVBucket(3)
 
 	rh := reqHandler{testBucket}
 
@@ -608,10 +643,11 @@ func BenchmarkParallelGet(b *testing.B) {
 
 // Best case dispatcher timing.
 func BenchmarkDispatch(b *testing.B) {
-	testBucket := &livebucket{}
-	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
-
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
+	testBucket.CreateVBucket(3)
 	rh := reqHandler{testBucket}
 
 	req := &gomemcached.MCRequest{
@@ -635,10 +671,12 @@ func TestChangesSince(t *testing.T) {
 }
 
 func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(0)
-	defer vb.Close()
+	testBucket.CreateVBucket(0)
 
 	for i := 0; i < numItems; i++ {
 		req := &gomemcached.MCRequest{
@@ -722,7 +760,11 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 
 func TestChangesSinceTransmitError(t *testing.T) {
 	w := errWriter{io.EOF}
-	v, _ := newVBucket(nil, 0, "./tmp")
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
+	v := testBucket.CreateVBucket(0)
 	for _, k := range []string{"a", "b"} {
 		vbSet(v, &vbreq{
 			w: nil,
@@ -814,10 +856,12 @@ func TestVBucketConfig(t *testing.T) {
 		},
 	}
 
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
 
 	for i, x := range tests {
 		req := &gomemcached.MCRequest{
@@ -855,10 +899,12 @@ func TestVBucketConfig(t *testing.T) {
 func TestMinMaxRange(t *testing.T) {
 	empty := []byte{}
 
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
 
 	tests := []struct {
 		op  gomemcached.CommandCode
@@ -940,10 +986,12 @@ func TestRGet(t *testing.T) {
 }
 
 func testRGet(t *testing.T, startKey int, numItems int) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(0)
-	defer vb.Close()
 
 	for i := 0; i < numItems; i++ {
 		req := &gomemcached.MCRequest{
@@ -1026,11 +1074,13 @@ func TestSplitRange(t *testing.T) {
 	vb0 := []int{0}
 	vb1 := []int{1}
 
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(0)
+	testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
-	defer vb.Close()
 
 	tests := []struct {
 		vbid int
@@ -1111,10 +1161,12 @@ func TestSplitRange(t *testing.T) {
 }
 
 func TestSlowClient(t *testing.T) {
-	testBucket := &livebucket{}
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(0)
-	defer vb.Close()
 	testBucket.SetVBState(0, VBActive)
 
 	req := &gomemcached.MCRequest{
@@ -1200,10 +1252,12 @@ func TestStoreFrontBack(t *testing.T) {
 			gomemcached.KEY_ENOENT, empty},
 	}
 
-	testBucket, _ := NewBucket("tmp")
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir)
+	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
-	defer vb.Close()
 	testBucket.SetVBState(3, VBActive)
 
 	clearStoreFront := func() {

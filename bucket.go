@@ -9,8 +9,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"unsafe"
-
-	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -22,7 +20,6 @@ const (
 
 type bucket interface {
 	Available() bool
-	Dir() string
 	Close() error
 	Load() error
 
@@ -62,7 +59,7 @@ func (b *Buckets) New(name string) (bucket, error) {
 	}
 
 	// TODO: Need name checking & encoding for safety/security.
-	bdir := b.dir + string(os.PathSeparator) + name + BUCKET_DIR_SUFFIX
+	bdir := b.Path(name)
 	if err := os.Mkdir(bdir, 0777); err != nil {
 		return nil, err
 	}
@@ -96,8 +93,12 @@ func (b *Buckets) Destroy(name string) {
 	if bucket != nil {
 		bucket.Close()
 		delete(b.buckets, name)
-		os.RemoveAll(bucket.Dir())
+		os.RemoveAll(b.Path(name)) // TODO: Is this what we want?
 	}
+}
+
+func (b *Buckets) Path(name string) string {
+	return b.dir + string(os.PathSeparator) + name + BUCKET_DIR_SUFFIX
 }
 
 // Reads the buckets directory and returns list of bucket names.
@@ -139,32 +140,6 @@ func (b *Buckets) Load() error {
 	return nil
 }
 
-type bucketstorereq struct {
-	cb  func(*bucketstore) error
-	res chan error
-}
-
-type bucketstore struct {
-	ident int
-	dir   string
-	file  *os.File // May be nil for in-memory only (e.g., for unit tests).
-	store *gkvlite.Store
-	ch    chan bucketstorereq
-}
-
-func (bs *bucketstore) service() {
-	for r := range bs.ch {
-		err := r.cb(bs)
-		if r.res != nil {
-			r.res <- err
-			close(r.res)
-		}
-	}
-	if bs.file != nil {
-		bs.file.Close()
-	}
-}
-
 type livebucket struct {
 	vbuckets     [MAX_VBUCKET]unsafe.Pointer
 	availablech  chan bool
@@ -181,26 +156,13 @@ func NewBucket(dirForBucket string) (bucket, error) {
 		bucketstores: make(map[int]*bucketstore),
 	}
 	for i := 0; i < STORES_PER_BUCKET; i++ {
-		path := fmt.Sprintf("%s%c%v.store", dirForBucket, os.PathSeparator, i)
-		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+		bs, err := newBucketStore(fmt.Sprintf("%s%c%v.store",
+			dirForBucket, os.PathSeparator, i))
 		if err != nil {
 			res.Close()
 			return nil, err
 		}
-		store, err := gkvlite.NewStore(file)
-		if err != nil {
-			file.Close()
-			res.Close()
-			return nil, err
-		}
-		res.bucketstores[i] = &bucketstore{
-			ident: i,
-			dir:   dirForBucket,
-			file:  file,
-			store: store,
-			ch:    make(chan bucketstorereq),
-		}
-		go res.bucketstores[i].service()
+		res.bucketstores[i] = bs
 	}
 	return res, nil
 }
@@ -247,14 +209,17 @@ func (b *livebucket) Available() bool {
 
 func (b *livebucket) Close() error {
 	close(b.availablech)
+	for vbid, _ := range b.vbuckets {
+		vbp := atomic.LoadPointer(&b.vbuckets[vbid])
+		if vbp != nil {
+			vb := (*vbucket)(vbp)
+			vb.Close()
+		}
+	}
 	for _, bs := range b.bucketstores {
 		close(bs.ch)
 	}
 	return nil
-}
-
-func (b *livebucket) Dir() string {
-	return b.dir
 }
 
 func (b *livebucket) Load() error {
@@ -262,6 +227,7 @@ func (b *livebucket) Load() error {
 }
 
 func (b *livebucket) getVBucket(vbid uint16) *vbucket {
+	// TODO: Revisit the available approach, as it feels racy.
 	if b == nil || !b.Available() {
 		return nil
 	}
@@ -278,7 +244,11 @@ func (b *livebucket) CreateVBucket(vbid uint16) *vbucket {
 	if b == nil || !b.Available() {
 		return nil
 	}
-	vb, err := newVBucket(b, vbid, b.dir)
+	bs := b.bucketstores[int(vbid)%STORES_PER_BUCKET]
+	if bs == nil {
+		return nil
+	}
+	vb, err := newVBucket(b, vbid, bs)
 	if err != nil {
 		return nil // TODO: Error propagation / logging.
 	}

@@ -76,3 +76,9 @@ func CASLess(p, q interface{}) int {
 	}
 	return 1
 }
+
+func casBytes(cas uint64) []byte {
+	buf := bytes.NewBuffer(make([]byte, 8)[:0])
+	binary.Write(buf, binary.BigEndian, cas)
+	return buf.Bytes()
+}
