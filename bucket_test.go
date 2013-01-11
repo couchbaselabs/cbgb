@@ -118,7 +118,7 @@ func TestNewBucket(t *testing.T) {
 
 	ch := make(chan interface{}, 2)
 
-	nb.Observer().Register(ch)
+	nb.(*livebucket).observer.Register(ch)
 
 	nb.CreateVBucket(3)
 	nb.SetVBState(3, VBActive)

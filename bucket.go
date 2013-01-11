@@ -23,7 +23,6 @@ type bucket interface {
 	Close() error
 	Load() error
 
-	Observer() *broadcaster
 	Subscribe(ch chan<- interface{})
 	Unsubscribe(ch chan<- interface{})
 
@@ -165,10 +164,6 @@ func NewBucket(dirForBucket string) (bucket, error) {
 		res.bucketstores[i] = bs
 	}
 	return res, nil
-}
-
-func (b *livebucket) Observer() *broadcaster {
-	return b.observer
 }
 
 // Subscribe to bucket events.
