@@ -1260,11 +1260,11 @@ func TestStoreFrontBack(t *testing.T) {
 	vb := testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 
-	clearStoreFront := func() {
+	evictMem := func() {
 		// Clear the storeFront's item.data so that vbucket has to fetch
 		// from the storeBack.
 		vb.Apply(func(vbLocked *vbucket) {
-			vbLocked.storeFront.visitItems([]byte("a"), func(i *item) bool {
+			vbLocked.mem.visitItems([]byte("a"), func(i *item) bool {
 				i.data = nil
 				return true
 			})
@@ -1293,7 +1293,7 @@ func TestStoreFrontBack(t *testing.T) {
 	}
 
 	runTestsFrom(0)
-	clearStoreFront()
+	evictMem()
 	runTestsFrom(5)
 
 	if vb.stats.StoreBackFetchedItems != 2 {
@@ -1319,7 +1319,7 @@ func TestStoreFrontBack(t *testing.T) {
 
 	// Test RGET's background fetching.
 	runTestsFrom(0)
-	clearStoreFront()
+	evictMem()
 	req := &gomemcached.MCRequest{
 		Opcode:  gomemcached.RGET,
 		Key:     []byte("a"),

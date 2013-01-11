@@ -9,30 +9,15 @@ import (
 
 type storeVisitor func(*item) bool
 
-// The store abstraction provides a simple, synchronous,
-// single-threaded items and changes-feed storage container.  Users
-// that need asynchronous behavior should handle it themselves (such
-// as by spawning their own goroutines) and by using
-// store.snapshot()'s.
-type store interface {
-	snapshot() (store, error)
-	getMeta(key []byte) (*item, error)
-	get(key []byte) (*item, error)
-	set(newItem *item, oldMeta *item) error
-	del(key []byte, cas uint64) error
-	visitItems(key []byte, visitor storeVisitor) error
-	visitChanges(cas uint64, visitor storeVisitor) error
-	rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte, path string) (store, error)
-}
-
-// The storeMem implementation is in-memory, based on immutable treaps.
-type storeMem struct {
+// The memstore implementation is in-memory only, single-threaded,
+// based on immutable treaps.
+type memstore struct {
 	items   *gtreap.Treap
 	changes *gtreap.Treap
 }
 
-func newStoreMem() store {
-	return &storeMem{
+func newMemStore() *memstore {
+	return &memstore{
 		items:   gtreap.NewTreap(KeyLess),
 		changes: gtreap.NewTreap(CASLess),
 	}
@@ -41,14 +26,14 @@ func newStoreMem() store {
 // The snapshot() method allows users to get a stable, immutable
 // snapshot of a store, which they can safely access while others are
 // concurrently accessing and modifying the original store.
-func (s *storeMem) snapshot() (store, error) {
-	return &storeMem{
+func (s *memstore) snapshot() (*memstore, error) {
+	return &memstore{
 		items:   s.items,
 		changes: s.changes,
 	}, nil
 }
 
-func (s *storeMem) get(key []byte) (*item, error) {
+func (s *memstore) get(key []byte) (*item, error) {
 	x := s.items.Get(&item{key: key})
 	if x != nil {
 		return x.(*item), nil
@@ -56,14 +41,13 @@ func (s *storeMem) get(key []byte) (*item, error) {
 	return nil, nil
 }
 
-// The getMeta() method is just like get(), except is might return
+// The getMeta() method is just like get(), except it might return
 // item.data of nil.
-func (s *storeMem) getMeta(key []byte) (*item, error) {
-	// This storeMem implementation, though, just uses get().
+func (s *memstore) getMeta(key []byte) (*item, error) {
 	return s.get(key)
 }
 
-func (s *storeMem) set(newItem *item, oldMeta *item) error {
+func (s *memstore) set(newItem *item, oldMeta *item) error {
 	s.items = s.items.Upsert(newItem, rand.Int())
 	s.changes = s.changes.Upsert(newItem, rand.Int())
 	if oldMeta != nil {
@@ -73,7 +57,7 @@ func (s *storeMem) set(newItem *item, oldMeta *item) error {
 	return nil
 }
 
-func (s *storeMem) del(key []byte, cas uint64) error {
+func (s *memstore) del(key []byte, cas uint64) error {
 	t := &item{
 		key:  key,
 		cas:  cas, // The cas to represent the delete mutation.
@@ -85,23 +69,23 @@ func (s *storeMem) del(key []byte, cas uint64) error {
 	return nil
 }
 
-func (s *storeMem) visitItems(key []byte, visitor storeVisitor) error {
+func (s *memstore) visitItems(key []byte, visitor storeVisitor) error {
 	s.items.VisitAscend(&item{key: key}, func(x gtreap.Item) bool {
 		return visitor(x.(*item))
 	})
 	return nil
 }
 
-func (s *storeMem) visitChanges(cas uint64, visitor storeVisitor) error {
+func (s *memstore) visitChanges(cas uint64, visitor storeVisitor) error {
 	s.changes.VisitAscend(&item{cas: cas}, func(x gtreap.Item) bool {
 		return visitor(x.(*item))
 	})
 	return nil
 }
 
-func (s *storeMem) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte,
-	path string) (store, error) {
-	return &storeMem{
+func (s *memstore) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte,
+	path string) (*memstore, error) {
+	return &memstore{
 		items: treapRangeCopy(s.items, gtreap.NewTreap(KeyLess),
 			s.items.Min(), // TODO: inefficient.
 			minKeyInclusive,

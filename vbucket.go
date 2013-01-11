@@ -67,7 +67,7 @@ type vbapplyreq struct {
 type vbucket struct {
 	parent      bucket
 	bs          *bucketstore
-	storeFront  store
+	mem         *memstore
 	cas         uint64
 	observer    *broadcaster
 	vbid        uint16
@@ -139,7 +139,7 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
 	rv := &vbucket{
 		parent:      parent,
 		bs:          bs,
-		storeFront:  newStoreMem(),
+		mem:         newMemStore(),
 		observer:    newBroadcaster(observerBroadcastMax),
 		vbid:        vbid,
 		state:       VBDead,
@@ -325,7 +325,7 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	meta, err := v.storeFront.getMeta(req.Key)
+	meta, err := v.mem.getMeta(req.Key)
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -348,7 +348,7 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		data: req.Body,
 	}
 
-	v.storeFront.set(itemNew, meta)
+	v.mem.set(itemNew, meta)
 	if meta != nil {
 		v.stats.Updates++
 	} else {
@@ -381,7 +381,7 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	i, err := v.storeFront.get(req.Key)
+	i, err := v.mem.get(req.Key)
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -429,7 +429,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 		fetchedItem, err := bs.get(v.collItems, vbr.req.Key)
 
 		// After fetching, call "through the top" so the
-		// storeFront update is synchronous.
+		// mem update is synchronous.
 		v.ApplyAsync(func(vbLocked *vbucket) {
 			if err != nil {
 				v.stats.StoreBackFetchedErr++
@@ -442,7 +442,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 
 			if fetchedItem != nil {
 				v.stats.StoreBackFetchedItems++
-				currMeta, err := v.storeFront.getMeta(fetchedItem.key)
+				currMeta, err := v.mem.getMeta(fetchedItem.key)
 				if err != nil {
 					v.stats.StoreBackFetchedErr++
 					v.respond(vbr, &gomemcached.MCResponse{
@@ -454,7 +454,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 
 				if currMeta != nil {
 					if currMeta.cas == cas {
-						v.storeFront.set(fetchedItem, nil)
+						v.mem.set(fetchedItem, nil)
 					} else {
 						// Item was recently modified & storeBack is behind.
 						v.stats.StoreBackFetchedModified++
@@ -486,7 +486,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		return rangeErr, nil
 	}
 
-	meta, err := v.storeFront.getMeta(req.Key)
+	meta, err := v.mem.getMeta(req.Key)
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -512,7 +512,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	cas := v.cas
 	v.cas++
 
-	v.storeFront.del(req.Key, cas)
+	v.mem.del(req.Key, cas)
 	v.stats.Items--
 
 	v.ApplyBucketStoreAsync(func(bs *bucketstore) {
@@ -555,7 +555,7 @@ func vbChangesSince(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation)
 		return true
 	}
 
-	v.storeFront.visitChanges(req.Cas, visitor)
+	v.mem.visitChanges(req.Cas, visitor)
 	close(ch)
 	if err == nil {
 		err = <-errs
@@ -606,7 +606,7 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.stats.RGets++
 
 	// Snapshot during the vbucket service() "lock".
-	storeSnapshot, err := v.storeFront.snapshot()
+	storeSnapshot, err := v.mem.snapshot()
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -831,7 +831,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 	transferSplits(0)
 	if res.Status == gomemcached.SUCCESS {
 		// TODO: Need to remove collections from bs.
-		v.storeFront = newStoreMem()
+		v.mem = newMemStore()
 		v.state = VBDead
 		v.config = &VBConfig{}
 	}
@@ -840,9 +840,9 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 func (v *vbucket) rangeCopyTo(dst *vbucket,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
-	s, err := v.storeFront.rangeCopy(minKeyInclusive, maxKeyExclusive, "")
+	s, err := v.mem.rangeCopy(minKeyInclusive, maxKeyExclusive, "")
 	if err == nil {
-		dst.storeFront = s
+		dst.mem = s
 
 		v.ApplyBucketStore(func(bs *bucketstore) {
 			err = bs.rangeCopy(v.collItems, dst.bs, dst.collItems,
@@ -853,7 +853,7 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 			}
 		})
 
-		if err == nil && dst.storeFront != nil {
+		if err == nil && dst.mem != nil {
 			dst.cas = v.cas
 			dst.state = v.state
 			dst.config = &VBConfig{
