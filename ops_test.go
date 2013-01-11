@@ -367,7 +367,7 @@ func TestQuit(t *testing.T) {
 }
 
 func TestTapSetup(t *testing.T) {
-	testBucket := NewBucket("tmp")
+	testBucket, _ := NewBucket("tmp")
 	testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
 	rh := reqHandler{testBucket}
@@ -399,7 +399,7 @@ func TestTapChanges(t *testing.T) {
 	// starts spuriously failing, that's why, and we'll make it
 	// better.
 
-	testBucket := NewBucket("tmp")
+	testBucket, _ := NewBucket("tmp")
 	rh := reqHandler{testBucket}
 
 	chpkt := make(chan transmissible, 128)
@@ -1200,7 +1200,7 @@ func TestStoreFrontBack(t *testing.T) {
 			gomemcached.KEY_ENOENT, empty},
 	}
 
-	testBucket := NewBucket("tmp")
+	testBucket, _ := NewBucket("tmp")
 	rh := reqHandler{testBucket}
 	vb := testBucket.CreateVBucket(3)
 	defer vb.Close()

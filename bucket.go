@@ -17,7 +17,7 @@ const (
 	MAX_VBUCKET         = 1024
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
-	STORES_PER_BUCKET   = 1
+	STORES_PER_BUCKET   = 4
 )
 
 type bucket interface {
@@ -70,7 +70,11 @@ func (b *Buckets) New(name string) (bucket, error) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
-	rv := NewBucket(bdir)
+	rv, err := NewBucket(bdir)
+	if err != nil {
+		return nil, err
+	}
+
 	b.buckets[name] = rv
 	return rv, nil
 }
@@ -136,7 +140,7 @@ func (b *Buckets) Load() error {
 }
 
 type bucketstorereq struct {
-	cb  func(*bucketstore)
+	cb  func(*bucketstore) error
 	res chan error
 }
 
@@ -148,6 +152,19 @@ type bucketstore struct {
 	ch    chan bucketstorereq
 }
 
+func (bs *bucketstore) service() {
+	for r := range bs.ch {
+		err := r.cb(bs)
+		if r.res != nil {
+			r.res <- err
+			close(r.res)
+		}
+	}
+	if bs.file != nil {
+		bs.file.Close()
+	}
+}
+
 type livebucket struct {
 	vbuckets     [MAX_VBUCKET]unsafe.Pointer
 	availablech  chan bool
@@ -156,7 +173,7 @@ type livebucket struct {
 	bucketstores map[int]*bucketstore
 }
 
-func NewBucket(dirForBucket string) bucket {
+func NewBucket(dirForBucket string) (bucket, error) {
 	res := &livebucket{
 		dir:          dirForBucket,
 		observer:     newBroadcaster(0),
@@ -164,13 +181,28 @@ func NewBucket(dirForBucket string) bucket {
 		bucketstores: make(map[int]*bucketstore),
 	}
 	for i := 0; i < STORES_PER_BUCKET; i++ {
+		path := fmt.Sprintf("%s%c%v.store", dirForBucket, os.PathSeparator, i)
+		file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+		if err != nil {
+			res.Close()
+			return nil, err
+		}
+		store, err := gkvlite.NewStore(file)
+		if err != nil {
+			file.Close()
+			res.Close()
+			return nil, err
+		}
 		res.bucketstores[i] = &bucketstore{
 			ident: i,
 			dir:   dirForBucket,
+			file:  file,
+			store: store,
 			ch:    make(chan bucketstorereq),
 		}
+		go res.bucketstores[i].service()
 	}
-	return res
+	return res, nil
 }
 
 func (b *livebucket) Observer() *broadcaster {
@@ -215,6 +247,9 @@ func (b *livebucket) Available() bool {
 
 func (b *livebucket) Close() error {
 	close(b.availablech)
+	for _, bs := range b.bucketstores {
+		close(bs.ch)
+	}
 	return nil
 }
 

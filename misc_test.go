@@ -11,7 +11,7 @@ import (
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {
-	b := NewBucket("tmp")
+	b, _ := NewBucket("tmp")
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 10)
@@ -38,7 +38,7 @@ func TestMutationInvalid(t *testing.T) {
 		}
 	}()
 
-	b := NewBucket("tmp")
+	b, _ := NewBucket("tmp")
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 5)

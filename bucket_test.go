@@ -59,7 +59,11 @@ func TestBucketRegistry(t *testing.T) {
 
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
-	b := NewBucket("tmp")
+	b, err := NewBucket("tmp")
+	if err != nil {
+		t.Fatalf("Expected NewBucket() to work")
+	}
+
 	b.CreateVBucket(0)
 	b.SetVBState(0, VBActive)
 
@@ -107,7 +111,10 @@ func TestBucketNotifications(t *testing.T) {
 }
 
 func TestNewBucket(t *testing.T) {
-	nb := NewBucket("tmp")
+	nb, err := NewBucket("tmp")
+	if err != nil {
+		t.Fatalf("Expected NewBucket() to work")
+	}
 
 	ch := make(chan interface{}, 2)
 
@@ -129,7 +136,10 @@ func TestNewBucket(t *testing.T) {
 }
 
 func TestCreateDestroyVBucket(t *testing.T) {
-	nb := NewBucket("tmp")
+	nb, err := NewBucket("tmp")
+	if err != nil {
+		t.Fatalf("Expected NewBucket() to work")
+	}
 
 	if nb.CreateVBucket(300) == nil {
 		t.Fatalf("Expected successful CreateVBucket")
@@ -178,7 +188,10 @@ func TestVBString(t *testing.T) {
 }
 
 func TestBucketClose(t *testing.T) {
-	nb := NewBucket("tmp")
+	nb, err := NewBucket("tmp")
+	if err != nil {
+		t.Fatalf("Expected NewBucket() to work")
+	}
 
 	if nb.CreateVBucket(300) == nil {
 		t.Fatalf("Expected successful CreateVBucket")
@@ -205,7 +218,10 @@ func TestBucketClose(t *testing.T) {
 }
 
 func TestVBSuspend(t *testing.T) {
-	nb := NewBucket("tmp")
+	nb, err := NewBucket("tmp")
+	if err != nil {
+		t.Fatalf("Expected NewBucket() to work")
+	}
 
 	if nb.CreateVBucket(300) == nil {
 		t.Fatalf("Expected successful CreateVBucket")
