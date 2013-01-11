@@ -119,6 +119,35 @@ func (s *bucketstore) del(items string, changes string,
 	return s.store.Flush() // TODO: flush less often.
 }
 
+func (s *bucketstore) visit(collName string, start []byte, withValue bool,
+	visitor func(*item) bool) (err error) {
+	if start == nil {
+		i, err := s.coll(collName).MinItem(false)
+		if err != nil {
+			return err
+		}
+		if i == nil {
+			return nil
+		}
+		start = i.Key
+	}
+
+	var vErr error
+	v := func(x *gkvlite.Item) bool {
+		i := &item{key: x.Key}
+		if withValue {
+			if vErr = i.fromValueBytes(x.Val); vErr != nil {
+				return false
+			}
+		}
+		return visitor(i)
+	}
+	if err := s.coll(collName).VisitItemsAscend(start, withValue, v); err != nil {
+		return err
+	}
+	return vErr
+}
+
 func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
 	minItem, err := s.coll(srcColl).MinItem(false)

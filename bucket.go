@@ -59,11 +59,8 @@ func (b *Buckets) New(name string) (rv bucket, err error) {
 	}
 
 	// TODO: Need name checking & encoding for safety/security.
-	bdir := b.Path(name)
-	if err = os.Mkdir(bdir, 0777); err != nil {
-		return nil, err
-	}
-	if !isDir(bdir) {
+	bdir := b.Path(name) // If an accessible bdir directory exists already, it's ok.
+	if err = os.Mkdir(bdir, 0777); err != nil && !isDir(bdir) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
@@ -236,10 +233,17 @@ func (b *livebucket) Load() (err error) {
 			if err != nil {
 				return err
 			}
+			if err = vb.load(); err != nil {
+				return err
+			}
 			if !b.casVBucket(uint16(vbid), vb, nil) {
 				return errors.New(fmt.Sprintf("loading vbucket: %v,"+
 					" but it already exists", vbid))
 			}
+			// TODO: Some loaded vbuckets might be non-active (replica, dead?).
+			// TODO: Handle edge case of ressurrecting a dead vbucket and its data?
+			// TODO: Perhaps this is warmup instead of load, to favor metadata first?
+			b.SetVBState(uint16(vbid), VBActive)
 		}
 	}
 	return nil

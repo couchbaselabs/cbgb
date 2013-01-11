@@ -24,14 +24,21 @@ func main() {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
 
-	defaultBucket, err := buckets.New(*defaultBucketName)
+	err = buckets.Load()
 	if err != nil {
-		log.Fatalf("Error creating default bucket: %s, %v", *defaultBucketName, err)
+		log.Printf("Could not load buckets: %v, data directory: %v", err, *data)
 	}
 
-	defaultBucket.Subscribe(mutationLogCh)
-	defaultBucket.CreateVBucket(0)
-	defaultBucket.SetVBState(0, cbgb.VBActive)
+	if buckets.Get(*defaultBucketName) == nil {
+		defaultBucket, err := buckets.New(*defaultBucketName)
+		if err != nil {
+			log.Fatalf("Error creating default bucket: %s, %v", *defaultBucketName, err)
+		}
+
+		defaultBucket.Subscribe(mutationLogCh)
+		defaultBucket.CreateVBucket(0)
+		defaultBucket.SetVBState(0, cbgb.VBActive)
+	}
 
 	if _, err := cbgb.StartServer(*addr, buckets, *defaultBucketName); err != nil {
 		log.Fatalf("Error starting server: %s", err)

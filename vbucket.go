@@ -295,6 +295,25 @@ func (v *vbucket) SetVBState(newState VBState,
 	return
 }
 
+func (v *vbucket) load() (err error) {
+	v.Apply(func(vbLocked *vbucket) {
+		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
+			visitor := func(i *item) bool {
+				// TODO: What if we're loading something out of allowed range?
+				// TODO: Don't want to have all values warmed into memory?
+				if v.cas <= i.cas {
+					v.cas = i.cas + 1
+				}
+				vbLocked.mem.set(i, nil)
+				v.stats.Items++
+				return true
+			}
+			err = bs.visit(v.collItems, nil, true, visitor)
+		})
+	})
+	return err
+}
+
 func (v *vbucket) AddStats(dest *Stats, key string) {
 	v.Apply(func(vbLocked *vbucket) {
 		if v.state == VBActive { // TODO: handle key
