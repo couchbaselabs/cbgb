@@ -50,8 +50,19 @@ func (s *bucketstore) service() {
 	}
 }
 
+func (s *bucketstore) apply(synchronous bool, cb func(*bucketstore)) {
+	req := &bucketstorereq{cb: cb}
+	if synchronous {
+		req.res = make(chan bool)
+	}
+	s.ch <- req
+	if synchronous {
+		<-req.res
+	}
+}
+
 // All the following methods need to be called while single-threaded,
-// so call them only in your callbacks from the service() loop.
+// so invoke them only in your apply() callback functions.
 
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
 	c := s.store.GetCollection(collName)
@@ -67,6 +78,10 @@ func (s *bucketstore) collNames() []string {
 
 func (s *bucketstore) collExists(collName string) bool {
 	return s.store.GetCollection(collName) != nil
+}
+
+func (s *bucketstore) flush() error {
+	return s.store.Flush()
 }
 
 func (s *bucketstore) get(items string, key []byte) (*item, error) {

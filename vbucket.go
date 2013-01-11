@@ -151,6 +151,11 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
 		collChanges: fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES),
 	}
 
+	bs.apply(true, func(bs *bucketstore) {
+		bs.coll(rv.collItems)
+		bs.coll(rv.collChanges)
+	})
+
 	go rv.service()
 
 	return rv, nil
@@ -254,14 +259,11 @@ func (v *vbucket) ApplyAsync(cb func(*vbucket)) {
 }
 
 func (v *vbucket) ApplyBucketStore(cb func(*bucketstore)) {
-	req := &bucketstorereq{cb: cb, res: make(chan bool)}
-	v.bs.ch <- req
-	<-req.res
+	v.bs.apply(true, cb)
 }
 
 func (v *vbucket) ApplyBucketStoreAsync(cb func(*bucketstore)) {
-	req := &bucketstorereq{cb: cb, res: nil}
-	v.bs.ch <- req
+	v.bs.apply(false, cb)
 }
 
 func (v *vbucket) Suspend() {

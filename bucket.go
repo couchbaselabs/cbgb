@@ -22,6 +22,7 @@ const (
 type bucket interface {
 	Available() bool
 	Close() error
+	Flush() error
 	Load() error
 
 	Subscribe(ch chan<- interface{})
@@ -213,6 +214,19 @@ func (b *livebucket) Close() error {
 	}
 	for _, bs := range b.bucketstores {
 		close(bs.ch)
+	}
+	return nil
+}
+
+func (b *livebucket) Flush() error {
+	for _, bs := range b.bucketstores {
+		var err error
+		bs.apply(true, func(bs *bucketstore) {
+			err = bs.flush()
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return nil
 }
