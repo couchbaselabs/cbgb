@@ -12,11 +12,13 @@ import (
 )
 
 const (
-	CHANGES_SINCE      = gomemcached.CommandCode(0x60)
-	GET_VBUCKET_CONFIG = gomemcached.CommandCode(0x61)
-	SET_VBUCKET_CONFIG = gomemcached.CommandCode(0x62)
-	SPLIT_RANGE        = gomemcached.CommandCode(0x63)
-	NOT_MY_RANGE       = gomemcached.Status(0x60)
+	CHANGES_SINCE       = gomemcached.CommandCode(0x60)
+	GET_VBUCKET_CONFIG  = gomemcached.CommandCode(0x61)
+	SET_VBUCKET_CONFIG  = gomemcached.CommandCode(0x62)
+	SPLIT_RANGE         = gomemcached.CommandCode(0x63)
+	NOT_MY_RANGE        = gomemcached.Status(0x60)
+	COLL_SUFFIX_ITEMS   = ".i"
+	COLL_SUFFIX_CHANGES = ".c"
 )
 
 type VBState uint8
@@ -145,8 +147,8 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
 		state:       VBDead,
 		ch:          make(chan vbreq),
 		ach:         make(chan vbapplyreq),
-		collItems:   fmt.Sprintf("%v.i", vbid),
-		collChanges: fmt.Sprintf("%v.c", vbid),
+		collItems:   fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_ITEMS),
+		collChanges: fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES),
 	}
 
 	go rv.service()

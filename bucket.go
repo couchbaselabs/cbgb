@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -49,7 +50,7 @@ func NewBuckets(dirForBuckets string) (*Buckets, error) {
 
 // Create a new named bucket.
 // Return the new bucket, or nil if the bucket already exists.
-func (b *Buckets) New(name string) (bucket, error) {
+func (b *Buckets) New(name string) (rv bucket, err error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -59,15 +60,14 @@ func (b *Buckets) New(name string) (bucket, error) {
 
 	// TODO: Need name checking & encoding for safety/security.
 	bdir := b.Path(name)
-	if err := os.Mkdir(bdir, 0777); err != nil {
+	if err = os.Mkdir(bdir, 0777); err != nil {
 		return nil, err
 	}
 	if !isDir(bdir) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
-	rv, err := NewBucket(bdir)
-	if err != nil {
+	if rv, err = NewBucket(bdir); err != nil {
 		return nil, err
 	}
 
@@ -217,8 +217,32 @@ func (b *livebucket) Close() error {
 	return nil
 }
 
-func (b *livebucket) Load() error {
-	return nil // TODO: need to do a real load here.
+func (b *livebucket) Load() (err error) {
+	for _, bs := range b.bucketstores {
+		for _, collName := range bs.collNames() {
+			if !strings.HasSuffix(collName, COLL_SUFFIX_ITEMS) {
+				continue
+			}
+			vbidStr := collName[0 : len(collName)-len(COLL_SUFFIX_ITEMS)]
+			if !bs.collExists(vbidStr+COLL_SUFFIX_ITEMS) ||
+				!bs.collExists(vbidStr+COLL_SUFFIX_CHANGES) {
+				continue
+			}
+			vbid, err := strconv.Atoi(vbidStr)
+			if err != nil {
+				return err
+			}
+			vb, err := newVBucket(b, uint16(vbid), bs)
+			if err != nil {
+				return err
+			}
+			if !b.casVBucket(uint16(vbid), vb, nil) {
+				return errors.New(fmt.Sprintf("loading vbucket: %v,"+
+					" but it already exists", vbid))
+			}
+		}
+	}
+	return nil
 }
 
 func (b *livebucket) getVBucket(vbid uint16) *vbucket {

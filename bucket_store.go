@@ -61,6 +61,14 @@ func (s *bucketstore) coll(collName string) *gkvlite.Collection {
 	return c
 }
 
+func (s *bucketstore) collNames() []string {
+	return s.store.GetCollectionNames()
+}
+
+func (s *bucketstore) collExists(collName string) bool {
+	return s.store.GetCollection(collName) != nil
+}
+
 func (s *bucketstore) get(items string, key []byte) (*item, error) {
 	return s.getItem(items, key, true)
 }
