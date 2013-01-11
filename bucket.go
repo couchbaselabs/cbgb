@@ -50,6 +50,9 @@ func NewBuckets(dirForBuckets string) (*Buckets, error) {
 
 // Create a new named bucket.
 // Return the new bucket, or nil if the bucket already exists.
+//
+// TODO: Need clearer names around New vs Create vs Open vs Destroy,
+// especially not that there's persistence.
 func (b *Buckets) New(name string) (rv bucket, err error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
@@ -214,6 +217,9 @@ func (b *livebucket) Close() error {
 	return nil
 }
 
+// TODO: Need to laod vbucket states and their configurations (e.g., key ranges)
+// TODO: Need to track some bucket "uuid", so that a recreated bucket X'
+// is distinct from a previously deleted bucket X?
 func (b *livebucket) Load() (err error) {
 	for _, bs := range b.bucketstores {
 		for _, collName := range bs.collNames() {
