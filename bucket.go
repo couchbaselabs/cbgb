@@ -53,7 +53,7 @@ func NewBuckets(dirForBuckets string) (*Buckets, error) {
 // Return the new bucket, or nil if the bucket already exists.
 //
 // TODO: Need clearer names around New vs Create vs Open vs Destroy,
-// especially not that there's persistence.
+// especially now that there's persistence.
 func (b *Buckets) New(name string) (rv bucket, err error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
