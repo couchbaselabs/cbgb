@@ -14,10 +14,10 @@ import (
 )
 
 const (
-	MAX_VBUCKET               = 1024
-	BUCKET_DIR_SUFFIX         = "-bucket" // Suffix allows non-buckets to be ignored.
-	DEFAULT_BUCKET_NAME       = "default"
-	DEFAULT_STORES_PER_BUCKET = 1
+	MAX_VBUCKET         = 1024
+	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
+	DEFAULT_BUCKET_NAME = "default"
+	STORES_PER_BUCKET   = 1
 )
 
 type bucket interface {
@@ -163,7 +163,7 @@ func NewBucket(dirForBucket string) bucket {
 		availablech:  make(chan bool),
 		bucketstores: make(map[int]*bucketstore),
 	}
-	for i := 0; i < DEFAULT_STORES_PER_BUCKET; i++ {
+	for i := 0; i < STORES_PER_BUCKET; i++ {
 		res.bucketstores[i] = &bucketstore{
 			ident: i,
 			dir:   dirForBucket,
