@@ -76,7 +76,6 @@ type vbucket struct {
 	state       VBState
 	config      *VBConfig
 	stats       Stats
-	suspended   bool
 	ch          chan vbreq
 	ach         chan vbapplyreq
 	collItems   string // Name of persistent items collection.
@@ -172,10 +171,6 @@ func (v *vbucket) service() {
 			if ar.res != nil {
 				close(ar.res)
 			}
-			if v.suspended {
-				v.serviceSuspended()
-			}
-
 		case req, ok := <-v.ch:
 			if !ok {
 				return
@@ -184,18 +179,6 @@ func (v *vbucket) service() {
 			if res != overrideResponse {
 				v.respond(&req, res)
 			}
-		}
-	}
-}
-
-func (v *vbucket) serviceSuspended() {
-	for ar := range v.ach {
-		ar.cb(v)
-		if ar.res != nil {
-			close(ar.res)
-		}
-		if !v.suspended {
-			return
 		}
 	}
 }
@@ -264,18 +247,6 @@ func (v *vbucket) ApplyBucketStore(cb func(*bucketstore)) {
 
 func (v *vbucket) ApplyBucketStoreAsync(cb func(*bucketstore)) {
 	v.bs.apply(false, cb)
-}
-
-func (v *vbucket) Suspend() {
-	v.Apply(func(vbLocked *vbucket) {
-		vbLocked.suspended = true
-	})
-}
-
-func (v *vbucket) Resume() {
-	v.Apply(func(vbLocked *vbucket) {
-		vbLocked.suspended = false
-	})
 }
 
 func (v *vbucket) GetVBState() (res VBState) {
