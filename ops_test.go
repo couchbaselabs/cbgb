@@ -433,7 +433,7 @@ func TestTapChanges(t *testing.T) {
 		Opcode: gomemcached.TAP_CONNECT,
 	}
 
-	go rh.doTap(treq, chpkt, cherr)
+	go doTap(rh.currentBucket, treq, chpkt, cherr)
 
 	vb0 := testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)

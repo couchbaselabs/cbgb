@@ -11,14 +11,14 @@ import (
 // How often to send opaque "heartbeats" on tap streams.
 var tapTickFreq = time.Second
 
-func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
+func doTap(b bucket, req *gomemcached.MCRequest,
 	chpkt chan<- transmissible, cherr <-chan error) error {
 
 	bch := make(chan interface{})
 	mch := make(chan interface{}, 1000)
 
-	rh.currentBucket.Subscribe(bch)
-	defer rh.currentBucket.Unsubscribe(bch)
+	b.Subscribe(bch)
+	defer b.Unsubscribe(bch)
 
 	ticker := time.NewTicker(tapTickFreq)
 	defer ticker.Stop()
@@ -27,7 +27,7 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 	registered := map[uint16]bool{}
 	defer func() {
 		for vbid := range registered {
-			vb := rh.currentBucket.getVBucket(vbid)
+			vb := b.getVBucket(vbid)
 			if vb != nil {
 				vb.observer.Unregister(mch)
 			}
@@ -61,7 +61,7 @@ func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
 			} else {
 				pkt.Extras = make([]byte, 16) // TODO: fill
 
-				vb := rh.currentBucket.getVBucket(m.vb)
+				vb := b.getVBucket(m.vb)
 				if vb != nil {
 					// TODO: if vb is suspended, the get() will freeze
 					// the TAP stream until vb is resumed; that may be
