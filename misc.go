@@ -2,9 +2,7 @@ package cbgb
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
-	"log"
 	"net/url"
 	"os"
 )
@@ -75,24 +73,4 @@ func isDir(path string) bool {
 		return false
 	}
 	return true // TODO: check for writability.
-}
-
-func MutationLogger(ch chan interface{}) {
-	for i := range ch {
-		switch o := i.(type) {
-		case mutation:
-			log.Printf("Mutation: %v", o)
-		case vbucketChange:
-			log.Printf("VBucket change: %v", o)
-			if o.newState == VBActive {
-				vb := o.getVBucket()
-				if vb != nil {
-					// Watch state changes
-					vb.observer.Register(ch)
-				}
-			}
-		default:
-			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
-		}
-	}
 }

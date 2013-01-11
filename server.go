@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
 
 	"github.com/dustin/gomemcached"
 	"github.com/dustin/gomemcached/server"
@@ -16,90 +15,6 @@ const (
 
 type reqHandler struct {
 	currentBucket bucket
-}
-
-// How often to send opaque "heartbeats" on tap streams.
-var tapTickFreq = time.Second
-
-func (rh *reqHandler) doTap(req *gomemcached.MCRequest,
-	chpkt chan<- transmissible, cherr <-chan error) error {
-
-	bch := make(chan interface{})
-	mch := make(chan interface{}, 1000)
-
-	rh.currentBucket.Subscribe(bch)
-	defer rh.currentBucket.Unsubscribe(bch)
-
-	ticker := time.NewTicker(tapTickFreq)
-	defer ticker.Stop()
-
-	// defer cleanup vbucket mchs
-	registered := map[uint16]bool{}
-	defer func() {
-		for vbid := range registered {
-			vb := rh.currentBucket.getVBucket(vbid)
-			if vb != nil {
-				vb.observer.Unregister(mch)
-			}
-		}
-	}()
-
-	for {
-		select {
-		case ci := <-bch:
-			// VBucket state change, so update registrations
-			c := ci.(vbucketChange)
-			vb := c.getVBucket()
-			if c.newState == VBActive {
-				vb.observer.Register(mch)
-				registered[vb.vbid] = true
-			} else if vb != nil {
-				vb.observer.Unregister(mch)
-				delete(registered, vb.vbid)
-			}
-		case mi := <-mch:
-			// Send a change
-			m := mi.(mutation)
-			pkt := &gomemcached.MCRequest{
-				Opcode:  gomemcached.TAP_MUTATION,
-				Key:     m.key,
-				VBucket: m.vb,
-			}
-			if m.deleted {
-				pkt.Opcode = gomemcached.TAP_DELETE
-				pkt.Extras = make([]byte, 8) // TODO: fill
-			} else {
-				pkt.Extras = make([]byte, 16) // TODO: fill
-
-				vb := rh.currentBucket.getVBucket(m.vb)
-				if vb != nil {
-					// TODO: if vb is suspended, the get() will freeze
-					// the TAP stream until vb is resumed; that may be
-					// or may not be what we want.
-					res := vb.get(m.key)
-					if res.Status != gomemcached.SUCCESS {
-						log.Printf("Tapped a missing item, skipping: %s",
-							m.key)
-						continue
-					}
-					pkt.Body = res.Body
-				} else {
-					log.Printf("Change on missing vbucket? %v", m.vb)
-					continue
-				}
-			}
-			chpkt <- pkt
-		case <-ticker.C:
-			// Send a noop
-			chpkt <- &gomemcached.MCRequest{
-				Opcode: gomemcached.TAP_OPAQUE,
-				Extras: make([]byte, 8),
-			}
-		case err := <-cherr:
-			return err
-		}
-	}
-	panic("unreachable")
 }
 
 func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
