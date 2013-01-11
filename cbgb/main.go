@@ -12,6 +12,8 @@ var mutationLogCh = make(chan interface{})
 func main() {
 	addr := flag.String("bind", ":11211", "memcached listen port")
 	data := flag.String("data", "./tmp", "data directory")
+	defaultBucketName := flag.String("default-bucket-name",
+		cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket")
 
 	flag.Parse()
 
@@ -22,13 +24,17 @@ func main() {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
 
-	defaultBucket := buckets.New(cbgb.DEFAULT_BUCKET_NAME)
+	defaultBucket, err := buckets.New(*defaultBucketName)
+	if err != nil {
+		log.Fatalf("Error creating default bucket: %s, %v", *defaultBucketName, err)
+	}
+
 	defaultBucket.Subscribe(mutationLogCh)
 	defaultBucket.CreateVBucket(0)
 	defaultBucket.SetVBState(0, cbgb.VBActive)
 
-	if _, err := cbgb.StartServer(*addr, buckets); err != nil {
-		log.Fatalf("Got an error:  %s", err)
+	if _, err := cbgb.StartServer(*addr, buckets, *defaultBucketName); err != nil {
+		log.Fatalf("Error starting server: %s", err)
 	}
 
 	// Let goroutines do their work.
