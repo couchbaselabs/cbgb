@@ -61,6 +61,10 @@ func (s *bucketstore) apply(synchronous bool, cb func(*bucketstore)) {
 	}
 }
 
+func (s *bucketstore) Close() {
+	close(s.ch)
+}
+
 // All the following methods need to be called while single-threaded,
 // so invoke them only in your apply() callback functions.
 

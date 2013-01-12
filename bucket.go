@@ -216,7 +216,7 @@ func (b *livebucket) Close() error {
 		}
 	}
 	for _, bs := range b.bucketstores {
-		close(bs.ch)
+		bs.Close()
 	}
 	return nil
 }
