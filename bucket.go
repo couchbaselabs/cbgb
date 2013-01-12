@@ -84,8 +84,8 @@ func (b *Buckets) Get(name string) bucket {
 	return b.buckets[name]
 }
 
-// Destroy the named bucket.
-func (b *Buckets) Destroy(name string) {
+// Close the named bucket, optionally purging all its files.
+func (b *Buckets) Close(name string, purgeFiles bool) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -93,7 +93,10 @@ func (b *Buckets) Destroy(name string) {
 	if bucket != nil {
 		bucket.Close()
 		delete(b.buckets, name)
-		os.RemoveAll(b.Path(name)) // TODO: Is this what we want?
+	}
+
+	if purgeFiles {
+		os.RemoveAll(b.Path(name))
 	}
 }
 

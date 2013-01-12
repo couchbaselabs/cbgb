@@ -17,7 +17,7 @@ func TestBucketRegistry(t *testing.T) {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
 	newb, err := bs.New(DEFAULT_BUCKET_NAME)
-	defer bs.Destroy(DEFAULT_BUCKET_NAME)
+	defer bs.Close(DEFAULT_BUCKET_NAME, true)
 	if err != nil || newb == nil {
 		t.Fatalf("Failed to create default bucket")
 	}
@@ -34,7 +34,7 @@ func TestBucketRegistry(t *testing.T) {
 		t.Fatalf("Didn't get my default bucket back.")
 	}
 
-	bs.Destroy(DEFAULT_BUCKET_NAME)
+	bs.Close(DEFAULT_BUCKET_NAME, true)
 	if b2.Available() {
 		t.Fatalf("Destroyed bucket is available.")
 	}
@@ -43,10 +43,10 @@ func TestBucketRegistry(t *testing.T) {
 		t.Fatalf("Got the default bucket after destroying it")
 	}
 
-	bs.Destroy(DEFAULT_BUCKET_NAME) // just verify we can do it again
+	bs.Close(DEFAULT_BUCKET_NAME, true) // just verify we can do it again
 
 	newb2, err := bs.New(DEFAULT_BUCKET_NAME)
-	defer bs.Destroy(DEFAULT_BUCKET_NAME)
+	defer bs.Close(DEFAULT_BUCKET_NAME, true)
 	if err != nil || newb2 == nil {
 		t.Fatalf("Failed to create default bucket again")
 	}
