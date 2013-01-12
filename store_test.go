@@ -130,3 +130,90 @@ func TestSaveLoadBasic(t *testing.T) {
 	}
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 }
+
+func TestSaveLoadMutations(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir)
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	if b0.SetVBState(2, VBActive) == nil {
+		t.Errorf("expected SetVBState to work")
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "initial data load")
+
+	err = b0.Flush()
+	if err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "after flush")
+
+	b0.Close()
+
+	b1, err := NewBucket(testBucketDir)
+	if err != nil {
+		t.Errorf("expected NewBucket re-open to work, err: %v", err)
+	}
+	r1 := &reqHandler{b1}
+	err = b1.Load()
+	if err != nil {
+		t.Errorf("expected Load to work, err: %v", err)
+	}
+	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
+
+	active := uint16(2)
+	tests := []struct {
+		op  gomemcached.CommandCode
+		vb  uint16
+		key string
+		val string
+	}{
+		{gomemcached.DELETE, active, "0", ""},
+		{gomemcached.DELETE, active, "2", ""},
+		{gomemcached.DELETE, active, "4", ""},
+		{gomemcached.SET, active, "2", "2"},
+		{gomemcached.SET, active, "5", "5"},
+	}
+
+	for _, x := range tests {
+		req := &gomemcached.MCRequest{
+			Opcode:  x.op,
+			VBucket: x.vb,
+			Key:     []byte(x.key),
+			Body:    []byte(x.val),
+		}
+		res := r1.HandleMessage(ioutil.Discard, req)
+		if res.Status != gomemcached.SUCCESS {
+			t.Errorf("Expected %v for %v:%v/%v, got %v",
+				gomemcached.SUCCESS, x.op, x.vb, x.key, res.Status)
+		}
+	}
+
+	err = b1.Flush()
+	if err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	b1.Close()
+
+	b2, err := NewBucket(testBucketDir)
+	if err != nil {
+		t.Errorf("expected NewBucket re-open to work, err: %v", err)
+	}
+	defer b2.Close()
+	r2 := &reqHandler{b2}
+	err = b2.Load()
+	if err != nil {
+		t.Errorf("expected Load to work, err: %v", err)
+	}
+
+	testExpectInts(t, r2, 2, []int{1, 2, 3, 5}, "reload2")
+}
