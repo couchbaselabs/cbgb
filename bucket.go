@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	MAX_VBUCKET         = 1024
+	MAX_VBUCKETS        = 1024
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
 	STORES_PER_BUCKET   = 4 // The # of *.store files per bucket (ignoring compaction).
@@ -144,7 +144,7 @@ func (b *Buckets) Load() error {
 }
 
 type livebucket struct {
-	vbuckets     [MAX_VBUCKET]unsafe.Pointer
+	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
 	availablech  chan bool
 	observer     *broadcaster
 	dir          string
@@ -176,7 +176,7 @@ func NewBucket(dirForBucket string) (bucket, error) {
 func (b *livebucket) Subscribe(ch chan<- interface{}) {
 	b.observer.Register(ch)
 	go func() {
-		for i := uint16(0); i < MAX_VBUCKET; i++ {
+		for i := uint16(0); i < MAX_VBUCKETS; i++ {
 			c := vbucketChange{bucket: b,
 				vbid:     i,
 				oldState: VBDead,

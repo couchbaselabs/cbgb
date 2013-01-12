@@ -735,7 +735,7 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 	// Validate the splits.
 	max := -1
 	for _, split := range sr.Splits {
-		if split.VBucketId < 0 || split.VBucketId >= MAX_VBUCKET {
+		if split.VBucketId < 0 || split.VBucketId >= MAX_VBUCKETS {
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("vbucket id %v out of range",
