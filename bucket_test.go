@@ -197,7 +197,6 @@ func TestBucketClose(t *testing.T) {
 	defer nb.destroyVBucket(300)
 
 	vb := nb.getVBucket(300)
-
 	if vb == nil {
 		t.Fatalf("Expected vb not returned")
 	}
@@ -226,6 +225,7 @@ func TestBucketLoadNames(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
+
 	names, err := b.LoadNames()
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
@@ -237,17 +237,18 @@ func TestBucketLoadNames(t *testing.T) {
 	if err = os.Mkdir(d+string(os.PathSeparator)+"foo-bucket-NOT", 0777); err != nil {
 		t.Fatalf("Expected mkdir to work, got: %v", err)
 	}
+
 	names, err = b.LoadNames()
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
-
 	if err = b.Load(); err != nil {
 		t.Fatalf("Expected Buckets.Load() on empty directory to work")
 	}
 
 	os.Mkdir(d+string(os.PathSeparator)+"foo-bucket", 0777)
 	os.Mkdir(d+string(os.PathSeparator)+"bar-bucket", 0777)
+
 	names, err = b.LoadNames()
 	if err != nil || len(names) != 2 {
 		t.Fatalf("Expected names to be len(2), got: %v", names)
