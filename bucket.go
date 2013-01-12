@@ -16,7 +16,7 @@ const (
 	MAX_VBUCKET         = 1024
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
-	STORES_PER_BUCKET   = 4
+	STORES_PER_BUCKET   = 4 // The # of *.store files per bucket (ignoring compaction).
 )
 
 type bucket interface {
