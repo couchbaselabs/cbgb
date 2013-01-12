@@ -45,6 +45,15 @@ func (v VBState) String() string {
 	return vbStateNames[v]
 }
 
+func parseVBState(s string) VBState {
+	for i, v := range vbStateNames {
+		if v != "" && v == s {
+			return VBState(uint8(i))
+		}
+	}
+	return VBDead
+}
+
 type VBConfig struct {
 	MinKeyInclusive Bytes `json:"minKeyInclusive"`
 	MaxKeyExclusive Bytes `json:"maxKeyExclusive"`

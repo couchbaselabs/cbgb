@@ -183,6 +183,26 @@ func TestVBString(t *testing.T) {
 			}
 		}
 	}
+
+	testParse := []struct {
+		s       string
+		expState VBState
+	}{
+		{"active", VBActive},
+		{"replica", VBReplica},
+		{"pending", VBPending},
+		{"dead", VBDead},
+		{"ACTIVE", VBDead},
+		{"not a vbstate", VBDead},
+		{"", VBDead},
+	}
+	for testIdx, test := range testParse {
+		got := parseVBState(test.s)
+		if test.expState != got {
+			t.Errorf("%v - Expected %v for parseVBState '%v', got %v",
+				testIdx, test.expState, test.s, got)
+		}
+	}
 }
 
 func TestBucketClose(t *testing.T) {
