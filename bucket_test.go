@@ -185,7 +185,7 @@ func TestVBString(t *testing.T) {
 	}
 
 	testParse := []struct {
-		s       string
+		s        string
 		expState VBState
 	}{
 		{"active", VBActive},
