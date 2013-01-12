@@ -217,3 +217,70 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	testExpectInts(t, r2, 2, []int{1, 2, 3, 5}, "reload2")
 }
+
+func TestSaveLoadVBState(t *testing.T) {
+	testSaveLoadVBState(t, false)
+	testSaveLoadVBState(t, true)
+}
+
+func testSaveLoadVBState(t *testing.T, withData bool) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir)
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	if b0.SetVBState(2, VBActive) == nil {
+		t.Errorf("expected SetVBState to work")
+	}
+
+	if withData {
+		testLoadInts(t, r0, 2, 5)
+	}
+
+	err = b0.Flush()
+	if err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	b0.Close()
+
+	tests := []struct {
+		currState VBState
+		nextState VBState
+	}{
+		{VBActive, VBReplica},
+		{VBReplica, VBPending},
+		{VBPending, VBDead},
+		{VBDead, VBActive},
+	}
+
+	for _, test := range tests {
+		b1, err := NewBucket(testBucketDir)
+		if err != nil {
+			t.Errorf("expected NewBucket re-open to work, err: %v", err)
+		}
+		r1 := &reqHandler{b1}
+		err = b1.Load()
+		if err != nil {
+			t.Errorf("expected Load to work, err: %v", err)
+		}
+		vb := b1.getVBucket(2)
+		if vb == nil {
+			t.Errorf("expected vbucket")
+		}
+		if vb.GetVBState() != test.currState {
+			t.Errorf("expected vbstate %v, got %v", test.currState, vb.state)
+		}
+		if b1.SetVBState(2, test.nextState) == nil {
+			t.Errorf("expected SetVBState to work")
+		}
+		if withData {
+			testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload2")
+		}
+	}
+}

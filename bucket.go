@@ -256,6 +256,8 @@ func (b *livebucket) Load() (err error) {
 			if err != nil {
 				return err
 			}
+			// TODO: Handle edge case of ressurrecting a dead vbucket and its data?
+			// TODO: Perhaps this is warmup instead of load, to favor metadata first?
 			if err = vb.load(); err != nil {
 				return err
 			}
@@ -263,10 +265,7 @@ func (b *livebucket) Load() (err error) {
 				return errors.New(fmt.Sprintf("loading vbucket: %v,"+
 					" but it already exists", vbid))
 			}
-			// TODO: Some loaded vbuckets might be non-active (replica, dead?).
-			// TODO: Handle edge case of ressurrecting a dead vbucket and its data?
-			// TODO: Perhaps this is warmup instead of load, to favor metadata first?
-			b.SetVBState(uint16(vbid), VBActive)
+			// TODO: Need to poke observers with changed vbstate?
 		}
 	}
 	return nil

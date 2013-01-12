@@ -19,6 +19,7 @@ const (
 	NOT_MY_RANGE        = gomemcached.Status(0x60)
 	COLL_SUFFIX_ITEMS   = ".i"
 	COLL_SUFFIX_CHANGES = ".c"
+	COLL_VBSTATE        = "vbs"
 )
 
 type VBState uint8
@@ -268,16 +269,28 @@ func (v *vbucket) GetVBState() (res VBState) {
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
 	v.Apply(func(vbLocked *vbucket) {
-		oldState = vbLocked.state
-		vbLocked.state = newState
-		if cb != nil {
-			cb(oldState)
-		}
+		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
+			err := bs.coll(COLL_VBSTATE).Set(
+				[]byte(fmt.Sprintf("%v", v.vbid)),
+				[]byte(newState.String()))
+			if err == nil {
+				err := bs.flush()
+				if err == nil {
+					oldState = vbLocked.state
+					vbLocked.state = newState
+					if cb != nil {
+						cb(oldState)
+					}
+				}
+			}
+			// TODO: Need to undo if there were errors?
+		})
 	})
 	return
 }
 
 func (v *vbucket) load() (err error) {
+	// TODO: If vbstate is dead, perhaps we don't need to load items.
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
 			visitor := func(i *item) bool {
@@ -291,6 +304,15 @@ func (v *vbucket) load() (err error) {
 				return true
 			}
 			err = bs.visit(v.collItems, nil, true, visitor)
+			if err == nil {
+				// TODO: Need to load changes?
+				x, err := bs.coll(COLL_VBSTATE).GetItem(
+					[]byte(fmt.Sprintf("%v", v.vbid)),
+					true)
+				if err == nil {
+					vbLocked.state = parseVBState(string(x.Val))
+				}
+			}
 		})
 	})
 	return err
