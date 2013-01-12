@@ -144,19 +144,19 @@ func (b *Buckets) Load() error {
 }
 
 type livebucket struct {
-	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
 	availablech  chan bool
-	observer     *broadcaster
 	dir          string
 	bucketstores map[int]*bucketstore
+	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
+	observer     *broadcaster
 }
 
 func NewBucket(dirForBucket string) (bucket, error) {
 	res := &livebucket{
-		dir:          dirForBucket,
-		observer:     newBroadcaster(0),
 		availablech:  make(chan bool),
+		dir:          dirForBucket,
 		bucketstores: make(map[int]*bucketstore),
+		observer:     newBroadcaster(0),
 	}
 	for i := 0; i < STORES_PER_BUCKET; i++ {
 		bs, err := newBucketStore(fmt.Sprintf("%s%c%v.store",
