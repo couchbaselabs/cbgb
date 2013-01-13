@@ -234,7 +234,7 @@ func (b *livebucket) Flush() error {
 	return nil
 }
 
-// TODO: Need to laod vbucket states and their configurations (e.g., key ranges)
+// TODO: Need to load vbucket configurations (e.g., key ranges)
 // TODO: Need to track some bucket "uuid", so that a recreated bucket X'
 // is distinct from a previously deleted bucket X?
 func (b *livebucket) Load() (err error) {
@@ -257,7 +257,7 @@ func (b *livebucket) Load() (err error) {
 				return err
 			}
 			// TODO: Handle edge case of ressurrecting a dead vbucket and its data?
-			// TODO: Perhaps this is warmup instead of load, to favor metadata first?
+			// TODO: Allow an optional metadata-only load?
 			if err = vb.load(); err != nil {
 				return err
 			}
