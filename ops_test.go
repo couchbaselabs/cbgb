@@ -1261,8 +1261,8 @@ func TestStoreFrontBack(t *testing.T) {
 	testBucket.SetVBState(3, VBActive)
 
 	evictMem := func() {
-		// Clear the storeFront's item.data so that vbucket has to fetch
-		// from the storeBack.
+		// Clear the memstore's item.data so that vbucket has to fetch
+		// from the bucketstore.
 		vb.Apply(func(vbLocked *vbucket) {
 			vbLocked.mem.visitItems([]byte("a"), func(i *item) bool {
 				i.data = nil
@@ -1296,25 +1296,25 @@ func TestStoreFrontBack(t *testing.T) {
 	evictMem()
 	runTestsFrom(5)
 
-	if vb.stats.StoreBackFetchedItems != 2 {
-		t.Errorf("Expected vb.stats.StoreBackFetchedItems of 2, got: %v",
-			vb.stats.StoreBackFetchedItems)
+	if vb.stats.FetchedItems != 2 {
+		t.Errorf("Expected vb.stats.FetchedItems of 2, got: %v",
+			vb.stats.FetchedItems)
 	}
-	if vb.stats.StoreBackFetchedModified != 0 {
-		t.Errorf("Expected vb.stats.StoreBackFetchedModified of 0, got: %v",
-			vb.stats.StoreBackFetchedModified)
+	if vb.stats.FetchedModified != 0 {
+		t.Errorf("Expected vb.stats.FetchedModified of 0, got: %v",
+			vb.stats.FetchedModified)
 	}
-	if vb.stats.StoreBackFetchedDeleted != 0 {
-		t.Errorf("Expected vb.stats.StoreBackFetchedDeleted of 0, got: %v",
-			vb.stats.StoreBackFetchedDeleted)
+	if vb.stats.FetchedDeleted != 0 {
+		t.Errorf("Expected vb.stats.FetchedDeleted of 0, got: %v",
+			vb.stats.FetchedDeleted)
 	}
-	if vb.stats.StoreBackFetchedNil != 0 {
-		t.Errorf("Expected vb.stats.StoreBackFetchedNil of 0, got: %v",
-			vb.stats.StoreBackFetchedNil)
+	if vb.stats.FetchedNil != 0 {
+		t.Errorf("Expected vb.stats.FetchedNil of 0, got: %v",
+			vb.stats.FetchedNil)
 	}
-	if vb.stats.StoreBackFetchedAgain != 0 {
-		t.Errorf("Expected vb.stats.StoreBackFetchedAgain of 0, got: %v",
-			vb.stats.StoreBackFetchedAgain)
+	if vb.stats.FetchedAgain != 0 {
+		t.Errorf("Expected vb.stats.FetchedAgain of 0, got: %v",
+			vb.stats.FetchedAgain)
 	}
 
 	// Test RGET's background fetching.

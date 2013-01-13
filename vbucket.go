@@ -457,7 +457,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 		// mem update is synchronous.
 		v.ApplyAsync(func(vbLocked *vbucket) {
 			if err != nil {
-				v.stats.StoreBackFetchedErr++
+				v.stats.FetchedErr++
 				v.respond(vbr, &gomemcached.MCResponse{
 					Status: gomemcached.TMPFAIL,
 					Body:   []byte(fmt.Sprintf("Store error %v", err)),
@@ -466,10 +466,10 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 			}
 
 			if fetchedItem != nil {
-				v.stats.StoreBackFetchedItems++
+				v.stats.FetchedItems++
 				currMeta, err := v.mem.getMeta(fetchedItem.key)
 				if err != nil {
-					v.stats.StoreBackFetchedErr++
+					v.stats.FetchedErr++
 					v.respond(vbr, &gomemcached.MCResponse{
 						Status: gomemcached.TMPFAIL,
 						Body:   []byte(fmt.Sprintf("Store error %v", err)),
@@ -481,15 +481,15 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 					if currMeta.cas == cas {
 						v.mem.set(fetchedItem, nil)
 					} else {
-						// Item was recently modified & storeBack is behind.
-						v.stats.StoreBackFetchedModified++
+						// Item was recently modified & bucketstore is behind.
+						v.stats.FetchedModified++
 					}
 				} else {
-					// Item was recently deleted & storeBack is behind.
-					v.stats.StoreBackFetchedDeleted++
+					// Item was recently deleted & bucketstore is behind.
+					v.stats.FetchedDeleted++
 				}
 			} else {
-				v.stats.StoreBackFetchedNil++
+				v.stats.FetchedNil++
 			}
 
 			// TODO: not sure if we should recurse here.
@@ -497,7 +497,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 			if res != overrideResponse {
 				v.respond(vbr, res)
 			} else {
-				v.stats.StoreBackFetchedAgain++
+				v.stats.FetchedAgain++
 			}
 		})
 	})
