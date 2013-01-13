@@ -412,11 +412,12 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	if wantsKey {
 		res.Key = req.Key
 	}
-
 	return res, nil
 }
 
 func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
+	// TODO: Potential deadlock here as we lock front after back
+	// as opposed ot the usual back after front ordering?
 	v.ApplyBucketStoreAsync(func(bs *bucketstore) {
 		fetchedItem, err := bs.get(v.collItems, vbr.req.Key)
 
@@ -427,7 +428,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 				v.stats.FetchedErr++
 				v.respond(vbr, &gomemcached.MCResponse{
 					Status: gomemcached.TMPFAIL,
-					Body:   []byte(fmt.Sprintf("Store error %v", err)),
+					Body:   []byte(fmt.Sprintf("Fetch error %v", err)),
 				})
 				return
 			}
@@ -439,7 +440,7 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 					v.stats.FetchedErr++
 					v.respond(vbr, &gomemcached.MCResponse{
 						Status: gomemcached.TMPFAIL,
-						Body:   []byte(fmt.Sprintf("Store error %v", err)),
+						Body:   []byte(fmt.Sprintf("Fetch error %v", err)),
 					})
 					return
 				}
