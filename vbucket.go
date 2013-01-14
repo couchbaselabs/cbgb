@@ -220,24 +220,27 @@ func (v *vbucket) GetVBState() (res VBState) {
 	return
 }
 
-// TODO: SetVBState should also return an error to expose any storage errors.
 func (v *vbucket) SetVBState(newState VBState,
-	cb func(oldState VBState)) (oldState VBState) {
+	cb func(oldState VBState)) (oldState VBState, err error) {
+	oldState = VBDead
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
 			oldState = parseVBState(vbLocked.meta.State)
+
 			newMeta := &VBMeta{Id: v.meta.Id}
 			newMeta.update(&v.meta)
 			newMeta.State = newState.String()
-			j, err := json.Marshal(newMeta)
+
+			var j []byte
+			j, err = json.Marshal(newMeta)
 			if err != nil {
 				return
 			}
 			k := []byte(fmt.Sprintf("%d", newMeta.Id))
-			if err := bs.coll(COLL_VBMETA).Set(k, j); err != nil {
+			if err = bs.coll(COLL_VBMETA).Set(k, j); err != nil {
 				return
 			}
-			if err := bs.flush(); err != nil {
+			if err = bs.flush(); err != nil {
 				return
 			}
 			vbLocked.meta.update(newMeta)
@@ -246,7 +249,7 @@ func (v *vbucket) SetVBState(newState VBState,
 			}
 		})
 	})
-	return
+	return oldState, err
 }
 
 func (v *vbucket) load() (err error) {

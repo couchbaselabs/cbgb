@@ -31,7 +31,7 @@ type bucket interface {
 	CreateVBucket(vbid uint16) (*vbucket, error)
 	destroyVBucket(vbid uint16) (destroyed bool)
 	getVBucket(vbid uint16) *vbucket
-	SetVBState(vbid uint16, newState VBState) *vbucket
+	SetVBState(vbid uint16, newState VBState) error
 }
 
 // Holder of buckets.
@@ -310,18 +310,17 @@ func (b *livebucket) destroyVBucket(vbid uint16) (destroyed bool) {
 	return
 }
 
-func (b *livebucket) SetVBState(vbid uint16, newState VBState) *vbucket {
+func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
 	vb := b.getVBucket(vbid)
 	if vb != nil {
-		vb.SetVBState(newState, func(oldState VBState) {
+		_, err := vb.SetVBState(newState, func(oldState VBState) {
 			if b.getVBucket(vbid) == vb {
 				b.observer.Submit(vbucketChange{b, vbid, oldState, newState})
-			} else {
-				vb = nil
 			}
 		})
+		return err
 	}
-	return vb
+	return errors.New("no vbucket during SetVBState()")
 }
 
 type vbucketChange struct {

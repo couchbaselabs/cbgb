@@ -104,7 +104,7 @@ func TestSaveLoadBasic(t *testing.T) {
 
 	r0 := &reqHandler{b0}
 	b0.CreateVBucket(2)
-	if b0.SetVBState(2, VBActive) == nil {
+	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
 	}
 
@@ -142,7 +142,7 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	r0 := &reqHandler{b0}
 	b0.CreateVBucket(2)
-	if b0.SetVBState(2, VBActive) == nil {
+	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
 	}
 
@@ -234,7 +234,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 
 	r0 := &reqHandler{b0}
 	b0.CreateVBucket(2)
-	if b0.SetVBState(2, VBActive) == nil {
+	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
 	}
 
@@ -277,7 +277,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		if vbs != test.currState {
 			t.Errorf("expected vbstate %v, got %v", test.currState, vbs)
 		}
-		if b1.SetVBState(2, test.nextState) == nil {
+		if b1.SetVBState(2, test.nextState) != nil {
 			t.Errorf("expected SetVBState to work")
 		}
 		if withData {
