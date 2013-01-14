@@ -28,7 +28,7 @@ type bucket interface {
 	Subscribe(ch chan<- interface{})
 	Unsubscribe(ch chan<- interface{})
 
-	CreateVBucket(vbid uint16) *vbucket
+	CreateVBucket(vbid uint16) (*vbucket, error)
 	destroyVBucket(vbid uint16) (destroyed bool)
 	getVBucket(vbid uint16) *vbucket
 	SetVBState(vbid uint16, newState VBState) *vbucket
@@ -279,22 +279,22 @@ func (b *livebucket) casVBucket(vbid uint16, vb *vbucket, vbPrev *vbucket) bool 
 		unsafe.Pointer(vbPrev), unsafe.Pointer(vb))
 }
 
-func (b *livebucket) CreateVBucket(vbid uint16) *vbucket {
+func (b *livebucket) CreateVBucket(vbid uint16) (*vbucket, error) {
 	if b == nil || !b.Available() {
-		return nil
+		return nil, errors.New("cannot create vbucket as bucket is unavailable")
 	}
 	bs := b.bucketstores[int(vbid)%STORES_PER_BUCKET]
 	if bs == nil {
-		return nil
+		return nil, errors.New("cannot create vbucket as bucketstore missing")
 	}
 	vb, err := newVBucket(b, vbid, bs)
 	if err != nil {
-		return nil // TODO: Error propagation / logging.
+		return nil, err
 	}
 	if b.casVBucket(vbid, vb, nil) {
-		return vb
+		return vb, nil
 	}
-	return nil
+	return nil, errors.New("vbucket already exists")
 }
 
 func (b *livebucket) destroyVBucket(vbid uint16) (destroyed bool) {

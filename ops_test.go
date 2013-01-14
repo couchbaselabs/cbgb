@@ -96,7 +96,7 @@ func TestBasicOps(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
+	vb, _ := testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 
 	for _, x := range tests {
@@ -160,7 +160,7 @@ func TestMutationBroadcast(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
+	vb, _ := testBucket.CreateVBucket(3)
 
 	ch := make(chan interface{}, 16)
 
@@ -436,7 +436,7 @@ func TestTapChanges(t *testing.T) {
 
 	go doTap(rh.currentBucket, treq, chpkt, cherr)
 
-	vb0 := testBucket.CreateVBucket(0)
+	vb0, _ := testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
 
 	testKey := []byte("testKey")
@@ -773,7 +773,7 @@ func TestChangesSinceTransmitError(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
-	v := testBucket.CreateVBucket(0)
+	v, _ := testBucket.CreateVBucket(0)
 	for _, k := range []string{"a", "b"} {
 		vbSet(v, &vbreq{
 			w: nil,
@@ -923,7 +923,7 @@ func TestVBMeta(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
+	vb, _ := testBucket.CreateVBucket(3)
 
 	for i, x := range tests {
 		req := &gomemcached.MCRequest{
@@ -961,7 +961,7 @@ func TestMinMaxRange(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
+	vb, _ := testBucket.CreateVBucket(3)
 
 	tests := []struct {
 		op  gomemcached.CommandCode
@@ -1048,7 +1048,7 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(0)
+	vb, _ := testBucket.CreateVBucket(0)
 
 	for i := 0; i < numItems; i++ {
 		req := &gomemcached.MCRequest{
@@ -1223,7 +1223,7 @@ func TestSlowClient(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(0)
+	vb, _ := testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
 
 	req := &gomemcached.MCRequest{
@@ -1314,7 +1314,7 @@ func TestStoreFrontBack(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb := testBucket.CreateVBucket(3)
+	vb, _ := testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 
 	evictMem := func() {

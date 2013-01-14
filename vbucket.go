@@ -771,7 +771,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 		var vb *vbucket
 		created := false
 		if vbid != v.meta.Id {
-			vb = v.parent.CreateVBucket(vbid)
+			vb, _ = v.parent.CreateVBucket(vbid)
 			created = true
 		}
 		if vb == nil {

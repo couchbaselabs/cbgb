@@ -139,10 +139,10 @@ func TestCreateDestroyVBucket(t *testing.T) {
 		t.Fatalf("Expected NewBucket() to work")
 	}
 
-	if nb.CreateVBucket(300) == nil {
+	if vb, err := nb.CreateVBucket(300); err != nil || vb == nil {
 		t.Fatalf("Expected successful CreateVBucket")
 	}
-	if nb.CreateVBucket(300) != nil {
+	if vb, err := nb.CreateVBucket(300); err == nil || vb != nil {
 		t.Fatalf("Expected failed second CreateVBucket")
 	}
 	if !nb.destroyVBucket(300) {
@@ -211,7 +211,7 @@ func TestBucketClose(t *testing.T) {
 		t.Fatalf("Expected NewBucket() to work")
 	}
 
-	if nb.CreateVBucket(300) == nil {
+	if vb, err := nb.CreateVBucket(300); err != nil || vb == nil {
 		t.Fatalf("Expected successful CreateVBucket")
 	}
 	defer nb.destroyVBucket(300)
@@ -228,8 +228,8 @@ func TestBucketClose(t *testing.T) {
 		t.Fatalf("Got a vbucket from a closed bucket: %v", vb2)
 	}
 
-	vb3 := nb.CreateVBucket(200)
-	if vb3 != nil {
+	vb3, err := nb.CreateVBucket(200)
+	if err == nil || vb3 != nil {
 		t.Fatalf("Created a vbucket on a closed bucket: %v", vb3)
 	}
 }
