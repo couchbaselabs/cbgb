@@ -273,8 +273,9 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		if vb == nil {
 			t.Errorf("expected vbucket")
 		}
-		if vb.GetVBState() != test.currState {
-			t.Errorf("expected vbstate %v, got %v", test.currState, vb.state)
+		vbs := vb.GetVBState()
+		if vbs != test.currState {
+			t.Errorf("expected vbstate %v, got %v", test.currState, vbs)
 		}
 		if b1.SetVBState(2, test.nextState) == nil {
 			t.Errorf("expected SetVBState to work")

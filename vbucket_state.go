@@ -1,5 +1,9 @@
 package cbgb
 
+import (
+	"bytes"
+)
+
 type VBState uint8
 
 const (
@@ -31,4 +35,34 @@ func parseVBState(s string) VBState {
 		}
 	}
 	return VBDead
+}
+
+type VBKeyRange struct {
+	MinKeyInclusive Bytes `json:"minKeyInclusive"`
+	MaxKeyExclusive Bytes `json:"maxKeyExclusive"`
+}
+
+func (t *VBKeyRange) Equal(u *VBKeyRange) bool {
+	if t == nil {
+		return u == nil
+	}
+	if u == nil {
+		return false
+	}
+	return bytes.Equal(t.MinKeyInclusive, u.MinKeyInclusive) &&
+		bytes.Equal(t.MaxKeyExclusive, u.MaxKeyExclusive)
+}
+
+type VBMeta struct {
+	Id       uint16      `json:"id"`
+	LastCas  uint64      `json:"lastCas"`
+	State    string      `json:"state"`
+	KeyRange *VBKeyRange `json:"keyRange"`
+}
+
+func (t *VBMeta) Equal(u *VBMeta) bool {
+	return t.Id == u.Id &&
+		t.LastCas == u.LastCas &&
+		t.State == u.State &&
+		t.KeyRange.Equal(u.KeyRange)
 }
