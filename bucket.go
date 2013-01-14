@@ -89,8 +89,7 @@ func (b *Buckets) Close(name string, purgeFiles bool) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	bucket := b.buckets[name]
-	if bucket != nil {
+	if bucket := b.buckets[name]; bucket != nil {
 		bucket.Close()
 		delete(b.buckets, name)
 	}
@@ -107,18 +106,18 @@ func (b *Buckets) Path(name string) string {
 // Reads the buckets directory and returns list of bucket names.
 func (b *Buckets) LoadNames() ([]string, error) {
 	list, err := ioutil.ReadDir(b.dir)
-	if err == nil {
-		res := make([]string, 0, len(list))
-		for _, entry := range list {
-			if entry.IsDir() &&
-				strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
-				res = append(res,
-					entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
-			}
-		}
-		return res, nil
+	if err != nil {
+		return nil, err
 	}
-	return nil, err
+	res := make([]string, 0, len(list))
+	for _, entry := range list {
+		if entry.IsDir() &&
+			strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
+			res = append(res,
+				entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
+		}
+	}
+	return res, nil
 }
 
 // Loads all buckets from the buckets directory.
@@ -181,10 +180,8 @@ func (b *livebucket) Subscribe(ch chan<- interface{}) {
 				vbid:     i,
 				oldState: VBDead,
 				newState: VBDead}
-			vb := c.getVBucket()
-			if vb != nil {
-				s := vb.GetVBState()
-				if s != VBDead {
+			if vb := c.getVBucket(); vb != nil {
+				if s := vb.GetVBState(); s != VBDead {
 					c.newState = s
 					ch <- c
 				}
@@ -209,8 +206,7 @@ func (b *livebucket) Available() bool {
 func (b *livebucket) Close() error {
 	close(b.availablech)
 	for vbid, _ := range b.vbuckets {
-		vbp := atomic.LoadPointer(&b.vbuckets[vbid])
-		if vbp != nil {
+		if vbp := atomic.LoadPointer(&b.vbuckets[vbid]); vbp != nil {
 			vb := (*vbucket)(vbp)
 			vb.Close()
 		}
@@ -306,8 +302,7 @@ func (b *livebucket) CreateVBucket(vbid uint16) *vbucket {
 
 func (b *livebucket) destroyVBucket(vbid uint16) (destroyed bool) {
 	destroyed = false
-	vb := b.getVBucket(vbid)
-	if vb != nil {
+	if vb := b.getVBucket(vbid); vb != nil {
 		vb.SetVBState(VBDead, func(oldState VBState) {
 			if b.casVBucket(vbid, nil, vb) {
 				b.observer.Submit(vbucketChange{b, vbid, oldState, VBDead})
@@ -346,6 +341,5 @@ func (c vbucketChange) getVBucket() *vbucket {
 }
 
 func (c vbucketChange) String() string {
-	return fmt.Sprintf("vbucket %v %v -> %v",
-		c.vbid, c.oldState, c.newState)
+	return fmt.Sprintf("vbucket %v %v -> %v", c.vbid, c.oldState, c.newState)
 }

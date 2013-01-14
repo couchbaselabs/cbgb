@@ -72,5 +72,11 @@ func (t *VBMeta) update(from *VBMeta) {
 	if t.LastCas < from.LastCas {
 		t.LastCas = from.LastCas
 	}
-	t.KeyRange = from.KeyRange
+	t.KeyRange = nil
+	if from.KeyRange != nil {
+		t.KeyRange = &VBKeyRange{
+			MinKeyInclusive: from.KeyRange.MinKeyInclusive,
+			MaxKeyExclusive: from.KeyRange.MaxKeyExclusive,
+		}
+	}
 }

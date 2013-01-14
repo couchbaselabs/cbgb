@@ -3,6 +3,7 @@ package cbgb
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -228,18 +229,20 @@ func (v *vbucket) SetVBState(newState VBState,
 			newMeta := &VBMeta{Id: v.meta.Id}
 			newMeta.update(&v.meta)
 			newMeta.State = newState.String()
-			if j, err := json.Marshal(newMeta); err == nil {
-				k := []byte(fmt.Sprintf("%d", newMeta.Id))
-				if err := bs.coll(COLL_VBMETA).Set(k, j); err != nil {
-					return
-				}
-				if err := bs.flush(); err != nil {
-					return
-				}
-				vbLocked.meta.update(newMeta)
-				if cb != nil {
-					cb(oldState)
-				}
+			j, err := json.Marshal(newMeta)
+			if err != nil {
+				return
+			}
+			k := []byte(fmt.Sprintf("%d", newMeta.Id))
+			if err := bs.coll(COLL_VBMETA).Set(k, j); err != nil {
+				return
+			}
+			if err := bs.flush(); err != nil {
+				return
+			}
+			vbLocked.meta.update(newMeta)
+			if cb != nil {
+				cb(oldState)
 			}
 		})
 	})
@@ -415,13 +418,11 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 }
 
 func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
-	// TODO: Potential deadlock here as we lock front after back
-	// as opposed ot the usual back after front ordering?
 	v.ApplyBucketStoreAsync(func(bs *bucketstore) {
 		fetchedItem, err := bs.get(v.collItems, vbr.req.Key)
 
-		// After fetching, call "through the top" so the
-		// mem update is synchronous.
+		// After fetching, call "through the top" asynchronously (so there's
+		// no deadlock) so the mem update is synchronous.
 		v.ApplyAsync(func(vbLocked *vbucket) {
 			if err != nil {
 				v.stats.FetchedErr++
@@ -570,14 +571,11 @@ func vbSetVBMeta(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	req := vbr.req
 	if req.Body != nil {
 		meta := &VBMeta{}
-		err := json.Unmarshal(req.Body, meta)
-		if err == nil {
-			v.meta.update(meta)
-			return &gomemcached.MCResponse{}, nil
-		} else {
-			log.Printf("Error decoding vbucket config: %v, err: %v",
-				string(req.Body), err)
+		if err := json.Unmarshal(req.Body, meta); err != nil {
+			return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
 		}
+		v.meta.update(meta)
+		return &gomemcached.MCResponse{}, nil
 	}
 	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
 }
@@ -699,16 +697,14 @@ func vbSplitRange(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	req := vbr.req
 	if req.Body != nil {
 		sr := &VBSplitRange{}
-		err := json.Unmarshal(req.Body, sr)
-		if err == nil {
-			return v.splitRange(sr), nil
-		} else {
+		if err := json.Unmarshal(req.Body, sr); err != nil {
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body: []byte(fmt.Sprintf("Error decoding split-range json: %v, err: %v",
 					string(req.Body), err)),
 			}, nil
 		}
+		return v.splitRange(sr), nil
 	}
 	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}, nil
 }
@@ -831,26 +827,31 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 func (v *vbucket) rangeCopyTo(dst *vbucket,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
 	s, err := v.mem.rangeCopy(minKeyInclusive, maxKeyExclusive, "")
-	if err == nil {
-		dst.mem = s
-
-		v.ApplyBucketStore(func(bs *bucketstore) {
-			err = bs.rangeCopy(v.collItems, dst.bs, dst.collItems,
-				minKeyInclusive, maxKeyExclusive)
-			if err == nil {
-				err = bs.rangeCopy(v.collChanges, dst.bs, dst.collChanges,
-					minKeyInclusive, maxKeyExclusive)
-			}
-		})
-
-		if err == nil && dst.mem != nil {
-			dst.meta.LastCas = v.meta.LastCas
-			dst.meta.State = v.meta.State
-			dst.meta.KeyRange = &VBKeyRange{
-				MinKeyInclusive: minKeyInclusive,
-				MaxKeyExclusive: maxKeyExclusive,
-			}
-		}
+	if err != nil {
+		return err
 	}
-	return err
+	if s == nil {
+		return errors.New("rangeCopyTo got nil mem copy")
+	}
+
+	v.ApplyBucketStore(func(bs *bucketstore) {
+		err = bs.rangeCopy(v.collItems, dst.bs, dst.collItems,
+			minKeyInclusive, maxKeyExclusive)
+		if err == nil {
+			err = bs.rangeCopy(v.collChanges, dst.bs, dst.collChanges,
+				minKeyInclusive, maxKeyExclusive)
+		}
+	})
+
+	if err != nil {
+		return err
+	}
+
+	dst.mem = s
+	dst.meta.update(&v.meta)
+	dst.meta.KeyRange = &VBKeyRange{
+		MinKeyInclusive: minKeyInclusive,
+		MaxKeyExclusive: maxKeyExclusive,
+	}
+	return nil
 }

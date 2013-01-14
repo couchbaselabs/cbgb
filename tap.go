@@ -39,13 +39,14 @@ func doTap(b bucket, req *gomemcached.MCRequest,
 		case ci := <-bch:
 			// VBucket state change, so update registrations
 			c := ci.(vbucketChange)
-			vb := c.getVBucket()
-			if c.newState == VBActive {
-				vb.observer.Register(mch)
-				registered[vb.meta.Id] = true
-			} else if vb != nil {
-				vb.observer.Unregister(mch)
-				delete(registered, vb.meta.Id)
+			if vb := c.getVBucket(); vb != nil {
+				if c.newState == VBActive {
+					vb.observer.Register(mch)
+					registered[vb.meta.Id] = true
+				} else if vb != nil {
+					vb.observer.Unregister(mch)
+					delete(registered, vb.meta.Id)
+				}
 			}
 		case mi := <-mch:
 			// Send a change
@@ -100,8 +101,7 @@ func MutationLogger(ch chan interface{}) {
 		case vbucketChange:
 			log.Printf("VBucket change: %v", o)
 			if o.newState == VBActive {
-				vb := o.getVBucket()
-				if vb != nil {
+				if vb := o.getVBucket(); vb != nil {
 					// Watch state changes
 					vb.observer.Register(ch)
 				}

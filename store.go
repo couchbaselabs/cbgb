@@ -34,8 +34,7 @@ func (s *memstore) snapshot() (*memstore, error) {
 }
 
 func (s *memstore) get(key []byte) (*item, error) {
-	x := s.items.Get(&item{key: key})
-	if x != nil {
+	if x := s.items.Get(&item{key: key}); x != nil {
 		return x.(*item), nil
 	}
 	return nil, nil
