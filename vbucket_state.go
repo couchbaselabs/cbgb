@@ -66,3 +66,11 @@ func (t *VBMeta) Equal(u *VBMeta) bool {
 		t.State == u.State &&
 		t.KeyRange.Equal(u.KeyRange)
 }
+
+func (t *VBMeta) update(from *VBMeta) {
+	t.State = parseVBState(from.State).String()
+	if t.LastCas < from.LastCas {
+		t.LastCas = from.LastCas
+	}
+	t.KeyRange = from.KeyRange
+}

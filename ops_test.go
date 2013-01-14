@@ -880,7 +880,7 @@ func TestVBMeta(t *testing.T) {
 			`{"lastCAS":100,"keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
-				State: "dead",
+				State:   "dead",
 				LastCas: 100,
 				KeyRange: &VBKeyRange{
 					MinKeyInclusive: []byte("aaa"),
@@ -890,7 +890,7 @@ func TestVBMeta(t *testing.T) {
 			gomemcached.SUCCESS,
 			[]byte(`{"id":3,"lastCas":100,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb"}}`),
 			&VBMeta{Id: 3,
-				State: "dead",
+				State:   "dead",
 				LastCas: 100,
 				KeyRange: &VBKeyRange{
 					MinKeyInclusive: []byte("aaa"),
@@ -900,7 +900,7 @@ func TestVBMeta(t *testing.T) {
 			`{"lastCAS":99,"keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
-				State: "dead",
+				State:   "dead",
 				LastCas: 100,
 				KeyRange: &VBKeyRange{
 					MinKeyInclusive: []byte("aaa"),
@@ -910,7 +910,7 @@ func TestVBMeta(t *testing.T) {
 			gomemcached.SUCCESS,
 			[]byte(`{"id":3,"lastCas":100,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb"}}`),
 			&VBMeta{Id: 3,
-				State: "dead",
+				State:   "dead",
 				LastCas: 100,
 				KeyRange: &VBKeyRange{
 					MinKeyInclusive: []byte("aaa"),

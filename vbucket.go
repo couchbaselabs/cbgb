@@ -19,7 +19,7 @@ const (
 	NOT_MY_RANGE        = gomemcached.Status(0x60)
 	COLL_SUFFIX_ITEMS   = ".i"
 	COLL_SUFFIX_CHANGES = ".c"
-	COLL_VBSTATE        = "vbs"
+	COLL_VBMETA         = "vbm"
 )
 
 type vbreq struct {
@@ -219,33 +219,52 @@ func (v *vbucket) GetVBState() (res VBState) {
 	return
 }
 
+// TODO: SetVBState should also return an error to expose any storage errors.
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState) {
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
-			err := bs.coll(COLL_VBSTATE).Set(
-				[]byte(fmt.Sprintf("%v", v.meta.Id)),
-				[]byte(newState.String()))
-			if err == nil {
-				err := bs.flush()
-				if err == nil {
-					oldState = parseVBState(vbLocked.meta.State)
-					vbLocked.meta.State = newState.String()
-					if cb != nil {
-						cb(oldState)
-					}
+			oldState = parseVBState(vbLocked.meta.State)
+			newMeta := &VBMeta{Id: v.meta.Id}
+			newMeta.update(&v.meta)
+			newMeta.State = newState.String()
+			if j, err := json.Marshal(newMeta); err == nil {
+				k := []byte(fmt.Sprintf("%d", newMeta.Id))
+				if err := bs.coll(COLL_VBMETA).Set(k, j); err != nil {
+					return
+				}
+				if err := bs.flush(); err != nil {
+					return
+				}
+				vbLocked.meta.update(newMeta)
+				if cb != nil {
+					cb(oldState)
 				}
 			}
-			// TODO: Need to undo if there were errors?
 		})
 	})
 	return
 }
 
 func (v *vbucket) load() (err error) {
-	// TODO: Need to load CAS and other metadata.
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
+			// TODO: Need to load changes?
+			meta := &VBMeta{}
+			meta.Id = v.meta.Id
+			meta.update(&v.meta)
+
+			x, err := bs.coll(COLL_VBMETA).GetItem(
+				[]byte(fmt.Sprintf("%v", v.meta.Id)), true)
+			if err != nil {
+				return
+			}
+			if x != nil && x.Val != nil {
+				if err = json.Unmarshal(x.Val, meta); err != nil {
+					return
+				}
+			} // TODO: Handle else of missing COLL_VBMETA.
+
 			visitor := func(i *item) bool {
 				// TODO: What if we're loading something out of allowed range?
 				// TODO: Don't want to have all values warmed into memory?
@@ -258,13 +277,7 @@ func (v *vbucket) load() (err error) {
 			}
 			err = bs.visit(v.collItems, nil, true, visitor)
 			if err == nil {
-				// TODO: Need to load changes?
-				x, err := bs.coll(COLL_VBSTATE).GetItem(
-					[]byte(fmt.Sprintf("%v", v.meta.Id)),
-					true)
-				if err == nil {
-					vbLocked.meta.State = parseVBState(string(x.Val)).String()
-				}
+				v.meta.update(meta)
 			}
 		})
 	})
@@ -559,11 +572,7 @@ func vbSetVBMeta(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		meta := &VBMeta{}
 		err := json.Unmarshal(req.Body, meta)
 		if err == nil {
-			v.meta.State = parseVBState(meta.State).String()
-			if v.meta.LastCas < meta.LastCas {
-				v.meta.LastCas = meta.LastCas
-			}
-			v.meta.KeyRange = meta.KeyRange
+			v.meta.update(meta)
 			return &gomemcached.MCResponse{}, nil
 		} else {
 			log.Printf("Error decoding vbucket config: %v, err: %v",
