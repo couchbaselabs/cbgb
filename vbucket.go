@@ -559,9 +559,10 @@ func vbSetVBMeta(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 		meta := &VBMeta{}
 		err := json.Unmarshal(req.Body, meta)
 		if err == nil {
-			// TODO: Currently disallowing LastCas changes as it is racy,
-			// but perhaps allow it if our current state is VBDead?
 			v.meta.State = parseVBState(meta.State).String()
+			if v.meta.LastCas < meta.LastCas {
+				v.meta.LastCas = meta.LastCas
+			}
 			v.meta.KeyRange = meta.KeyRange
 			return &gomemcached.MCResponse{}, nil
 		} else {
