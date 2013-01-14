@@ -17,8 +17,6 @@ func (b *broadcaster) broadcast(m interface{}) {
 func (b *broadcaster) run() {
 	for {
 		select {
-		case m := (<-b.input):
-			b.broadcast(m)
 		case ch, ok := (<-b.reg):
 			if ok {
 				b.outputs[ch] = true
@@ -27,6 +25,8 @@ func (b *broadcaster) run() {
 			}
 		case ch := (<-b.unreg):
 			delete(b.outputs, ch)
+		case m := (<-b.input):
+			b.broadcast(m)
 		}
 	}
 }
