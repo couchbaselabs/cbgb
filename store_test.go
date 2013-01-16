@@ -6,6 +6,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -59,7 +60,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir)
+	b0, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
@@ -79,7 +80,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 	testExpectInts(t, r0, 2, []int{}, "after flush")
 
-	b1, err := NewBucket(testBucketDir)
+	b1, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
@@ -96,7 +97,7 @@ func TestSaveLoadBasic(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	// defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir)
+	b0, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
@@ -118,7 +119,7 @@ func TestSaveLoadBasic(t *testing.T) {
 
 	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "after flush")
 
-	b1, err := NewBucket(testBucketDir)
+	b1, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
@@ -135,7 +136,7 @@ func TestSaveLoadMutations(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir)
+	b0, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
@@ -158,7 +159,7 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b0.Close()
 
-	b1, err := NewBucket(testBucketDir)
+	b1, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
@@ -204,7 +205,7 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b1.Close()
 
-	b2, err := NewBucket(testBucketDir)
+	b2, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
@@ -227,7 +228,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir)
+	b0, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
@@ -260,7 +261,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	}
 
 	for _, test := range tests {
-		b1, err := NewBucket(testBucketDir)
+		b1, err := NewBucket(testBucketDir, time.Second)
 		if err != nil {
 			t.Errorf("expected NewBucket re-open to work, err: %v", err)
 		}
@@ -284,4 +285,40 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 			testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload2")
 		}
 	}
+}
+
+func TestFlushInterval(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir, time.Millisecond)
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	if b0.SetVBState(2, VBActive) != nil {
+		t.Errorf("expected SetVBState to work")
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "initial data load")
+
+	// Sleep long enough so flushInterval hits and does a Flush( for us,
+	// where we don't do an explicit Flush(0 here.
+	time.Sleep(10 * time.Millisecond)
+
+	b0.Close()
+
+	b1, err := NewBucket(testBucketDir, time.Second)
+	if err != nil {
+		t.Errorf("expected NewBucket re-open to work, err: %v", err)
+	}
+	r1 := &reqHandler{b1}
+	err = b1.Load()
+	if err != nil {
+		t.Errorf("expected Load to work, err: %v", err)
+	}
+	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 }

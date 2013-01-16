@@ -93,7 +93,7 @@ func TestBasicOps(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
@@ -157,7 +157,7 @@ func TestBasicOps(t *testing.T) {
 func TestMutationBroadcast(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
@@ -244,7 +244,7 @@ func testGet(rh *reqHandler, vbid uint16, key string) *gomemcached.MCResponse {
 func TestCASDelete(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	testBucket.CreateVBucket(3)
@@ -286,7 +286,7 @@ func TestCASDelete(t *testing.T) {
 func TestCASSet(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	testBucket.CreateVBucket(3)
@@ -330,7 +330,7 @@ func TestCASSet(t *testing.T) {
 func TestVersionCommand(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
@@ -352,7 +352,7 @@ func TestVersionCommand(t *testing.T) {
 func TestVersionNOOP(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
@@ -370,7 +370,7 @@ func TestVersionNOOP(t *testing.T) {
 func TestQuit(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
@@ -388,7 +388,7 @@ func TestQuit(t *testing.T) {
 func TestTapSetup(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
@@ -423,7 +423,7 @@ func TestTapChanges(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
@@ -512,7 +512,7 @@ func TestTapChanges(t *testing.T) {
 func TestStats(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 
@@ -536,7 +536,7 @@ func TestStats(t *testing.T) {
 func TestInvalidCommand(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
 	rh := reqHandler{testBucket}
@@ -555,7 +555,7 @@ func TestInvalidCommand(t *testing.T) {
 func BenchmarkInvalidCommand(b *testing.B) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
 	rh := reqHandler{testBucket}
@@ -574,7 +574,7 @@ func BenchmarkInvalidCommand(b *testing.B) {
 func TestParallelMutations(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
 
@@ -612,7 +612,7 @@ func TestParallelMutations(t *testing.T) {
 func BenchmarkParallelGet(b *testing.B) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
 
@@ -646,7 +646,7 @@ func BenchmarkParallelGet(b *testing.B) {
 func BenchmarkDispatch(b *testing.B) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
 	rh := reqHandler{testBucket}
@@ -674,7 +674,7 @@ func TestChangesSince(t *testing.T) {
 func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	testBucket.CreateVBucket(0)
@@ -771,7 +771,7 @@ func TestChangesSinceTransmitError(t *testing.T) {
 	w := errWriter{io.EOF}
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	v, _ := testBucket.CreateVBucket(0)
 	for _, k := range []string{"a", "b"} {
@@ -920,7 +920,7 @@ func TestVBMeta(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
@@ -958,7 +958,7 @@ func TestMinMaxRange(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
@@ -1045,7 +1045,7 @@ func TestRGet(t *testing.T) {
 func testRGet(t *testing.T, startKey int, numItems int) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(0)
@@ -1133,7 +1133,7 @@ func TestSplitRange(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	testBucket.CreateVBucket(0)
@@ -1220,7 +1220,7 @@ func TestSplitRange(t *testing.T) {
 func TestSlowClient(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(0)
@@ -1311,7 +1311,7 @@ func TestStoreFrontBack(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
 	vb, _ := testBucket.CreateVBucket(3)

@@ -5,13 +5,14 @@ import (
 	"encoding/json"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 )
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {
-	b, _ := NewBucket("tmp")
+	b, _ := NewBucket("tmp", time.Second)
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 10)
@@ -38,7 +39,7 @@ func TestMutationInvalid(t *testing.T) {
 		}
 	}()
 
-	b, _ := NewBucket("tmp")
+	b, _ := NewBucket("tmp", time.Second)
 	b.CreateVBucket(0)
 
 	ch := make(chan interface{}, 5)
@@ -71,7 +72,7 @@ func TestSessionLoop(t *testing.T) {
 }
 
 func TestListener(t *testing.T) {
-	b, err := NewBuckets("tmp")
+	b, err := NewBuckets("tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}
@@ -95,7 +96,7 @@ func TestListener(t *testing.T) {
 }
 
 func TestListenerFail(t *testing.T) {
-	b, err := NewBuckets("tmp")
+	b, err := NewBuckets("tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}

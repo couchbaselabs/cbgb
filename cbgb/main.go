@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"time"
 
 	"github.com/couchbaselabs/cbgb"
 )
@@ -14,12 +15,14 @@ func main() {
 	data := flag.String("data", "./tmp", "data directory")
 	defaultBucketName := flag.String("default-bucket-name",
 		cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket")
+	flushInterval := flag.Int("flush-interval",
+		10, "seconds between flushing or persisting mutations to storage")
 
 	flag.Parse()
 
 	go cbgb.MutationLogger(mutationLogCh)
 
-	buckets, err := cbgb.NewBuckets(*data)
+	buckets, err := cbgb.NewBuckets(*data, time.Second * time.Duration(*flushInterval))
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}

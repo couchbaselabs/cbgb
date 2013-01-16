@@ -114,7 +114,7 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
 		collChanges: fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES),
 	}
 
-	bs.apply(true, func(bs *bucketstore) {
+	bs.apply(true, false, func(bs *bucketstore) {
 		bs.coll(rv.collItems)
 		bs.coll(rv.collChanges)
 	})
@@ -205,12 +205,12 @@ func (v *vbucket) ApplyAsync(cb func(*vbucket)) {
 	v.ach <- vbapplyreq{cb: cb, res: nil}
 }
 
-func (v *vbucket) ApplyBucketStore(cb func(*bucketstore)) {
-	v.bs.apply(true, cb)
+func (v *vbucket) ApplyBucketStore(mutation bool, cb func(*bucketstore)) {
+	v.bs.apply(true, mutation, cb)
 }
 
-func (v *vbucket) ApplyBucketStoreAsync(cb func(*bucketstore)) {
-	v.bs.apply(false, cb)
+func (v *vbucket) ApplyBucketStoreAsync(mutation bool, cb func(*bucketstore)) {
+	v.bs.apply(false, mutation, cb)
 }
 
 func (v *vbucket) GetVBState() (res VBState) {
@@ -224,7 +224,7 @@ func (v *vbucket) SetVBState(newState VBState,
 	cb func(oldState VBState)) (oldState VBState, err error) {
 	oldState = VBDead
 	v.Apply(func(vbLocked *vbucket) {
-		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
+		vbLocked.ApplyBucketStore(false, func(bs *bucketstore) {
 			oldState = parseVBState(vbLocked.meta.State)
 
 			newMeta := &VBMeta{Id: v.meta.Id}
@@ -254,7 +254,7 @@ func (v *vbucket) SetVBState(newState VBState,
 
 func (v *vbucket) load() (err error) {
 	v.Apply(func(vbLocked *vbucket) {
-		vbLocked.ApplyBucketStore(func(bs *bucketstore) {
+		vbLocked.ApplyBucketStore(false, func(bs *bucketstore) {
 			// TODO: Need to load changes?
 			meta := &VBMeta{}
 			meta.Id = v.meta.Id
@@ -355,7 +355,7 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.stats.ValueBytesIncoming += uint64(len(req.Body))
 
 	itemNewBack := itemNew.clone()
-	v.ApplyBucketStoreAsync(func(bs *bucketstore) {
+	v.ApplyBucketStoreAsync(true, func(bs *bucketstore) {
 		// TODO: Handle async error.
 		bs.set(v.collItems, v.collChanges, itemNewBack, meta)
 	})
@@ -421,7 +421,7 @@ func vbGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 }
 
 func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
-	v.ApplyBucketStoreAsync(func(bs *bucketstore) {
+	v.ApplyBucketStoreAsync(false, func(bs *bucketstore) {
 		fetchedItem, err := bs.get(v.collItems, vbr.req.Key)
 
 		// After fetching, call "through the top" asynchronously (so there's
@@ -511,7 +511,7 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.mem.del(req.Key, cas)
 	v.stats.Items--
 
-	v.ApplyBucketStoreAsync(func(bs *bucketstore) {
+	v.ApplyBucketStoreAsync(true, func(bs *bucketstore) {
 		// TODO: Handle async error.
 		bs.del(v.collItems, v.collChanges, req.Key, cas)
 	})
@@ -622,7 +622,7 @@ func vbRGet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 				if i.data == nil {
 					// TODO: track stats for RGET bg-fetches?
 					// TODO: should we fetch from snapshot?
-					v.ApplyBucketStore(func(bs *bucketstore) {
+					v.ApplyBucketStore(false, func(bs *bucketstore) {
 						i, err = bs.get(v.collItems, i.key)
 					})
 				}
@@ -837,7 +837,7 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 		return errors.New("rangeCopyTo got nil mem copy")
 	}
 
-	v.ApplyBucketStore(func(bs *bucketstore) {
+	v.ApplyBucketStore(false, func(bs *bucketstore) {
 		err = bs.rangeCopy(v.collItems, dst.bs, dst.collItems,
 			minKeyInclusive, maxKeyExclusive)
 		if err == nil {

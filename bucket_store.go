@@ -3,23 +3,27 @@ package cbgb
 import (
 	"bytes"
 	"os"
+	"time"
 
 	"github.com/steveyen/gkvlite"
 )
 
 type bucketstorereq struct {
-	cb  func(*bucketstore)
-	res chan bool
+	cb       func(*bucketstore)
+	mutation bool
+	res      chan bool
 }
 
 type bucketstore struct {
-	path  string
-	file  *os.File // May be nil for in-memory only (e.g., for unit tests).
-	store *gkvlite.Store
-	ch    chan *bucketstorereq
+	path          string
+	file          *os.File
+	store         *gkvlite.Store
+	ch            chan *bucketstorereq
+	dirty         bool
+	flushInterval time.Duration
 }
 
-func newBucketStore(path string) (*bucketstore, error) {
+func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, err
@@ -30,28 +34,45 @@ func newBucketStore(path string) (*bucketstore, error) {
 		return nil, err
 	}
 	res := &bucketstore{
-		file:  file,
-		store: store,
-		ch:    make(chan *bucketstorereq),
+		file:          file,
+		store:         store,
+		ch:            make(chan *bucketstorereq),
+		flushInterval: flushInterval,
 	}
 	go res.service()
 	return res, nil
 }
 
 func (s *bucketstore) service() {
-	for r := range s.ch {
-		r.cb(s)
-		if r.res != nil {
-			close(r.res)
+	defer s.file.Close()
+
+	ticker := time.NewTicker(s.flushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case r, ok := <-s.ch:
+			if !ok {
+				return
+			}
+			r.cb(s)
+			if r.mutation {
+				s.dirty = true
+			}
+			if r.res != nil {
+				close(r.res)
+			}
+		case <-ticker.C:
+			if s.dirty {
+				s.flush() // TODO: Handle flush error.
+				s.dirty = false
+			}
 		}
-	}
-	if s.file != nil {
-		s.file.Close()
 	}
 }
 
-func (s *bucketstore) apply(synchronous bool, cb func(*bucketstore)) {
-	req := &bucketstorereq{cb: cb}
+func (s *bucketstore) apply(synchronous bool, mutation bool, cb func(*bucketstore)) {
+	req := &bucketstorereq{cb: cb, mutation: mutation}
 	if synchronous {
 		req.res = make(chan bool)
 	}
@@ -85,6 +106,7 @@ func (s *bucketstore) collExists(collName string) bool {
 }
 
 func (s *bucketstore) flush() error {
+	s.dirty = false
 	return s.store.Flush()
 }
 
@@ -115,11 +137,8 @@ func (s *bucketstore) set(items string, changes string,
 		return err
 	}
 	// TODO: should we include the item value in the changes feed?
-	if err := collChanges.Set(casBytes(newItem.cas), newItem.key); err != nil {
-		return err
-	}
 	// TODO: should we be deleting older changes from the changes feed?
-	return s.store.Flush() // TODO: flush less often.
+	return collChanges.Set(casBytes(newItem.cas), newItem.key)
 }
 
 func (s *bucketstore) del(items string, changes string,
@@ -131,11 +150,8 @@ func (s *bucketstore) del(items string, changes string,
 		return err
 	}
 	// Empty value represents a deletion tombstone.
-	if err := collChanges.Set(casBytes(cas), []byte{}); err != nil {
-		return err
-	}
 	// TODO: should we be deleting older changes from the changes feed?
-	return s.store.Flush() // TODO: flush less often.
+	return collChanges.Set(casBytes(cas), []byte{})
 }
 
 func (s *bucketstore) visit(collName string, start []byte, withValue bool,

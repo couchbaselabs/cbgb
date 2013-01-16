@@ -8,11 +8,11 @@ import (
 )
 
 func TestBucketRegistry(t *testing.T) {
-	_, err := NewBuckets("./this-is-not-a-directory")
+	_, err := NewBuckets("./this-is-not-a-directory", time.Second)
 	if err == nil {
 		t.Fatalf("Expected NewBuckets to fail")
 	}
-	bs, err := NewBuckets("./tmp")
+	bs, err := NewBuckets("./tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
@@ -57,7 +57,7 @@ func TestBucketRegistry(t *testing.T) {
 
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
-	b, err := NewBucket("tmp")
+	b, err := NewBucket("tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
 	}
@@ -109,7 +109,7 @@ func TestBucketNotifications(t *testing.T) {
 }
 
 func TestNewBucket(t *testing.T) {
-	nb, err := NewBucket("tmp")
+	nb, err := NewBucket("tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
 	}
@@ -134,7 +134,7 @@ func TestNewBucket(t *testing.T) {
 }
 
 func TestCreateDestroyVBucket(t *testing.T) {
-	nb, err := NewBucket("tmp")
+	nb, err := NewBucket("tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
 	}
@@ -206,7 +206,7 @@ func TestVBString(t *testing.T) {
 }
 
 func TestBucketClose(t *testing.T) {
-	nb, err := NewBucket("tmp")
+	nb, err := NewBucket("tmp", time.Second)
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
 	}
@@ -241,7 +241,7 @@ func TestBucketLoadNames(t *testing.T) {
 	}
 
 	t.Logf("tmpdir %v", d)
-	b, err := NewBuckets(d)
+	b, err := NewBuckets(d, time.Second)
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}

@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 )
 
@@ -36,17 +37,22 @@ type bucket interface {
 
 // Holder of buckets.
 type Buckets struct {
-	buckets map[string]bucket
-	dir     string // Directory where all buckets are stored.
-	lock    sync.Mutex
+	buckets       map[string]bucket
+	dir           string // Directory where all buckets are stored.
+	lock          sync.Mutex
+	flushInterval time.Duration
 }
 
 // Build a new holder of buckets.
-func NewBuckets(dirForBuckets string) (*Buckets, error) {
+func NewBuckets(dirForBuckets string, flushInterval time.Duration) (*Buckets, error) {
 	if !isDir(dirForBuckets) {
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
-	return &Buckets{buckets: map[string]bucket{}, dir: dirForBuckets}, nil
+	return &Buckets{
+		buckets:       map[string]bucket{},
+		dir:           dirForBuckets,
+		flushInterval: flushInterval,
+	}, nil
 }
 
 // Create a new named bucket.
@@ -68,7 +74,7 @@ func (b *Buckets) New(name string) (rv bucket, err error) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
-	if rv, err = NewBucket(bdir); err != nil {
+	if rv, err = NewBucket(bdir, b.flushInterval); err != nil {
 		return nil, err
 	}
 
@@ -150,7 +156,7 @@ type livebucket struct {
 	observer     *broadcaster
 }
 
-func NewBucket(dirForBucket string) (bucket, error) {
+func NewBucket(dirForBucket string, flushInterval time.Duration) (bucket, error) {
 	res := &livebucket{
 		availablech:  make(chan bool),
 		dir:          dirForBucket,
@@ -158,8 +164,8 @@ func NewBucket(dirForBucket string) (bucket, error) {
 		observer:     newBroadcaster(0),
 	}
 	for i := 0; i < STORES_PER_BUCKET; i++ {
-		bs, err := newBucketStore(fmt.Sprintf("%s%c%v.store",
-			dirForBucket, os.PathSeparator, i))
+		path := fmt.Sprintf("%s%c%v.store", dirForBucket, os.PathSeparator, i)
+		bs, err := newBucketStore(path, flushInterval)
 		if err != nil {
 			res.Close()
 			return nil, err
@@ -221,7 +227,7 @@ func (b *livebucket) Flush() error {
 	// TODO: Compaction.
 	for _, bs := range b.bucketstores {
 		var err error
-		bs.apply(true, func(bs *bucketstore) {
+		bs.apply(true, false, func(bs *bucketstore) {
 			err = bs.flush()
 		})
 		if err != nil {
