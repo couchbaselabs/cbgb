@@ -305,8 +305,8 @@ func TestFlushInterval(t *testing.T) {
 	testLoadInts(t, r0, 2, 5)
 	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "initial data load")
 
-	// Sleep long enough so flushInterval hits and does a Flush( for us,
-	// where we don't do an explicit Flush(0 here.
+	// We don't do an explicit Flush() here.  Instead, we sleep longer
+	// than the flushInterval so there's a background Flush() for us.
 	time.Sleep(10 * time.Millisecond)
 
 	b0.Close()
