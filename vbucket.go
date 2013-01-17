@@ -269,7 +269,10 @@ func (v *vbucket) load() (err error) {
 				if err = json.Unmarshal(x.Val, meta); err != nil {
 					return
 				}
-			} // TODO: Handle else of missing COLL_VBMETA.
+			} else {
+				err = errors.New("missing COLL_VBMETA")
+				return
+			}
 
 			visitor := func(i *item) bool {
 				// TODO: What if we're loading something out of allowed range?
