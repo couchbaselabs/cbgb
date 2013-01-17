@@ -36,6 +36,8 @@ type Stats struct {
 	FetchedAgain    uint64
 	FetchedErr      uint64
 
+	AsyncStoreErr uint64
+
 	ValueBytesIncoming uint64
 	ValueBytesOutgoing uint64
 
@@ -60,6 +62,7 @@ func (s *Stats) Add(in *Stats) {
 	s.FetchedNil += in.FetchedNil
 	s.FetchedAgain += in.FetchedAgain
 	s.FetchedErr += in.FetchedErr
+	s.AsyncStoreErr += in.AsyncStoreErr
 	s.ValueBytesIncoming += in.ValueBytesIncoming
 	s.ValueBytesOutgoing += in.ValueBytesOutgoing
 	s.ErrNotMyRange += in.ErrNotMyRange
@@ -83,6 +86,7 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"fetched_nil", strconv.FormatUint(s.FetchedNil, 10)}
 	ch <- statItem{"fetched_again", strconv.FormatUint(s.FetchedAgain, 10)}
 	ch <- statItem{"fetched_err", strconv.FormatUint(s.FetchedErr, 10)}
+	ch <- statItem{"async_store_err", strconv.FormatUint(s.AsyncStoreErr, 10)}
 	ch <- statItem{"value_bytes_incoming", strconv.FormatUint(s.ValueBytesIncoming, 10)}
 	ch <- statItem{"value_bytes_outgoing", strconv.FormatUint(s.ValueBytesOutgoing, 10)}
 	ch <- statItem{"err_not_my_range", strconv.FormatUint(s.ErrNotMyRange, 10)}

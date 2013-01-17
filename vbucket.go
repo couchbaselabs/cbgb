@@ -359,8 +359,12 @@ func vbSet(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 
 	itemNewBack := itemNew.clone()
 	v.ApplyBucketStoreAsync(true, func(bs *bucketstore) {
-		// TODO: Handle async error.
-		bs.set(v.collItems, v.collChanges, itemNewBack, meta)
+		if err := bs.set(v.collItems, v.collChanges, itemNewBack, meta); err != nil {
+			log.Printf("Error bs.set(%v)", itemNewBack)
+			v.ApplyAsync(func(vbLocked *vbucket) {
+				vbLocked.stats.AsyncStoreErr++
+			})
+		}
 	})
 
 	toBroadcast := &mutation{v.meta.Id, req.Key, itemCas, false}
@@ -466,7 +470,6 @@ func vbGetBackgroundFetch(v *vbucket, vbr *vbreq, cas uint64) {
 				v.stats.FetchedNil++
 			}
 
-			// TODO: not sure if we should recurse here.
 			res, _ := vbGet(v, vbr)
 			if res != overrideResponse {
 				v.respond(vbr, res)
@@ -515,8 +518,12 @@ func vbDelete(v *vbucket, vbr *vbreq) (*gomemcached.MCResponse, *mutation) {
 	v.stats.Items--
 
 	v.ApplyBucketStoreAsync(true, func(bs *bucketstore) {
-		// TODO: Handle async error.
-		bs.del(v.collItems, v.collChanges, req.Key, cas)
+		if err := bs.del(v.collItems, v.collChanges, req.Key, cas); err != nil {
+			log.Printf("Error bs.del(%v)", req.Key)
+			v.ApplyAsync(func(vbLocked *vbucket) {
+				vbLocked.stats.AsyncStoreErr++
+			})
+		}
 	})
 
 	toBroadcast := &mutation{v.meta.Id, req.Key, cas, true}
