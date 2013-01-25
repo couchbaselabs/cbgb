@@ -125,6 +125,8 @@ func TestBasicOps(t *testing.T) {
 		}
 	}
 
+	time.Sleep(10 * time.Millisecond) // Let async stats catch up.
+
 	if !reflect.DeepEqual(&expStats, &vb.stats) {
 		t.Errorf("Expected stats of %v, got %v", expStats, vb.stats)
 	}
@@ -280,7 +282,6 @@ func TestCASDelete(t *testing.T) {
 	if res.Status != gomemcached.SUCCESS {
 		t.Fatalf("Failed to delete with cas: %v", res)
 	}
-
 }
 
 func TestCASSet(t *testing.T) {
@@ -583,7 +584,7 @@ func TestParallelMutations(t *testing.T) {
 	wg := sync.WaitGroup{}
 	for i := 0; i < 100; i++ {
 		wg.Add(1)
-		go func(key string) {
+		go func(i int, key string) {
 			defer wg.Done()
 			rh := reqHandler{testBucket}
 
@@ -600,10 +601,9 @@ func TestParallelMutations(t *testing.T) {
 					VBucket: 3,
 					Key:     []byte(key),
 				}
-
 				rh.HandleMessage(nil, req)
 			}
-		}(keys[i%len(keys)])
+		}(i, keys[i%len(keys)])
 	}
 	wg.Wait()
 }
@@ -773,21 +773,19 @@ func TestChangesSinceTransmitError(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
-	v, _ := testBucket.CreateVBucket(0)
-	for _, k := range []string{"a", "b"} {
-		vbSet(v, &vbreq{
-			w: nil,
-			req: &gomemcached.MCRequest{
-				Opcode: gomemcached.SET,
-				Key:    []byte(k),
-				Body:   []byte(k),
-			}})
+	rh := reqHandler{testBucket}
+	testBucket.CreateVBucket(0)
+	for _, k := range []string{"a", "b", "c"} {
+		rh.HandleMessage(nil, &gomemcached.MCRequest{
+			Opcode: gomemcached.SET,
+			Key:    []byte(k),
+			Body:   []byte(k),
+		})
 	}
-	res, _ := vbChangesSince(v, &vbreq{w: w,
-		req: &gomemcached.MCRequest{
-			Opcode: CHANGES_SINCE,
-			Cas:    0,
-		}})
+	res := rh.HandleMessage(w, &gomemcached.MCRequest{
+		Opcode: CHANGES_SINCE,
+		Cas:    0,
+	})
 	if !res.Fatal {
 		t.Errorf("Expected fatal response due to transmit error, %v", res)
 	}
@@ -1314,18 +1312,11 @@ func TestStoreFrontBack(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir, time.Second)
 	defer testBucket.Close()
 	rh := reqHandler{testBucket}
-	vb, _ := testBucket.CreateVBucket(3)
+	testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 
 	evictMem := func() {
-		// Clear the memstore's item.data so that vbucket has to fetch
-		// from the bucketstore.
-		vb.Apply(func(vbLocked *vbucket) {
-			vbLocked.mem.visitItems([]byte("a"), func(i *item) bool {
-				i.data = nil
-				return true
-			})
-		})
+		// TODO: Clear item.data so we have to fetch from disk.
 	}
 
 	runTestsFrom := func(start int) {
@@ -1352,27 +1343,6 @@ func TestStoreFrontBack(t *testing.T) {
 	runTestsFrom(0)
 	evictMem()
 	runTestsFrom(5)
-
-	if vb.stats.FetchedItems != 2 {
-		t.Errorf("Expected vb.stats.FetchedItems of 2, got: %v",
-			vb.stats.FetchedItems)
-	}
-	if vb.stats.FetchedModified != 0 {
-		t.Errorf("Expected vb.stats.FetchedModified of 0, got: %v",
-			vb.stats.FetchedModified)
-	}
-	if vb.stats.FetchedDeleted != 0 {
-		t.Errorf("Expected vb.stats.FetchedDeleted of 0, got: %v",
-			vb.stats.FetchedDeleted)
-	}
-	if vb.stats.FetchedNil != 0 {
-		t.Errorf("Expected vb.stats.FetchedNil of 0, got: %v",
-			vb.stats.FetchedNil)
-	}
-	if vb.stats.FetchedAgain != 0 {
-		t.Errorf("Expected vb.stats.FetchedAgain of 0, got: %v",
-			vb.stats.FetchedAgain)
-	}
 
 	// Test RGET's background fetching.
 	runTestsFrom(0)

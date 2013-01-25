@@ -34,7 +34,14 @@ func (i *item) toValueBytes() []byte {
 	if err := binary.Write(buf, binary.BigEndian, i.cas); err != nil {
 		return nil
 	}
+	// TODO: Handle if len(key) > uint16.
+	if err := binary.Write(buf, binary.BigEndian, uint16(len(i.key))); err != nil {
+		return nil
+	}
 	if err := binary.Write(buf, binary.BigEndian, uint32(len(i.data))); err != nil {
+		return nil
+	}
+	if _, err := buf.Write(i.key); err != nil {
 		return nil
 	}
 	if _, err := buf.Write(i.data); err != nil {
@@ -54,12 +61,17 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 	if err = binary.Read(buf, binary.BigEndian, &i.cas); err != nil {
 		return err
 	}
-	var length uint32
-	if err = binary.Read(buf, binary.BigEndian, &length); err != nil {
+	var keylen uint16
+	if err = binary.Read(buf, binary.BigEndian, &keylen); err != nil {
 		return err
 	}
-	start := 4 + 4 + 8 + 4
-	i.data = b[start : start+int(length)]
+	var datalen uint32
+	if err = binary.Read(buf, binary.BigEndian, &datalen); err != nil {
+		return err
+	}
+	start := 4 + 4 + 8 + 2 + 4
+	i.key = b[start : start+int(keylen)]
+	i.data = b[start+int(keylen) : start+int(keylen)+int(datalen)]
 	return nil
 }
 

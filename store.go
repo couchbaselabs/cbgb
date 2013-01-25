@@ -2,119 +2,232 @@ package cbgb
 
 import (
 	"bytes"
-	"math/rand"
+	"os"
+	"time"
 
-	"github.com/steveyen/gtreap"
+	"github.com/steveyen/gkvlite"
 )
 
-type storeVisitor func(*item) bool
-
-// The memstore implementation is in-memory only, single-threaded,
-// based on immutable treaps.
-type memstore struct {
-	items   *gtreap.Treap
-	changes *gtreap.Treap
+type bucketstorereq struct {
+	cb       func(*bucketstore)
+	mutation bool
+	res      chan bool
 }
 
-func newMemStore() *memstore {
-	return &memstore{
-		items:   gtreap.NewTreap(KeyLess),
-		changes: gtreap.NewTreap(CASLess),
+type bucketstore struct {
+	path          string
+	file          *os.File
+	store         *gkvlite.Store
+	ch            chan *bucketstorereq
+	dirty         bool
+	flushInterval time.Duration
+}
+
+func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, error) {
+	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		return nil, err
+	}
+	store, err := gkvlite.NewStore(file)
+	if err != nil {
+		file.Close()
+		return nil, err
+	}
+	res := &bucketstore{
+		file:          file,
+		store:         store,
+		ch:            make(chan *bucketstorereq, 1),
+		flushInterval: flushInterval,
+	}
+	go res.service()
+	return res, nil
+}
+
+func (s *bucketstore) service() {
+	defer s.file.Close()
+
+	ticker := time.NewTicker(s.flushInterval)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case r, ok := <-s.ch:
+			if !ok {
+				return
+			}
+			r.cb(s)
+			if r.mutation {
+				s.dirty = true
+			}
+			if r.res != nil {
+				close(r.res)
+			}
+		case <-ticker.C:
+			if s.dirty {
+				s.flush() // TODO: Handle flush error.
+				s.dirty = false
+			}
+		}
 	}
 }
 
-// The snapshot() method allows users to get a stable, immutable
-// snapshot of a store, which they can safely access while others are
-// concurrently accessing and modifying the original store.
-func (s *memstore) snapshot() (*memstore, error) {
-	return &memstore{
-		items:   s.items,
-		changes: s.changes,
-	}, nil
+func (s *bucketstore) apply(synchronous bool, mutation bool, cb func(*bucketstore)) {
+	req := &bucketstorereq{cb: cb, mutation: mutation}
+	if synchronous {
+		req.res = make(chan bool)
+	}
+	s.ch <- req
+	if synchronous {
+		<-req.res
+	}
 }
 
-func (s *memstore) get(key []byte) (*item, error) {
-	if x := s.items.Get(&item{key: key}); x != nil {
-		return x.(*item), nil
+func (s *bucketstore) Close() {
+	close(s.ch)
+}
+
+// All the following methods need to be called while single-threaded,
+// so invoke them only in your apply() callback functions.
+
+func (s *bucketstore) coll(collName string) *gkvlite.Collection {
+	c := s.store.GetCollection(collName)
+	if c == nil {
+		c = s.store.SetCollection(collName, nil)
+	}
+	return c
+}
+
+func (s *bucketstore) collNames() []string {
+	return s.store.GetCollectionNames()
+}
+
+func (s *bucketstore) collExists(collName string) bool {
+	return s.store.GetCollection(collName) != nil
+}
+
+func (s *bucketstore) flush() error {
+	s.dirty = false
+	return s.store.Flush()
+}
+
+func (s *bucketstore) get(items string, key []byte) (*item, error) {
+	return s.getItem(items, key, true)
+}
+
+func (s *bucketstore) getMeta(items string, key []byte) (*item, error) {
+	return s.getItem(items, key, false)
+}
+
+func (s *bucketstore) getItem(items string, key []byte, withValue bool) (i *item, err error) {
+	v, err := s.coll(items).GetItem(key, withValue)
+	if err != nil {
+		return nil, err
+	}
+	if v != nil {
+		i := &item{key: key}
+		if err = i.fromValueBytes(v.Val); err != nil {
+			return nil, err
+		}
+		return i, nil
 	}
 	return nil, nil
 }
 
-// The getMeta() method is just like get(), except it might return
-// item.data of nil.
-func (s *memstore) getMeta(key []byte) (*item, error) {
-	return s.get(key)
+func (s *bucketstore) set(items string, changes string,
+	newItem *item, oldMeta *item) error {
+	collItems := s.coll(items)
+	collChanges := s.coll(changes)
+
+	bytes := newItem.toValueBytes()
+
+	if err := collItems.Set(newItem.key, bytes); err != nil {
+		return err
+	}
+	// TODO: should we include the item value in the changes feed?
+	// TODO: should we be deleting older changes from the changes feed?
+	return collChanges.Set(casBytes(newItem.cas), bytes)
 }
 
-func (s *memstore) set(newItem *item, oldMeta *item) error {
-	s.items = s.items.Upsert(newItem, rand.Int())
-	s.changes = s.changes.Upsert(newItem, rand.Int())
-	if oldMeta != nil {
-		// TODO: Should we be de-duplicating oldMeta from the changes feed?
-		s.changes.Delete(oldMeta)
+func (s *bucketstore) del(items string, changes string,
+	key []byte, cas uint64) error {
+	collItems := s.coll(items)
+	collChanges := s.coll(changes)
+
+	if err := collItems.Delete(key); err != nil {
+		return err
+	}
+	// Empty value represents a deletion tombstone.
+	// TODO: should we be deleting older changes from the changes feed?
+	// TODO: Currently wrong just deleting last change.
+	return collChanges.Delete(casBytes(cas))
+}
+
+func (s *bucketstore) visit(collName string, start []byte, withValue bool,
+	visitor func(*item) bool) (err error) {
+	if start == nil {
+		i, err := s.coll(collName).MinItem(false)
+		if err != nil {
+			return err
+		}
+		if i == nil {
+			return nil
+		}
+		start = i.Key
+	}
+
+	var vErr error
+	v := func(x *gkvlite.Item) bool {
+		i := &item{key: x.Key}
+		if withValue {
+			if vErr = i.fromValueBytes(x.Val); vErr != nil {
+				return false
+			}
+		}
+		return visitor(i)
+	}
+	if err := s.coll(collName).VisitItemsAscend(start, withValue, v); err != nil {
+		return err
+	}
+	return vErr
+}
+
+func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string,
+	minKeyInclusive []byte, maxKeyExclusive []byte) error {
+	minItem, err := s.coll(srcColl).MinItem(false)
+	if err != nil {
+		return err
+	}
+	if minItem != nil {
+		if err := collRangeCopy(s.coll(srcColl), dst.coll(dstColl), minItem.Key,
+			minKeyInclusive, maxKeyExclusive); err != nil {
+			return err
+		}
 	}
 	return nil
 }
 
-func (s *memstore) del(key []byte, cas uint64) error {
-	t := &item{
-		key:  key,
-		cas:  cas, // The cas to represent the delete mutation.
-		data: nil, // A nil data represents a delete mutation.
-	}
-	s.items = s.items.Delete(t)
-	s.changes = s.changes.Upsert(t, rand.Int())
-	// TODO: Should we be deleting older changes from the changes feed?
-	return nil
-}
-
-func (s *memstore) visitItems(key []byte, visitor storeVisitor) error {
-	s.items.VisitAscend(&item{key: key}, func(x gtreap.Item) bool {
-		return visitor(x.(*item))
-	})
-	return nil
-}
-
-func (s *memstore) visitChanges(cas uint64, visitor storeVisitor) error {
-	s.changes.VisitAscend(&item{cas: cas}, func(x gtreap.Item) bool {
-		return visitor(x.(*item))
-	})
-	return nil
-}
-
-func (s *memstore) rangeCopy(minKeyInclusive []byte, maxKeyExclusive []byte,
-	path string) (*memstore, error) {
-	return &memstore{
-		items: treapRangeCopy(s.items, gtreap.NewTreap(KeyLess),
-			s.items.Min(), // TODO: inefficient.
-			minKeyInclusive,
-			maxKeyExclusive),
-		changes: treapRangeCopy(s.changes, gtreap.NewTreap(CASLess),
-			s.changes.Min(), // TODO: inefficient.
-			minKeyInclusive,
-			maxKeyExclusive),
-	}, nil
-}
-
-func treapRangeCopy(src *gtreap.Treap, dst *gtreap.Treap, minItem gtreap.Item,
-	minKeyInclusive []byte, maxKeyExclusive []byte) *gtreap.Treap {
-	// TODO: should instead use the treap's split capability, which
-	// would be O(log N) instead of an O(N) visit, and should also use
-	// its snapshot feature so that this can be done asynchronously
-	// outside of the vbucket's service() loop.
-	visitor := func(x gtreap.Item) bool {
-		i := x.(*item)
+func collRangeCopy(src *gkvlite.Collection, dst *gkvlite.Collection,
+	minKey []byte,
+	minKeyInclusive []byte,
+	maxKeyExclusive []byte) error {
+	var errVisit error
+	visitor := func(i *gkvlite.Item) bool {
 		if len(minKeyInclusive) > 0 &&
-			bytes.Compare(i.key, minKeyInclusive) < 0 {
+			bytes.Compare(i.Key, minKeyInclusive) < 0 {
 			return true
 		}
 		if len(maxKeyExclusive) > 0 &&
-			bytes.Compare(i.key, maxKeyExclusive) >= 0 {
+			bytes.Compare(i.Key, maxKeyExclusive) >= 0 {
 			return true
 		}
-		dst.Upsert(x, rand.Int())
+		errVisit = dst.SetItem(i)
+		if errVisit != nil {
+			return false
+		}
 		return true
 	}
-	src.VisitAscend(minItem, visitor)
-	return dst
+	if errVisit != nil {
+		return errVisit
+	}
+	return src.VisitItemsAscend(minKey, true, visitor)
 }
