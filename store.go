@@ -189,23 +189,9 @@ func (s *bucketstore) getItem(items string, changes string,
 
 func (s *bucketstore) visitItems(items string, changes string, start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
-	collItems := s.coll(items)
-	collChanges := s.coll(changes)
-
-	if start == nil {
-		i, err := collItems.MinItem(false)
-		if err != nil {
-			return err
-		}
-		if i == nil {
-			return nil
-		}
-		start = i.Key
-	}
-
 	var vErr error
 	v := func(iItem *gkvlite.Item) bool {
-		cItem, vErr := collChanges.GetItem(iItem.Val, withValue)
+		cItem, vErr := s.coll(changes).GetItem(iItem.Val, withValue)
 		if vErr != nil {
 			return false
 		}
@@ -218,7 +204,7 @@ func (s *bucketstore) visitItems(items string, changes string, start []byte, wit
 		}
 		return visitor(i)
 	}
-	if err := collItems.VisitItemsAscend(start, true, v); err != nil {
+	if err := s.visit(s.coll(items), start, withValue, v); err != nil {
 		return err
 	}
 	return vErr
@@ -226,17 +212,6 @@ func (s *bucketstore) visitItems(items string, changes string, start []byte, wit
 
 func (s *bucketstore) visitChanges(collName string, start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
-	if start == nil {
-		i, err := s.coll(collName).MinItem(false)
-		if err != nil {
-			return err
-		}
-		if i == nil {
-			return nil
-		}
-		start = i.Key
-	}
-
 	var vErr error
 	v := func(cItem *gkvlite.Item) bool {
 		i := &item{}
@@ -245,10 +220,25 @@ func (s *bucketstore) visitChanges(collName string, start []byte, withValue bool
 		}
 		return visitor(i)
 	}
-	if err := s.coll(collName).VisitItemsAscend(start, withValue, v); err != nil {
+	if err := s.visit(s.coll(collName), start, withValue, v); err != nil {
 		return err
 	}
 	return vErr
+}
+
+func (s *bucketstore) visit(coll *gkvlite.Collection, start []byte, withValue bool,
+	v func(*gkvlite.Item) bool) (err error) {
+	if start == nil {
+		i, err := coll.MinItem(false)
+		if err != nil {
+			return err
+		}
+		if i == nil {
+			return nil
+		}
+		start = i.Key
+	}
+	return coll.VisitItemsAscend(start, withValue, v)
 }
 
 // All the following mutation methods need to be called while
