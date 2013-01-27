@@ -80,14 +80,8 @@ var dispatchTable = [256]dispatchFun{
 	// TODO: Move new command codes to gomemcached one day.
 	GET_VBMETA: vbGetVBMeta,
 	SET_VBMETA: vbSetVBMeta,
-}
 
-func init() {
-	// This handler references the initialized dispatch table
-	// cyclically, so I'm initializing this particular handler
-	// slightly later to break the cycle.  A refactoring might
-	// make this unnecessary.
-	dispatchTable[SPLIT_RANGE] = vbSplitRange
+	SPLIT_RANGE: vbSplitRange,
 }
 
 const observerBroadcastMax = 100
