@@ -94,3 +94,11 @@ func casBytes(cas uint64) []byte {
 	binary.Write(buf, binary.BigEndian, cas)
 	return buf.Bytes()
 }
+
+func casBytesParse(b []byte) (cas uint64, err error) {
+	buf := bytes.NewBuffer(b)
+	if err = binary.Read(buf, binary.BigEndian, &cas); err != nil {
+		return 0, err
+	}
+	return cas, nil
+}
