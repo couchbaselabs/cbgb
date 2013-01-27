@@ -14,27 +14,12 @@ type bucketstorereq struct {
 	res chan bool
 }
 
-type bucketfile struct {
-	file *os.File
-}
-
-func (f *bucketfile) ReadAt(p []byte, off int64) (n int, err error) {
-	return f.file.ReadAt(p, off)
-}
-
-func (f *bucketfile) WriteAt(p []byte, off int64) (n int, err error) {
-	return f.file.WriteAt(p, off)
-}
-
-func (f *bucketfile) Stat() (fi os.FileInfo, err error) {
-	return f.file.Stat()
-}
-
 type bucketstore struct {
 	path          string
 	file          *os.File
 	store         *gkvlite.Store
 	ch            chan *bucketstorereq
+	fch           chan *bucketstorereq // Channel for file operations
 	dirtiness     int64
 	flushInterval time.Duration
 }
@@ -44,22 +29,29 @@ func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, err
 	if err != nil {
 		return nil, err
 	}
-	store, err := gkvlite.NewStore(&bucketfile{file: file})
-	if err != nil {
-		file.Close()
-		return nil, err
-	}
+
 	res := &bucketstore{
+		path:          path,
 		file:          file,
-		store:         store,
-		ch:            make(chan *bucketstorereq, 1),
+		ch:            make(chan *bucketstorereq),
+		fch:           make(chan *bucketstorereq),
 		flushInterval: flushInterval,
 	}
-	go res.service()
+
+	go res.service(res.ch)
+	go res.serviceBasic(res.fch)
+
+	store, err := gkvlite.NewStore(res)
+	if err != nil {
+		res.Close()
+		return nil, err
+	}
+	res.store = store
+
 	return res, nil
 }
 
-func (s *bucketstore) service() {
+func (s *bucketstore) service(ch chan *bucketstorereq) {
 	defer s.file.Close()
 
 	ticker := time.NewTicker(s.flushInterval)
@@ -67,14 +59,12 @@ func (s *bucketstore) service() {
 
 	for {
 		select {
-		case r, ok := <-s.ch:
+		case r, ok := <-ch:
 			if !ok {
 				return
 			}
 			r.cb(s)
-			if r.res != nil {
-				close(r.res)
-			}
+			close(r.res)
 		case <-ticker.C:
 			d := atomic.LoadInt64(&s.dirtiness)
 			if d > 0 {
@@ -87,23 +77,53 @@ func (s *bucketstore) service() {
 	}
 }
 
-func (s *bucketstore) apply(synchronous bool, cb func(*bucketstore)) {
-	req := &bucketstorereq{cb: cb}
-	if synchronous {
-		req.res = make(chan bool)
+func (s *bucketstore) serviceBasic(ch chan *bucketstorereq) {
+	for r := range ch {
+		r.cb(s)
+		close(r.res)
 	}
+}
+
+func (s *bucketstore) apply(cb func(*bucketstore)) {
+	req := &bucketstorereq{cb: cb, res: make(chan bool)}
 	s.ch <- req
-	if synchronous {
-		<-req.res
-	}
+	<-req.res
+}
+
+func (s *bucketstore) applyFile(cb func(*bucketstore)) {
+	req := &bucketstorereq{cb: cb, res: make(chan bool)}
+	s.fch <- req
+	<-req.res
 }
 
 func (s *bucketstore) Close() {
 	close(s.ch)
+	close(s.fch)
+}
+
+func (s *bucketstore) ReadAt(p []byte, off int64) (n int, err error) {
+	s.applyFile(func(bs *bucketstore) {
+		n, err = bs.file.ReadAt(p, off)
+	})
+	return n, err
+}
+
+func (s *bucketstore) WriteAt(p []byte, off int64) (n int, err error) {
+	s.applyFile(func(bs *bucketstore) {
+		n, err = bs.file.WriteAt(p, off)
+	})
+	return n, err
+}
+
+func (s *bucketstore) Stat() (fi os.FileInfo, err error) {
+	s.applyFile(func(bs *bucketstore) {
+		fi, err = bs.file.Stat()
+	})
+	return fi, err
 }
 
 func (s *bucketstore) flush() (err error) {
-	s.apply(true, func(sLocked *bucketstore) {
+	s.apply(func(sLocked *bucketstore) {
 		d := atomic.LoadInt64(&s.dirtiness)
 		err = sLocked.store.Flush()
 		if err == nil {
