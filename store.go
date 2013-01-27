@@ -168,6 +168,8 @@ func (s *bucketstore) getItem(items string, changes string,
 		return nil, err
 	}
 	if iItem != nil {
+		// TODO: Use the Transient field in gkvlite to optimize away
+		// the double lookup here with memoization.
 		cItem, err := s.coll(changes).GetItem(iItem.Val, withValue)
 		if err != nil {
 			return nil, err
