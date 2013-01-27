@@ -169,6 +169,11 @@ func TestSaveLoadMutations(t *testing.T) {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
 
+	vb := b1.getVBucket(2)
+	if vb.meta.LastCas != 5 {
+		t.Errorf("expected reloaded LastCas to be 5")
+	}
+
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 
 	active := uint16(2)
@@ -222,6 +227,11 @@ func TestSaveLoadMutations(t *testing.T) {
 	}
 
 	testExpectInts(t, r2, 2, []int{1, 2, 3, 5}, "reload2")
+
+	vb2 := b2.getVBucket(2)
+	if vb2.meta.LastCas != 10 {
+		t.Errorf("expected reloaded LastCas to be 10")
+	}
 }
 
 func TestSaveLoadVBState(t *testing.T) {
