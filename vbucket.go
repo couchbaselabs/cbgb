@@ -220,7 +220,6 @@ func (v *vbucket) load() (err error) {
 
 			// TODO: Need to update v.stats.Items.
 			// TODO: What if we're loading something out of allowed range?
-			// TODO: Don't want to have all values warmed into memory?
 		})
 	})
 
@@ -731,9 +730,10 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 	if res.Status == gomemcached.SUCCESS {
 		v.Apply(func(vbLocked *vbucket) {
-			// TODO: Need to remove collections from bs?
 			vbLocked.meta.State = VBDead.String()
 			vbLocked.meta.KeyRange = &VBKeyRange{}
+			// TODO: Need to flush?
+			// TODO: Need a new 'purge vbucket' command?
 		})
 	}
 	return
