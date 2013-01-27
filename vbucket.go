@@ -118,6 +118,8 @@ func (v *vbucket) service(ch chan vbapplyreq) {
 }
 
 func (v *vbucket) Close() error {
+	// TODO: Can get panics if goroutines send to closed channels.
+	// Perhaps use atomic pointer CAS on channels as the way out?
 	close(v.ach)
 	close(v.mch)
 	return v.observer.Close()
