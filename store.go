@@ -3,15 +3,15 @@ package cbgb
 import (
 	"bytes"
 	"os"
+	"sync/atomic"
 	"time"
 
 	"github.com/steveyen/gkvlite"
 )
 
 type bucketstorereq struct {
-	cb       func(*bucketstore)
-	mutation bool
-	res      chan bool
+	cb  func(*bucketstore)
+	res chan bool
 }
 
 type bucketstore struct {
@@ -19,7 +19,7 @@ type bucketstore struct {
 	file          *os.File
 	store         *gkvlite.Store
 	ch            chan *bucketstorereq
-	dirty         bool
+	dirtiness     int64
 	flushInterval time.Duration
 }
 
@@ -56,23 +56,23 @@ func (s *bucketstore) service() {
 				return
 			}
 			r.cb(s)
-			if r.mutation {
-				s.dirty = true
-			}
 			if r.res != nil {
 				close(r.res)
 			}
 		case <-ticker.C:
-			if s.dirty {
-				s.flush() // TODO: Handle flush error.
-				s.dirty = false
+			d := atomic.LoadInt64(&s.dirtiness)
+			if d > 0 {
+				err := s.store.Flush() // TODO: Handle flush error.
+				if err == nil {
+					atomic.AddInt64(&s.dirtiness, -d)
+				}
 			}
 		}
 	}
 }
 
-func (s *bucketstore) apply(synchronous bool, mutation bool, cb func(*bucketstore)) {
-	req := &bucketstorereq{cb: cb, mutation: mutation}
+func (s *bucketstore) apply(synchronous bool, cb func(*bucketstore)) {
+	req := &bucketstorereq{cb: cb}
 	if synchronous {
 		req.res = make(chan bool)
 	}
@@ -86,8 +86,20 @@ func (s *bucketstore) Close() {
 	close(s.ch)
 }
 
-// All the following methods need to be called while single-threaded,
-// so invoke them only in your apply() callback functions.
+func (s *bucketstore) flush() (err error) {
+	s.apply(true, func(sLocked *bucketstore) {
+		d := atomic.LoadInt64(&s.dirtiness)
+		err = sLocked.store.Flush()
+		if err == nil {
+			atomic.AddInt64(&s.dirtiness, -d)
+		}
+	})
+	return err
+}
+
+func (s *bucketstore) dirty() {
+	atomic.AddInt64(&s.dirtiness, 1)
+}
 
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
 	c := s.store.GetCollection(collName)
@@ -103,11 +115,6 @@ func (s *bucketstore) collNames() []string {
 
 func (s *bucketstore) collExists(collName string) bool {
 	return s.store.GetCollection(collName) != nil
-}
-
-func (s *bucketstore) flush() error {
-	s.dirty = false
-	return s.store.Flush()
 }
 
 func (s *bucketstore) get(items string, key []byte) (*item, error) {
@@ -131,35 +138,6 @@ func (s *bucketstore) getItem(items string, key []byte, withValue bool) (i *item
 		return i, nil
 	}
 	return nil, nil
-}
-
-func (s *bucketstore) set(items string, changes string,
-	newItem *item, oldMeta *item) error {
-	collItems := s.coll(items)
-	collChanges := s.coll(changes)
-
-	bytes := newItem.toValueBytes()
-
-	if err := collItems.Set(newItem.key, bytes); err != nil {
-		return err
-	}
-	// TODO: should we include the item value in the changes feed?
-	// TODO: should we be deleting older changes from the changes feed?
-	return collChanges.Set(casBytes(newItem.cas), bytes)
-}
-
-func (s *bucketstore) del(items string, changes string,
-	key []byte, cas uint64) error {
-	collItems := s.coll(items)
-	collChanges := s.coll(changes)
-
-	if err := collItems.Delete(key); err != nil {
-		return err
-	}
-	// Empty value represents a deletion tombstone.
-	// TODO: should we be deleting older changes from the changes feed?
-	// TODO: Currently wrong just deleting last change.
-	return collChanges.Delete(casBytes(cas))
 }
 
 func (s *bucketstore) visit(collName string, start []byte, withValue bool,
@@ -191,6 +169,50 @@ func (s *bucketstore) visit(collName string, start []byte, withValue bool,
 	return vErr
 }
 
+// All the following mutation methods need to be called while
+// single-threaded with respect to the mutating collection.
+
+func (s *bucketstore) set(items string, changes string,
+	newItem *item, oldMeta *item) error {
+	collItems := s.coll(items)
+	collChanges := s.coll(changes)
+
+	bytes := newItem.toValueBytes()
+
+	if err := collItems.Set(newItem.key, bytes); err != nil {
+		return err
+	}
+	// TODO: What if we flush between the item set and changes set?  Inconsistent db?
+	// TODO: should we include the item value in the changes feed?
+	// TODO: should we be deleting older changes from the changes feed?
+	if err := collChanges.Set(casBytes(newItem.cas), bytes); err != nil {
+		return err
+	}
+
+	s.dirty()
+	return nil
+}
+
+func (s *bucketstore) del(items string, changes string,
+	key []byte, cas uint64) error {
+	collItems := s.coll(items)
+	collChanges := s.coll(changes)
+
+	if err := collItems.Delete(key); err != nil {
+		return err
+	}
+	// Empty value represents a deletion tombstone.
+	// TODO: What if we flush between the item set and changes set?  Inconsistent db?
+	// TODO: should we be deleting older changes from the changes feed?
+	// TODO: Currently wrong just deleting last change.
+	if err := collChanges.Delete(casBytes(cas)); err != nil {
+		return err
+	}
+
+	s.dirty()
+	return nil
+}
+
 func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
 	minItem, err := s.coll(srcColl).MinItem(false)
@@ -202,6 +224,7 @@ func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string
 			minKeyInclusive, maxKeyExclusive); err != nil {
 			return err
 		}
+		dst.dirty()
 	}
 	return nil
 }

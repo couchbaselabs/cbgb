@@ -226,10 +226,7 @@ func (b *livebucket) Close() error {
 func (b *livebucket) Flush() error {
 	// TODO: Compaction.
 	for _, bs := range b.bucketstores {
-		var err error
-		bs.apply(true, false, func(bs *bucketstore) {
-			err = bs.flush()
-		})
+		err := bs.flush()
 		if err != nil {
 			return err
 		}
