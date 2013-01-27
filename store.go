@@ -170,6 +170,8 @@ func (s *bucketstore) getItem(items string, changes string,
 	if iItem != nil {
 		// TODO: Use the Transient field in gkvlite to optimize away
 		// the double lookup here with memoization.
+		// TODO: What if a compaction happens in between the lookups,
+		// and the changes-feed no longer has the item?
 		cItem, err := s.coll(changes).GetItem(iItem.Val, withValue)
 		if err != nil {
 			return nil, err
