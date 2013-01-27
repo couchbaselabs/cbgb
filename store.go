@@ -153,30 +153,74 @@ func (s *bucketstore) collExists(collName string) bool {
 	return s.store.GetCollection(collName) != nil
 }
 
-func (s *bucketstore) get(items string, key []byte) (*item, error) {
-	return s.getItem(items, key, true)
+func (s *bucketstore) get(items string, changes string, key []byte) (*item, error) {
+	return s.getItem(items, changes, key, true)
 }
 
-func (s *bucketstore) getMeta(items string, key []byte) (*item, error) {
-	return s.getItem(items, key, false)
+func (s *bucketstore) getMeta(items string, changes string, key []byte) (*item, error) {
+	return s.getItem(items, changes, key, false)
 }
 
-func (s *bucketstore) getItem(items string, key []byte, withValue bool) (i *item, err error) {
-	v, err := s.coll(items).GetItem(key, withValue)
+func (s *bucketstore) getItem(items string, changes string,
+	key []byte, withValue bool) (i *item, err error) {
+	iItem, err := s.coll(items).GetItem(key, true)
 	if err != nil {
 		return nil, err
 	}
-	if v != nil {
-		i := &item{key: key}
-		if err = i.fromValueBytes(v.Val); err != nil {
+	if iItem != nil {
+		cItem, err := s.coll(changes).GetItem(iItem.Val, withValue)
+		if err != nil {
 			return nil, err
 		}
-		return i, nil
+		if cItem != nil {
+			i := &item{key: key}
+			if err = i.fromValueBytes(cItem.Val); err != nil {
+				return nil, err
+			}
+			return i, nil
+		}
 	}
 	return nil, nil
 }
 
-func (s *bucketstore) visit(collName string, start []byte, withValue bool,
+func (s *bucketstore) visitItems(items string, changes string, start []byte, withValue bool,
+	visitor func(*item) bool) (err error) {
+	collItems := s.coll(items)
+	collChanges := s.coll(changes)
+
+	if start == nil {
+		i, err := collItems.MinItem(false)
+		if err != nil {
+			return err
+		}
+		if i == nil {
+			return nil
+		}
+		start = i.Key
+	}
+
+	var vErr error
+	v := func(iItem *gkvlite.Item) bool {
+		cItem, vErr := collChanges.GetItem(iItem.Val, withValue)
+		if vErr != nil {
+			return false
+		}
+		if cItem == nil {
+			return true // TODO: track this case; might have been compacted away.
+		}
+		i := &item{key: iItem.Key}
+		if vErr = i.fromValueBytes(cItem.Val); vErr != nil {
+			return false
+		}
+		return visitor(i)
+	}
+	if err := collItems.VisitItemsAscend(start, true, v); err != nil {
+		return err
+	}
+	return vErr
+}
+
+func (s *bucketstore) visitChanges(collName string, start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
 	if start == nil {
 		i, err := s.coll(collName).MinItem(false)
@@ -190,12 +234,10 @@ func (s *bucketstore) visit(collName string, start []byte, withValue bool,
 	}
 
 	var vErr error
-	v := func(x *gkvlite.Item) bool {
-		i := &item{key: x.Key}
-		if withValue {
-			if vErr = i.fromValueBytes(x.Val); vErr != nil {
-				return false
-			}
+	v := func(cItem *gkvlite.Item) bool {
+		i := &item{}
+		if vErr = i.fromValueBytes(cItem.Val); vErr != nil {
+			return false
 		}
 		return visitor(i)
 	}
@@ -212,19 +254,18 @@ func (s *bucketstore) set(items string, changes string,
 	newItem *item, oldMeta *item) error {
 	collItems := s.coll(items)
 	collChanges := s.coll(changes)
+	vBytes := newItem.toValueBytes()
+	cBytes := casBytes(newItem.cas)
 
-	bytes := newItem.toValueBytes()
-
-	if err := collItems.Set(newItem.key, bytes); err != nil {
+	// TODO: should we be de-duplicating older changes from the changes feed?
+	if err := collChanges.Set(cBytes, vBytes); err != nil {
 		return err
 	}
-	// TODO: What if we flush between the item set and changes set?  Inconsistent db?
-	// TODO: should we include the item value in the changes feed?
-	// TODO: should we be deleting older changes from the changes feed?
-	if err := collChanges.Set(casBytes(newItem.cas), bytes); err != nil {
+	// TODO: What if we flush between the items update and changes update?
+	// That could result in an inconsistent db file?
+	if err := collItems.Set(newItem.key, cBytes); err != nil {
 		return err
 	}
-
 	s.dirty()
 	return nil
 }
@@ -233,18 +274,18 @@ func (s *bucketstore) del(items string, changes string,
 	key []byte, cas uint64) error {
 	collItems := s.coll(items)
 	collChanges := s.coll(changes)
+	cBytes := casBytes(cas)
 
+	// Empty value means it was a deletion.
+	// TODO: should we be de-duplicating older changes from the changes feed?
+	if err := collChanges.Set(cBytes, []byte("")); err != nil {
+		return err
+	}
+	// TODO: What if we flush between the items update and changes update?
+	// That could result in an inconsistent db file?
 	if err := collItems.Delete(key); err != nil {
 		return err
 	}
-	// Empty value represents a deletion tombstone.
-	// TODO: What if we flush between the item set and changes set?  Inconsistent db?
-	// TODO: should we be deleting older changes from the changes feed?
-	// TODO: Currently wrong just deleting last change.
-	if err := collChanges.Delete(casBytes(cas)); err != nil {
-		return err
-	}
-
 	s.dirty()
 	return nil
 }
@@ -255,6 +296,8 @@ func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string
 	if err != nil {
 		return err
 	}
+	// TODO: What if we flush between the items update and changes update?
+	// That could result in an inconsistent db file?
 	if minItem != nil {
 		if err := collRangeCopy(s.coll(srcColl), dst.coll(dstColl), minItem.Key,
 			minKeyInclusive, maxKeyExclusive); err != nil {

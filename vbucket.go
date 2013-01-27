@@ -218,6 +218,17 @@ func (v *vbucket) load() (err error) {
 				return
 			}
 
+			i, err := vm.bs.coll(vm.collChanges).MaxItem(true)
+			if err != nil {
+				return
+			}
+			if i != nil {
+				meta.LastCas, err = casBytesParse(i.Key)
+				if err != nil {
+					return
+				}
+			}
+
 			vbLocked.meta.update(meta)
 
 			// TODO: Need to update v.stats.Items.
@@ -273,7 +284,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	var err error
 
 	v.Mutate(func(vm *vbucket) {
-		meta, err = vm.bs.getMeta(vm.collItems, req.Key)
+		meta, err = vm.bs.getMeta(vm.collItems, vm.collChanges, req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -342,7 +353,7 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		return res
 	}
 
-	i, err := v.bs.get(v.collItems, req.Key)
+	i, err := v.bs.get(v.collItems, v.collChanges, req.Key)
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -398,7 +409,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	var err error
 
 	v.Mutate(func(vm *vbucket) {
-		meta, err = vm.bs.getMeta(vm.collItems, req.Key)
+		meta, err = vm.bs.getMeta(vm.collItems, vm.collChanges, req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -478,7 +489,7 @@ func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 		return true
 	}
 
-	errVisit := v.bs.visit(v.collChanges, casBytes(req.Cas), true, visitor)
+	errVisit := v.bs.visitChanges(v.collChanges, casBytes(req.Cas), true, visitor)
 
 	close(ch)
 
@@ -565,7 +576,7 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 		return true
 	}
 
-	if err := v.bs.visit(v.collItems, req.Key, true, visitor); err != nil {
+	if err := v.bs.visitItems(v.collItems, v.collChanges, req.Key, true, visitor); err != nil {
 		res = &gomemcached.MCResponse{Fatal: true}
 	}
 

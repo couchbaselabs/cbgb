@@ -95,7 +95,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 func TestSaveLoadBasic(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	// defer os.RemoveAll(testBucketDir)
+	defer os.RemoveAll(testBucketDir)
 
 	b0, err := NewBucket(testBucketDir, time.Second)
 	if err != nil {
@@ -168,6 +168,7 @@ func TestSaveLoadMutations(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
+
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 
 	active := uint16(2)
@@ -198,10 +199,14 @@ func TestSaveLoadMutations(t *testing.T) {
 		}
 	}
 
+	testExpectInts(t, r1, 2, []int{1, 2, 3, 5}, "before flush")
+
 	err = b1.Flush()
 	if err != nil {
 		t.Errorf("expected Flush to work, got: %v", err)
 	}
+
+	testExpectInts(t, r1, 2, []int{1, 2, 3, 5}, "after flush")
 
 	b1.Close()
 
