@@ -57,10 +57,6 @@ func (m mutation) String() string {
 	return fmt.Sprintf("%v: vb:%v %s -> %v", sym, m.vb, m.key, m.cas)
 }
 
-// Sentinel value indicating a dispatch handler wishes to take control
-// of the response.
-var overrideResponse = &gomemcached.MCResponse{}
-
 type dispatchFun func(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) *gomemcached.MCResponse
 
