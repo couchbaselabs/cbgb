@@ -14,6 +14,22 @@ type bucketstorereq struct {
 	res chan bool
 }
 
+type bucketfile struct {
+	file *os.File
+}
+
+func (f *bucketfile) ReadAt(p []byte, off int64) (n int, err error) {
+	return f.file.ReadAt(p, off)
+}
+
+func (f *bucketfile) WriteAt(p []byte, off int64) (n int, err error) {
+	return f.file.WriteAt(p, off)
+}
+
+func (f *bucketfile) Stat() (fi os.FileInfo, err error) {
+	return f.file.Stat()
+}
+
 type bucketstore struct {
 	path          string
 	file          *os.File
@@ -28,7 +44,7 @@ func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, err
 	if err != nil {
 		return nil, err
 	}
-	store, err := gkvlite.NewStore(file)
+	store, err := gkvlite.NewStore(&bucketfile{file: file})
 	if err != nil {
 		file.Close()
 		return nil, err
