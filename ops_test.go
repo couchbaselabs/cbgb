@@ -565,6 +565,8 @@ func BenchmarkInvalidCommand(b *testing.B) {
 		Opcode: gomemcached.CommandCode(255),
 	}
 
+	// Ignore time from above.
+	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
 		rh.HandleMessage(nil, req)
 	}
@@ -630,7 +632,6 @@ func BenchmarkParallelGet(b *testing.B) {
 
 	// Ignore time from above.
 	b.ResetTimer()
-
 	for worker := 0; worker < parallel; worker++ {
 		go func() {
 			defer wg.Done()
