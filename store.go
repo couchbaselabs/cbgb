@@ -38,8 +38,8 @@ func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, err
 		flushInterval: flushInterval,
 	}
 
-	go res.serviceApply(res.ch)
-	go res.serviceMutate(res.fch)
+	go res.service(res.ch)
+	go res.serviceFile(res.fch)
 
 	store, err := gkvlite.NewStore(res)
 	if err != nil {
@@ -51,7 +51,7 @@ func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, err
 	return res, nil
 }
 
-func (s *bucketstore) serviceApply(ch chan *bucketstorereq) {
+func (s *bucketstore) service(ch chan *bucketstorereq) {
 	ticker := time.NewTicker(s.flushInterval)
 	defer ticker.Stop()
 
@@ -75,7 +75,7 @@ func (s *bucketstore) serviceApply(ch chan *bucketstorereq) {
 	}
 }
 
-func (s *bucketstore) serviceMutate(ch chan *bucketstorereq) {
+func (s *bucketstore) serviceFile(ch chan *bucketstorereq) {
 	defer s.file.Close()
 
 	for r := range ch {
