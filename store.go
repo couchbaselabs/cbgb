@@ -22,7 +22,22 @@ type bucketstore struct {
 	fch           chan *bucketstorereq // Channel for file operations
 	dirtiness     int64
 	flushInterval time.Duration
-	flushErrors   int64
+	stats         bucketstorestats
+}
+
+type bucketstorestats struct {
+	TotFlush uint64
+	TotRead  uint64
+	TotWrite uint64
+	TotStat  uint64
+
+	FlushErrors uint64
+	ReadErrors  uint64
+	WriteErrors uint64
+	StatErrors  uint64
+
+	ReadBytes  uint64
+	WriteBytes uint64
 }
 
 func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, error) {
@@ -70,7 +85,7 @@ func (s *bucketstore) service(ch chan *bucketstorereq) {
 				err := s.store.Flush()
 				if err != nil {
 					// TODO: Log flush error.
-					atomic.AddInt64(&s.flushErrors, 1)
+					atomic.AddUint64(&s.stats.FlushErrors, 1)
 				} else {
 					atomic.AddInt64(&s.dirtiness, -d)
 				}
@@ -105,8 +120,10 @@ func (s *bucketstore) Close() {
 	close(s.fch)
 }
 
-func (s *bucketstore) FlushErrors() int64 {
-	return atomic.LoadInt64(&s.flushErrors)
+func (s *bucketstore) Stats() *bucketstorestats {
+	bss := &bucketstorestats{}
+	bss.Add(&s.stats)
+	return bss
 }
 
 func (s *bucketstore) Flush() (err error) {
@@ -322,25 +339,55 @@ func collRangeCopy(src *gkvlite.Collection, dst *gkvlite.Collection,
 	return src.VisitItemsAscend(minKey, true, visitor)
 }
 
-// The following methods implement the gkvlite.StoreFile interface.
+// The following bucketstore methods implement the gkvlite.StoreFile
+// interface.
 
 func (s *bucketstore) ReadAt(p []byte, off int64) (n int, err error) {
 	s.applyFile(func(bs *bucketstore) {
+		atomic.AddUint64(&s.stats.TotRead, 1)
 		n, err = bs.file.ReadAt(p, off)
+		if err != nil {
+			atomic.AddUint64(&s.stats.ReadErrors, 1)
+		}
+		atomic.AddUint64(&s.stats.ReadBytes, uint64(n))
 	})
 	return n, err
 }
 
 func (s *bucketstore) WriteAt(p []byte, off int64) (n int, err error) {
 	s.applyFile(func(bs *bucketstore) {
+		atomic.AddUint64(&s.stats.TotWrite, 1)
 		n, err = bs.file.WriteAt(p, off)
+		if err != nil {
+			atomic.AddUint64(&s.stats.WriteErrors, 1)
+		}
+		atomic.AddUint64(&s.stats.WriteBytes, uint64(n))
 	})
 	return n, err
 }
 
 func (s *bucketstore) Stat() (fi os.FileInfo, err error) {
 	s.applyFile(func(bs *bucketstore) {
+		atomic.AddUint64(&s.stats.TotStat, 1)
 		fi, err = bs.file.Stat()
+		if err != nil {
+			atomic.AddUint64(&s.stats.StatErrors, 1)
+		}
 	})
 	return fi, err
+}
+
+func (bss *bucketstorestats) Add(in *bucketstorestats) {
+	bss.TotFlush += atomic.LoadUint64(&in.TotFlush)
+	bss.TotRead += atomic.LoadUint64(&in.TotRead)
+	bss.TotWrite += atomic.LoadUint64(&in.TotWrite)
+	bss.TotStat += atomic.LoadUint64(&in.TotStat)
+
+	bss.FlushErrors += atomic.LoadUint64(&in.FlushErrors)
+	bss.ReadErrors += atomic.LoadUint64(&in.ReadErrors)
+	bss.WriteErrors += atomic.LoadUint64(&in.WriteErrors)
+	bss.StatErrors += atomic.LoadUint64(&in.StatErrors)
+
+	bss.ReadBytes += atomic.LoadUint64(&in.ReadBytes)
+	bss.WriteBytes += atomic.LoadUint64(&in.WriteBytes)
 }

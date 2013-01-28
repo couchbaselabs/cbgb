@@ -232,6 +232,41 @@ func TestSaveLoadMutations(t *testing.T) {
 	if vb2.meta.LastCas != 10 {
 		t.Errorf("expected reloaded LastCas to be 10")
 	}
+
+	bss := vb2.bs.Stats()
+	if bss == nil {
+		t.Errorf("expected bucket store to have Stats()")
+	}
+	if bss.TotFlush != 0 {
+		t.Errorf("expected bss to have 0 TotFlush")
+	}
+	if bss.TotRead == 0 {
+		t.Errorf("expected bss to have >0 TotRead")
+	}
+	if bss.TotWrite != 0 {
+		t.Errorf("expected bss to have 0 TotWrite")
+	}
+	if bss.TotStat == 0 {
+		t.Errorf("expected bss to have >0 TotStat")
+	}
+	if bss.FlushErrors != 0 {
+		t.Errorf("expected bss to have 0 FlushErrors")
+	}
+	if bss.ReadErrors != 0 {
+		t.Errorf("expected bss to have 0 ReadErrors")
+	}
+	if bss.WriteErrors != 0 {
+		t.Errorf("expected bss to have 0 WriteErrors")
+	}
+	if bss.StatErrors != 0 {
+		t.Errorf("expected bss to have 0 StatErrors")
+	}
+	if bss.ReadBytes == 0 {
+		t.Errorf("expected bss to have >0 ReadBytes")
+	}
+	if bss.WriteBytes != 0 {
+		t.Errorf("expected bss to have 0 WriteBytes")
+	}
 }
 
 func TestSaveLoadVBState(t *testing.T) {
