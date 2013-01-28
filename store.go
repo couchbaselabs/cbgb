@@ -260,12 +260,15 @@ func (s *bucketstore) set(items string, changes string,
 	if err := collChanges.Set(cBytes, vBytes); err != nil {
 		return err
 	}
-	// TODO: What if we flush between the items update and changes
-	// update?  That could result in an inconsistent db file?
-	// Solution idea #1 is to have load-time fixup, that
-	// incorporates changes into the key-index.
-	if err := collItems.Set(newItem.key, cBytes); err != nil {
-		return err
+	// An nil/empty key means this is a metadata change.
+	if newItem.key != nil && len(newItem.key) > 0 {
+		// TODO: What if we flush between the items update and changes
+		// update?  That could result in an inconsistent db file?
+		// Solution idea #1 is to have load-time fixup, that
+		// incorporates changes into the key-index.
+		if err := collItems.Set(newItem.key, cBytes); err != nil {
+			return err
+		}
 	}
 	s.dirty()
 	return nil
@@ -282,12 +285,15 @@ func (s *bucketstore) del(items string, changes string,
 	if err := collChanges.Set(cBytes, []byte("")); err != nil {
 		return err
 	}
-	// TODO: What if we flush between the items update and changes
-	// update?  That could result in an inconsistent db file?
-	// Solution idea #1 is to have load-time fixup, that
-	// incorporates changes into the key-index.
-	if err := collItems.Delete(key); err != nil {
-		return err
+	// An nil/empty key means this is a metadata change.
+	if key != nil && len(key) > 0 {
+		// TODO: What if we flush between the items update and changes
+		// update?  That could result in an inconsistent db file?
+		// Solution idea #1 is to have load-time fixup, that
+		// incorporates changes into the key-index.
+		if err := collItems.Delete(key); err != nil {
+			return err
+		}
 	}
 	s.dirty()
 	return nil
