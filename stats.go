@@ -32,7 +32,7 @@ type Stats struct {
 	ValueBytesIncoming uint64
 	ValueBytesOutgoing uint64
 
-	ErrStore uint64
+	ErrStore      uint64
 	ErrNotMyRange uint64
 }
 
