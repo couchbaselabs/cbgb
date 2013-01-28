@@ -323,7 +323,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 
 	v.Apply(func(vbLocked *vbucket) {
 		if err != nil {
-			vbLocked.stats.AsyncStoreErr++
+			vbLocked.stats.ErrStore++
 		} else {
 			if meta != nil {
 				vbLocked.stats.Updates++
@@ -448,7 +448,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 	v.Apply(func(vbLocked *vbucket) {
 		if err != nil {
-			vbLocked.stats.AsyncStoreErr++
+			vbLocked.stats.ErrStore++
 		} else if meta != nil {
 			vbLocked.stats.Items--
 		}
