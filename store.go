@@ -9,11 +9,6 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
-type bucketstorereq struct {
-	cb  func(*bucketstore)
-	res chan bool
-}
-
 type bucketstore struct {
 	path          string
 	file          *os.File
@@ -23,6 +18,11 @@ type bucketstore struct {
 	dirtiness     int64
 	flushInterval time.Duration
 	stats         bucketstorestats
+}
+
+type bucketstorereq struct {
+	cb  func(*bucketstore)
+	res chan bool
 }
 
 type bucketstorestats struct {
