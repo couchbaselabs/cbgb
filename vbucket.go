@@ -10,6 +10,7 @@ import (
 	"sort"
 
 	"github.com/dustin/gomemcached"
+	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -37,8 +38,8 @@ type vbucket struct {
 	mch         chan vbapplyreq // To mutate the items/changes collections.
 	stats       Stats
 	observer    *broadcaster
-	collItems   string // Name of persistent items collection.
-	collChanges string // Name of persistent changes collection.
+	collItems   *gkvlite.Collection
+	collChanges *gkvlite.Collection
 }
 
 // Message sent on object change
@@ -87,6 +88,7 @@ var dispatchTable = [256]dispatchFun{
 const observerBroadcastMax = 100
 
 func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
+	collItems, collChanges := bs.vbucketColls(vbid)
 	rv := &vbucket{
 		parent:      parent,
 		vbid:        vbid,
@@ -95,12 +97,9 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
 		ach:         make(chan vbapplyreq),
 		mch:         make(chan vbapplyreq),
 		observer:    newBroadcaster(observerBroadcastMax),
-		collItems:   fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_ITEMS),
-		collChanges: fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES),
+		collItems:   collItems,
+		collChanges: collChanges,
 	}
-
-	bs.coll(rv.collItems)
-	bs.coll(rv.collChanges)
 
 	go rv.service(rv.ach)
 	go rv.service(rv.mch)
@@ -218,7 +217,7 @@ func (v *vbucket) load() (err error) {
 				return
 			}
 
-			i, err := vm.bs.coll(vm.collChanges).MaxItem(true)
+			i, err := vm.collChanges.MaxItem(true)
 			if err != nil {
 				return
 			}

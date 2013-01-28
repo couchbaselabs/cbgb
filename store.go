@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"fmt"
 	"os"
 	"sync/atomic"
 	"time"
@@ -141,6 +142,12 @@ func (s *bucketstore) dirty() {
 	atomic.AddInt64(&s.dirtiness, 1)
 }
 
+func (s *bucketstore) vbucketColls(vbid uint16) (*gkvlite.Collection, *gkvlite.Collection) {
+	i := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_ITEMS))
+	c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
+	return i, c
+}
+
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
 	c := s.store.GetCollection(collName)
 	if c == nil {
@@ -157,17 +164,19 @@ func (s *bucketstore) collExists(collName string) bool {
 	return s.store.GetCollection(collName) != nil
 }
 
-func (s *bucketstore) get(items string, changes string, key []byte) (*item, error) {
+func (s *bucketstore) get(items *gkvlite.Collection, changes *gkvlite.Collection,
+	key []byte) (*item, error) {
 	return s.getItem(items, changes, key, true)
 }
 
-func (s *bucketstore) getMeta(items string, changes string, key []byte) (*item, error) {
+func (s *bucketstore) getMeta(items *gkvlite.Collection, changes *gkvlite.Collection,
+	key []byte) (*item, error) {
 	return s.getItem(items, changes, key, false)
 }
 
-func (s *bucketstore) getItem(items string, changes string,
+func (s *bucketstore) getItem(items *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte, withValue bool) (i *item, err error) {
-	iItem, err := s.coll(items).GetItem(key, true)
+	iItem, err := items.GetItem(key, true)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +186,7 @@ func (s *bucketstore) getItem(items string, changes string,
 		// TODO: What if a compaction happens in between the lookups,
 		// and the changes-feed no longer has the item?  Answer: compaction
 		// must not remove items that the key-index references.
-		cItem, err := s.coll(changes).GetItem(iItem.Val, withValue)
+		cItem, err := changes.GetItem(iItem.Val, withValue)
 		if err != nil {
 			return nil, err
 		}
@@ -192,11 +201,12 @@ func (s *bucketstore) getItem(items string, changes string,
 	return nil, nil
 }
 
-func (s *bucketstore) visitItems(items string, changes string, start []byte, withValue bool,
+func (s *bucketstore) visitItems(items *gkvlite.Collection, changes *gkvlite.Collection,
+	start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
 	var vErr error
 	v := func(iItem *gkvlite.Item) bool {
-		cItem, vErr := s.coll(changes).GetItem(iItem.Val, withValue)
+		cItem, vErr := changes.GetItem(iItem.Val, withValue)
 		if vErr != nil {
 			return false
 		}
@@ -209,13 +219,14 @@ func (s *bucketstore) visitItems(items string, changes string, start []byte, wit
 		}
 		return visitor(i)
 	}
-	if err := s.visit(s.coll(items), start, withValue, v); err != nil {
+	if err := s.visit(items, start, withValue, v); err != nil {
 		return err
 	}
 	return vErr
 }
 
-func (s *bucketstore) visitChanges(collName string, start []byte, withValue bool,
+func (s *bucketstore) visitChanges(changes *gkvlite.Collection,
+	start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
 	var vErr error
 	v := func(cItem *gkvlite.Item) bool {
@@ -225,13 +236,14 @@ func (s *bucketstore) visitChanges(collName string, start []byte, withValue bool
 		}
 		return visitor(i)
 	}
-	if err := s.visit(s.coll(collName), start, withValue, v); err != nil {
+	if err := s.visit(changes, start, withValue, v); err != nil {
 		return err
 	}
 	return vErr
 }
 
-func (s *bucketstore) visit(coll *gkvlite.Collection, start []byte, withValue bool,
+func (s *bucketstore) visit(coll *gkvlite.Collection,
+	start []byte, withValue bool,
 	v func(*gkvlite.Item) bool) (err error) {
 	if start == nil {
 		i, err := coll.MinItem(false)
@@ -249,15 +261,13 @@ func (s *bucketstore) visit(coll *gkvlite.Collection, start []byte, withValue bo
 // All the following mutation methods need to be called while
 // single-threaded with respect to the mutating collection.
 
-func (s *bucketstore) set(items string, changes string,
+func (s *bucketstore) set(items *gkvlite.Collection, changes *gkvlite.Collection,
 	newItem *item, oldMeta *item) error {
-	collItems := s.coll(items)
-	collChanges := s.coll(changes)
 	vBytes := newItem.toValueBytes()
 	cBytes := casBytes(newItem.cas)
 
 	// TODO: should we be de-duplicating older changes from the changes feed?
-	if err := collChanges.Set(cBytes, vBytes); err != nil {
+	if err := changes.Set(cBytes, vBytes); err != nil {
 		return err
 	}
 	// An nil/empty key means this is a metadata change.
@@ -266,7 +276,7 @@ func (s *bucketstore) set(items string, changes string,
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
-		if err := collItems.Set(newItem.key, cBytes); err != nil {
+		if err := items.Set(newItem.key, cBytes); err != nil {
 			return err
 		}
 	}
@@ -274,15 +284,13 @@ func (s *bucketstore) set(items string, changes string,
 	return nil
 }
 
-func (s *bucketstore) del(items string, changes string,
+func (s *bucketstore) del(items *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte, cas uint64) error {
-	collItems := s.coll(items)
-	collChanges := s.coll(changes)
 	cBytes := casBytes(cas)
 
 	// Empty value means it was a deletion.
 	// TODO: should we be de-duplicating older changes from the changes feed?
-	if err := collChanges.Set(cBytes, []byte("")); err != nil {
+	if err := changes.Set(cBytes, []byte("")); err != nil {
 		return err
 	}
 	// An nil/empty key means this is a metadata change.
@@ -291,7 +299,7 @@ func (s *bucketstore) del(items string, changes string,
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
-		if err := collItems.Delete(key); err != nil {
+		if err := items.Delete(key); err != nil {
 			return err
 		}
 	}
@@ -299,9 +307,10 @@ func (s *bucketstore) del(items string, changes string,
 	return nil
 }
 
-func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string,
+func (s *bucketstore) rangeCopy(srcColl *gkvlite.Collection,
+	dst *bucketstore, dstColl *gkvlite.Collection,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
-	minItem, err := s.coll(srcColl).MinItem(false)
+	minItem, err := srcColl.MinItem(false)
 	if err != nil {
 		return err
 	}
@@ -310,7 +319,7 @@ func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string
 	// Solution idea #1 is to have load-time fixup, that
 	// incorporates changes into the key-index.
 	if minItem != nil {
-		if err := collRangeCopy(s.coll(srcColl), dst.coll(dstColl), minItem.Key,
+		if err := collRangeCopy(srcColl, dstColl, minItem.Key,
 			minKeyInclusive, maxKeyExclusive); err != nil {
 			return err
 		}
