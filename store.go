@@ -22,6 +22,7 @@ type bucketstore struct {
 	fch           chan *bucketstorereq // Channel for file operations
 	dirtiness     int64
 	flushInterval time.Duration
+	flushErrors   int64
 }
 
 func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, error) {
@@ -66,8 +67,11 @@ func (s *bucketstore) service(ch chan *bucketstorereq) {
 		case <-ticker.C:
 			d := atomic.LoadInt64(&s.dirtiness)
 			if d > 0 {
-				err := s.store.Flush() // TODO: Handle flush error.
-				if err == nil {
+				err := s.store.Flush()
+				if err != nil {
+					// TODO: Log flush error.
+					atomic.AddInt64(&s.flushErrors, 1)
+				} else {
 					atomic.AddInt64(&s.dirtiness, -d)
 				}
 			}
@@ -101,7 +105,11 @@ func (s *bucketstore) Close() {
 	close(s.fch)
 }
 
-func (s *bucketstore) flush() (err error) {
+func (s *bucketstore) FlushErrors() int64 {
+	return atomic.LoadInt64(&s.flushErrors)
+}
+
+func (s *bucketstore) Flush() (err error) {
 	s.apply(func(sLocked *bucketstore) {
 		d := atomic.LoadInt64(&s.dirtiness)
 		err = sLocked.store.Flush()

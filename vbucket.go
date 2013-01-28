@@ -187,7 +187,7 @@ func (v *vbucket) SetVBState(newState VBState,
 			if err = vm.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
 				return
 			}
-			if err = vm.bs.flush(); err != nil {
+			if err = vm.bs.Flush(); err != nil {
 				return
 			}
 			vbLocked.meta.update(newMeta)
