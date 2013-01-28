@@ -8,6 +8,8 @@ import (
 	"io"
 	"log"
 	"sort"
+	"sync/atomic"
+	"unsafe"
 
 	"github.com/dustin/gomemcached"
 	"github.com/steveyen/gkvlite"
@@ -38,8 +40,8 @@ type vbucket struct {
 	mch         chan vbapplyreq // To mutate the items/changes collections.
 	stats       Stats
 	observer    *broadcaster
-	collItems   *gkvlite.Collection
-	collChanges *gkvlite.Collection
+	collItems   unsafe.Pointer // *gkvlite.Collection
+	collChanges unsafe.Pointer // *gkvlite.Collection
 }
 
 // Message sent on object change
@@ -97,8 +99,8 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
 		ach:         make(chan vbapplyreq),
 		mch:         make(chan vbapplyreq),
 		observer:    newBroadcaster(observerBroadcastMax),
-		collItems:   collItems,
-		collChanges: collChanges,
+		collItems:   unsafe.Pointer(collItems),
+		collChanges: unsafe.Pointer(collChanges),
 	}
 
 	go rv.service(rv.ach)
@@ -145,6 +147,14 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 		Key:     key,
 		VBucket: v.vbid,
 	})
+}
+
+func (v *vbucket) CollItems() *gkvlite.Collection {
+	return (*gkvlite.Collection)(atomic.LoadPointer(&v.collItems))
+}
+
+func (v *vbucket) CollChanges() *gkvlite.Collection {
+	return (*gkvlite.Collection)(atomic.LoadPointer(&v.collChanges))
 }
 
 func (v *vbucket) Apply(cb func(*vbucket)) {
@@ -217,7 +227,7 @@ func (v *vbucket) load() (err error) {
 				return
 			}
 
-			i, err := vm.collChanges.MaxItem(true)
+			i, err := vm.CollChanges().MaxItem(true)
 			if err != nil {
 				return
 			}
@@ -283,7 +293,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	var err error
 
 	v.Mutate(func(vm *vbucket) {
-		meta, err = vm.bs.getMeta(vm.collItems, vm.collChanges, req.Key)
+		meta, err = vm.bs.getMeta(vm.CollItems(), vm.CollChanges(), req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -307,7 +317,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			data: req.Body,
 		}
 
-		err = vm.bs.set(vm.collItems, vm.collChanges, itemNew, meta)
+		err = vm.bs.set(vm.CollItems(), vm.CollChanges(), itemNew, meta)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -352,7 +362,7 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		return res
 	}
 
-	i, err := v.bs.get(v.collItems, v.collChanges, req.Key)
+	i, err := v.bs.get(v.CollItems(), v.CollChanges(), req.Key)
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -408,7 +418,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	var err error
 
 	v.Mutate(func(vm *vbucket) {
-		meta, err = vm.bs.getMeta(vm.collItems, vm.collChanges, req.Key)
+		meta, err = vm.bs.getMeta(vm.CollItems(), vm.CollChanges(), req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -432,7 +442,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		err = vm.bs.del(vm.collItems, vm.collChanges, req.Key, cas)
+		err = vm.bs.del(vm.CollItems(), vm.CollChanges(), req.Key, cas)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -488,7 +498,7 @@ func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 		return true
 	}
 
-	errVisit := v.bs.visitChanges(v.collChanges, casBytes(req.Cas), true, visitor)
+	errVisit := v.bs.visitChanges(v.CollChanges(), casBytes(req.Cas), true, visitor)
 
 	close(ch)
 
@@ -575,7 +585,8 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 		return true
 	}
 
-	if err := v.bs.visitItems(v.collItems, v.collChanges, req.Key, true, visitor); err != nil {
+	if err := v.bs.visitItems(v.CollItems(), v.CollChanges(),
+		req.Key, true, visitor); err != nil {
 		res = &gomemcached.MCResponse{Fatal: true}
 	}
 
@@ -755,10 +766,10 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
 	// TODO: Should this be under dst.Apply()/Mutate().
 
-	err := v.bs.rangeCopy(v.collItems, dst.bs, dst.collItems,
+	err := v.bs.rangeCopy(v.CollItems(), dst.bs, dst.CollItems(),
 		minKeyInclusive, maxKeyExclusive)
 	if err == nil {
-		err = v.bs.rangeCopy(v.collChanges, dst.bs, dst.collChanges,
+		err = v.bs.rangeCopy(v.CollChanges(), dst.bs, dst.CollChanges(),
 			minKeyInclusive, maxKeyExclusive)
 	}
 	if err != nil {
