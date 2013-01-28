@@ -143,6 +143,8 @@ func (s *bucketstore) dirty() {
 }
 
 func (s *bucketstore) vbucketColls(vbid uint16) (*gkvlite.Collection, *gkvlite.Collection) {
+	// TODO: Add a callback parameter, so we can ask the user to pause/update
+	// their collection references (such as on compaction).
 	i := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_ITEMS))
 	c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
 	return i, c
