@@ -25,7 +25,7 @@ type bucketstorereq struct {
 	res chan bool
 }
 
-type bucketstorestats struct {
+type bucketstorestats struct { // TODO: Unify stats naming conventions.
 	TotFlush uint64
 	TotRead  uint64
 	TotWrite uint64
