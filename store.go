@@ -101,27 +101,6 @@ func (s *bucketstore) Close() {
 	close(s.fch)
 }
 
-func (s *bucketstore) ReadAt(p []byte, off int64) (n int, err error) {
-	s.applyFile(func(bs *bucketstore) {
-		n, err = bs.file.ReadAt(p, off)
-	})
-	return n, err
-}
-
-func (s *bucketstore) WriteAt(p []byte, off int64) (n int, err error) {
-	s.applyFile(func(bs *bucketstore) {
-		n, err = bs.file.WriteAt(p, off)
-	})
-	return n, err
-}
-
-func (s *bucketstore) Stat() (fi os.FileInfo, err error) {
-	s.applyFile(func(bs *bucketstore) {
-		fi, err = bs.file.Stat()
-	})
-	return fi, err
-}
-
 func (s *bucketstore) flush() (err error) {
 	s.apply(func(sLocked *bucketstore) {
 		d := atomic.LoadInt64(&s.dirtiness)
@@ -171,7 +150,8 @@ func (s *bucketstore) getItem(items string, changes string,
 		// TODO: Use the Transient field in gkvlite to optimize away
 		// the double lookup here with memoization.
 		// TODO: What if a compaction happens in between the lookups,
-		// and the changes-feed no longer has the item?
+		// and the changes-feed no longer has the item?  Answer: compaction
+		// must not remove items that the key-index references.
 		cItem, err := s.coll(changes).GetItem(iItem.Val, withValue)
 		if err != nil {
 			return nil, err
@@ -255,8 +235,10 @@ func (s *bucketstore) set(items string, changes string,
 	if err := collChanges.Set(cBytes, vBytes); err != nil {
 		return err
 	}
-	// TODO: What if we flush between the items update and changes update?
-	// That could result in an inconsistent db file?
+	// TODO: What if we flush between the items update and changes
+	// update?  That could result in an inconsistent db file?
+	// Solution idea #1 is to have load-time fixup, that
+	// incorporates changes into the key-index.
 	if err := collItems.Set(newItem.key, cBytes); err != nil {
 		return err
 	}
@@ -275,8 +257,10 @@ func (s *bucketstore) del(items string, changes string,
 	if err := collChanges.Set(cBytes, []byte("")); err != nil {
 		return err
 	}
-	// TODO: What if we flush between the items update and changes update?
-	// That could result in an inconsistent db file?
+	// TODO: What if we flush between the items update and changes
+	// update?  That could result in an inconsistent db file?
+	// Solution idea #1 is to have load-time fixup, that
+	// incorporates changes into the key-index.
 	if err := collItems.Delete(key); err != nil {
 		return err
 	}
@@ -290,8 +274,10 @@ func (s *bucketstore) rangeCopy(srcColl string, dst *bucketstore, dstColl string
 	if err != nil {
 		return err
 	}
-	// TODO: What if we flush between the items update and changes update?
-	// That could result in an inconsistent db file?
+	// TODO: What if we flush between the items update and changes
+	// update?  That could result in an inconsistent db file?
+	// Solution idea #1 is to have load-time fixup, that
+	// incorporates changes into the key-index.
 	if minItem != nil {
 		if err := collRangeCopy(s.coll(srcColl), dst.coll(dstColl), minItem.Key,
 			minKeyInclusive, maxKeyExclusive); err != nil {
@@ -326,4 +312,27 @@ func collRangeCopy(src *gkvlite.Collection, dst *gkvlite.Collection,
 		return errVisit
 	}
 	return src.VisitItemsAscend(minKey, true, visitor)
+}
+
+// The following methods implement the gkvlite.StoreFile interface.
+
+func (s *bucketstore) ReadAt(p []byte, off int64) (n int, err error) {
+	s.applyFile(func(bs *bucketstore) {
+		n, err = bs.file.ReadAt(p, off)
+	})
+	return n, err
+}
+
+func (s *bucketstore) WriteAt(p []byte, off int64) (n int, err error) {
+	s.applyFile(func(bs *bucketstore) {
+		n, err = bs.file.WriteAt(p, off)
+	})
+	return n, err
+}
+
+func (s *bucketstore) Stat() (fi os.FileInfo, err error) {
+	s.applyFile(func(bs *bucketstore) {
+		fi, err = bs.file.Stat()
+	})
+	return fi, err
 }
