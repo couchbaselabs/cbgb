@@ -120,9 +120,7 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 func (v *vbucket) service(ch chan vbapplyreq) {
 	for r := range ch {
 		r.cb(v)
-		if r.res != nil {
-			close(r.res)
-		}
+		close(r.res)
 	}
 }
 
