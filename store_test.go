@@ -169,8 +169,8 @@ func TestSaveLoadMutations(t *testing.T) {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
 
-	vb := b1.getVBucket(2)
-	if vb.meta.LastCas != 5 {
+	vb1 := b1.getVBucket(2)
+	if vb1.meta.LastCas != 5 {
 		t.Errorf("expected reloaded LastCas to be 5")
 	}
 
@@ -213,6 +213,41 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	testExpectInts(t, r1, 2, []int{1, 2, 3, 5}, "after flush")
 
+	bss1 := vb1.bs.Stats()
+	if bss1 == nil {
+		t.Errorf("expected bucket store to have Stats()")
+	}
+	if bss1.TotFlush != 0 {
+		t.Errorf("expected bss1 to have 0 TotFlush")
+	}
+	if bss1.TotRead == 0 {
+		t.Errorf("expected bss1 to have >0 TotRead")
+	}
+	if bss1.TotWrite == 0 {
+		t.Errorf("expected bss1 to have >0 TotWrite")
+	}
+	if bss1.TotStat == 0 {
+		t.Errorf("expected bss1 to have >0 TotStat")
+	}
+	if bss1.FlushErrors != 0 {
+		t.Errorf("expected bss1 to have 0 FlushErrors")
+	}
+	if bss1.ReadErrors != 0 {
+		t.Errorf("expected bss1 to have 0 ReadErrors")
+	}
+	if bss1.WriteErrors != 0 {
+		t.Errorf("expected bss1 to have 0 WriteErrors")
+	}
+	if bss1.StatErrors != 0 {
+		t.Errorf("expected bss1 to have 0 StatErrors")
+	}
+	if bss1.ReadBytes == 0 {
+		t.Errorf("expected bss1 to have >0 ReadBytes")
+	}
+	if bss1.WriteBytes == 0 {
+		t.Errorf("expected bss1 to have >0 WriteBytes")
+	}
+
 	b1.Close()
 
 	b2, err := NewBucket(testBucketDir, time.Second)
@@ -233,39 +268,39 @@ func TestSaveLoadMutations(t *testing.T) {
 		t.Errorf("expected reloaded LastCas to be 10")
 	}
 
-	bss := vb2.bs.Stats()
-	if bss == nil {
+	bss2 := vb2.bs.Stats()
+	if bss2 == nil {
 		t.Errorf("expected bucket store to have Stats()")
 	}
-	if bss.TotFlush != 0 {
-		t.Errorf("expected bss to have 0 TotFlush")
+	if bss2.TotFlush != 0 {
+		t.Errorf("expected bss2 to have 0 TotFlush")
 	}
-	if bss.TotRead == 0 {
-		t.Errorf("expected bss to have >0 TotRead")
+	if bss2.TotRead == 0 {
+		t.Errorf("expected bss2 to have >0 TotRead")
 	}
-	if bss.TotWrite != 0 {
-		t.Errorf("expected bss to have 0 TotWrite")
+	if bss2.TotWrite != 0 {
+		t.Errorf("expected bss2 to have 0 TotWrite")
 	}
-	if bss.TotStat == 0 {
-		t.Errorf("expected bss to have >0 TotStat")
+	if bss2.TotStat == 0 {
+		t.Errorf("expected bss2 to have >0 TotStat")
 	}
-	if bss.FlushErrors != 0 {
-		t.Errorf("expected bss to have 0 FlushErrors")
+	if bss2.FlushErrors != 0 {
+		t.Errorf("expected bss2 to have 0 FlushErrors")
 	}
-	if bss.ReadErrors != 0 {
-		t.Errorf("expected bss to have 0 ReadErrors")
+	if bss2.ReadErrors != 0 {
+		t.Errorf("expected bss2 to have 0 ReadErrors")
 	}
-	if bss.WriteErrors != 0 {
-		t.Errorf("expected bss to have 0 WriteErrors")
+	if bss2.WriteErrors != 0 {
+		t.Errorf("expected bss2 to have 0 WriteErrors")
 	}
-	if bss.StatErrors != 0 {
-		t.Errorf("expected bss to have 0 StatErrors")
+	if bss2.StatErrors != 0 {
+		t.Errorf("expected bss2 to have 0 StatErrors")
 	}
-	if bss.ReadBytes == 0 {
-		t.Errorf("expected bss to have >0 ReadBytes")
+	if bss2.ReadBytes == 0 {
+		t.Errorf("expected bss2 to have >0 ReadBytes")
 	}
-	if bss.WriteBytes != 0 {
-		t.Errorf("expected bss to have 0 WriteBytes")
+	if bss2.WriteBytes != 0 {
+		t.Errorf("expected bss2 to have 0 WriteBytes")
 	}
 }
 
