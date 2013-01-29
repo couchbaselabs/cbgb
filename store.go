@@ -16,7 +16,7 @@ type bucketstore struct {
 	bsf           *bucketstorefile
 	ch            chan *bucketstorereq
 	dirtiness     int64
-	flushInterval time.Duration
+	flushInterval time.Duration // Time between flushes.
 
 	// Map of callbacks, which are invoked when we need the
 	// bucketstore client to pause its mutations and when we want to
@@ -26,11 +26,12 @@ type bucketstore struct {
 }
 
 type bucketstorefile struct {
-	path  string
-	file  *os.File
-	store *gkvlite.Store
-	ch    chan *bucketstorereq
-	stats bucketstorestats
+	path          string
+	file          *os.File
+	store         *gkvlite.Store
+	ch            chan *bucketstorereq
+	sleepInterval time.Duration // Time until we sleep, closing file until next request.
+	stats         bucketstorestats
 }
 
 type bucketstorereq struct {
@@ -48,21 +49,25 @@ type bucketstorestats struct { // TODO: Unify stats naming conventions.
 	ReadErrors  uint64
 	WriteErrors uint64
 	StatErrors  uint64
+	WakeErrors  uint64
 
 	ReadBytes  uint64
 	WriteBytes uint64
 }
 
-func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, error) {
+func newBucketStore(path string,
+	flushInterval time.Duration,
+	sleepInterval time.Duration) (*bucketstore, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, err
 	}
 
 	bsf := &bucketstorefile{
-		path: path,
-		file: file,
-		ch:   make(chan *bucketstorereq),
+		path:          path,
+		file:          file,
+		ch:            make(chan *bucketstorereq),
+		sleepInterval: sleepInterval,
 	}
 	go bsf.service()
 
@@ -363,11 +368,25 @@ func collRangeCopy(src *gkvlite.Collection, dst *gkvlite.Collection,
 // ------------------------------------------------------------
 
 func (bsf *bucketstorefile) service() {
-	defer bsf.file.Close()
+	defer func() {
+		if bsf.file != nil {
+			bsf.file.Close()
+		}
+	}()
 
-	for r := range bsf.ch { // TODO: Close file & quiesce when no activity.
-		r.cb()
-		close(r.res)
+	for {
+		select {
+		case r, ok := <-bsf.ch:
+			if !ok {
+				return
+			}
+			r.cb()
+			close(r.res)
+		case <-time.After(bsf.sleepInterval):
+			if bsf.Sleep() != nil {
+				return
+			}
+		}
 	}
 }
 
@@ -379,6 +398,30 @@ func (bsf *bucketstorefile) apply(cb func()) {
 
 func (bsf *bucketstorefile) Close() {
 	close(bsf.ch)
+}
+
+func (bsf *bucketstorefile) Sleep() error {
+	bsf.file.Close()
+	bsf.file = nil
+
+	// TODO: If we sleep for too long, then we should die.
+	r, ok := <-bsf.ch
+	if !ok {
+		return nil
+	}
+
+	file, err := os.OpenFile(bsf.path, os.O_RDWR|os.O_CREATE, 0600)
+	if err != nil {
+		// TODO: Log this siesta-wakeup / re-open error.
+		atomic.AddUint64(&bsf.stats.WakeErrors, 1)
+		bsf.Close()
+		return err
+	}
+	bsf.file = file
+
+	r.cb()
+	close(r.res)
+	return nil
 }
 
 // The following bucketstore methods implement the gkvlite.StoreFile
@@ -429,6 +472,7 @@ func (bss *bucketstorestats) Add(in *bucketstorestats) {
 	bss.ReadErrors += atomic.LoadUint64(&in.ReadErrors)
 	bss.WriteErrors += atomic.LoadUint64(&in.WriteErrors)
 	bss.StatErrors += atomic.LoadUint64(&in.StatErrors)
+	bss.WakeErrors += atomic.LoadUint64(&in.WakeErrors)
 
 	bss.ReadBytes += atomic.LoadUint64(&in.ReadBytes)
 	bss.WriteBytes += atomic.LoadUint64(&in.WriteBytes)

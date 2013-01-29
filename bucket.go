@@ -41,10 +41,13 @@ type Buckets struct {
 	dir           string // Directory where all buckets are stored.
 	lock          sync.Mutex
 	flushInterval time.Duration
+	sleepInterval time.Duration
 }
 
 // Build a new holder of buckets.
-func NewBuckets(dirForBuckets string, flushInterval time.Duration) (*Buckets, error) {
+func NewBuckets(dirForBuckets string,
+	flushInterval time.Duration,
+	sleepInterval time.Duration) (*Buckets, error) {
 	if !isDir(dirForBuckets) {
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
@@ -52,6 +55,7 @@ func NewBuckets(dirForBuckets string, flushInterval time.Duration) (*Buckets, er
 		buckets:       map[string]bucket{},
 		dir:           dirForBuckets,
 		flushInterval: flushInterval,
+		sleepInterval: sleepInterval,
 	}, nil
 }
 
@@ -74,7 +78,7 @@ func (b *Buckets) New(name string) (rv bucket, err error) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
-	if rv, err = NewBucket(bdir, b.flushInterval); err != nil {
+	if rv, err = NewBucket(bdir, b.flushInterval, b.sleepInterval); err != nil {
 		return nil, err
 	}
 
@@ -156,7 +160,9 @@ type livebucket struct {
 	observer     *broadcaster
 }
 
-func NewBucket(dirForBucket string, flushInterval time.Duration) (bucket, error) {
+func NewBucket(dirForBucket string,
+	flushInterval time.Duration,
+	sleepInterval time.Duration) (bucket, error) {
 	res := &livebucket{
 		availablech:  make(chan bool),
 		dir:          dirForBucket,
@@ -165,7 +171,7 @@ func NewBucket(dirForBucket string, flushInterval time.Duration) (bucket, error)
 	}
 	for i := 0; i < STORES_PER_BUCKET; i++ {
 		path := fmt.Sprintf("%s%c%v.store", dirForBucket, os.PathSeparator, i)
-		bs, err := newBucketStore(path, flushInterval)
+		bs, err := newBucketStore(path, flushInterval, sleepInterval)
 		if err != nil {
 			res.Close()
 			return nil, err
