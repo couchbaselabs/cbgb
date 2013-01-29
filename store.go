@@ -44,6 +44,8 @@ type bucketstorestats struct { // TODO: Unify stats naming conventions.
 	TotRead  uint64
 	TotWrite uint64
 	TotStat  uint64
+	TotSleep uint64
+	TotWake  uint64
 
 	FlushErrors uint64
 	ReadErrors  uint64
@@ -401,6 +403,8 @@ func (bsf *bucketstorefile) Close() {
 }
 
 func (bsf *bucketstorefile) Sleep() error {
+	atomic.AddUint64(&bsf.stats.TotSleep, 1)
+
 	bsf.file.Close()
 	bsf.file = nil
 
@@ -409,6 +413,8 @@ func (bsf *bucketstorefile) Sleep() error {
 	if !ok {
 		return nil
 	}
+
+	atomic.AddUint64(&bsf.stats.TotWake, 1)
 
 	file, err := os.OpenFile(bsf.path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -467,6 +473,8 @@ func (bss *bucketstorestats) Add(in *bucketstorestats) {
 	bss.TotRead += atomic.LoadUint64(&in.TotRead)
 	bss.TotWrite += atomic.LoadUint64(&in.TotWrite)
 	bss.TotStat += atomic.LoadUint64(&in.TotStat)
+	bss.TotSleep += atomic.LoadUint64(&in.TotSleep)
+	bss.TotWake += atomic.LoadUint64(&in.TotWake)
 
 	bss.FlushErrors += atomic.LoadUint64(&in.FlushErrors)
 	bss.ReadErrors += atomic.LoadUint64(&in.ReadErrors)

@@ -453,11 +453,27 @@ func TestCloseInterval(t *testing.T) {
 	}
 	r1 := &reqHandler{b1}
 
-	time.Sleep(10 * time.Millisecond)
-
 	err = b1.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
+
+	time.Sleep(10 * time.Millisecond)
+
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
+
+	vb1 := b1.getVBucket(2)
+	bss1 := vb1.bs.Stats()
+	if bss1 == nil {
+		t.Errorf("expected bucket store to have Stats()")
+	}
+	if bss1.TotSleep != 1 {
+		t.Errorf("expected bss1 to have 1 TotSleep")
+	}
+	if bss1.TotWake != 1 {
+		t.Errorf("expected bss1 to have 1 TotWake")
+	}
+	if bss1.WakeErrors != 0 {
+		t.Errorf("expected bss1 to have 0 WakeErrors")
+	}
 }
