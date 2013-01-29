@@ -6,6 +6,7 @@ import (
 	"os"
 	"sync/atomic"
 	"time"
+	"unsafe"
 
 	"github.com/steveyen/gkvlite"
 )
@@ -13,11 +14,12 @@ import (
 type collItemsChanges func() (*gkvlite.Collection, *gkvlite.Collection)
 
 type bucketstore struct {
-	bsf             *bucketstorefile
+	bsf             unsafe.Pointer // *bucketstorefile
 	ch              chan *bucketstorereq
 	dirtiness       int64
 	flushInterval   time.Duration // Time between checking whether to flush.
 	compactInterval time.Duration // Time between checking whether to compact.
+	stats           *bucketstorestats
 
 	// Map of callbacks, which are invoked when we need the
 	// bucketstore client to pause its mutations and when we want to
@@ -32,7 +34,7 @@ type bucketstorefile struct {
 	store         *gkvlite.Store
 	ch            chan *bucketstorereq
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
-	stats         bucketstorestats
+	stats         *bucketstorestats
 }
 
 type bucketstorereq struct {
@@ -67,11 +69,13 @@ func newBucketStore(path string,
 		return nil, err
 	}
 
+	bss := &bucketstorestats{}
 	bsf := &bucketstorefile{
 		path:          path,
 		file:          file,
 		ch:            make(chan *bucketstorereq),
 		sleepInterval: sleepInterval,
+		stats:         bss,
 	}
 	go bsf.service()
 
@@ -83,15 +87,20 @@ func newBucketStore(path string,
 	bsf.store = store
 
 	res := &bucketstore{
-		bsf:               bsf,
+		bsf:               unsafe.Pointer(bsf),
 		ch:                make(chan *bucketstorereq),
 		flushInterval:     flushInterval,
 		compactInterval:   compactInterval,
+		stats:             bss,
 		mapPauseSwapColls: make(map[uint16]func(collItemsChanges)),
 	}
 	go res.service()
 
 	return res, nil
+}
+
+func (s *bucketstore) BSF() *bucketstorefile {
+	return (*bucketstorefile)(atomic.LoadPointer(&s.bsf))
 }
 
 func (s *bucketstore) service() {
@@ -112,16 +121,19 @@ func (s *bucketstore) service() {
 		case <-tickerF.C:
 			d := atomic.LoadInt64(&s.dirtiness)
 			if d > 0 {
-				err := s.bsf.store.Flush()
+				err := s.BSF().store.Flush()
 				if err != nil {
 					// TODO: Log flush error.
-					atomic.AddUint64(&s.bsf.stats.FlushErrors, 1)
+					atomic.AddUint64(&s.stats.FlushErrors, 1)
 				} else {
 					atomic.AddInt64(&s.dirtiness, -d)
 				}
 			}
 		case <-tickerC.C:
-			s.compact()
+			bsfCompact, err := s.compact()
+			if err != nil {
+				atomic.StorePointer(&s.bsf, unsafe.Pointer(bsfCompact))
+			}
 		}
 	}
 }
@@ -133,20 +145,22 @@ func (s *bucketstore) apply(cb func()) {
 }
 
 func (s *bucketstore) Close() {
-	close(s.ch)
-	s.bsf.Close()
+	s.apply(func() {
+		close(s.ch)
+		s.BSF().Close()
+	})
 }
 
 func (s *bucketstore) Stats() *bucketstorestats {
 	bss := &bucketstorestats{}
-	bss.Add(&s.bsf.stats)
+	bss.Add(s.stats)
 	return bss
 }
 
 func (s *bucketstore) Flush() (err error) {
 	s.apply(func() {
 		d := atomic.LoadInt64(&s.dirtiness)
-		err = s.bsf.store.Flush()
+		err = s.BSF().store.Flush()
 		if err == nil {
 			atomic.AddInt64(&s.dirtiness, -d)
 		}
@@ -158,7 +172,8 @@ func (s *bucketstore) dirty() {
 	atomic.AddInt64(&s.dirtiness, 1)
 }
 
-func (s *bucketstore) compact() {
+func (s *bucketstore) compact() (*bucketstorefile, error) {
+	return s.BSF(), nil
 }
 
 func (s *bucketstore) collItemsChanges(id uint16,
@@ -173,19 +188,19 @@ func (s *bucketstore) collItemsChanges(id uint16,
 }
 
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
-	c := s.bsf.store.GetCollection(collName)
+	c := s.BSF().store.GetCollection(collName)
 	if c == nil {
-		c = s.bsf.store.SetCollection(collName, nil)
+		c = s.BSF().store.SetCollection(collName, nil)
 	}
 	return c
 }
 
 func (s *bucketstore) collNames() []string {
-	return s.bsf.store.GetCollectionNames()
+	return s.BSF().store.GetCollectionNames()
 }
 
 func (s *bucketstore) collExists(collName string) bool {
-	return s.bsf.store.GetCollection(collName) != nil
+	return s.BSF().store.GetCollection(collName) != nil
 }
 
 func (s *bucketstore) get(items *gkvlite.Collection, changes *gkvlite.Collection,
