@@ -17,12 +17,16 @@ func main() {
 		cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket")
 	flushInterval := flag.Int("flush-interval",
 		10, "seconds between flushing or persisting mutations to storage")
+	sleepInterval := flag.Int("sleep-interval",
+		100, "seconds until files are closed (to be reopened on the next request)")
 
 	flag.Parse()
 
 	go cbgb.MutationLogger(mutationLogCh)
 
-	buckets, err := cbgb.NewBuckets(*data, time.Second * time.Duration(*flushInterval))
+	buckets, err := cbgb.NewBuckets(*data,
+		time.Second * time.Duration(*flushInterval),
+		time.Second * time.Duration(*sleepInterval))
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
