@@ -34,7 +34,7 @@ type vbapplyreq struct {
 type vbucket struct {
 	parent      bucket
 	vbid        uint16
-	meta        VBMeta
+	meta        VBMeta // TODO: Switch this to atomic unsafe.Pointer.
 	bs          *bucketstore
 	ach         chan vbapplyreq // To access top-level vbucket fields & stats.
 	mch         chan vbapplyreq // To mutate the items/changes collections.
@@ -177,6 +177,7 @@ func (v *vbucket) Mutate(cb func(*vbucket)) {
 
 func (v *vbucket) GetVBState() (res VBState) {
 	v.Apply(func(vbLocked *vbucket) {
+		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
 		res = parseVBState(vbLocked.meta.State)
 	})
 	return res
@@ -527,6 +528,7 @@ func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 
 func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	v.Apply(func(vbLocked *vbucket) {
+		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
 		vbLocked.stats.Ops++
 		if j, err := json.Marshal(&vbLocked.meta); err == nil {
 			res = &gomemcached.MCResponse{Body: j}
@@ -540,6 +542,7 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 	v.Apply(func(vbLocked *vbucket) {
+		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
 		vbLocked.stats.Ops++
 		if req.Body != nil {
 			meta := &VBMeta{}
@@ -547,6 +550,8 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 				return
 			}
 			vbLocked.meta.update(meta)
+			// TODO: record the meta change in the changes stream.
+			// TODO: flush.
 			res = &gomemcached.MCResponse{}
 		}
 	})

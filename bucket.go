@@ -247,6 +247,7 @@ func (b *livebucket) Flush() error {
 func (b *livebucket) Load() (err error) {
 	for _, bs := range b.bucketstores {
 		for _, collName := range bs.collNames() {
+			// TODO: Load based on changes, not on items?
 			if !strings.HasSuffix(collName, COLL_SUFFIX_ITEMS) {
 				continue
 			}
