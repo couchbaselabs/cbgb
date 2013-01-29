@@ -163,6 +163,8 @@ type livebucket struct {
 func NewBucket(dirForBucket string,
 	flushInterval time.Duration,
 	sleepInterval time.Duration) (bucket, error) {
+	compactInterval := 10 * time.Second // TODO: parametrize compaction interval.
+
 	res := &livebucket{
 		availablech:  make(chan bool),
 		dir:          dirForBucket,
@@ -171,7 +173,7 @@ func NewBucket(dirForBucket string,
 	}
 	for i := 0; i < STORES_PER_BUCKET; i++ {
 		path := fmt.Sprintf("%s%c%v.store", dirForBucket, os.PathSeparator, i)
-		bs, err := newBucketStore(path, flushInterval, sleepInterval)
+		bs, err := newBucketStore(path, flushInterval, compactInterval, sleepInterval)
 		if err != nil {
 			res.Close()
 			return nil, err

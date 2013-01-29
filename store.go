@@ -13,10 +13,11 @@ import (
 type collItemsChanges func() (*gkvlite.Collection, *gkvlite.Collection)
 
 type bucketstore struct {
-	bsf           *bucketstorefile
-	ch            chan *bucketstorereq
-	dirtiness     int64
-	flushInterval time.Duration // Time between flushes.
+	bsf             *bucketstorefile
+	ch              chan *bucketstorereq
+	dirtiness       int64
+	flushInterval   time.Duration // Time between checking whether to flush.
+	compactInterval time.Duration // Time between checking whether to compact.
 
 	// Map of callbacks, which are invoked when we need the
 	// bucketstore client to pause its mutations and when we want to
@@ -59,6 +60,7 @@ type bucketstorestats struct { // TODO: Unify stats naming conventions.
 
 func newBucketStore(path string,
 	flushInterval time.Duration,
+	compactInterval time.Duration,
 	sleepInterval time.Duration) (*bucketstore, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -84,6 +86,7 @@ func newBucketStore(path string,
 		bsf:               bsf,
 		ch:                make(chan *bucketstorereq),
 		flushInterval:     flushInterval,
+		compactInterval:   compactInterval,
 		mapPauseSwapColls: make(map[uint16]func(collItemsChanges)),
 	}
 	go res.service()
@@ -92,8 +95,11 @@ func newBucketStore(path string,
 }
 
 func (s *bucketstore) service() {
-	ticker := time.NewTicker(s.flushInterval)
-	defer ticker.Stop()
+	tickerF := time.NewTicker(s.flushInterval)
+	defer tickerF.Stop()
+
+	tickerC := time.NewTicker(s.compactInterval)
+	defer tickerC.Stop()
 
 	for {
 		select {
@@ -103,7 +109,7 @@ func (s *bucketstore) service() {
 			}
 			r.cb()
 			close(r.res)
-		case <-ticker.C:
+		case <-tickerF.C:
 			d := atomic.LoadInt64(&s.dirtiness)
 			if d > 0 {
 				err := s.bsf.store.Flush()
@@ -114,6 +120,8 @@ func (s *bucketstore) service() {
 					atomic.AddInt64(&s.dirtiness, -d)
 				}
 			}
+		case <-tickerC.C:
+			s.compact()
 		}
 	}
 }
@@ -148,6 +156,9 @@ func (s *bucketstore) Flush() (err error) {
 
 func (s *bucketstore) dirty() {
 	atomic.AddInt64(&s.dirtiness, 1)
+}
+
+func (s *bucketstore) compact() {
 }
 
 func (s *bucketstore) collItemsChanges(id uint16,
