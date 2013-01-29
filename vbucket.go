@@ -89,9 +89,17 @@ var dispatchTable = [256]dispatchFun{
 
 const observerBroadcastMax = 100
 
-func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (*vbucket, error) {
-	collItems, collChanges := bs.vbucketColls(vbid)
-	rv := &vbucket{
+func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
+	pauseSwapColls := func(cic collItemsChanges) {
+		rv.Mutate(func(vbLocked *vbucket) {
+			collItems, collChanges := cic()
+			atomic.StorePointer(&rv.collItems, unsafe.Pointer(collItems))
+			atomic.StorePointer(&rv.collChanges, unsafe.Pointer(collChanges))
+		})
+	}
+
+	collItems, collChanges := bs.collItemsChanges(vbid, pauseSwapColls)
+	rv = &vbucket{
 		parent:      parent,
 		vbid:        vbid,
 		meta:        VBMeta{Id: vbid, State: VBDead.String()},

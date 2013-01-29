@@ -10,11 +10,19 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
+type collItemsChanges func() (*gkvlite.Collection, *gkvlite.Collection)
+
 type bucketstore struct {
 	bsf           *bucketstorefile
 	ch            chan *bucketstorereq
 	dirtiness     int64
 	flushInterval time.Duration
+
+	// Map of callbacks, which are invoked when we need the
+	// bucketstore client to pause its mutations and when we want to
+	// provide new items and changes collections to the bucketstore
+	// client (such as because of compaction).
+	mapPauseSwapColls map[uint16]func(collItemsChanges)
 }
 
 type bucketstorefile struct {
@@ -66,9 +74,10 @@ func newBucketStore(path string, flushInterval time.Duration) (*bucketstore, err
 	bsf.store = store
 
 	res := &bucketstore{
-		bsf:           bsf,
-		ch:            make(chan *bucketstorereq),
-		flushInterval: flushInterval,
+		bsf:               bsf,
+		ch:                make(chan *bucketstorereq),
+		flushInterval:     flushInterval,
+		mapPauseSwapColls: make(map[uint16]func(collItemsChanges)),
 	}
 	go res.service()
 
@@ -134,11 +143,14 @@ func (s *bucketstore) dirty() {
 	atomic.AddInt64(&s.dirtiness, 1)
 }
 
-func (s *bucketstore) vbucketColls(vbid uint16) (*gkvlite.Collection, *gkvlite.Collection) {
-	// TODO: Add a callback parameter, so we can ask the user to pause/update
-	// their collection references (such as on compaction).
-	i := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_ITEMS))
-	c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
+func (s *bucketstore) collItemsChanges(id uint16,
+	psc func(collItemsChanges)) (*gkvlite.Collection, *gkvlite.Collection) {
+	var i, c *gkvlite.Collection
+	s.apply(func() {
+		i = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_ITEMS))
+		c = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_CHANGES))
+		s.mapPauseSwapColls[id] = psc
+	})
 	return i, c
 }
 
