@@ -416,3 +416,48 @@ func testFlushCloseInterval(t *testing.T,
 	}
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 }
+
+func TestCloseInterval(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir, time.Millisecond, time.Millisecond)
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	if b0.SetVBState(2, VBActive) != nil {
+		t.Errorf("expected SetVBState to work")
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "initial data load")
+
+	err = b0.Flush()
+	if err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	time.Sleep(10 * time.Millisecond)
+
+	testLoadInts(t, r0, 2, 1)
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "data")
+
+	b0.Close()
+
+	b1, err := NewBucket(testBucketDir, time.Millisecond, time.Millisecond)
+	if err != nil {
+		t.Errorf("expected NewBucket re-open to work, err: %v", err)
+	}
+	r1 := &reqHandler{b1}
+
+	time.Sleep(10 * time.Millisecond)
+
+	err = b1.Load()
+	if err != nil {
+		t.Errorf("expected Load to work, err: %v", err)
+	}
+	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
+}
