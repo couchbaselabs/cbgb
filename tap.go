@@ -42,10 +42,10 @@ func doTap(b bucket, req *gomemcached.MCRequest,
 			if vb := c.getVBucket(); vb != nil {
 				if c.newState == VBActive {
 					vb.observer.Register(mch)
-					registered[vb.meta.Id] = true
+					registered[vb.vbid] = true
 				} else if vb != nil {
 					vb.observer.Unregister(mch)
-					delete(registered, vb.meta.Id)
+					delete(registered, vb.vbid)
 				}
 			}
 		case mi := <-mch:

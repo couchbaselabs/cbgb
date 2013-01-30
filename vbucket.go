@@ -34,7 +34,7 @@ type vbapplyreq struct {
 type vbucket struct {
 	parent      bucket
 	vbid        uint16
-	meta        VBMeta // TODO: Switch this to atomic unsafe.Pointer.
+	meta        unsafe.Pointer // *VBMeta
 	bs          *bucketstore
 	ach         chan vbapplyreq // To access top-level vbucket fields & stats.
 	mch         chan vbapplyreq // To mutate the items/changes collections.
@@ -102,7 +102,7 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 	rv = &vbucket{
 		parent:      parent,
 		vbid:        vbid,
-		meta:        VBMeta{Id: vbid, State: VBDead.String()},
+		meta:        unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
 		bs:          bs,
 		ach:         make(chan vbapplyreq),
 		mch:         make(chan vbapplyreq),
@@ -115,6 +115,10 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 	go rv.service(rv.mch)
 
 	return rv, nil
+}
+
+func (v *vbucket) Meta() *VBMeta {
+	return (*VBMeta)(atomic.LoadPointer(&v.meta))
 }
 
 func (v *vbucket) service(ch chan vbapplyreq) {
@@ -176,22 +180,18 @@ func (v *vbucket) Mutate(cb func(*vbucket)) {
 }
 
 func (v *vbucket) GetVBState() (res VBState) {
-	v.Apply(func(vbLocked *vbucket) {
-		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
-		res = parseVBState(vbLocked.meta.State)
-	})
-	return res
+	return parseVBState(v.Meta().State)
 }
 
 func (v *vbucket) SetVBState(newState VBState,
-	cb func(oldState VBState)) (oldState VBState, err error) {
-	oldState = VBDead
+	cb func(prevState VBState)) (prevState VBState, err error) {
+	prevState = VBDead
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.Mutate(func(vm *vbucket) {
-			oldState = parseVBState(vbLocked.meta.State)
+			prevMeta := vbLocked.Meta()
+			prevState = parseVBState(prevMeta.State)
 
-			newMeta := &VBMeta{Id: v.vbid}
-			newMeta.update(&vbLocked.meta)
+			newMeta := prevMeta.Copy()
 			newMeta.State = newState.String()
 
 			var j []byte
@@ -203,23 +203,25 @@ func (v *vbucket) SetVBState(newState VBState,
 			if err = vm.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
 				return
 			}
-			if err = vm.bs.Flush(); err != nil {
-				return
-			}
-			vbLocked.meta.update(newMeta)
+			atomic.StorePointer(&vbLocked.meta, unsafe.Pointer(newMeta))
 			if cb != nil {
-				cb(oldState)
+				cb(prevState)
 			}
 		})
 	})
-	return oldState, err
+	if err != nil {
+		return prevState, err
+	}
+
+	// Flush outside the Apply/Mutate sections to avoid deadlock, in
+	// case the bucketstore calls us back to swap collections.
+	return prevState, v.bs.Flush()
 }
 
 func (v *vbucket) load() (err error) {
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.Mutate(func(vm *vbucket) {
-			meta := &VBMeta{Id: v.vbid}
-			meta.update(&vbLocked.meta)
+			meta := vbLocked.Meta().Copy()
 
 			x, err := vm.bs.coll(COLL_VBMETA).GetItem(
 				[]byte(fmt.Sprintf("%v", v.vbid)), true)
@@ -239,13 +241,17 @@ func (v *vbucket) load() (err error) {
 				return
 			}
 			if i != nil {
-				meta.LastCas, err = casBytesParse(i.Key)
+				var lastCas uint64
+				lastCas, err = casBytesParse(i.Key)
 				if err != nil {
 					return
 				}
+				if meta.LastCas < lastCas {
+					meta.LastCas = lastCas
+				}
 			}
 
-			vbLocked.meta.update(meta)
+			atomic.StorePointer(&vbLocked.meta, unsafe.Pointer(meta))
 
 			// TODO: Need to update v.stats.Items.
 			// TODO: What if we're loading something out of allowed range?
@@ -256,22 +262,21 @@ func (v *vbucket) load() (err error) {
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	v.Apply(func(vbLocked *vbucket) {
-		if parseVBState(vbLocked.meta.State) == VBActive { // TODO: handle key
-			dest.Add(&vbLocked.stats)
-		}
-	})
+	if parseVBState(v.Meta().State) == VBActive { // TODO: handle key
+		dest.Add(&v.stats)
+	}
 }
 
 func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
-	if v.meta.KeyRange != nil {
-		if len(v.meta.KeyRange.MinKeyInclusive) > 0 &&
-			bytes.Compare(req.Key, v.meta.KeyRange.MinKeyInclusive) < 0 {
+	meta := v.Meta()
+	if meta.KeyRange != nil {
+		if len(meta.KeyRange.MinKeyInclusive) > 0 &&
+			bytes.Compare(req.Key, meta.KeyRange.MinKeyInclusive) < 0 {
 			v.stats.ErrNotMyRange++
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
-		if len(v.meta.KeyRange.MaxKeyExclusive) > 0 &&
-			bytes.Compare(req.Key, v.meta.KeyRange.MaxKeyExclusive) >= 0 {
+		if len(meta.KeyRange.MaxKeyExclusive) > 0 &&
+			bytes.Compare(req.Key, meta.KeyRange.MaxKeyExclusive) >= 0 {
 			v.stats.ErrNotMyRange++
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
@@ -288,19 +293,18 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 
 		res = vbLocked.checkRange(req)
 		if res == nil {
-			vbLocked.meta.LastCas++
-			itemCas = vbLocked.meta.LastCas
+			itemCas = atomic.AddUint64(&vbLocked.Meta().LastCas, 1)
 		}
 	})
 	if res != nil {
 		return res
 	}
 
-	var meta *item
+	var prevMeta *item
 	var err error
 
 	v.Mutate(func(vm *vbucket) {
-		meta, err = vm.bs.getMeta(vm.CollItems(), vm.CollChanges(), req.Key)
+		prevMeta, err = vm.bs.getMeta(vm.CollItems(), vm.CollChanges(), req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -308,7 +312,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			}
 			return
 		}
-		if req.Cas != 0 && (meta == nil || meta.cas != req.Cas) {
+		if req.Cas != 0 && (prevMeta == nil || prevMeta.cas != req.Cas) {
 			err = errors.New("CAS mismatch")
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
@@ -324,7 +328,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			data: req.Body,
 		}
 
-		err = vm.bs.set(vm.CollItems(), vm.CollChanges(), itemNew, meta)
+		err = vm.bs.set(vm.CollItems(), vm.CollChanges(), itemNew, prevMeta)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -341,7 +345,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		if err != nil {
 			vbLocked.stats.ErrStore++
 		} else {
-			if meta != nil {
+			if prevMeta != nil {
 				vbLocked.stats.Updates++
 			} else {
 				vbLocked.stats.Creates++
@@ -413,19 +417,18 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 		res = vbLocked.checkRange(req)
 		if res == nil {
-			vbLocked.meta.LastCas++
-			cas = vbLocked.meta.LastCas
+			cas = atomic.AddUint64(&vbLocked.Meta().LastCas, 1)
 		}
 	})
 	if res != nil {
 		return res
 	}
 
-	var meta *item
+	var prevMeta *item
 	var err error
 
 	v.Mutate(func(vm *vbucket) {
-		meta, err = vm.bs.getMeta(vm.CollItems(), vm.CollChanges(), req.Key)
+		prevMeta, err = vm.bs.getMeta(vm.CollItems(), vm.CollChanges(), req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -433,7 +436,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			}
 			return
 		}
-		if req.Cas != 0 && (meta == nil || meta.cas != req.Cas) {
+		if req.Cas != 0 && (prevMeta == nil || prevMeta.cas != req.Cas) {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body:   []byte(fmt.Sprintf("CAS mismatch")),
@@ -441,7 +444,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		if meta == nil {
+		if prevMeta == nil {
 			if req.Opcode.IsQuiet() {
 				return
 			}
@@ -465,12 +468,12 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	v.Apply(func(vbLocked *vbucket) {
 		if err != nil {
 			vbLocked.stats.ErrStore++
-		} else if meta != nil {
+		} else if prevMeta != nil {
 			vbLocked.stats.Items--
 		}
 	})
 
-	if err == nil && meta != nil {
+	if err == nil && prevMeta != nil {
 		v.observer.Submit(mutation{v.vbid, req.Key, cas, true})
 	}
 
@@ -530,7 +533,7 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 	v.Apply(func(vbLocked *vbucket) {
 		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
 		vbLocked.stats.Ops++
-		if j, err := json.Marshal(&vbLocked.meta); err == nil {
+		if j, err := json.Marshal(vbLocked.Meta()); err == nil {
 			res = &gomemcached.MCResponse{Body: j}
 		} else {
 			res = &gomemcached.MCResponse{Body: []byte("{}")}
@@ -549,7 +552,8 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 			if err := json.Unmarshal(req.Body, meta); err != nil {
 				return
 			}
-			vbLocked.meta.update(meta)
+			atomic.StorePointer(&vbLocked.meta,
+				unsafe.Pointer(vbLocked.Meta().Copy().update(meta)))
 			// TODO: record the meta change in the changes stream.
 			// TODO: flush.
 			res = &gomemcached.MCResponse{}
@@ -712,7 +716,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 		vbid := uint16(splits[splitIdx].VBucketId)
 		var vb *vbucket
 		created := false
-		if vbid != v.meta.Id {
+		if vbid != v.Meta().Id {
 			vb, _ = v.parent.CreateVBucket(vbid)
 			created = true
 		}
@@ -725,7 +729,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 		if vb != nil {
 			vb.Apply(func(vbLocked *vbucket) {
-				if parseVBState(vbLocked.meta.State) == VBDead {
+				if parseVBState(vbLocked.Meta().State) == VBDead {
 					transferSplits(splitIdx + 1)
 					if res.Status == gomemcached.SUCCESS {
 						err := v.rangeCopyTo(vbLocked,
@@ -743,7 +747,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 						Status: gomemcached.EINVAL,
 						Body: []byte(fmt.Sprintf("Error split-range, vbucket: %v,"+
 							" state not initially dead or was incorrect,"+
-							" was: %v, req: %v", vbid, vbLocked.meta.State, splits)),
+							" was: %v, req: %v", vbid, vbLocked.Meta().State, splits)),
 					}
 				}
 			})
@@ -764,8 +768,9 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 	if res.Status == gomemcached.SUCCESS {
 		v.Apply(func(vbLocked *vbucket) {
-			vbLocked.meta.State = VBDead.String()
-			vbLocked.meta.KeyRange = &VBKeyRange{}
+			meta := vbLocked.Meta()
+			meta.State = VBDead.String()
+			meta.KeyRange = &VBKeyRange{}
 			// TODO: Need to flush?
 			// TODO: Need a new 'purge vbucket' command?
 		})
@@ -787,10 +792,13 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 		return err
 	}
 
-	dst.meta.update(&v.meta)
-	dst.meta.KeyRange = &VBKeyRange{
+	dstMeta := dst.Meta().Copy()
+	dstMeta.update(v.Meta())
+	dstMeta.KeyRange = &VBKeyRange{
 		MinKeyInclusive: minKeyInclusive,
 		MaxKeyExclusive: maxKeyExclusive,
 	}
+	atomic.StorePointer(&dst.meta, unsafe.Pointer(dstMeta))
+
 	return nil
 }

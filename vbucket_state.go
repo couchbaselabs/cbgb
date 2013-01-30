@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"sync/atomic"
 )
 
 type VBState uint8
@@ -67,10 +68,15 @@ func (t *VBMeta) Equal(u *VBMeta) bool {
 		t.KeyRange.Equal(u.KeyRange)
 }
 
-func (t *VBMeta) update(from *VBMeta) {
+func (t *VBMeta) Copy() *VBMeta {
+	return (&VBMeta{Id: t.Id}).update(t)
+}
+
+func (t *VBMeta) update(from *VBMeta) *VBMeta {
 	t.State = parseVBState(from.State).String()
-	if t.LastCas < from.LastCas {
-		t.LastCas = from.LastCas
+	fromCas := atomic.LoadUint64(&from.LastCas)
+	if atomic.LoadUint64(&t.LastCas) < fromCas {
+		atomic.StoreUint64(&t.LastCas, fromCas)
 	}
 	t.KeyRange = nil
 	if from.KeyRange != nil {
@@ -79,4 +85,5 @@ func (t *VBMeta) update(from *VBMeta) {
 			MaxKeyExclusive: from.KeyRange.MaxKeyExclusive,
 		}
 	}
+	return t
 }

@@ -944,9 +944,9 @@ func TestVBMeta(t *testing.T) {
 		}
 
 		if x.expVBMeta != nil {
-			if !x.expVBMeta.Equal(&vb.meta) {
+			if !x.expVBMeta.Equal(vb.Meta()) {
 				t.Errorf("Test %v, expected vbmeta for %v to be\n%#v\ngot\n%#v",
-					i, x.op, x.expVBMeta, vb.meta)
+					i, x.op, x.expVBMeta, vb.Meta())
 			}
 		}
 	}
