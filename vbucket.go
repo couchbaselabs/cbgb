@@ -194,6 +194,10 @@ func (v *vbucket) SetVBState(newState VBState,
 			newMeta := prevMeta.Copy()
 			newMeta.State = newState.String()
 
+			// TODO: reflect VBState change into changes stream.  Need
+			// to ensure a Flush between changes stream update and
+			// COLL_VBMETA update is atomic.
+
 			var j []byte
 			j, err = json.Marshal(newMeta)
 			if err != nil {
@@ -293,6 +297,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 
 		res = vbLocked.checkRange(req)
 		if res == nil {
+			// TODO: Consider moving LastCas out of meta due to races?
 			itemCas = atomic.AddUint64(&vbLocked.Meta().LastCas, 1)
 		}
 	})
@@ -417,6 +422,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 		res = vbLocked.checkRange(req)
 		if res == nil {
+			// TODO: Consider moving LastCas out of meta due to races?
 			cas = atomic.AddUint64(&vbLocked.Meta().LastCas, 1)
 		}
 	})
