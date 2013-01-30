@@ -188,7 +188,7 @@ func (v *vbucket) SetVBState(newState VBState,
 	prevState = VBDead
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.Mutate(func(vm *vbucket) {
-			prevMeta := vbLocked.Meta()
+			prevMeta := vm.Meta()
 			prevState = parseVBState(prevMeta.State)
 
 			newMeta := prevMeta.Copy()
@@ -207,7 +207,7 @@ func (v *vbucket) SetVBState(newState VBState,
 			if err = vm.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
 				return
 			}
-			atomic.StorePointer(&vbLocked.meta, unsafe.Pointer(newMeta))
+			atomic.StorePointer(&vm.meta, unsafe.Pointer(newMeta))
 			if cb != nil {
 				cb(prevState)
 			}
@@ -225,7 +225,7 @@ func (v *vbucket) SetVBState(newState VBState,
 func (v *vbucket) load() (err error) {
 	v.Apply(func(vbLocked *vbucket) {
 		vbLocked.Mutate(func(vm *vbucket) {
-			meta := vbLocked.Meta().Copy()
+			meta := vm.Meta().Copy()
 
 			x, err := vm.bs.coll(COLL_VBMETA).GetItem(
 				[]byte(fmt.Sprintf("%v", v.vbid)), true)
@@ -255,7 +255,7 @@ func (v *vbucket) load() (err error) {
 				}
 			}
 
-			atomic.StorePointer(&vbLocked.meta, unsafe.Pointer(meta))
+			atomic.StorePointer(&vm.meta, unsafe.Pointer(meta))
 
 			// TODO: Need to update v.stats.Items.
 			// TODO: What if we're loading something out of allowed range?
@@ -537,7 +537,6 @@ func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 
 func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	v.Apply(func(vbLocked *vbucket) {
-		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
 		vbLocked.stats.Ops++
 		if j, err := json.Marshal(vbLocked.Meta()); err == nil {
 			res = &gomemcached.MCResponse{Body: j}
@@ -551,19 +550,20 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 	v.Apply(func(vbLocked *vbucket) {
-		// TODO: Might also need to Mutate() for vbGetMeta/vbSetVBMeta race avoidance.
-		vbLocked.stats.Ops++
-		if req.Body != nil {
-			meta := &VBMeta{}
-			if err := json.Unmarshal(req.Body, meta); err != nil {
-				return
+		vbLocked.Mutate(func(vm *vbucket) {
+			vbLocked.stats.Ops++
+			if req.Body != nil {
+				meta := &VBMeta{}
+				if err := json.Unmarshal(req.Body, meta); err != nil {
+					return
+				}
+				atomic.StorePointer(&vm.meta,
+					unsafe.Pointer(vm.Meta().Copy().update(meta)))
+				// TODO: record the meta change in the changes stream.
+				// TODO: flush.
+				res = &gomemcached.MCResponse{}
 			}
-			atomic.StorePointer(&vbLocked.meta,
-				unsafe.Pointer(vbLocked.Meta().Copy().update(meta)))
-			// TODO: record the meta change in the changes stream.
-			// TODO: flush.
-			res = &gomemcached.MCResponse{}
-		}
+		})
 	})
 	return res
 }
