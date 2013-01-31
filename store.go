@@ -15,7 +15,7 @@ type collItemsChanges func() (*gkvlite.Collection, *gkvlite.Collection)
 
 type bucketstore struct {
 	bsf             unsafe.Pointer // *bucketstorefile
-	ch              chan *bucketstorereq
+	ch              chan *funreq
 	dirtiness       int64
 	flushInterval   time.Duration // Time between checking whether to flush.
 	compactInterval time.Duration // Time between checking whether to compact.
@@ -32,14 +32,9 @@ type bucketstorefile struct {
 	path          string
 	file          *os.File
 	store         *gkvlite.Store
-	ch            chan *bucketstorereq
+	ch            chan *funreq
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
 	stats         *bucketstorestats
-}
-
-type bucketstorereq struct {
-	cb  func()
-	res chan bool
 }
 
 type bucketstorestats struct { // TODO: Unify stats naming conventions.
@@ -73,7 +68,7 @@ func newBucketStore(path string,
 	bsf := &bucketstorefile{
 		path:          path,
 		file:          file,
-		ch:            make(chan *bucketstorereq),
+		ch:            make(chan *funreq),
 		sleepInterval: sleepInterval,
 		stats:         bss,
 	}
@@ -88,7 +83,7 @@ func newBucketStore(path string,
 
 	res := &bucketstore{
 		bsf:               unsafe.Pointer(bsf),
-		ch:                make(chan *bucketstorereq),
+		ch:                make(chan *funreq),
 		flushInterval:     flushInterval,
 		compactInterval:   compactInterval,
 		stats:             bss,
@@ -116,7 +111,7 @@ func (s *bucketstore) service() {
 			if !ok {
 				return
 			}
-			r.cb()
+			r.fun()
 			close(r.res)
 		case <-tickerF.C:
 			d := atomic.LoadInt64(&s.dirtiness)
@@ -132,8 +127,8 @@ func (s *bucketstore) service() {
 	}
 }
 
-func (s *bucketstore) apply(cb func()) {
-	req := &bucketstorereq{cb: cb, res: make(chan bool)}
+func (s *bucketstore) apply(fun func()) {
+	req := &funreq{fun: fun, res: make(chan bool)}
 	s.ch <- req
 	<-req.res
 }
@@ -414,7 +409,7 @@ func (bsf *bucketstorefile) service() {
 			if !ok {
 				return
 			}
-			r.cb()
+			r.fun()
 			close(r.res)
 		case <-time.After(bsf.sleepInterval):
 			if bsf.Sleep() != nil {
@@ -424,8 +419,8 @@ func (bsf *bucketstorefile) service() {
 	}
 }
 
-func (bsf *bucketstorefile) apply(cb func()) {
-	req := &bucketstorereq{cb: cb, res: make(chan bool)}
+func (bsf *bucketstorefile) apply(fun func()) {
+	req := &funreq{fun: fun, res: make(chan bool)}
 	bsf.ch <- req
 	<-req.res
 }
@@ -457,7 +452,7 @@ func (bsf *bucketstorefile) Sleep() error {
 	}
 	bsf.file = file
 
-	r.cb()
+	r.fun()
 	close(r.res)
 	return nil
 }
