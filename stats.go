@@ -4,6 +4,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"github.com/dustin/gomemcached"
@@ -16,7 +17,7 @@ type statItem struct {
 }
 
 type Stats struct {
-	Items uint64
+	Items int64
 
 	Ops         uint64
 	Gets        uint64
@@ -37,25 +38,25 @@ type Stats struct {
 }
 
 func (s *Stats) Add(in *Stats) {
-	s.Items += in.Items
-	s.Ops += in.Ops
-	s.Gets += in.Gets
-	s.GetMisses += in.GetMisses
-	s.Sets += in.Sets
-	s.Deletes += in.Deletes
-	s.Creates += in.Creates
-	s.Updates += in.Updates
-	s.RGets += in.RGets
-	s.RGetResults += in.RGetResults
-	s.Unknowns += in.Unknowns
-	s.ValueBytesIncoming += in.ValueBytesIncoming
-	s.ValueBytesOutgoing += in.ValueBytesOutgoing
-	s.ErrStore += in.ErrStore
-	s.ErrNotMyRange += in.ErrNotMyRange
+	s.Items += atomic.LoadInt64(&in.Items)
+	s.Ops += atomic.LoadUint64(&in.Ops)
+	s.Gets += atomic.LoadUint64(&in.Gets)
+	s.GetMisses += atomic.LoadUint64(&in.GetMisses)
+	s.Sets += atomic.LoadUint64(&in.Sets)
+	s.Deletes += atomic.LoadUint64(&in.Deletes)
+	s.Creates += atomic.LoadUint64(&in.Creates)
+	s.Updates += atomic.LoadUint64(&in.Updates)
+	s.RGets += atomic.LoadUint64(&in.RGets)
+	s.RGetResults += atomic.LoadUint64(&in.RGetResults)
+	s.Unknowns += atomic.LoadUint64(&in.Unknowns)
+	s.ValueBytesIncoming += atomic.LoadUint64(&in.ValueBytesIncoming)
+	s.ValueBytesOutgoing += atomic.LoadUint64(&in.ValueBytesOutgoing)
+	s.ErrStore += atomic.LoadUint64(&in.ErrStore)
+	s.ErrNotMyRange += atomic.LoadUint64(&in.ErrNotMyRange)
 }
 
 func (s *Stats) Send(ch chan<- statItem) {
-	ch <- statItem{"items", strconv.FormatUint(s.Items, 10)}
+	ch <- statItem{"items", strconv.FormatInt(s.Items, 10)}
 	ch <- statItem{"ops", strconv.FormatUint(s.Ops, 10)}
 	ch <- statItem{"gets", strconv.FormatUint(s.Gets, 10)}
 	ch <- statItem{"get_misses", strconv.FormatUint(s.GetMisses, 10)}

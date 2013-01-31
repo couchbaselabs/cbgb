@@ -125,12 +125,10 @@ func (v *vbucket) Close() error {
 }
 
 func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	atomic.AddUint64(&v.stats.Ops, 1)
 	f := dispatchTable[req.Opcode]
 	if f == nil {
-		v.Apply(func() {
-			v.stats.Ops++
-			v.stats.Unknowns++
-		})
+		atomic.AddUint64(&v.stats.Unknowns, 1)
 		return &gomemcached.MCResponse{
 			Status: gomemcached.UNKNOWN_COMMAND,
 			Body:   []byte(fmt.Sprintf("Unknown command %v", req.Opcode)),
@@ -264,9 +262,11 @@ func (v *vbucket) load() (err error) {
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	if parseVBState(v.Meta().State) == VBActive { // TODO: handle key
-		dest.Add(&v.stats)
-	}
+	v.Apply(func() { // Need apply protection due to stats.Items.
+		if parseVBState(v.Meta().State) == VBActive { // TODO: handle key
+			dest.Add(&v.stats)
+		}
+	})
 }
 
 func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
@@ -274,12 +274,12 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 	if meta.KeyRange != nil {
 		if len(meta.KeyRange.MinKeyInclusive) > 0 &&
 			bytes.Compare(req.Key, meta.KeyRange.MinKeyInclusive) < 0 {
-			v.stats.ErrNotMyRange++
+			atomic.AddUint64(&v.stats.ErrNotMyRange, 1)
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
 		if len(meta.KeyRange.MaxKeyExclusive) > 0 &&
 			bytes.Compare(req.Key, meta.KeyRange.MaxKeyExclusive) >= 0 {
-			v.stats.ErrNotMyRange++
+			atomic.AddUint64(&v.stats.ErrNotMyRange, 1)
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
 	}
@@ -287,21 +287,18 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 }
 
 func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	var itemCas uint64
+	atomic.AddUint64(&v.stats.Sets, 1)
 
-	v.Apply(func() {
-		v.stats.Ops++
-		v.stats.Sets++
-
-		res = v.checkRange(req)
-		if res == nil {
-			// TODO: Consider moving LastCas out of meta due to races?
-			itemCas = atomic.AddUint64(&v.Meta().LastCas, 1)
-		}
-	})
+	res = v.checkRange(req)
 	if res != nil {
 		return res
 	}
+
+	var itemCas uint64
+	v.Apply(func() {
+		// TODO: We have the apply to avoid races, but is there a better way?
+		itemCas = atomic.AddUint64(&v.Meta().LastCas, 1)
+	})
 
 	var prevMeta *item
 	var err error
@@ -344,19 +341,17 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		}
 	})
 
-	v.Apply(func() {
-		if err != nil {
-			v.stats.ErrStore++
+	if err != nil {
+		atomic.AddUint64(&v.stats.ErrStore, 1)
+	} else {
+		if prevMeta != nil {
+			atomic.AddUint64(&v.stats.Updates, 1)
 		} else {
-			if prevMeta != nil {
-				v.stats.Updates++
-			} else {
-				v.stats.Creates++
-				v.stats.Items++
-			}
-			v.stats.ValueBytesIncoming += uint64(len(req.Body))
+			atomic.AddUint64(&v.stats.Creates, 1)
+			atomic.AddInt64(&v.stats.Items, 1)
 		}
-	})
+		atomic.AddUint64(&v.stats.ValueBytesIncoming, uint64(len(req.Body)))
+	}
 
 	if err == nil {
 		v.observer.Submit(mutation{v.vbid, req.Key, itemCas, false})
@@ -366,12 +361,9 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 }
 
 func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	v.Apply(func() {
-		v.stats.Ops++
-		v.stats.Gets++
+	atomic.AddUint64(&v.stats.Gets, 1)
 
-		res = v.checkRange(req)
-	})
+	res = v.checkRange(req)
 	if res != nil {
 		return res
 	}
@@ -384,13 +376,11 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		}
 	}
 
-	v.Apply(func() {
-		if i == nil {
-			v.stats.GetMisses++
-		} else {
-			v.stats.ValueBytesOutgoing += uint64(len(i.data))
-		}
-	})
+	if i == nil {
+		atomic.AddUint64(&v.stats.GetMisses, 1)
+	} else {
+		atomic.AddUint64(&v.stats.ValueBytesOutgoing, uint64(len(i.data)))
+	}
 
 	if i == nil {
 		if req.Opcode.IsQuiet() {
@@ -412,21 +402,18 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 }
 
 func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	var cas uint64
+	atomic.AddUint64(&v.stats.Deletes, 1)
 
-	v.Apply(func() {
-		v.stats.Ops++
-		v.stats.Deletes++
-
-		res = v.checkRange(req)
-		if res == nil {
-			// TODO: Consider moving LastCas out of meta due to races?
-			cas = atomic.AddUint64(&v.Meta().LastCas, 1)
-		}
-	})
+	res = v.checkRange(req)
 	if res != nil {
 		return res
 	}
+
+	var cas uint64
+	v.Apply(func() {
+		// TODO: We have the apply to avoid races, but is there a better way?
+		cas = atomic.AddUint64(&v.Meta().LastCas, 1)
+	})
 
 	var prevMeta *item
 	var err error
@@ -469,13 +456,11 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		}
 	})
 
-	v.Apply(func() {
-		if err != nil {
-			v.stats.ErrStore++
-		} else if prevMeta != nil {
-			v.stats.Items--
-		}
-	})
+	if err != nil {
+		atomic.AddUint64(&v.stats.ErrStore, 1)
+	} else if prevMeta != nil {
+		atomic.AddInt64(&v.stats.Items, -1)
+	}
 
 	if err == nil && prevMeta != nil {
 		v.observer.Submit(mutation{v.vbid, req.Key, cas, true})
@@ -528,14 +513,13 @@ func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 		return &gomemcached.MCResponse{Fatal: true}
 	}
 
-	// TODO: Update stats including Ops counter.
+	// TODO: Update stats.
 
 	return res
 }
 
 func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	v.Apply(func() {
-		v.stats.Ops++
 		if j, err := json.Marshal(v.Meta()); err == nil {
 			res = &gomemcached.MCResponse{Body: j}
 		} else {
@@ -553,7 +537,6 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 	v.bs.apply(func() {
 		v.Apply(func() {
 			v.Mutate(func() {
-				v.stats.Ops++
 				if req.Body != nil {
 					newMeta := &VBMeta{}
 					if err := json.Unmarshal(req.Body, newMeta); err != nil {
@@ -620,13 +603,9 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 		res = &gomemcached.MCResponse{Fatal: true}
 	}
 
-	v.Apply(func() {
-		v.stats.Ops++
-		v.stats.RGets++
-		v.stats.RGetResults += visitRGetResults
-		v.stats.ValueBytesOutgoing += visitValueBytesOutgoing
-		// TODO: Track errors.
-	})
+	atomic.AddUint64(&v.stats.RGets, 1)
+	atomic.AddUint64(&v.stats.RGetResults, visitRGetResults)
+	atomic.AddUint64(&v.stats.ValueBytesOutgoing, visitValueBytesOutgoing)
 
 	return res
 }
