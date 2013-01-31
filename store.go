@@ -176,7 +176,6 @@ func (s *bucketstore) dirty() {
 func (s *bucketstore) compact() (*bucketstorefile, error) {
 	bsf := s.BSF()
 	// TODO: copy VBMeta (vbm).
-	// TODO: disable changes to vbm collection during compaction.
 	// TODO: what if there's an error during compaction, when we're half moved over?
 	return bsf, nil
 }
