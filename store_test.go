@@ -217,8 +217,8 @@ func TestSaveLoadMutations(t *testing.T) {
 	if bss1 == nil {
 		t.Errorf("expected bucket store to have Stats()")
 	}
-	if bss1.TotFlush != 0 {
-		t.Errorf("expected bss1 to have 0 TotFlush")
+	if bss1.TotFlush != 1 {
+		t.Errorf("expected bss1 to have 1 TotFlush")
 	}
 	if bss1.TotRead == 0 {
 		t.Errorf("expected bss1 to have >0 TotRead")
@@ -417,7 +417,7 @@ func testFlushCloseInterval(t *testing.T,
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 }
 
-func TestCloseInterval(t *testing.T) {
+func TestSleepInterval(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
@@ -447,33 +447,40 @@ func TestCloseInterval(t *testing.T) {
 
 	b0.Close()
 
-	b1, err := NewBucket(testBucketDir, time.Millisecond, time.Millisecond)
-	if err != nil {
-		t.Errorf("expected NewBucket re-open to work, err: %v", err)
-	}
-	r1 := &reqHandler{b1}
+	testWithFlushInterval := func(flushInterval time.Duration) {
+		b1, err := NewBucket(testBucketDir, 20*time.Millisecond, time.Millisecond)
+		if err != nil {
+			t.Errorf("expected NewBucket re-open to work, err: %v", err)
+		}
+		r1 := &reqHandler{b1}
 
-	err = b1.Load()
-	if err != nil {
-		t.Errorf("expected Load to work, err: %v", err)
+		err = b1.Load()
+		if err != nil {
+			t.Errorf("expected Load to work, err: %v", err)
+		}
+
+		time.Sleep(10 * time.Millisecond)
+
+		testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
+
+		vb1 := b1.getVBucket(2)
+		bss1 := vb1.bs.Stats()
+		if bss1 == nil {
+			t.Errorf("expected bucket store to have Stats()")
+		}
+		if bss1.TotSleep != 1 {
+			t.Errorf("expected bss1 to have 1 TotSleep, got %v", bss1.TotSleep)
+		}
+		if bss1.TotWake != 1 {
+			t.Errorf("expected bss1 to have 1 TotWake, got %v", bss1.TotWake)
+		}
+		if bss1.WakeErrors != 0 {
+			t.Errorf("expected bss1 to have 0 WakeErrors")
+		}
+
+		b1.Close()
 	}
 
-	time.Sleep(10 * time.Millisecond)
-
-	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
-
-	vb1 := b1.getVBucket(2)
-	bss1 := vb1.bs.Stats()
-	if bss1 == nil {
-		t.Errorf("expected bucket store to have Stats()")
-	}
-	if bss1.TotSleep != 1 {
-		t.Errorf("expected bss1 to have 1 TotSleep")
-	}
-	if bss1.TotWake != 1 {
-		t.Errorf("expected bss1 to have 1 TotWake")
-	}
-	if bss1.WakeErrors != 0 {
-		t.Errorf("expected bss1 to have 0 WakeErrors")
-	}
+	testWithFlushInterval(1 * time.Millisecond)
+	testWithFlushInterval(20 * time.Millisecond)
 }

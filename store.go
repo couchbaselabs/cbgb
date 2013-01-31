@@ -121,13 +121,7 @@ func (s *bucketstore) service() {
 		case <-tickerF.C:
 			d := atomic.LoadInt64(&s.dirtiness)
 			if d > 0 {
-				err := s.BSF().store.Flush()
-				if err != nil {
-					// TODO: Log flush error.
-					atomic.AddUint64(&s.stats.FlushErrors, 1)
-				} else {
-					atomic.AddInt64(&s.dirtiness, -d)
-				}
+				s.flush()
 			}
 		case <-tickerC.C:
 			bsfCompact, err := s.compact()
@@ -159,13 +153,20 @@ func (s *bucketstore) Stats() *bucketstorestats {
 
 func (s *bucketstore) Flush() (err error) {
 	s.apply(func() {
-		d := atomic.LoadInt64(&s.dirtiness)
-		err = s.BSF().store.Flush()
-		if err == nil {
-			atomic.AddInt64(&s.dirtiness, -d)
-		}
+		err = s.flush()
 	})
 	return err
+}
+
+func (s *bucketstore) flush() error {
+	d := atomic.LoadInt64(&s.dirtiness)
+	if err := s.BSF().store.Flush(); err != nil {
+		atomic.AddUint64(&s.stats.FlushErrors, 1)
+		return err
+	}
+	atomic.AddInt64(&s.dirtiness, -d)
+	atomic.AddUint64(&s.stats.TotFlush, 1)
+	return nil
 }
 
 func (s *bucketstore) dirty() {
