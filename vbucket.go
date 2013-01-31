@@ -186,40 +186,48 @@ func (v *vbucket) GetVBState() (res VBState) {
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(prevState VBState)) (prevState VBState, err error) {
 	prevState = VBDead
-	v.Apply(func(vbLocked *vbucket) {
-		vbLocked.Mutate(func(vm *vbucket) {
-			prevMeta := vm.Meta()
-			prevState = parseVBState(prevMeta.State)
+	// The bs.apply() ensures we're not compacting/flushing while changing vbstate.
+	v.bs.apply(func() {
+		v.Apply(func(vbLocked *vbucket) {
+			vbLocked.Mutate(func(vm *vbucket) {
+				prevMeta := vm.Meta()
+				prevState = parseVBState(prevMeta.State)
 
-			newMeta := prevMeta.Copy()
-			newMeta.State = newState.String()
+				newMeta := prevMeta.Copy()
+				newMeta.State = newState.String()
 
-			// TODO: reflect VBState change into changes stream.  Need
-			// to ensure a Flush between changes stream update and
-			// COLL_VBMETA update is atomic.
-
-			var j []byte
-			j, err = json.Marshal(newMeta)
-			if err != nil {
-				return
-			}
-			k := []byte(fmt.Sprintf("%d", v.vbid))
-			if err = vm.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
-				return
-			}
-			atomic.StorePointer(&vm.meta, unsafe.Pointer(newMeta))
-			if cb != nil {
-				cb(prevState)
-			}
+				err = vm.setVBMeta(newMeta)
+				if err != nil {
+					return
+				}
+				if cb != nil {
+					cb(prevState)
+				}
+			})
 		})
 	})
-	if err != nil {
-		return prevState, err
-	}
+	return prevState, err
+}
 
-	// Flush outside the Apply/Mutate sections to avoid deadlock, in
-	// case the bucketstore calls us back to swap collections.
-	return prevState, v.bs.Flush()
+func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
+	// TODO: record the meta change in the changes stream.
+	// This should only be called when holding the bucketstore
+	// service/apply "lock", to ensure a Flush between changes stream
+	// update and COLL_VBMETA update is atomic.
+	var j []byte
+	j, err = json.Marshal(newMeta)
+	if err != nil {
+		return err
+	}
+	k := []byte(fmt.Sprintf("%d", v.vbid))
+	if err = v.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
+		return err
+	}
+	if err = v.bs.flush(); err != nil {
+		return err
+	}
+	atomic.StorePointer(&v.meta, unsafe.Pointer(newMeta))
+	return nil
 }
 
 func (v *vbucket) load() (err error) {
@@ -549,20 +557,29 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 
 func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
-	v.Apply(func(vbLocked *vbucket) {
-		vbLocked.Mutate(func(vm *vbucket) {
-			vbLocked.stats.Ops++
-			if req.Body != nil {
-				meta := &VBMeta{}
-				if err := json.Unmarshal(req.Body, meta); err != nil {
-					return
+	// The bs.apply() ensures we're not compacting/flushing while changing vbstate.
+	v.bs.apply(func() {
+		v.Apply(func(vbLocked *vbucket) {
+			vbLocked.Mutate(func(vm *vbucket) {
+				vbLocked.stats.Ops++
+				if req.Body != nil {
+					newMeta := &VBMeta{}
+					if err := json.Unmarshal(req.Body, newMeta); err != nil {
+						return
+					}
+					newMeta = vm.Meta().Copy().update(newMeta)
+
+					if err := vm.setVBMeta(newMeta); err != nil {
+						res = &gomemcached.MCResponse{
+							Status: gomemcached.TMPFAIL,
+							Body:   []byte(fmt.Sprintf("setVBMeta error %v", err)),
+						}
+						return
+					}
+
+					res = &gomemcached.MCResponse{}
 				}
-				atomic.StorePointer(&vm.meta,
-					unsafe.Pointer(vm.Meta().Copy().update(meta)))
-				// TODO: record the meta change in the changes stream.
-				// TODO: flush.
-				res = &gomemcached.MCResponse{}
-			}
+			})
 		})
 	})
 	return res
