@@ -174,6 +174,8 @@ func (s *bucketstore) dirty() {
 }
 
 func (s *bucketstore) compact() (*bucketstorefile, error) {
+	// This should be invoked via bucketstore serice(), so there's
+	// no concurrent flushing.
 	bsf := s.BSF()
 	// TODO: copy VBMeta (vbm).
 	// TODO: what if there's an error during compaction, when we're half moved over?

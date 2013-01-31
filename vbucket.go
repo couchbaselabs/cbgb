@@ -186,7 +186,9 @@ func (v *vbucket) GetVBState() (res VBState) {
 func (v *vbucket) SetVBState(newState VBState,
 	cb func(prevState VBState)) (prevState VBState, err error) {
 	prevState = VBDead
-	// The bs.apply() ensures we're not compacting/flushing while changing vbstate.
+	// The bs.apply() ensures we're not compacting/flushing while
+	// changing vbstate, which is good for atomicity and to avoid
+	// deadlock when the compactor wants to swap collections.
 	v.bs.apply(func() {
 		v.Apply(func(vbLocked *vbucket) {
 			vbLocked.Mutate(func(vm *vbucket) {
@@ -557,7 +559,9 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 
 func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
-	// The bs.apply() ensures we're not compacting/flushing while changing vbstate.
+	// The bs.apply() ensures we're not compacting/flushing while
+	// changing vbstate, which is good for atomicity and to avoid
+	// deadlock when the compactor wants to swap collections.
 	v.bs.apply(func() {
 		v.Apply(func(vbLocked *vbucket) {
 			vbLocked.Mutate(func(vm *vbucket) {
