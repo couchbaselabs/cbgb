@@ -57,6 +57,7 @@ func (t *VBKeyRange) Equal(u *VBKeyRange) bool {
 type VBMeta struct {
 	Id       uint16      `json:"id"`
 	LastCas  uint64      `json:"lastCas"`
+	MetaCas  uint64      `json:"metaCas"`
 	State    string      `json:"state"`
 	KeyRange *VBKeyRange `json:"keyRange"`
 }
@@ -64,6 +65,7 @@ type VBMeta struct {
 func (t *VBMeta) Equal(u *VBMeta) bool {
 	return t.Id == u.Id &&
 		t.LastCas == u.LastCas &&
+		t.MetaCas == u.MetaCas &&
 		t.State == u.State &&
 		t.KeyRange.Equal(u.KeyRange)
 }
@@ -77,6 +79,10 @@ func (t *VBMeta) update(from *VBMeta) *VBMeta {
 	fromCas := atomic.LoadUint64(&from.LastCas)
 	if atomic.LoadUint64(&t.LastCas) < fromCas {
 		atomic.StoreUint64(&t.LastCas, fromCas)
+	}
+	metaCas := atomic.LoadUint64(&from.MetaCas)
+	if atomic.LoadUint64(&t.MetaCas) < metaCas {
+		atomic.StoreUint64(&t.MetaCas, metaCas)
 	}
 	t.KeyRange = nil
 	if from.KeyRange != nil {

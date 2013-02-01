@@ -180,9 +180,11 @@ func (v *vbucket) SetVBState(newState VBState,
 			v.Mutate(func() {
 				prevMeta := v.Meta()
 				prevState = parseVBState(prevMeta.State)
+				casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
 
 				newMeta := prevMeta.Copy()
 				newMeta.State = newState.String()
+				newMeta.MetaCas = casMeta
 
 				err = v.setVBMeta(newMeta)
 				if err != nil {
@@ -198,7 +200,6 @@ func (v *vbucket) SetVBState(newState VBState,
 }
 
 func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
-	// TODO: record the meta change in the changes stream.
 	// This should only be called when holding the bucketstore
 	// service/apply "lock", to ensure a Flush between changes stream
 	// update and COLL_VBMETA update is atomic.
@@ -208,6 +209,14 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 		return err
 	}
 	k := []byte(fmt.Sprintf("%d", v.vbid))
+	i := &item{
+		key:  nil, // A nil key means it's a VBMeta change.
+		cas:  newMeta.MetaCas,
+		data: j,
+	}
+	if err = v.bs.set(nil, v.CollChanges(), i, nil); err != nil {
+		return err
+	}
 	if err = v.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
 		return err
 	}
@@ -542,7 +551,12 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 					if err := json.Unmarshal(req.Body, newMeta); err != nil {
 						return
 					}
-					newMeta = v.Meta().Copy().update(newMeta)
+
+					prevMeta := v.Meta()
+					casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
+
+					newMeta = prevMeta.Copy().update(newMeta)
+					newMeta.MetaCas = casMeta
 
 					if err := v.setVBMeta(newMeta); err != nil {
 						res = &gomemcached.MCResponse{
@@ -792,6 +806,7 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 		MinKeyInclusive: minKeyInclusive,
 		MaxKeyExclusive: maxKeyExclusive,
 	}
+	dstMeta.MetaCas = dstMeta.LastCas
 	atomic.StorePointer(&dst.meta, unsafe.Pointer(dstMeta))
 
 	return nil
