@@ -21,7 +21,7 @@ const (
 	SET_VBMETA          = gomemcached.CommandCode(0x62)
 	SPLIT_RANGE         = gomemcached.CommandCode(0x63)
 	NOT_MY_RANGE        = gomemcached.Status(0x60)
-	COLL_SUFFIX_KEYS    = ".k"
+	COLL_SUFFIX_KEYS    = ".a" // This suffix sorts before CHANGES suffix.
 	COLL_SUFFIX_CHANGES = ".c"
 	COLL_VBMETA         = "vbm"
 )

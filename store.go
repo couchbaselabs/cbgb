@@ -175,7 +175,7 @@ func (s *bucketstore) compact() (*bucketstorefile, error) {
 	// TODO: copy VBMeta (vbm).
 	// TODO: what if there's an error during compaction, when we're half moved over?
 	// TODO: how to get a keys index that's sync'ed with the changes stream?
-	// TODO: perhaps grab a snapshot from the last flush?  or just roots?
+	// TODO: perhaps grab a snapshot from the last flush? or just roots?
 	// TODO: perhaps remember a history of flushes.
 	// TODO: perhaps need to copy bunch of keys index history (multiple roots)?
 	return bsf, nil
@@ -320,13 +320,6 @@ func (s *bucketstore) set(keys *gkvlite.Collection, changes *gkvlite.Collection,
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
-		// TODO: Flushing race possible, if we flush the changes first, but
-		// then somebody does a set(), updating both changes and keys, and
-		// then we get back to flushing keys.  Then, keys would be ahead
-		// of changes.
-		// Solution idea #1 would be to always flush keys first, which
-		// means that keys index on disk would likely be behind of changes
-		// and that startwould would need fixup.
 		if err := keys.Set(newItem.key, cBytes); err != nil {
 			return err
 		}
