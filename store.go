@@ -169,12 +169,14 @@ func (s *bucketstore) dirty() {
 }
 
 func (s *bucketstore) compact() (*bucketstorefile, error) {
-	// This should be invoked via bucketstore serice(), so there's
+	// This should be invoked via bucketstore service(), so there's
 	// no concurrent flushing.
 	bsf := s.BSF()
 	// TODO: copy VBMeta (vbm).
 	// TODO: what if there's an error during compaction, when we're half moved over?
 	// TODO: how to get a items index that's sync'ed with the changes stream?
+	// TODO: perhaps grab a snapshot from the last flush?  or just roots?
+	// TODO: perhaps remember a history of flushes.
 	// TODO: perhaps need to copy bunch of items index history (multiple roots)?
 	return bsf, nil
 }
@@ -318,6 +320,10 @@ func (s *bucketstore) set(items *gkvlite.Collection, changes *gkvlite.Collection
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
+		// TODO: Flushing race possible, if we flush the changes first, but
+		// then somebody does a set(), updating both changes and items, and
+		// then we get back to flushing items.  Then, items would be ahead
+		// of changes.
 		if err := items.Set(newItem.key, cBytes); err != nil {
 			return err
 		}
