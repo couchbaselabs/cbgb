@@ -21,7 +21,7 @@ const (
 	SET_VBMETA          = gomemcached.CommandCode(0x62)
 	SPLIT_RANGE         = gomemcached.CommandCode(0x63)
 	NOT_MY_RANGE        = gomemcached.Status(0x60)
-	COLL_SUFFIX_ITEMS   = ".i"
+	COLL_SUFFIX_KEYS    = ".k"
 	COLL_SUFFIX_CHANGES = ".c"
 	COLL_VBMETA         = "vbm"
 )
@@ -32,10 +32,10 @@ type vbucket struct {
 	meta        unsafe.Pointer // *VBMeta
 	bs          *bucketstore
 	ach         chan *funreq // To access top-level vbucket fields & stats.
-	mch         chan *funreq // To mutate the items/changes collections.
+	mch         chan *funreq // To mutate the keys/changes collections.
 	stats       Stats
 	observer    *broadcaster
-	collItems   unsafe.Pointer // *gkvlite.Collection
+	collKeys    unsafe.Pointer // *gkvlite.Collection
 	collChanges unsafe.Pointer // *gkvlite.Collection
 }
 
@@ -85,15 +85,15 @@ var dispatchTable = [256]dispatchFun{
 const observerBroadcastMax = 100
 
 func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
-	pauseSwapColls := func(cic collItemsChanges) {
+	pauseSwapColls := func(cic collKeysChanges) {
 		rv.Mutate(func() {
-			collItems, collChanges := cic()
-			atomic.StorePointer(&rv.collItems, unsafe.Pointer(collItems))
+			collKeys, collChanges := cic()
+			atomic.StorePointer(&rv.collKeys, unsafe.Pointer(collKeys))
 			atomic.StorePointer(&rv.collChanges, unsafe.Pointer(collChanges))
 		})
 	}
 
-	collItems, collChanges := bs.collItemsChanges(vbid, pauseSwapColls)
+	collKeys, collChanges := bs.collKeysChanges(vbid, pauseSwapColls)
 	rv = &vbucket{
 		parent:      parent,
 		vbid:        vbid,
@@ -102,7 +102,7 @@ func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 		ach:         make(chan *funreq),
 		mch:         make(chan *funreq),
 		observer:    newBroadcaster(observerBroadcastMax),
-		collItems:   unsafe.Pointer(collItems),
+		collKeys:    unsafe.Pointer(collKeys),
 		collChanges: unsafe.Pointer(collChanges),
 	}
 
@@ -145,8 +145,8 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 	})
 }
 
-func (v *vbucket) CollItems() *gkvlite.Collection {
-	return (*gkvlite.Collection)(atomic.LoadPointer(&v.collItems))
+func (v *vbucket) CollKeys() *gkvlite.Collection {
+	return (*gkvlite.Collection)(atomic.LoadPointer(&v.collKeys))
 }
 
 func (v *vbucket) CollChanges() *gkvlite.Collection {
@@ -271,7 +271,7 @@ func (v *vbucket) load() (err error) {
 }
 
 func (v *vbucket) AddStats(dest *Stats, key string) {
-	v.Apply(func() { // Need apply protection due to stats.Items.
+	v.Apply(func() { // Need apply() protection due to stats.Items.
 		if parseVBState(v.Meta().State) == VBActive { // TODO: handle key
 			dest.Add(&v.stats)
 		}
@@ -313,7 +313,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	var err error
 
 	v.Mutate(func() {
-		prevMeta, err = v.bs.getMeta(v.CollItems(), v.CollChanges(), req.Key)
+		prevMeta, err = v.bs.getMeta(v.CollKeys(), v.CollChanges(), req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -337,7 +337,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			data: req.Body,
 		}
 
-		err = v.bs.set(v.CollItems(), v.CollChanges(), itemNew, prevMeta)
+		err = v.bs.set(v.CollKeys(), v.CollChanges(), itemNew, prevMeta)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -377,7 +377,7 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		return res
 	}
 
-	i, err := v.bs.get(v.CollItems(), v.CollChanges(), req.Key)
+	i, err := v.bs.get(v.CollKeys(), v.CollChanges(), req.Key)
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
@@ -428,7 +428,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	var err error
 
 	v.Mutate(func() {
-		prevMeta, err = v.bs.getMeta(v.CollItems(), v.CollChanges(), req.Key)
+		prevMeta, err = v.bs.getMeta(v.CollKeys(), v.CollChanges(), req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -452,7 +452,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		err = v.bs.del(v.CollItems(), v.CollChanges(), req.Key, cas)
+		err = v.bs.del(v.CollKeys(), v.CollChanges(), req.Key, cas)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -612,7 +612,7 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 		return true
 	}
 
-	if err := v.bs.visitItems(v.CollItems(), v.CollChanges(),
+	if err := v.bs.visitItems(v.CollKeys(), v.CollChanges(),
 		req.Key, true, visitor); err != nil {
 		res = &gomemcached.MCResponse{Fatal: true}
 	}
@@ -790,7 +790,7 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
 	// TODO: Should this be under dst.Apply()/Mutate().
 
-	err := v.bs.rangeCopy(v.CollItems(), dst.bs, dst.CollItems(),
+	err := v.bs.rangeCopy(v.CollKeys(), dst.bs, dst.CollKeys(),
 		minKeyInclusive, maxKeyExclusive)
 	if err == nil {
 		err = v.bs.rangeCopy(v.CollChanges(), dst.bs, dst.CollChanges(),

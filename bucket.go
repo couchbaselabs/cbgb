@@ -247,13 +247,12 @@ func (b *livebucket) Flush() error {
 func (b *livebucket) Load() (err error) {
 	for _, bs := range b.bucketstores {
 		for _, collName := range bs.collNames() {
-			// TODO: Load based on changes, not on items?
-			if !strings.HasSuffix(collName, COLL_SUFFIX_ITEMS) {
+			if !strings.HasSuffix(collName, COLL_SUFFIX_CHANGES) {
 				continue
 			}
-			vbidStr := collName[0 : len(collName)-len(COLL_SUFFIX_ITEMS)]
-			if !bs.collExists(vbidStr+COLL_SUFFIX_ITEMS) ||
-				!bs.collExists(vbidStr+COLL_SUFFIX_CHANGES) {
+			vbidStr := collName[0 : len(collName)-len(COLL_SUFFIX_CHANGES)]
+			if !bs.collExists(vbidStr+COLL_SUFFIX_CHANGES) ||
+				!bs.collExists(vbidStr+COLL_SUFFIX_KEYS) {
 				continue
 			}
 			vbid, err := strconv.Atoi(vbidStr)

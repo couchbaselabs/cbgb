@@ -11,7 +11,7 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
-type collItemsChanges func() (*gkvlite.Collection, *gkvlite.Collection)
+type collKeysChanges func() (*gkvlite.Collection, *gkvlite.Collection)
 
 type bucketstore struct {
 	bsf             unsafe.Pointer // *bucketstorefile
@@ -23,9 +23,9 @@ type bucketstore struct {
 
 	// Map of callbacks, which are invoked when we need the
 	// bucketstore client to pause its mutations and when we want to
-	// provide new items and changes collections to the bucketstore
+	// provide new keys and changes collections to the bucketstore
 	// client (such as because of compaction).
-	mapPauseSwapColls map[uint16]func(collItemsChanges)
+	mapPauseSwapColls map[uint16]func(collKeysChanges)
 }
 
 type bucketstorefile struct {
@@ -87,7 +87,7 @@ func newBucketStore(path string,
 		flushInterval:     flushInterval,
 		compactInterval:   compactInterval,
 		stats:             bss,
-		mapPauseSwapColls: make(map[uint16]func(collItemsChanges)),
+		mapPauseSwapColls: make(map[uint16]func(collKeysChanges)),
 	}
 	go res.service()
 
@@ -174,18 +174,18 @@ func (s *bucketstore) compact() (*bucketstorefile, error) {
 	bsf := s.BSF()
 	// TODO: copy VBMeta (vbm).
 	// TODO: what if there's an error during compaction, when we're half moved over?
-	// TODO: how to get a items index that's sync'ed with the changes stream?
+	// TODO: how to get a keys index that's sync'ed with the changes stream?
 	// TODO: perhaps grab a snapshot from the last flush?  or just roots?
 	// TODO: perhaps remember a history of flushes.
-	// TODO: perhaps need to copy bunch of items index history (multiple roots)?
+	// TODO: perhaps need to copy bunch of keys index history (multiple roots)?
 	return bsf, nil
 }
 
-func (s *bucketstore) collItemsChanges(id uint16,
-	psc func(collItemsChanges)) (*gkvlite.Collection, *gkvlite.Collection) {
+func (s *bucketstore) collKeysChanges(id uint16,
+	psc func(collKeysChanges)) (*gkvlite.Collection, *gkvlite.Collection) {
 	var i, c *gkvlite.Collection
 	s.apply(func() {
-		i = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_ITEMS))
+		i = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_KEYS))
 		c = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_CHANGES))
 		s.mapPauseSwapColls[id] = psc
 	})
@@ -208,19 +208,19 @@ func (s *bucketstore) collExists(collName string) bool {
 	return s.BSF().store.GetCollection(collName) != nil
 }
 
-func (s *bucketstore) get(items *gkvlite.Collection, changes *gkvlite.Collection,
+func (s *bucketstore) get(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte) (*item, error) {
-	return s.getItem(items, changes, key, true)
+	return s.getItem(keys, changes, key, true)
 }
 
-func (s *bucketstore) getMeta(items *gkvlite.Collection, changes *gkvlite.Collection,
+func (s *bucketstore) getMeta(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte) (*item, error) {
-	return s.getItem(items, changes, key, false)
+	return s.getItem(keys, changes, key, false)
 }
 
-func (s *bucketstore) getItem(items *gkvlite.Collection, changes *gkvlite.Collection,
+func (s *bucketstore) getItem(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte, withValue bool) (i *item, err error) {
-	iItem, err := items.GetItem(key, true)
+	iItem, err := keys.GetItem(key, true)
 	if err != nil {
 		return nil, err
 	}
@@ -245,7 +245,7 @@ func (s *bucketstore) getItem(items *gkvlite.Collection, changes *gkvlite.Collec
 	return nil, nil
 }
 
-func (s *bucketstore) visitItems(items *gkvlite.Collection, changes *gkvlite.Collection,
+func (s *bucketstore) visitItems(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
 	var vErr error
@@ -263,7 +263,7 @@ func (s *bucketstore) visitItems(items *gkvlite.Collection, changes *gkvlite.Col
 		}
 		return visitor(i)
 	}
-	if err := s.visit(items, start, withValue, v); err != nil {
+	if err := s.visit(keys, start, withValue, v); err != nil {
 		return err
 	}
 	return vErr
@@ -305,7 +305,7 @@ func (s *bucketstore) visit(coll *gkvlite.Collection,
 // All the following mutation methods need to be called while
 // single-threaded with respect to the mutating collection.
 
-func (s *bucketstore) set(items *gkvlite.Collection, changes *gkvlite.Collection,
+func (s *bucketstore) set(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	newItem *item, oldMeta *item) error {
 	vBytes := newItem.toValueBytes()
 	cBytes := casBytes(newItem.cas)
@@ -316,15 +316,18 @@ func (s *bucketstore) set(items *gkvlite.Collection, changes *gkvlite.Collection
 	}
 	// An nil/empty key means this is a metadata change.
 	if newItem.key != nil && len(newItem.key) > 0 {
-		// TODO: What if we flush between the items update and changes
+		// TODO: What if we flush between the keys update and changes
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
 		// TODO: Flushing race possible, if we flush the changes first, but
-		// then somebody does a set(), updating both changes and items, and
-		// then we get back to flushing items.  Then, items would be ahead
+		// then somebody does a set(), updating both changes and keys, and
+		// then we get back to flushing keys.  Then, keys would be ahead
 		// of changes.
-		if err := items.Set(newItem.key, cBytes); err != nil {
+		// Solution idea #1 would be to always flush keys first, which
+		// means that keys index on disk would likely be behind of changes
+		// and that startwould would need fixup.
+		if err := keys.Set(newItem.key, cBytes); err != nil {
 			return err
 		}
 	}
@@ -332,7 +335,7 @@ func (s *bucketstore) set(items *gkvlite.Collection, changes *gkvlite.Collection
 	return nil
 }
 
-func (s *bucketstore) del(items *gkvlite.Collection, changes *gkvlite.Collection,
+func (s *bucketstore) del(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte, cas uint64) error {
 	cBytes := casBytes(cas)
 
@@ -343,11 +346,11 @@ func (s *bucketstore) del(items *gkvlite.Collection, changes *gkvlite.Collection
 	}
 	// An nil/empty key means this is a metadata change.
 	if key != nil && len(key) > 0 {
-		// TODO: What if we flush between the items update and changes
+		// TODO: What if we flush between the keys update and changes
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
-		if err := items.Delete(key); err != nil {
+		if err := keys.Delete(key); err != nil {
 			return err
 		}
 	}
@@ -362,7 +365,7 @@ func (s *bucketstore) rangeCopy(srcColl *gkvlite.Collection,
 	if err != nil {
 		return err
 	}
-	// TODO: What if we flush between the items update and changes
+	// TODO: What if we flush between the keys update and changes
 	// update?  That could result in an inconsistent db file?
 	// Solution idea #1 is to have load-time fixup, that
 	// incorporates changes into the key-index.
