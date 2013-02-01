@@ -174,6 +174,8 @@ func (s *bucketstore) compact() (*bucketstorefile, error) {
 	bsf := s.BSF()
 	// TODO: copy VBMeta (vbm).
 	// TODO: what if there's an error during compaction, when we're half moved over?
+	// TODO: how to get a items index that's sync'ed with the changes stream?
+	// TODO: perhaps need to copy bunch of items index history (multiple roots)?
 	return bsf, nil
 }
 
