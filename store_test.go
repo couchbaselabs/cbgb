@@ -45,6 +45,9 @@ func testExpectInts(t *testing.T, rh *reqHandler, vbid int, expectedInts []int,
 			desc, len(expectedInts), len(results), len(w.Bytes()))
 	}
 	for i, expectedInt := range expectedInts {
+		if i >= len(results) {
+			return
+		}
 		if !bytes.Equal(results[i].Key, []byte(strconv.Itoa(expectedInt))) {
 			t.Errorf("testExpectInts: %v - expected rget result key: %v, got: %v",
 				desc, expectedInt, string(results[i].Key))
@@ -630,5 +633,131 @@ func TestStoreFiles(t *testing.T) {
 	idx, ver, err = parseStoreFileName("0-0-.store")
 	if err == nil {
 		t.Errorf("expected err")
+	}
+}
+
+func TestCompaction(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+	for i := 0; i < 100; i++ {
+		testLoadInts(t, r0, 2, 5)
+		if err = b0.Flush(); err != nil {
+			t.Errorf("expected Flush (loop) to work, got: %v", err)
+		}
+	}
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4},
+		"initial data load")
+
+	if err = b0.Compact(); err != nil {
+		t.Errorf("expected Compact to work, got: %v", err)
+	}
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4},
+		"after compaction")
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	testLoadInts(t, r0, 2, 7)
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4, 5, 6},
+		"mutation after compaction")
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+}
+
+func TestEmptyFileCompaction(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+	testExpectInts(t, r0, 2, []int{},
+		"initially empty collection")
+
+	if err = b0.Compact(); err != nil {
+		t.Errorf("expected Compact to work, got: %v", err)
+	}
+	testExpectInts(t, r0, 2, []int{},
+		"after compaction")
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	testLoadInts(t, r0, 2, 7)
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4, 5, 6},
+		"mutation after compaction")
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+}
+
+func TestCompactionNumFiles(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+	for i := 0; i < 100; i++ {
+		testLoadInts(t, r0, 2, 5)
+		if err = b0.Flush(); err != nil {
+			t.Errorf("expected Flush (loop) to work, got: %v", err)
+		}
+	}
+	preCompactFiles, err := ioutil.ReadDir(testBucketDir)
+	if err = b0.Compact(); err != nil {
+		t.Errorf("expected Compact to work, got: %v", err)
+	}
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+	b0.Close()
+	postCompactFiles, err := ioutil.ReadDir(testBucketDir)
+	if len(postCompactFiles) != 2 * len(preCompactFiles) {
+		t.Errorf("expected 2x postCompactFiles vs preCompactFiles, got: %v vs %v",
+			len(postCompactFiles), len(preCompactFiles))
 	}
 }

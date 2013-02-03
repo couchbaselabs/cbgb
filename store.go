@@ -37,22 +37,25 @@ type bucketstorefile struct {
 	store         *gkvlite.Store
 	ch            chan *funreq
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
+	insomnia      bool          // When true, no sleeping.
 	stats         *bucketstorestats
 }
 
 type bucketstorestats struct { // TODO: Unify stats naming conventions.
-	TotFlush uint64
-	TotRead  uint64
-	TotWrite uint64
-	TotStat  uint64
-	TotSleep uint64
-	TotWake  uint64
+	TotFlush   uint64
+	TotRead    uint64
+	TotWrite   uint64
+	TotStat    uint64
+	TotSleep   uint64
+	TotWake    uint64
+	TotCompact uint64
 
-	FlushErrors uint64
-	ReadErrors  uint64
-	WriteErrors uint64
-	StatErrors  uint64
-	WakeErrors  uint64
+	FlushErrors   uint64
+	ReadErrors    uint64
+	WriteErrors   uint64
+	StatErrors    uint64
+	WakeErrors    uint64
+	CompactErrors uint64
 
 	ReadBytes  uint64
 	WriteBytes uint64
@@ -73,6 +76,7 @@ func newBucketStore(path string,
 		file:          file,
 		ch:            make(chan *funreq),
 		sleepInterval: sleepInterval,
+		insomnia:      false,
 		stats:         bss,
 	}
 	go bsf.service()
@@ -122,10 +126,7 @@ func (s *bucketstore) service() {
 				s.flush()
 			}
 		case <-tickerC.C:
-			bsfCompact, err := s.compact()
-			if err != nil {
-				atomic.StorePointer(&s.bsf, unsafe.Pointer(bsfCompact))
-			}
+			s.compact()
 		}
 	}
 }
@@ -171,20 +172,11 @@ func (s *bucketstore) dirty() {
 	atomic.AddInt64(&s.dirtiness, 1)
 }
 
-func (s *bucketstore) compact() (*bucketstorefile, error) {
-	// This should be invoked via bucketstore service(), so there's
-	// no concurrent flushing.
-	// TODO: Do not let the bsf sleep.
-	bsf := s.BSF()
-
-	// TODO: what if there's an error during compaction, when we're half moved over?
-	// TODO: how to get a keys index that's sync'ed with the changes stream?
-	// TODO: perhaps grab a snapshot from the last flush? or just roots?
-	// TODO: perhaps remember a history of flushes.
-	// TODO: perhaps need to copy bunch of keys index history (multiple roots)?
-	// TODO: handle if someone creates/deletes a vbucket during compaction.
-
-	return bsf, nil
+func (s *bucketstore) Compact() (err error) {
+	s.apply(func() {
+		err = s.compact()
+	})
+	return err
 }
 
 func (s *bucketstore) collKeysChanges(id uint16,
@@ -336,11 +328,12 @@ func (s *bucketstore) set(keys *gkvlite.Collection, changes *gkvlite.Collection,
 
 func (s *bucketstore) del(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte, cas uint64) error {
+	// An item.exp of 0xffffffff means it was a deletion.
 	cBytes := casBytes(cas)
+	vBytes := (&item{key: key, cas: cas, exp: 0xffffffff}).toValueBytes()
 
-	// Empty value means it was a deletion.
 	// TODO: should we be de-duplicating older changes from the changes feed?
-	if err := changes.Set(cBytes, []byte("")); err != nil {
+	if err := changes.Set(cBytes, vBytes); err != nil {
 		return err
 	}
 	// An nil/empty key means this is a metadata change.
@@ -422,7 +415,7 @@ func (bsf *bucketstorefile) service() {
 			r.fun()
 			close(r.res)
 		case <-time.After(bsf.sleepInterval):
-			if bsf.Sleep() != nil {
+			if !bsf.insomnia && bsf.Sleep() != nil {
 				return
 			}
 		}

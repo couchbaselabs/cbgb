@@ -23,6 +23,7 @@ const (
 
 type bucket interface {
 	Available() bool
+	Compact() error
 	Close() error
 	Flush() error
 	Load() error
@@ -248,9 +249,18 @@ func (b *livebucket) Close() error {
 }
 
 func (b *livebucket) Flush() error {
-	// TODO: Compaction.
 	for _, bs := range b.bucketstores {
 		err := bs.Flush()
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (b *livebucket) Compact() error {
+	for _, bs := range b.bucketstores {
+		err := bs.Compact()
 		if err != nil {
 			return err
 		}
