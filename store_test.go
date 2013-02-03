@@ -538,3 +538,33 @@ func TestLatestStoreFiles(t *testing.T) {
 	checkNames("many files", f,
 		[]string{"0-1234.store", "1-1.store", "2-0.store", "3-0.store"})
 }
+
+func TestStoreFiles(t *testing.T) {
+	f := makeStoreFileName(0, 0)
+	if f != "0-0.store" {
+		t.Errorf("expected 0-0.store, got %v", f)
+	}
+
+	idx, ver, err := parseStoreFileName("0-0.store")
+	if err != nil {
+		t.Errorf("expected no err, got %v", err)
+	}
+	if idx != 0 || ver != 0 {
+		t.Errorf("expected 0-0, got %v-%v", idx, ver)
+	}
+
+	idx, ver, err = parseStoreFileName("0-0.store.bak")
+	if err == nil {
+		t.Errorf("expected err")
+	}
+
+	idx, ver, err = parseStoreFileName("-.store")
+	if err == nil {
+		t.Errorf("expected err")
+	}
+
+	idx, ver, err = parseStoreFileName("0-0-.store")
+	if err == nil {
+		t.Errorf("expected err")
+	}
+}
