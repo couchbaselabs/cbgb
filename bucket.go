@@ -38,25 +38,35 @@ type bucket interface {
 
 // Holder of buckets.
 type Buckets struct {
-	buckets       map[string]bucket
-	dir           string // Directory where all buckets are stored.
-	lock          sync.Mutex
-	flushInterval time.Duration
-	sleepInterval time.Duration
+	buckets  map[string]bucket
+	dir      string // Directory where all buckets are stored.
+	lock     sync.Mutex
+	settings *BucketSettings
+}
+
+type BucketSettings struct {
+	FlushInterval   time.Duration
+	SleepInterval   time.Duration
+	CompactInterval time.Duration
+}
+
+func (bs *BucketSettings) Copy() *BucketSettings {
+	return &BucketSettings{
+		FlushInterval:   bs.FlushInterval,
+		SleepInterval:   bs.SleepInterval,
+		CompactInterval: bs.CompactInterval,
+	}
 }
 
 // Build a new holder of buckets.
-func NewBuckets(dirForBuckets string,
-	flushInterval time.Duration,
-	sleepInterval time.Duration) (*Buckets, error) {
+func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error) {
 	if !isDir(dirForBuckets) {
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
 	return &Buckets{
-		buckets:       map[string]bucket{},
-		dir:           dirForBuckets,
-		flushInterval: flushInterval,
-		sleepInterval: sleepInterval,
+		buckets:  map[string]bucket{},
+		dir:      dirForBuckets,
+		settings: settings.Copy(),
 	}, nil
 }
 
@@ -79,7 +89,7 @@ func (b *Buckets) New(name string) (rv bucket, err error) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
-	if rv, err = NewBucket(bdir, b.flushInterval, b.sleepInterval); err != nil {
+	if rv, err = NewBucket(bdir, b.settings); err != nil {
 		return nil, err
 	}
 
@@ -161,11 +171,7 @@ type livebucket struct {
 	observer     *broadcaster
 }
 
-func NewBucket(dirForBucket string,
-	flushInterval time.Duration,
-	sleepInterval time.Duration) (bucket, error) {
-	compactInterval := 10 * time.Second // TODO: parametrize compaction interval.
-
+func NewBucket(dirForBucket string, settings *BucketSettings) (bucket, error) {
 	fileNames, err := latestStoreFileNames(dirForBucket, STORES_PER_BUCKET)
 	if err != nil {
 		return nil, err
@@ -180,7 +186,10 @@ func NewBucket(dirForBucket string,
 
 	for i, fileName := range fileNames {
 		p := path.Join(dirForBucket, fileName)
-		bs, err := newBucketStore(p, flushInterval, compactInterval, sleepInterval)
+		bs, err := newBucketStore(p,
+			settings.FlushInterval,
+			settings.SleepInterval,
+			settings.CompactInterval)
 		if err != nil {
 			res.Close()
 			return nil, err

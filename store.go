@@ -60,8 +60,8 @@ type bucketstorestats struct { // TODO: Unify stats naming conventions.
 
 func newBucketStore(path string,
 	flushInterval time.Duration,
-	compactInterval time.Duration,
-	sleepInterval time.Duration) (*bucketstore, error) {
+	sleepInterval time.Duration,
+	compactInterval time.Duration) (*bucketstore, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, err

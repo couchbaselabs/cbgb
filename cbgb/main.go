@@ -19,14 +19,19 @@ func main() {
 		10, "seconds between flushing or persisting mutations to storage")
 	sleepInterval := flag.Int("sleep-interval",
 		100, "seconds until files are closed (to be reopened on the next request)")
+	compactInterval := flag.Int("compact-interval",
+		10 * 60, "seconds until files are compacted")
 
 	flag.Parse()
 
 	go cbgb.MutationLogger(mutationLogCh)
 
 	buckets, err := cbgb.NewBuckets(*data,
-		time.Second * time.Duration(*flushInterval),
-		time.Second * time.Duration(*sleepInterval))
+		&cbgb.BucketSettings{
+			FlushInterval:   time.Second * time.Duration(*flushInterval),
+			SleepInterval:   time.Second * time.Duration(*sleepInterval),
+			CompactInterval: time.Second * time.Duration(*compactInterval),
+		})
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
