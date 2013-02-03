@@ -328,9 +328,8 @@ func (s *bucketstore) set(keys *gkvlite.Collection, changes *gkvlite.Collection,
 
 func (s *bucketstore) del(keys *gkvlite.Collection, changes *gkvlite.Collection,
 	key []byte, cas uint64) error {
-	// An item.exp of 0xffffffff means it was a deletion.
 	cBytes := casBytes(cas)
-	vBytes := (&item{key: key, cas: cas, exp: 0xffffffff}).toValueBytes()
+	vBytes := (&item{key: key, cas: cas}).markAsDeletion().toValueBytes()
 
 	// TODO: should we be de-duplicating older changes from the changes feed?
 	if err := changes.Set(cBytes, vBytes); err != nil {

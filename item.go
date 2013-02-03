@@ -22,6 +22,18 @@ func (i *item) clone() *item {
 	}
 }
 
+func (i *item) markAsDeletion() *item {
+	i.exp = DELETION_EXP
+	i.flag = DELETION_FLAG
+	i.data = nil
+	return i
+}
+
+func (i *item) isDeletion() bool {
+	return i.exp == DELETION_EXP && i.flag == DELETION_FLAG &&
+		(i.data == nil || len(i.data) == 0)
+}
+
 // Serialize everything but the key.
 func (i *item) toValueBytes() []byte {
 	buf := &bytes.Buffer{}

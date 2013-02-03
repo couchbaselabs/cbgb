@@ -300,12 +300,12 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 		if i.key == nil || len(i.key) <= 0 {
 			return true // A nil/empty key means a metadata change.
 		}
-		if i.exp != 0xffffffff {
-			if errVisit = kDst.Set(i.key, cItem.Key); errVisit != nil {
+		if i.isDeletion() {
+			if errVisit = kDst.Delete(i.key); errVisit != nil {
 				return false
 			}
 		} else {
-			if errVisit = kDst.Delete(i.key); errVisit != nil {
+			if errVisit = kDst.Set(i.key, cItem.Key); errVisit != nil {
 				return false
 			}
 		}
