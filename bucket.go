@@ -165,14 +165,20 @@ func NewBucket(dirForBucket string,
 	sleepInterval time.Duration) (bucket, error) {
 	compactInterval := 10 * time.Second // TODO: parametrize compaction interval.
 
+	fileNames, err := latestStoreFiles(dirForBucket)
+	if err != nil {
+		return nil, err
+	}
+
 	res := &livebucket{
 		availablech:  make(chan bool),
 		dir:          dirForBucket,
 		bucketstores: make(map[int]*bucketstore),
 		observer:     newBroadcaster(0),
 	}
-	for i := 0; i < STORES_PER_BUCKET; i++ {
-		path := fmt.Sprintf("%s%c%v.store", dirForBucket, os.PathSeparator, i)
+
+	for i, fileName := range fileNames {
+		path := dirForBucket + string(os.PathSeparator) + fileName
 		bs, err := newBucketStore(path, flushInterval, compactInterval, sleepInterval)
 		if err != nil {
 			res.Close()
@@ -181,6 +187,45 @@ func NewBucket(dirForBucket string,
 		res.bucketstores[i] = bs
 	}
 	return res, nil
+}
+
+// The store files follow a "STORENUM-VERSION.store" naming pattern.
+func latestStoreFiles(dirForBucket string) ([]string, error) {
+	fileInfos, err := ioutil.ReadDir(dirForBucket)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]string, STORES_PER_BUCKET)
+	for i := 0; i < STORES_PER_BUCKET; i++ {
+		latestVer := 0
+		latestName := fmt.Sprintf("%v-%v.store", i, latestVer)
+		for _, fileInfo := range fileInfos {
+			if !fileInfo.IsDir() && strings.HasSuffix(fileInfo.Name(), ".store") {
+				base := fileInfo.Name()[0 : len(fileInfo.Name())-len(".store")]
+				parts := strings.Split(base, "-")
+				if len(parts) != 2 || len(parts[0]) == 0 || len(parts[1]) == 0 {
+					continue
+				}
+				idx, err := strconv.Atoi(parts[0])
+				if err != nil {
+					return nil, err
+				}
+				if idx != i {
+					continue
+				}
+				ver, err := strconv.Atoi(parts[1])
+				if err != nil {
+					return nil, err
+				}
+				if latestVer < ver {
+					latestVer = ver
+					latestName = fileInfo.Name()
+				}
+			}
+		}
+		res[i] = latestName
+	}
+	return res, err
 }
 
 // Subscribe to bucket events.

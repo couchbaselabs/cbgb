@@ -484,3 +484,57 @@ func TestSleepInterval(t *testing.T) {
 	testWithFlushInterval(1 * time.Millisecond)
 	testWithFlushInterval(20 * time.Millisecond)
 }
+
+func TestLatestStoreFiles(t *testing.T) {
+	d, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(d)
+
+	checkNames := func(msg string, got []string, exp []string) {
+		if len(got) != len(exp) {
+			t.Errorf("%v - expected %v, got %v", msg, exp, got)
+		}
+		for i, v := range exp {
+			if got[i] != v {
+				t.Errorf("%v - expected %v, got %v", msg, v, got[i])
+			}
+		}
+	}
+
+	f, err := latestStoreFiles(d)
+	if err != nil {
+		t.Errorf("expected latestStoreFiles to work, err: %v", err)
+	}
+	checkNames("empty", f,
+		[]string{"0-0.store", "1-0.store", "2-0.store", "3-0.store"})
+
+	ioutil.WriteFile(d+"/0-1234.store", []byte("hi"), 0600)
+	f, err = latestStoreFiles(d)
+	if err != nil {
+		t.Errorf("expected latestStoreFiles to work, err: %v", err)
+	}
+	checkNames("one file", f,
+		[]string{"0-1234.store", "1-0.store", "2-0.store", "3-0.store"})
+
+	ioutil.WriteFile(d+"/0-234.store", []byte("hi"), 0600)
+	f, err = latestStoreFiles(d)
+	if err != nil {
+		t.Errorf("expected latestStoreFiles to work, err: %v", err)
+	}
+	checkNames("one shadowed file", f,
+		[]string{"0-1234.store", "1-0.store", "2-0.store", "3-0.store"})
+
+	ioutil.WriteFile(d+"/1-1.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/2-0.store.not", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/2-.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/-.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/-100.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/3-1-1.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/4-0.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/4-0.store", []byte("hi"), 0600)
+	f, err = latestStoreFiles(d)
+	if err != nil {
+		t.Errorf("expected latestStoreFiles to work, err: %v", err)
+	}
+	checkNames("many files", f,
+		[]string{"0-1234.store", "1-1.store", "2-0.store", "3-0.store"})
+}
