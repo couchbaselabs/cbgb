@@ -16,20 +16,10 @@ import (
 func (s *bucketstore) compact() error {
 	// This should be invoked via bucketstore.service(), so there's no
 	// concurrent flushing.
-	if err := s.compactGo(); err != nil {
-		atomic.AddUint64(&s.stats.CompactErrors, 1)
-		return err
-	}
-	atomic.AddUint64(&s.stats.TotCompact, 1)
-	return nil
-}
-
-func (s *bucketstore) compactGo() (err error) {
 	bsf := s.BSF()
 
-	// Turn off concurrent sleeping.
 	bsf.apply(func() {
-		bsf.insomnia = true
+		bsf.insomnia = true // Turn off concurrent sleeping.
 	})
 	defer func() {
 		bsf.apply(func() {
@@ -39,13 +29,15 @@ func (s *bucketstore) compactGo() (err error) {
 
 	compactPath := bsf.path + ".compact"
 
-	if err := s.compactCopyData(bsf, compactPath); err != nil {
+	if err := s.compactGo(bsf, compactPath); err != nil {
+		atomic.AddUint64(&s.stats.CompactErrors, 1)
 		return err
 	}
+	atomic.AddUint64(&s.stats.TotCompact, 1)
 	return nil
 }
 
-func (s *bucketstore) compactCopyData(bsf *bucketstorefile, compactPath string) error {
+func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error {
 	os.Remove(compactPath) // Ignore any previous attempts.
 
 	compactFile, err := os.OpenFile(compactPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)

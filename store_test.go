@@ -756,7 +756,7 @@ func TestCompactionNumFiles(t *testing.T) {
 	}
 	b0.Close()
 	postCompactFiles, err := ioutil.ReadDir(testBucketDir)
-	if len(postCompactFiles) != 2 * len(preCompactFiles) {
+	if len(postCompactFiles) != 2*len(preCompactFiles) {
 		t.Errorf("expected 2x postCompactFiles vs preCompactFiles, got: %v vs %v",
 			len(postCompactFiles), len(preCompactFiles))
 	}
