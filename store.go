@@ -3,7 +3,10 @@ package cbgb
 import (
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"os"
+	"strconv"
+	"strings"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -171,25 +174,28 @@ func (s *bucketstore) dirty() {
 func (s *bucketstore) compact() (*bucketstorefile, error) {
 	// This should be invoked via bucketstore service(), so there's
 	// no concurrent flushing.
+	// TODO: Do not let the bsf sleep.
 	bsf := s.BSF()
-	// TODO: copy VBMeta (vbm).
+
 	// TODO: what if there's an error during compaction, when we're half moved over?
 	// TODO: how to get a keys index that's sync'ed with the changes stream?
 	// TODO: perhaps grab a snapshot from the last flush? or just roots?
 	// TODO: perhaps remember a history of flushes.
 	// TODO: perhaps need to copy bunch of keys index history (multiple roots)?
+	// TODO: handle if someone creates/deletes a vbucket during compaction.
+
 	return bsf, nil
 }
 
 func (s *bucketstore) collKeysChanges(id uint16,
 	psc func(collKeysChanges)) (*gkvlite.Collection, *gkvlite.Collection) {
-	var i, c *gkvlite.Collection
+	var k, c *gkvlite.Collection
 	s.apply(func() {
-		i = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_KEYS))
+		k = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_KEYS))
 		c = s.coll(fmt.Sprintf("%v%s", id, COLL_SUFFIX_CHANGES))
 		s.mapPauseSwapColls[id] = psc
 	})
-	return i, c
+	return k, c
 }
 
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
@@ -515,4 +521,60 @@ func (bss *bucketstorestats) Add(in *bucketstorestats) {
 
 	bss.ReadBytes += atomic.LoadUint64(&in.ReadBytes)
 	bss.WriteBytes += atomic.LoadUint64(&in.WriteBytes)
+}
+
+// Find the highest version-numbered store files in a bucket directory.
+func latestStoreFileNames(dirForBucket string, storesPerBucket int) ([]string, error) {
+	fileInfos, err := ioutil.ReadDir(dirForBucket)
+	if err != nil {
+		return nil, err
+	}
+	res := make([]string, storesPerBucket)
+	for i := 0; i < storesPerBucket; i++ {
+		latestVer := 0
+		latestName := makeStoreFileName(i, latestVer)
+		for _, fileInfo := range fileInfos {
+			if fileInfo.IsDir() {
+				continue
+			}
+			idx, ver, err := parseStoreFileName(fileInfo.Name())
+			if err != nil {
+				continue
+			}
+			if idx != i {
+				continue
+			}
+			if latestVer < ver {
+				latestVer = ver
+				latestName = fileInfo.Name()
+			}
+		}
+		res[i] = latestName
+	}
+	return res, err
+}
+
+// The store files follow a "IDX-VER.store" naming pattern.
+func makeStoreFileName(idx int, ver int) string {
+	return fmt.Sprintf("%v-%v.store", idx, ver)
+}
+
+func parseStoreFileName(fileName string) (idx int, ver int, err error) {
+	if !strings.HasSuffix(fileName, ".store") {
+		return -1, -1, fmt.Errorf("missing a store filename suffix: %v", fileName)
+	}
+	base := fileName[0 : len(fileName)-len(".store")]
+	parts := strings.Split(base, "-")
+	if len(parts) != 2 || len(parts[0]) == 0 || len(parts[1]) == 0 {
+		return -1, -1, fmt.Errorf("not a store filename: %v", fileName)
+	}
+	idx, err = strconv.Atoi(parts[0])
+	if err != nil {
+		return -1, -1, err
+	}
+	ver, err = strconv.Atoi(parts[1])
+	if err != nil {
+		return -1, -1, err
+	}
+	return idx, ver, nil
 }
