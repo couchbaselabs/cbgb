@@ -24,6 +24,7 @@ const (
 	COLL_SUFFIX_KEYS    = ".a" // This suffix sorts before CHANGES suffix.
 	COLL_SUFFIX_CHANGES = ".c"
 	COLL_VBMETA         = "vbm"
+	MAX_VBID            = 0x0000ffff // Due to uint16.
 	MAX_EXP             = 0x7fffffff
 	DELETION_EXP        = 0x80000000 // Deletion sentinel exp.
 	DELETION_FLAG       = 0xffffffff // Deletion sentinel flag.

@@ -77,7 +77,7 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 		if err != nil {
 			return err
 		}
-		if vbid < 0 || vbid > 0x0000ffff {
+		if vbid < 0 || vbid > MAX_VBID {
 			return fmt.Errorf("compact vbid out of range: %v, vbid: %v",
 				bsf.path, vbid)
 		}
