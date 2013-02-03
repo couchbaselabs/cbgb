@@ -116,7 +116,6 @@ func TestSaveLoadBasic(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
-	// defer b0.Close()
 
 	r0 := &reqHandler{b0}
 	b0.CreateVBucket(2)
