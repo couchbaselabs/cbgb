@@ -791,6 +791,7 @@ func TestCompactionNumFiles(t *testing.T) {
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
+			PurgeTimeout:    20 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -816,6 +817,46 @@ func TestCompactionNumFiles(t *testing.T) {
 	postCompactFiles, err := ioutil.ReadDir(testBucketDir)
 	if len(postCompactFiles) != 2*len(preCompactFiles) {
 		t.Errorf("expected 2x postCompactFiles vs preCompactFiles, got: %v vs %v",
+			len(postCompactFiles), len(preCompactFiles))
+	}
+}
+
+func TestCompactionPurgeTimeout(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   time.Millisecond,
+			CompactInterval: 10 * time.Second,
+			PurgeTimeout:    time.Millisecond,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{b0}
+	b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+	for i := 0; i < 100; i++ {
+		testLoadInts(t, r0, 2, 5)
+		if err = b0.Flush(); err != nil {
+			t.Errorf("expected Flush (loop) to work, got: %v", err)
+		}
+	}
+	preCompactFiles, err := ioutil.ReadDir(testBucketDir)
+	if err = b0.Compact(); err != nil {
+		t.Errorf("expected Compact to work, got: %v", err)
+	}
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+	time.Sleep(5 * time.Millisecond)
+	b0.Close()
+	postCompactFiles, err := ioutil.ReadDir(testBucketDir)
+	if len(postCompactFiles) != len(preCompactFiles) {
+		t.Errorf("expected purged postCompactFiles == preCompactFiles with, got: %v vs %v",
 			len(postCompactFiles), len(preCompactFiles))
 	}
 }

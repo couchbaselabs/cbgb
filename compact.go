@@ -233,7 +233,11 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 
 	atomic.StorePointer(&s.bsf, unsafe.Pointer(nextBSF))
 
-	// TODO: Shut down old bsf.
+	// Shut down old bsf by setting its sleepPurge.
+	bsf.apply(func() {
+		bsf.sleepInterval = s.purgeTimeout
+		bsf.sleepPurge = s.purgeTimeout
+	})
 
 	return nil
 }

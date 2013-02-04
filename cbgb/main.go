@@ -21,6 +21,8 @@ func main() {
 		100, "seconds until files are closed (to be reopened on the next request)")
 	compactInterval := flag.Int("compact-interval",
 		10 * 60, "seconds until files are compacted")
+	purgeTimeout := flag.Int("purge-timeout",
+		10, "seconds until unused files are purged after compaction")
 
 	flag.Parse()
 
@@ -31,6 +33,7 @@ func main() {
 			FlushInterval:   time.Second * time.Duration(*flushInterval),
 			SleepInterval:   time.Second * time.Duration(*sleepInterval),
 			CompactInterval: time.Second * time.Duration(*compactInterval),
+			PurgeTimeout:    time.Second * time.Duration(*purgeTimeout),
 		})
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)

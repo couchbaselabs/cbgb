@@ -49,6 +49,7 @@ type BucketSettings struct {
 	FlushInterval   time.Duration
 	SleepInterval   time.Duration
 	CompactInterval time.Duration
+	PurgeTimeout    time.Duration
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
@@ -56,6 +57,7 @@ func (bs *BucketSettings) Copy() *BucketSettings {
 		FlushInterval:   bs.FlushInterval,
 		SleepInterval:   bs.SleepInterval,
 		CompactInterval: bs.CompactInterval,
+		PurgeTimeout:    bs.PurgeTimeout,
 	}
 }
 
@@ -190,7 +192,8 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (bucket, error) {
 		bs, err := newBucketStore(p,
 			settings.FlushInterval,
 			settings.SleepInterval,
-			settings.CompactInterval)
+			settings.CompactInterval,
+			settings.PurgeTimeout)
 		if err != nil {
 			res.Close()
 			return nil, err

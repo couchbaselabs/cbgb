@@ -22,6 +22,7 @@ type bucketstore struct {
 	dirtiness       int64
 	flushInterval   time.Duration // Time between checking whether to flush.
 	compactInterval time.Duration // Time between checking whether to compact.
+	purgeTimeout    time.Duration // Time to keep old, unused file after compaction..
 	stats           *bucketstorestats
 
 	// Map of callbacks, which are invoked when we need the
@@ -37,6 +38,7 @@ type bucketstorefile struct {
 	store         *gkvlite.Store
 	ch            chan *funreq
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
+	sleepPurge    time.Duration // When >0, purge file after sleeping + this duration.
 	insomnia      bool          // When true, no sleeping.
 	stats         *bucketstorestats
 }
@@ -64,7 +66,8 @@ type bucketstorestats struct { // TODO: Unify stats naming conventions.
 func newBucketStore(path string,
 	flushInterval time.Duration,
 	sleepInterval time.Duration,
-	compactInterval time.Duration) (*bucketstore, error) {
+	compactInterval time.Duration,
+	purgeTimeout time.Duration) (*bucketstore, error) {
 	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
 		return nil, err
@@ -76,6 +79,7 @@ func newBucketStore(path string,
 		file:          file,
 		ch:            make(chan *funreq),
 		sleepInterval: sleepInterval,
+		sleepPurge:    time.Duration(0),
 		insomnia:      false,
 		stats:         bss,
 	}
@@ -93,6 +97,7 @@ func newBucketStore(path string,
 		ch:                make(chan *funreq),
 		flushInterval:     flushInterval,
 		compactInterval:   compactInterval,
+		purgeTimeout:      purgeTimeout,
 		stats:             bss,
 		mapPauseSwapColls: make(map[uint16]func(collKeysChanges)),
 	}
@@ -437,10 +442,26 @@ func (bsf *bucketstorefile) Sleep() error {
 	bsf.file.Close()
 	bsf.file = nil
 
-	// TODO: If we sleep for too long, then we should die.
-	r, ok := <-bsf.ch
-	if !ok {
-		return nil
+	var r *funreq
+	var ok bool
+
+	if bsf.sleepPurge > time.Duration(0) {
+		select {
+		case r, ok = <-bsf.ch:
+			if !ok {
+				os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
+				return nil
+			}
+		case <-time.After(bsf.sleepPurge):
+			close(bsf.ch)
+			os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
+			return nil
+		}
+	} else {
+		r, ok = <-bsf.ch
+		if !ok {
+			return nil
+		}
 	}
 
 	atomic.AddUint64(&bsf.stats.TotWake, 1)
