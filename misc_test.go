@@ -3,7 +3,9 @@ package cbgb
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
 	"net"
+	"os"
 	"testing"
 	"time"
 
@@ -12,7 +14,9 @@ import (
 
 // Exercise the mutation logger code. Output is not examined.
 func TestMutationLogger(t *testing.T) {
-	b, _ := NewBucket("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -44,7 +48,9 @@ func TestMutationInvalid(t *testing.T) {
 		}
 	}()
 
-	b, _ := NewBucket("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -82,7 +88,9 @@ func TestSessionLoop(t *testing.T) {
 }
 
 func TestListener(t *testing.T) {
-	b, err := NewBuckets("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -111,7 +119,9 @@ func TestListener(t *testing.T) {
 }
 
 func TestListenerFail(t *testing.T) {
-	b, err := NewBuckets("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,

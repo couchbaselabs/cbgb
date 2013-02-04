@@ -17,7 +17,9 @@ func TestBucketRegistry(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected NewBuckets to fail")
 	}
-	bs, err := NewBuckets("./tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	bs, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -67,7 +69,9 @@ func TestBucketRegistry(t *testing.T) {
 
 // Verify the current and future bucket changes are sent.
 func TestBucketNotifications(t *testing.T) {
-	b, err := NewBucket("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -124,7 +128,9 @@ func TestBucketNotifications(t *testing.T) {
 }
 
 func TestNewBucket(t *testing.T) {
-	nb, err := NewBucket("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -154,7 +160,9 @@ func TestNewBucket(t *testing.T) {
 }
 
 func TestCreateDestroyVBucket(t *testing.T) {
-	nb, err := NewBucket("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
@@ -231,7 +239,9 @@ func TestVBString(t *testing.T) {
 }
 
 func TestBucketClose(t *testing.T) {
-	nb, err := NewBucket("tmp",
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   time.Second,
 			SleepInterval:   time.Second,
