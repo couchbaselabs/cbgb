@@ -604,8 +604,6 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 	// Flags          8
 	// Max results	 32
 
-	// TODO: Extras.
-
 	res = &gomemcached.MCResponse{
 		Opcode: req.Opcode,
 		Cas:    req.Cas,
@@ -754,7 +752,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 		}
 
 		// TODO: Possible race here, in-between creation and access,
-		// an adversary could delete the vbucket?
+		// where an adversary could delete the vbucket at the wrong time?
 
 		if vb != nil {
 			vb.Apply(func() {
@@ -781,7 +779,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 				}
 			})
 			if res.Status != gomemcached.SUCCESS && created {
-				// TODO: Cleanup the vbucket that we created.
+				// TODO: Cleanup the vbucket that we created if error.
 			}
 		} else {
 			res = &gomemcached.MCResponse{
@@ -809,7 +807,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 
 func (v *vbucket) rangeCopyTo(dst *vbucket,
 	minKeyInclusive []byte, maxKeyExclusive []byte) error {
-	// TODO: Should this be under dst.Apply()/Mutate().
+	// TODO: Should this be under src and/or dst Apply()/Mutate() protection?
 
 	err := v.bs.rangeCopy(v.CollKeys(), dst.bs, dst.CollKeys(),
 		minKeyInclusive, maxKeyExclusive)
