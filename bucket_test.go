@@ -275,12 +275,11 @@ func TestBucketClose(t *testing.T) {
 }
 
 func TestBucketLoadNames(t *testing.T) {
-	d, err := ioutil.TempDir(os.TempDir(), "cbgb-TestBucketLoadNames")
+	d, err := ioutil.TempDir("./tmp", "test")
 	if err != nil {
 		t.Fatalf("Expected TempDir to work, got: %v", err)
 	}
-
-	t.Logf("tmpdir %v", d)
+	defer os.RemoveAll(d)
 	b, err := NewBuckets(d,
 		&BucketSettings{
 			FlushInterval:   time.Second,
