@@ -67,4 +67,23 @@ func TestItemSerialization(t *testing.T) {
 	if !bytes.Equal(ib, jb) {
 		t.Errorf("expected item.toValueBytes() to be the same")
 	}
+
+	kb := []byte("")
+	k := &item{}
+	err = k.fromValueBytes(kb)
+	if err == nil {
+		t.Errorf("expected toValueBytes error on empty buf")
+	}
+
+	kb = ib[1:]
+	err = k.fromValueBytes(kb)
+	if err == nil {
+		t.Errorf("expected toValueBytes error on empty buf")
+	}
+
+	kb = ib[4:]
+	err = k.fromValueBytes(kb)
+	if err == nil {
+		t.Errorf("expected toValueBytes error on empty buf")
+	}
 }

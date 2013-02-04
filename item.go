@@ -3,6 +3,7 @@ package cbgb
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 )
 
 type item struct {
@@ -71,6 +72,11 @@ func (i *item) toValueBytes() []byte {
 }
 
 func (i *item) fromValueBytes(b []byte) (err error) {
+	hdrlen := 4 + 4 + 8 + 2 + 4
+	if hdrlen > len(b) {
+		return fmt.Errorf("item.fromValueBytes(): arr too short: %v, minimum: %v",
+			len(b), hdrlen)
+	}
 	buf := bytes.NewBuffer(b)
 	if err = binary.Read(buf, binary.BigEndian, &i.exp); err != nil {
 		return err
@@ -89,9 +95,20 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 	if err = binary.Read(buf, binary.BigEndian, &datalen); err != nil {
 		return err
 	}
-	start := 4 + 4 + 8 + 2 + 4
-	i.key = b[start : start+int(keylen)]
-	i.data = b[start+int(keylen) : start+int(keylen)+int(datalen)]
+	if len(b) < hdrlen+int(keylen)+int(datalen) {
+		return fmt.Errorf("item.fromValueBytes(): arr too short: %v, wanted: %v",
+			len(b), hdrlen+int(keylen)+int(datalen))
+	}
+	if keylen > 0 {
+		i.key = b[hdrlen : hdrlen+int(keylen)]
+	} else {
+		i.key = []byte("")
+	}
+	if datalen > 0 {
+		i.data = b[hdrlen+int(keylen) : hdrlen+int(keylen)+int(datalen)]
+	} else {
+		i.data = []byte("")
+	}
 	return nil
 }
 
