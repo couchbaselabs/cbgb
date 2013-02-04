@@ -102,6 +102,12 @@ func TestItemNilSerialization(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected item.fromValueBytes() to work")
 	}
+	if j.key == nil {
+		t.Errorf("expected item.key to be non-nil")
+	}
+	if j.data == nil {
+		t.Errorf("expected item.data to be non-nil")
+	}
 	if len(j.key) != 0 || len(j.data) != 0 {
 		t.Errorf("expected item.key/data to be 0 len")
 	}
