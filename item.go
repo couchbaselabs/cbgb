@@ -34,6 +34,14 @@ func (i *item) isDeletion() bool {
 		(i.data == nil || len(i.data) == 0)
 }
 
+func (i *item) Equal(j *item) bool {
+	return bytes.Equal(i.key, j.key) &&
+		i.exp == j.exp &&
+		i.flag == j.flag &&
+		i.cas == j.cas &&
+		bytes.Equal(i.data, j.data)
+}
+
 // Serialize everything but the key.
 func (i *item) toValueBytes() []byte {
 	buf := &bytes.Buffer{}
