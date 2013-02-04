@@ -681,6 +681,64 @@ func TestCompaction(t *testing.T) {
 	if err = b0.Flush(); err != nil {
 		t.Errorf("expected Flush to work, got: %v", err)
 	}
+
+	active := uint16(2)
+	tests := []struct {
+		op  gomemcached.CommandCode
+		vb  uint16
+		key string
+		val string
+	}{
+		{gomemcached.DELETE, active, "0", ""},
+		{gomemcached.DELETE, active, "2", ""},
+		{gomemcached.DELETE, active, "4", ""},
+		{gomemcached.SET, active, "2", "2"},
+		{gomemcached.SET, active, "5", "5"},
+	}
+
+	for _, x := range tests {
+		req := &gomemcached.MCRequest{
+			Opcode:  x.op,
+			VBucket: x.vb,
+			Key:     []byte(x.key),
+			Body:    []byte(x.val),
+		}
+		res := r0.HandleMessage(ioutil.Discard, req)
+		if res.Status != gomemcached.SUCCESS {
+			t.Errorf("Expected %v for %v:%v/%v, got %v",
+				gomemcached.SUCCESS, x.op, x.vb, x.key, res.Status)
+		}
+	}
+	testExpectInts(t, r0, 2, []int{1, 2, 3, 5, 6}, "after delete")
+
+	if err = b0.Compact(); err != nil {
+		t.Errorf("expected Compact to work, got: %v", err)
+	}
+	testExpectInts(t, r0, 2, []int{1, 2, 3, 5, 6}, "after delete, compact")
+
+	if err = b0.Flush(); err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+	testExpectInts(t, r0, 2, []int{1, 2, 3, 5, 6}, "after delete, compact, flush")
+
+	b0.Close()
+
+	b1, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   11 * time.Second,
+			SleepInterval:   11 * time.Second,
+			CompactInterval: 11 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r1 := &reqHandler{b1}
+	err = b1.Load()
+	if err != nil {
+		t.Errorf("expected Load to work, err: %v", err)
+	}
+	testExpectInts(t, r1, 2, []int{1, 2, 3, 5, 6}, "after reload")
 }
 
 func TestEmptyFileCompaction(t *testing.T) {
