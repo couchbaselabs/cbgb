@@ -43,9 +43,9 @@ func TestItemDeletionSentinel(t *testing.T) {
 func TestItemSerialization(t *testing.T) {
 	i := &item{
 		key:  []byte("a"),
-		exp:  123,
-		flag: 321,
-		cas:  111,
+		exp:  0x81234321,
+		flag: 0xffffffff,
+		cas:  0xfedcba9876432100,
 		data: []byte("b"),
 	}
 	ib := i.toValueBytes()
@@ -85,5 +85,24 @@ func TestItemSerialization(t *testing.T) {
 	err = k.fromValueBytes(kb)
 	if err == nil {
 		t.Errorf("expected toValueBytes error on empty buf")
+	}
+}
+
+func TestItemNilSerialization(t *testing.T) {
+	i := &item{
+		key:  nil,
+		data: nil,
+	}
+	ib := i.toValueBytes()
+	if ib == nil {
+		t.Errorf("expected item.toValueBytes() to work")
+	}
+	j := &item{}
+	err := j.fromValueBytes(ib)
+	if err != nil {
+		t.Errorf("expected item.fromValueBytes() to work")
+	}
+	if len(j.key) != 0 || len(j.data) != 0 {
+		t.Errorf("expected item.key/data to be 0 len")
 	}
 }
