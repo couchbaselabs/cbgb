@@ -106,3 +106,28 @@ func TestItemNilSerialization(t *testing.T) {
 		t.Errorf("expected item.key/data to be 0 len")
 	}
 }
+
+func TestCASSerialization(t *testing.T) {
+	cas0 := uint64(0xfedcba9876432100)
+	b0 := casBytes(cas0)
+	if b0 == nil {
+		t.Errorf("expected casBytes() to be non-nil")
+	}
+	cas1, err := casBytesParse(b0)
+	if err != nil {
+		t.Errorf("expected casBytesParse() to work")
+	}
+	if cas1 != cas0 {
+		t.Errorf("expected cas to equal")
+	}
+
+	_, err = casBytesParse([]byte(""))
+	if err == nil {
+		t.Errorf("expected casBytesParse() to error on short bytes")
+	}
+
+	_, err = casBytesParse(b0[1:])
+	if err == nil {
+		t.Errorf("expected casBytesParse() to error on short bytes")
+	}
+}

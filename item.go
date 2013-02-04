@@ -133,6 +133,9 @@ func casBytes(cas uint64) []byte {
 }
 
 func casBytesParse(b []byte) (cas uint64, err error) {
+	if len(b) < 8 {
+		return 0, fmt.Errorf("item.casBytesParse() arr len: %v", len(b))
+	}
 	buf := bytes.NewBuffer(b)
 	if err = binary.Read(buf, binary.BigEndian, &cas); err != nil {
 		return 0, err
