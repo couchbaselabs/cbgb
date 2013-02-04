@@ -16,18 +16,20 @@ import (
 )
 
 const (
-	CHANGES_SINCE       = gomemcached.CommandCode(0x60)
-	GET_VBMETA          = gomemcached.CommandCode(0x61)
-	SET_VBMETA          = gomemcached.CommandCode(0x62)
-	SPLIT_RANGE         = gomemcached.CommandCode(0x63)
-	NOT_MY_RANGE        = gomemcached.Status(0x60)
-	COLL_SUFFIX_KEYS    = ".a" // This suffix sorts before CHANGES suffix.
-	COLL_SUFFIX_CHANGES = ".c"
-	COLL_VBMETA         = "vbm"
-	MAX_VBID            = 0x0000ffff // Due to uint16.
-	MAX_EXP             = 0x7fffffff
-	DELETION_EXP        = 0x80000000 // Deletion sentinel exp.
-	DELETION_FLAG       = 0xffffffff // Deletion sentinel flag.
+	CHANGES_SINCE        = gomemcached.CommandCode(0x60)
+	GET_VBMETA           = gomemcached.CommandCode(0x61)
+	SET_VBMETA           = gomemcached.CommandCode(0x62)
+	SPLIT_RANGE          = gomemcached.CommandCode(0x63)
+	NOT_MY_RANGE         = gomemcached.Status(0x60)
+	COLL_SUFFIX_KEYS     = ".a" // This suffix sorts before CHANGES suffix.
+	COLL_SUFFIX_CHANGES  = ".c"
+	COLL_VBMETA          = "vbm"
+	MAX_VBID             = 0x0000ffff // Due to uint16.
+	MAX_ITEM_KEY_LENGTH  = 250
+	MAX_ITEM_DATA_LENGTH = 1024 * 1024
+	MAX_ITEM_EXP         = 0x7fffffff
+	DELETION_EXP         = 0x80000000 // Deletion sentinel exp.
+	DELETION_FLAG        = 0xffffffff // Deletion sentinel flag.
 )
 
 type vbucket struct {
@@ -283,6 +285,13 @@ func (v *vbucket) AddStats(dest *Stats, key string) {
 }
 
 func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	if len(req.Key) > MAX_ITEM_KEY_LENGTH {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body:   []byte(fmt.Sprintf("key length too long: %v", len(req.Key))),
+		}
+	}
+
 	meta := v.Meta()
 	if meta.KeyRange != nil {
 		if len(meta.KeyRange.MinKeyInclusive) > 0 &&
@@ -305,6 +314,14 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	res = v.checkRange(req)
 	if res != nil {
 		return res
+	}
+
+	if len(req.Body) > MAX_ITEM_DATA_LENGTH {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body: []byte(fmt.Sprintf("data too big: %v, key: %v",
+				len(req.Body), req.Key)),
+		}
 	}
 
 	var itemCas uint64

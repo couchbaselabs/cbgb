@@ -45,6 +45,12 @@ func (i *item) Equal(j *item) bool {
 
 // Serialize everything but the key.
 func (i *item) toValueBytes() []byte {
+	if len(i.key) > MAX_ITEM_KEY_LENGTH {
+		return nil
+	}
+	if len(i.data) > MAX_ITEM_DATA_LENGTH {
+		return nil
+	}
 	buf := &bytes.Buffer{}
 	if err := binary.Write(buf, binary.BigEndian, i.exp); err != nil {
 		return nil
@@ -55,7 +61,6 @@ func (i *item) toValueBytes() []byte {
 	if err := binary.Write(buf, binary.BigEndian, i.cas); err != nil {
 		return nil
 	}
-	// TODO: Handle if len(key) > uint16.
 	if err := binary.Write(buf, binary.BigEndian, uint16(len(i.key))); err != nil {
 		return nil
 	}
