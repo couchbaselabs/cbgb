@@ -117,6 +117,9 @@ func (s *bucketstore) service() {
 	tickerC := time.NewTicker(s.compactInterval)
 	defer tickerC.Stop()
 
+	numFlushes := uint64(0)
+	lastCompact := uint64(0)
+
 	for {
 		select {
 		case r, ok := <-s.ch:
@@ -129,9 +132,13 @@ func (s *bucketstore) service() {
 			d := atomic.LoadInt64(&s.dirtiness)
 			if d > 0 {
 				s.flush()
+				numFlushes++
 			}
 		case <-tickerC.C:
-			s.compact()
+			if lastCompact != numFlushes {
+				s.compact()
+				lastCompact = numFlushes
+			}
 		}
 	}
 }
