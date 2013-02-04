@@ -677,63 +677,37 @@ func TestParallelMutations(t *testing.T) {
 
 // Parallel dispatcher invocation timing.
 func BenchmarkParallelGet(b *testing.B) {
-	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
-		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
-			CompactInterval: 10 * time.Second,
-		})
-	defer testBucket.Close()
-	testBucket.CreateVBucket(3)
-
-	rh := reqHandler{testBucket}
-
 	req := &gomemcached.MCRequest{
 		Opcode:  gomemcached.GET,
 		Key:     []byte("k"),
 		VBucket: 3,
 	}
-
-	wg := sync.WaitGroup{}
-	var parallel = 32
-	wg.Add(parallel)
-
-	// Ignore time from above.
-	b.ResetTimer()
-	for worker := 0; worker < parallel; worker++ {
-		go func() {
-			defer wg.Done()
-			for i := 0; i < b.N/parallel; i++ {
-				rh.HandleMessage(nil, req)
-			}
-		}()
-	}
-	wg.Wait()
+	benchmarkParallelCmd(b, req)
 }
 
-// Parallel dispatcher invocation timing.
 func BenchmarkParallelSet(b *testing.B) {
-	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
-		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
-			CompactInterval: 10 * time.Second,
-		})
-	defer testBucket.Close()
-	testBucket.CreateVBucket(3)
-
-	rh := reqHandler{testBucket}
-
 	req := &gomemcached.MCRequest{
 		Opcode:  gomemcached.SET,
 		Key:     []byte("k"),
 		VBucket: 3,
 		Body:    []byte("hello"),
 	}
+	benchmarkParallelCmd(b, req)
+}
+
+func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   time.Second,
+			SleepInterval:   time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	defer testBucket.Close()
+	testBucket.CreateVBucket(3)
+
+	rh := reqHandler{testBucket}
 
 	wg := sync.WaitGroup{}
 	var parallel = 32
