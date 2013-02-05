@@ -31,6 +31,11 @@ func main() {
 
 	flag.Parse()
 
+	log.Printf("cbgb")
+	flag.VisitAll(func(f *flag.Flag) {
+		log.Printf("  %v=%v", f.Name, f.Value)
+	})
+
 	go cbgb.MutationLogger(mutationLogCh)
 
 	buckets, err := cbgb.NewBuckets(*data,
