@@ -32,6 +32,9 @@ func main() {
 	purgeTimeout := flag.Duration("purge-timeout",
 		10 * time.Second,
 		"duration until unused files are purged after compaction")
+	staticPath := flag.String("static-path",
+		"static",
+		"path to static content")
 
 	flag.Parse()
 
@@ -81,6 +84,8 @@ func main() {
 
 	if *rest != ":DISABLED" {
 		log.Printf("listening rest on: %v", *rest)
+		http.Handle("/static/",
+			http.StripPrefix("/static", http.FileServer(http.Dir(*staticPath))))
 		log.Fatal(http.ListenAndServe(*rest, nil))
 	}
 
