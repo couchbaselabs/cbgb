@@ -11,7 +11,7 @@ import (
 var mutationLogCh = make(chan interface{})
 
 func main() {
-	addr := flag.String("bind", ":11211", "memcached listen port")
+	bind := flag.String("bind", ":11211", "memcached listen port")
 	data := flag.String("data", "./tmp", "data directory")
 	defaultBucketName := flag.String("default-bucket-name",
 		cbgb.DEFAULT_BUCKET_NAME,
@@ -71,7 +71,7 @@ func main() {
 	}
 
 	log.Printf("starting server")
-	if _, err := cbgb.StartServer(*addr, buckets, *defaultBucketName); err != nil {
+	if _, err := cbgb.StartServer(*bind, buckets, *defaultBucketName); err != nil {
 		log.Fatalf("Error starting server: %s", err)
 	}
 
