@@ -14,15 +14,20 @@ func main() {
 	addr := flag.String("bind", ":11211", "memcached listen port")
 	data := flag.String("data", "./tmp", "data directory")
 	defaultBucketName := flag.String("default-bucket-name",
-		cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket")
-	flushInterval := flag.Int("flush-interval",
-		10, "seconds between flushing or persisting mutations to storage")
-	sleepInterval := flag.Int("sleep-interval",
-		100, "seconds until files are closed (to be reopened on the next request)")
-	compactInterval := flag.Int("compact-interval",
-		10 * 60, "seconds until files are compacted")
-	purgeTimeout := flag.Int("purge-timeout",
-		10, "seconds until unused files are purged after compaction")
+		cbgb.DEFAULT_BUCKET_NAME,
+		"name of the default bucket")
+	flushInterval := flag.Duration("flush-interval",
+		10 * time.Second,
+		"duration between flushing or persisting mutations to storage")
+	sleepInterval := flag.Duration("sleep-interval",
+		2 * time.Minute,
+		"duration until files are closed (to be reopened on the next request)")
+	compactInterval := flag.Duration("compact-interval",
+		10 * time.Minute,
+		"duration until files are compacted")
+	purgeTimeout := flag.Duration("purge-timeout",
+		10 * time.Second,
+		"duration until unused files are purged after compaction")
 
 	flag.Parse()
 
@@ -30,10 +35,10 @@ func main() {
 
 	buckets, err := cbgb.NewBuckets(*data,
 		&cbgb.BucketSettings{
-			FlushInterval:   time.Second * time.Duration(*flushInterval),
-			SleepInterval:   time.Second * time.Duration(*sleepInterval),
-			CompactInterval: time.Second * time.Duration(*compactInterval),
-			PurgeTimeout:    time.Second * time.Duration(*purgeTimeout),
+			FlushInterval:   *flushInterval,
+			SleepInterval:   *sleepInterval,
+			CompactInterval: *compactInterval,
+			PurgeTimeout:    *purgeTimeout,
 		})
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
