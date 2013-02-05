@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"log"
+	"net/http"
 	"time"
 
 	"github.com/couchbaselabs/cbgb"
@@ -10,9 +11,12 @@ import (
 
 var mutationLogCh = make(chan interface{})
 
+var startTime = time.Now()
+
 func main() {
-	bind := flag.String("bind", ":11211", "memcached listen port")
+	addr := flag.String("addr", ":11211", "data protocol listen address")
 	data := flag.String("data", "./tmp", "data directory")
+	rest := flag.String("rest", ":DISABLED", "rest protocol listen address")
 	defaultBucketName := flag.String("default-bucket-name",
 		cbgb.DEFAULT_BUCKET_NAME,
 		"name of the default bucket")
@@ -49,7 +53,7 @@ func main() {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
 
-	log.Printf("loading buckets")
+	log.Printf("loading buckets from: %v", *data)
 	err = buckets.Load()
 	if err != nil {
 		log.Printf("Could not load buckets: %v, data directory: %v", err, *data)
@@ -70,9 +74,14 @@ func main() {
 		}
 	}
 
-	log.Printf("starting server")
-	if _, err := cbgb.StartServer(*bind, buckets, *defaultBucketName); err != nil {
+	log.Printf("listening data on: %v", *addr)
+	if _, err := cbgb.StartServer(*addr, buckets, *defaultBucketName); err != nil {
 		log.Fatalf("Error starting server: %s", err)
+	}
+
+	if *rest != ":DISABLED" {
+		log.Printf("listening rest on: %v", *rest)
+		log.Fatal(http.ListenAndServe(*rest, nil))
 	}
 
 	// Let goroutines do their work.
