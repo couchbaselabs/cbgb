@@ -1,41 +1,47 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
+	"io"
 	"log"
 	"net/http"
 	"time"
 
 	"github.com/couchbaselabs/cbgb"
+	"github.com/gorilla/mux"
 )
 
 var mutationLogCh = make(chan interface{})
 
 var startTime = time.Now()
 
-func main() {
-	addr := flag.String("addr", ":11211", "data protocol listen address")
-	data := flag.String("data", "./tmp", "data directory")
-	rest := flag.String("rest", ":DISABLED", "rest protocol listen address")
-	defaultBucketName := flag.String("default-bucket-name",
+var addr = flag.String("addr", ":11211", "data protocol listen address")
+var data = flag.String("data", "./tmp", "data directory")
+var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
+
+var defaultBucketName = flag.String("default-bucket-name",
 		cbgb.DEFAULT_BUCKET_NAME,
 		"name of the default bucket")
-	flushInterval := flag.Duration("flush-interval",
+var flushInterval = flag.Duration("flush-interval",
 		10 * time.Second,
 		"duration between flushing or persisting mutations to storage")
-	sleepInterval := flag.Duration("sleep-interval",
+var sleepInterval = flag.Duration("sleep-interval",
 		2 * time.Minute,
 		"duration until files are closed (to be reopened on the next request)")
-	compactInterval := flag.Duration("compact-interval",
+var compactInterval = flag.Duration("compact-interval",
 		10 * time.Minute,
 		"duration until files are compacted")
-	purgeTimeout := flag.Duration("purge-timeout",
+var purgeTimeout = flag.Duration("purge-timeout",
 		10 * time.Second,
 		"duration until unused files are purged after compaction")
-	staticPath := flag.String("static-path",
+var staticPath = flag.String("static-path",
 		"static",
 		"path to static content")
 
+var bucketSettings *cbgb.BucketSettings
+
+func main() {
 	flag.Parse()
 
 	log.Printf("cbgb")
@@ -45,13 +51,13 @@ func main() {
 
 	go cbgb.MutationLogger(mutationLogCh)
 
-	buckets, err := cbgb.NewBuckets(*data,
-		&cbgb.BucketSettings{
-			FlushInterval:   *flushInterval,
-			SleepInterval:   *sleepInterval,
-			CompactInterval: *compactInterval,
-			PurgeTimeout:    *purgeTimeout,
-		})
+	bucketSettings = &cbgb.BucketSettings{
+		FlushInterval:   *flushInterval,
+		SleepInterval:   *sleepInterval,
+		CompactInterval: *compactInterval,
+		PurgeTimeout:    *purgeTimeout,
+	}
+	buckets, err := cbgb.NewBuckets(*data, bucketSettings)
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
@@ -84,11 +90,43 @@ func main() {
 
 	if *rest != ":DISABLED" {
 		log.Printf("listening rest on: %v", *rest)
-		http.Handle("/static/",
-			http.StripPrefix("/static", http.FileServer(http.Dir(*staticPath))))
-		log.Fatal(http.ListenAndServe(*rest, nil))
+		r := mux.NewRouter()
+		r.HandleFunc("/api/serverSettings", serveServerSettings).Methods("GET")
+		r.HandleFunc("/api/bucketSettings", serveBucketSettings).Methods("GET")
+		r.PathPrefix("/static/").Handler(
+			http.StripPrefix("/static/",
+				http.FileServer(http.Dir(*staticPath))))
+		r.Handle("/",
+			http.RedirectHandler("/static/app.html", 302))
+		log.Fatal(http.ListenAndServe(*rest, r))
 	}
 
 	// Let goroutines do their work.
 	select {}
+}
+
+func serveServerSettings(w http.ResponseWriter, r *http.Request) {
+	mustEncode(w, map[string]interface{}{
+		"startTime": startTime,
+		"addr": *addr,
+		"data": *data,
+		"rest": *rest,
+		"defaultBucketName": *defaultBucketName,
+	})
+}
+
+func serveBucketSettings(w http.ResponseWriter, r *http.Request) {
+	mustEncode(w, bucketSettings)
+}
+
+func mustEncode(w io.Writer, i interface{}) {
+	if headered, ok := w.(http.ResponseWriter); ok {
+		headered.Header().Set("Cache-Control", "no-cache")
+		headered.Header().Set("Content-type", "application/json")
+	}
+
+	e := json.NewEncoder(w)
+	if err := e.Encode(i); err != nil {
+		panic(err)
+	}
 }
