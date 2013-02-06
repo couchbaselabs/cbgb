@@ -28,7 +28,7 @@ function BucketListCtrl($scope, $http) {
 function BucketDetailCtrl($scope, $routeParams, $http) {
   $http.get('/api/buckets/' + $routeParams.bucketName).success(function(data) {
       $scope.bucket = data;
-      $scope.partitions = _.values(data.partitions);
+      $scope.bucket.partitionsArray = _.values(data.partitions);
   });
   $scope.orderChoice = 'id';
 }

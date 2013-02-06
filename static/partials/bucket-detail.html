@@ -17,7 +17,7 @@
   <div>
     partitions:
     <ul>
-      <li ng-repeat="partition in partitions | filter:filterChoice | orderBy:orderChoice">
+      <li ng-repeat="partition in bucket.partitionsArray | filter:filterChoice | orderBy:orderChoice">
         {{partition | json}}
       </li>
     </ul>
