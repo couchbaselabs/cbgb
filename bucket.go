@@ -46,10 +46,10 @@ type Buckets struct {
 }
 
 type BucketSettings struct {
-	FlushInterval   time.Duration
-	SleepInterval   time.Duration
-	CompactInterval time.Duration
-	PurgeTimeout    time.Duration
+	FlushInterval   time.Duration `json:"flushInterval"`
+	SleepInterval   time.Duration `json:"sleepInterval"`
+	CompactInterval time.Duration `json:"compactInterval"`
+	PurgeTimeout    time.Duration `json:"purgeTimeout"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
