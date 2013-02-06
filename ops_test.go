@@ -1350,19 +1350,19 @@ func TestSplitRange(t *testing.T) {
 		}
 		last := -1
 		for _, v := range x.expActive {
-			vb := testBucket.getVBucket(uint16(v))
+			vb := testBucket.GetVBucket(uint16(v))
 			if vb == nil {
 				t.Errorf("%v: Expected vbucket %v but was nil", testNum, v)
 			} else if vb.GetVBState() != VBActive {
 				t.Errorf("%v: Expected vbucket %v to be active but was %v",
-					testNum, v, testBucket.getVBucket(uint16(v)).GetVBState())
+					testNum, v, testBucket.GetVBucket(uint16(v)).GetVBState())
 			}
 			for {
 				last++
 				if last >= v {
 					break
 				}
-				vb := testBucket.getVBucket(uint16(last))
+				vb := testBucket.GetVBucket(uint16(last))
 				if vb != nil && vb.GetVBState() == VBActive {
 					t.Errorf("%v: Expected vbucket %v to not be active, but it is",
 						testNum, last)

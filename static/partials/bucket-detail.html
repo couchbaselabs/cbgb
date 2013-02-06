@@ -1,0 +1,13 @@
+<div ng-controller="BucketDetailCtrl">
+  <div>
+    bucket: {{bucket.name}}
+  </div>
+  <div>
+    partitions:
+    <ul>
+      <li ng-repeat="partition in bucket.partitions">
+        {{partition | json}}
+      </li>
+    </ul>
+  </div>
+</div>

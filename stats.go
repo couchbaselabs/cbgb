@@ -76,7 +76,7 @@ func (s *Stats) Send(ch chan<- statItem) {
 func aggregateStats(b bucket, key string) (agg *Stats) {
 	agg = &Stats{}
 	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
-		vb := b.getVBucket(i)
+		vb := b.GetVBucket(i)
 		if vb != nil {
 			vb.AddStats(agg, key)
 		}

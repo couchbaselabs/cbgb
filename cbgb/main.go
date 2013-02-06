@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/couchbaselabs/cbgb"
@@ -39,6 +40,7 @@ var staticPath = flag.String("static-path",
 		"static",
 		"path to static content")
 
+var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
 
 func main() {
@@ -51,13 +53,15 @@ func main() {
 
 	go cbgb.MutationLogger(mutationLogCh)
 
+	var err error
+
 	bucketSettings = &cbgb.BucketSettings{
 		FlushInterval:   *flushInterval,
 		SleepInterval:   *sleepInterval,
 		CompactInterval: *compactInterval,
 		PurgeTimeout:    *purgeTimeout,
 	}
-	buckets, err := cbgb.NewBuckets(*data, bucketSettings)
+	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
 	if err != nil {
 		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
 	}
@@ -91,8 +95,9 @@ func main() {
 	if *rest != ":DISABLED" {
 		log.Printf("listening rest on: %v", *rest)
 		r := mux.NewRouter()
-		r.HandleFunc("/api/serverSettings", serveServerSettings).Methods("GET")
-		r.HandleFunc("/api/bucketSettings", serveBucketSettings).Methods("GET")
+		r.HandleFunc("/api/buckets", httpGetBuckets).Methods("GET")
+		r.HandleFunc("/api/buckets/{bucketName}", httpGetBucket).Methods("GET")
+		r.HandleFunc("/api/settings", httpGetSettings).Methods("GET")
 		r.PathPrefix("/static/").Handler(
 			http.StripPrefix("/static/",
 				http.FileServer(http.Dir(*staticPath))))
@@ -105,18 +110,48 @@ func main() {
 	select {}
 }
 
-func serveServerSettings(w http.ResponseWriter, r *http.Request) {
+func httpGetSettings(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, map[string]interface{}{
 		"startTime": startTime,
 		"addr": *addr,
 		"data": *data,
 		"rest": *rest,
 		"defaultBucketName": *defaultBucketName,
+		"bucketSettings": bucketSettings,
 	})
 }
 
-func serveBucketSettings(w http.ResponseWriter, r *http.Request) {
-	mustEncode(w, bucketSettings)
+func httpGetBuckets(w http.ResponseWriter, r *http.Request) {
+	names, err := buckets.LoadNames()
+	if err != nil {
+		http.Error(w, err.Error(), 500)
+		return
+	}
+	mustEncode(w, names)
+}
+
+func httpGetBucket(w http.ResponseWriter, r *http.Request) {
+	bucketName, ok := mux.Vars(r)["bucketName"]
+	if !ok {
+		http.Error(w, "missing bucketName parameter", 400)
+		return
+	}
+	bucket := buckets.Get(bucketName)
+	if bucket == nil {
+		http.Error(w, "no bucket with that bucketName", 404)
+		return
+	}
+	partitions := map[string]interface{}{}
+	for vbid := uint16(0); vbid < uint16(cbgb.MAX_VBUCKETS); vbid++ {
+		vb := bucket.GetVBucket(vbid)
+		if vb != nil {
+			partitions[strconv.Itoa(int(vbid))] = vb.Meta()
+		}
+	}
+	mustEncode(w, map[string]interface{}{
+		"name": bucketName,
+		"partitions": partitions,
+	})
 }
 
 func mustEncode(w io.Writer, i interface{}) {
@@ -124,7 +159,6 @@ func mustEncode(w io.Writer, i interface{}) {
 		headered.Header().Set("Cache-Control", "no-cache")
 		headered.Header().Set("Content-type", "application/json")
 	}
-
 	e := json.NewEncoder(w)
 	if err := e.Encode(i); err != nil {
 		panic(err)

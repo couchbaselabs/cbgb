@@ -44,7 +44,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		return nil
 	}
 
-	vb := rh.currentBucket.getVBucket(req.VBucket)
+	vb := rh.currentBucket.GetVBucket(req.VBucket)
 	if vb == nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.NOT_MY_VBUCKET,

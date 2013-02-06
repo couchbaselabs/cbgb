@@ -1,0 +1,11 @@
+<div ng-controller="ServerCtrl">
+  <div>
+    settings:
+    <ul>
+      <li ng-repeat="key in settingsKeys">
+      {{key}}:
+      {{settings[key]}}
+    </li>
+  </div>
+  <a href="#/buckets">buckets</a>
+</div>

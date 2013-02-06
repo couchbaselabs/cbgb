@@ -201,7 +201,7 @@ func TestSaveLoadMutations(t *testing.T) {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
 
-	vb1 := b1.getVBucket(2)
+	vb1 := b1.GetVBucket(2)
 	if vb1.Meta().LastCas != 6 {
 		t.Errorf("expected reloaded LastCas to be 6, got %v", vb1.Meta().LastCas)
 	}
@@ -300,7 +300,7 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	testExpectInts(t, r2, 2, []int{1, 2, 3, 5}, "reload2")
 
-	vb2 := b2.getVBucket(2)
+	vb2 := b2.GetVBucket(2)
 	if vb2.Meta().LastCas != 11 {
 		t.Errorf("expected reloaded LastCas to be 11, got %v", vb2.Meta().LastCas)
 	}
@@ -402,7 +402,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		if err != nil {
 			t.Errorf("expected Load to work, err: %v", err)
 		}
-		vb := b1.getVBucket(2)
+		vb := b1.GetVBucket(2)
 		if vb == nil {
 			t.Errorf("expected vbucket")
 		}
@@ -530,7 +530,7 @@ func TestSleepInterval(t *testing.T) {
 
 		testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 
-		vb1 := b1.getVBucket(2)
+		vb1 := b1.GetVBucket(2)
 		bss1 := vb1.bs.Stats()
 		if bss1 == nil {
 			t.Errorf("expected bucket store to have Stats()")

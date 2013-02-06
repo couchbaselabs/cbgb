@@ -27,7 +27,7 @@ func doTap(b bucket, req *gomemcached.MCRequest,
 	registered := map[uint16]bool{}
 	defer func() {
 		for vbid := range registered {
-			vb := b.getVBucket(vbid)
+			vb := b.GetVBucket(vbid)
 			if vb != nil {
 				vb.observer.Unregister(mch)
 			}
@@ -62,7 +62,7 @@ func doTap(b bucket, req *gomemcached.MCRequest,
 			} else {
 				pkt.Extras = make([]byte, 16) // TODO: fill
 
-				vb := b.getVBucket(m.vb)
+				vb := b.GetVBucket(m.vb)
 				if vb != nil {
 					// TODO: if vb is suspended, the get() will freeze
 					// the TAP stream until vb is resumed; that may be

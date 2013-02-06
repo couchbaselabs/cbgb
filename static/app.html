@@ -1,33 +1,12 @@
 <!doctype html>
-<html ng-app>
+<html ng-app="cbgb">
 <head>
   <script src="angular.min.js"></script>
   <script src="lodash.min.js"></script>
-  <script src="ctrl.js"></script>
+  <script src="app.js"></script>
 </head>
 <body>
-<h1>cbgb</h1>
-
-<div ng-controller="ServerCtrl">
-  <div>
-    server settings:
-    <ul>
-      <li ng-repeat="key in serverSettingsKeys">
-      {{key}}:
-      {{serverSettings[key]}}
-    </li>
-  </ul>
-
-  </div>
-  <div>
-    bucket settings:
-    <ul>
-      <li ng-repeat="key in bucketSettingsKeys">
-      {{key}}:
-      {{bucketSettings[key] / 1000000000.0}}
-    </li>
-  </div>
-</div>
-
+  <h1><a href="#/">cbgb</a></h1>
+  <div ng-view></div>
 </body>
 </html>

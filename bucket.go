@@ -32,8 +32,8 @@ type bucket interface {
 	Unsubscribe(ch chan<- interface{})
 
 	CreateVBucket(vbid uint16) (*vbucket, error)
-	destroyVBucket(vbid uint16) (destroyed bool)
-	getVBucket(vbid uint16) *vbucket
+	DestroyVBucket(vbid uint16) (destroyed bool)
+	GetVBucket(vbid uint16) *vbucket
 	SetVBState(vbid uint16, newState VBState) error
 }
 
@@ -305,7 +305,7 @@ func (b *livebucket) Load() (err error) {
 	return nil
 }
 
-func (b *livebucket) getVBucket(vbid uint16) *vbucket {
+func (b *livebucket) GetVBucket(vbid uint16) *vbucket {
 	// TODO: Revisit the available approach, as it feels racy.
 	if b == nil || !b.Available() {
 		return nil
@@ -337,9 +337,9 @@ func (b *livebucket) CreateVBucket(vbid uint16) (*vbucket, error) {
 	return nil, errors.New("vbucket already exists")
 }
 
-func (b *livebucket) destroyVBucket(vbid uint16) (destroyed bool) {
+func (b *livebucket) DestroyVBucket(vbid uint16) (destroyed bool) {
 	destroyed = false
-	if vb := b.getVBucket(vbid); vb != nil {
+	if vb := b.GetVBucket(vbid); vb != nil {
 		vb.SetVBState(VBDead, func(oldState VBState) {
 			if b.casVBucket(vbid, nil, vb) {
 				b.observer.Submit(vbucketChange{b, vbid, oldState, VBDead})
@@ -351,10 +351,10 @@ func (b *livebucket) destroyVBucket(vbid uint16) (destroyed bool) {
 }
 
 func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
-	vb := b.getVBucket(vbid)
+	vb := b.GetVBucket(vbid)
 	if vb != nil {
 		_, err := vb.SetVBState(newState, func(oldState VBState) {
-			if b.getVBucket(vbid) == vb {
+			if b.GetVBucket(vbid) == vb {
 				b.observer.Submit(vbucketChange{b, vbid, oldState, newState})
 			}
 		})
@@ -373,7 +373,7 @@ func (c vbucketChange) getVBucket() *vbucket {
 	if c.bucket == nil {
 		return nil
 	}
-	return c.bucket.getVBucket(c.vbid)
+	return c.bucket.GetVBucket(c.vbid)
 }
 
 func (c vbucketChange) String() string {

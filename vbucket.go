@@ -748,7 +748,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 			created = true
 		}
 		if vb == nil {
-			vb = v.parent.getVBucket(vbid)
+			vb = v.parent.GetVBucket(vbid)
 		}
 
 		// TODO: Possible race here, in-between creation and access,

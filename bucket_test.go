@@ -96,9 +96,9 @@ func TestBucketNotifications(t *testing.T) {
 
 	b.CreateVBucket(3)
 	b.SetVBState(3, VBActive)
-	b.destroyVBucket(3)
+	b.DestroyVBucket(3)
 	b.Unsubscribe(bch)
-	b.destroyVBucket(0)
+	b.DestroyVBucket(0)
 
 	tests := []struct {
 		vb uint16
@@ -146,7 +146,7 @@ func TestNewBucket(t *testing.T) {
 
 	nb.CreateVBucket(3)
 	nb.SetVBState(3, VBActive)
-	nb.destroyVBucket(3)
+	nb.DestroyVBucket(3)
 
 	bc := (<-ch).(vbucketChange)
 	if bc.vbid != 3 || bc.newState != VBActive {
@@ -178,11 +178,11 @@ func TestCreateDestroyVBucket(t *testing.T) {
 	if vb, err := nb.CreateVBucket(300); err == nil || vb != nil {
 		t.Fatalf("Expected failed second CreateVBucket")
 	}
-	if !nb.destroyVBucket(300) {
-		t.Fatalf("Expected successful destroyVBucket")
+	if !nb.DestroyVBucket(300) {
+		t.Fatalf("Expected successful DestroyVBucket")
 	}
-	if nb.destroyVBucket(300) {
-		t.Fatalf("Expected failed second destroyVBucket")
+	if nb.DestroyVBucket(300) {
+		t.Fatalf("Expected failed second DestroyVBucket")
 	}
 }
 
@@ -254,16 +254,16 @@ func TestBucketClose(t *testing.T) {
 	if vb, err := nb.CreateVBucket(300); err != nil || vb == nil {
 		t.Fatalf("Expected successful CreateVBucket")
 	}
-	defer nb.destroyVBucket(300)
+	defer nb.DestroyVBucket(300)
 
-	vb := nb.getVBucket(300)
+	vb := nb.GetVBucket(300)
 	if vb == nil {
 		t.Fatalf("Expected vb not returned")
 	}
 
 	nb.Close()
 
-	vb2 := nb.getVBucket(300)
+	vb2 := nb.GetVBucket(300)
 	if vb2 != nil {
 		t.Fatalf("Got a vbucket from a closed bucket: %v", vb2)
 	}
