@@ -16,7 +16,6 @@ angular.module('cbgb', []).
 function ServerCtrl($scope, $http) {
   $http.get('/api/settings').success(function(data) {
       $scope.settings = data;
-      $scope.settingsKeys = _.keys(data)
   });
 }
 
@@ -29,5 +28,7 @@ function BucketListCtrl($scope, $http) {
 function BucketDetailCtrl($scope, $routeParams, $http) {
   $http.get('/api/buckets/' + $routeParams.bucketName).success(function(data) {
       $scope.bucket = data;
+      $scope.partitions = _.values(data.partitions);
   });
+  $scope.orderChoice = 'id';
 }

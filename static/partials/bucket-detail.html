@@ -2,10 +2,22 @@
   <div>
     bucket: {{bucket.name}}
   </div>
+
+  <div>
+    filter: <input ng-model="filterChoice">
+    order by:
+      <select ng-model="orderChoice">
+        <option value="id">id</option>
+        <option value="lastCas">lastCas</option>
+        <option value="metaCas">metaCas</option>
+        <option value="state">state</option>
+        <option value="keyRange">keyRange</option>
+      </select>
+  </div>
   <div>
     partitions:
     <ul>
-      <li ng-repeat="partition in bucket.partitions">
+      <li ng-repeat="partition in partitions | filter:filterChoice | orderBy:orderChoice">
         {{partition | json}}
       </li>
     </ul>
