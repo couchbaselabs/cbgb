@@ -2,6 +2,7 @@
 <html ng-app>
 <head>
   <script src="angular.min.js"></script>
+  <script src="lodash.min.js"></script>
   <script src="ctrl.js"></script>
 </head>
 <body>
@@ -9,10 +10,22 @@
 
 <div ng-controller="ServerCtrl">
   <div>
-    server settings: {{serverSettings}}
+    server settings:
+    <ul>
+      <li ng-repeat="key in serverSettingsKeys">
+      {{key}}:
+      {{serverSettings[key]}}
+    </li>
+  </ul>
+
   </div>
   <div>
-    bucket settings: {{bucketSettings}}
+    bucket settings:
+    <ul>
+      <li ng-repeat="key in bucketSettingsKeys">
+      {{key}}:
+      {{bucketSettings[key] / 1000000000.0}}
+    </li>
   </div>
 </div>
 
