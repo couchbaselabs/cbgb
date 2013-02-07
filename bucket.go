@@ -35,6 +35,8 @@ type bucket interface {
 	DestroyVBucket(vbid uint16) (destroyed bool)
 	GetVBucket(vbid uint16) *vbucket
 	SetVBState(vbid uint16, newState VBState) error
+
+	GetBucketStore(int) *bucketstore
 }
 
 // Holder of buckets.
@@ -249,6 +251,10 @@ func (b *livebucket) Close() error {
 		bs.Close()
 	}
 	return nil
+}
+
+func (b *livebucket) GetBucketStore(idx int) *bucketstore {
+	return b.bucketstores[idx]
 }
 
 func (b *livebucket) Flush() error {

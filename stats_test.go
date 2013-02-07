@@ -3,7 +3,10 @@ package cbgb
 import (
 	"bytes"
 	"io"
+	"io/ioutil"
+	"os"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 	mcclient "github.com/dustin/gomemcached/client"
@@ -127,5 +130,117 @@ func TestStatsError(t *testing.T) {
 
 	if err != io.EOF {
 		t.Fatalf("Expected EOF writing to the error writer, %v", err)
+	}
+}
+
+func TestNewBucketAggregateStats(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   time.Millisecond,
+			SleepInterval:   time.Millisecond,
+			CompactInterval: 10 * time.Second,
+		})
+
+	s := AggregateStats(b0, "")
+	if s == nil {
+		t.Errorf("Expected non-nil aggregatestats()")
+	}
+	if s.Items != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Ops != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Gets != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.GetMisses != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Sets != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Deletes != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Creates != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Updates != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.RGets != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.RGetResults != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.Unknowns != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.RGets != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.IncomingValueBytes != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.OutgoingValueBytes != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.StoreErrors != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+	if s.NotMyRangeErrors != 0 {
+		t.Errorf("Unexpected stats: %v", s)
+	}
+
+	bss := AggregateBucketStoreStats(b0, "")
+	if bss.Flushes != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.Reads != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.Writes != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.Stats != 4 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.Sleeps != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.Wakes != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.Compacts != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.FlushErrors != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.ReadErrors != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.WriteErrors != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.StatErrors != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.WakeErrors != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.CompactErrors != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.ReadBytes != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
+	}
+	if bss.WriteBytes != 0 {
+		t.Errorf("Unexpected bss value: %v", bss)
 	}
 }

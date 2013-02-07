@@ -144,7 +144,7 @@ func TestBasicOps(t *testing.T) {
 		close(expStatItems)
 	}()
 	go func() {
-		aggregateStats(testBucket, "").Send(actStatItems)
+		AggregateStats(testBucket, "").Send(actStatItems)
 		close(actStatItems)
 	}()
 

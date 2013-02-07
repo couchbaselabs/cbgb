@@ -273,7 +273,7 @@ func (v *vbucket) load() (err error) {
 	return err
 }
 
-func (v *vbucket) AddStats(dest *Stats, key string) {
+func (v *vbucket) AddStatsTo(dest *Stats, key string) {
 	v.Apply(func() { // Need apply() protection due to stats.Items.
 		if parseVBState(v.Meta().State) == VBActive { // TODO: handle key
 			dest.Add(&v.stats)

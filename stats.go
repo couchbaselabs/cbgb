@@ -73,15 +73,29 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"not_my_range_errors", strconv.FormatUint(s.NotMyRangeErrors, 10)}
 }
 
-func aggregateStats(b bucket, key string) (agg *Stats) {
+func AggregateStats(b bucket, key string) (agg *Stats) {
 	agg = &Stats{}
 	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
 		vb := b.GetVBucket(i)
 		if vb != nil {
-			vb.AddStats(agg, key)
+			vb.AddStatsTo(agg, key)
 		}
 	}
 	return
+}
+
+func AggregateBucketStoreStats(b bucket, key string) *BucketStoreStats {
+	agg := &BucketStoreStats{}
+	i := 0
+	for {
+		bs := b.GetBucketStore(i)
+		if bs == nil {
+			break
+		}
+		agg.Add(bs.Stats())
+		i++
+	}
+	return agg
 }
 
 // This is slightly more complicated than it would generally need to
@@ -112,7 +126,7 @@ func doStats(b bucket, w io.Writer, key string) error {
 	ch <- statItem{"uptime", time.Since(serverStart).String()}
 	ch <- statItem{"version", VERSION}
 
-	agg := aggregateStats(b, key)
+	agg := AggregateStats(b, key)
 	agg.Send(ch)
 
 	close(ch)
