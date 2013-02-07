@@ -87,8 +87,8 @@ func TestBasicOps(t *testing.T) {
 		Deletes:            3,
 		Creates:            2,
 		Unknowns:           1,
-		ValueBytesIncoming: 6,
-		ValueBytesOutgoing: 9,
+		IncomingValueBytes: 6,
+		OutgoingValueBytes: 9,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -1173,9 +1173,9 @@ func TestMinMaxRange(t *testing.T) {
 		}
 	}
 
-	if vb.stats.ErrNotMyRange != uint64(7) {
-		t.Errorf("Expected stats ErrNotMyRange %v, got %v",
-			uint64(7), vb.stats.ErrNotMyRange)
+	if vb.stats.NotMyRangeErrors != uint64(7) {
+		t.Errorf("Expected stats NotMyRangeErrors %v, got %v",
+			uint64(7), vb.stats.NotMyRangeErrors)
 	}
 }
 
@@ -1266,14 +1266,14 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 			uint64(len(results)), vb.stats.RGetResults)
 	}
 
-	if vb.stats.ValueBytesIncoming != uint64(numItems) {
+	if vb.stats.IncomingValueBytes != uint64(numItems) {
 		t.Errorf("Expected stats results incoming bytes %v, got %v",
-			uint64(numItems), vb.stats.ValueBytesIncoming)
+			uint64(numItems), vb.stats.IncomingValueBytes)
 	}
 
-	if vb.stats.ValueBytesOutgoing != uint64(len(results)) {
+	if vb.stats.OutgoingValueBytes != uint64(len(results)) {
 		t.Errorf("Expected stats results outgoing bytes %v, got %v",
-			uint64(len(results)), vb.stats.ValueBytesOutgoing)
+			uint64(len(results)), vb.stats.OutgoingValueBytes)
 	}
 }
 

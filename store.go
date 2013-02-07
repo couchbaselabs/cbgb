@@ -43,14 +43,14 @@ type bucketstorefile struct {
 	stats         *bucketstorestats
 }
 
-type bucketstorestats struct { // TODO: Unify stats naming conventions.
-	TotFlush   uint64
-	TotRead    uint64
-	TotWrite   uint64
-	TotStat    uint64
-	TotSleep   uint64
-	TotWake    uint64
-	TotCompact uint64
+type bucketstorestats struct {
+	Flushes  uint64
+	Reads    uint64
+	Writes   uint64
+	Stats    uint64
+	Sleeps   uint64
+	Wakes    uint64
+	Compacts uint64
 
 	FlushErrors   uint64
 	ReadErrors    uint64
@@ -176,7 +176,7 @@ func (s *bucketstore) flush() error {
 		return err
 	}
 	atomic.AddInt64(&s.dirtiness, -d)
-	atomic.AddUint64(&s.stats.TotFlush, 1)
+	atomic.AddUint64(&s.stats.Flushes, 1)
 	return nil
 }
 
@@ -444,7 +444,7 @@ func (bsf *bucketstorefile) Close() {
 }
 
 func (bsf *bucketstorefile) Sleep() error {
-	atomic.AddUint64(&bsf.stats.TotSleep, 1)
+	atomic.AddUint64(&bsf.stats.Sleeps, 1)
 
 	bsf.file.Close()
 	bsf.file = nil
@@ -471,7 +471,7 @@ func (bsf *bucketstorefile) Sleep() error {
 		}
 	}
 
-	atomic.AddUint64(&bsf.stats.TotWake, 1)
+	atomic.AddUint64(&bsf.stats.Wakes, 1)
 
 	file, err := os.OpenFile(bsf.path, os.O_RDWR|os.O_CREATE, 0600)
 	if err != nil {
@@ -492,7 +492,7 @@ func (bsf *bucketstorefile) Sleep() error {
 
 func (bsf *bucketstorefile) ReadAt(p []byte, off int64) (n int, err error) {
 	bsf.apply(func() {
-		atomic.AddUint64(&bsf.stats.TotRead, 1)
+		atomic.AddUint64(&bsf.stats.Reads, 1)
 		n, err = bsf.file.ReadAt(p, off)
 		if err != nil {
 			atomic.AddUint64(&bsf.stats.ReadErrors, 1)
@@ -504,7 +504,7 @@ func (bsf *bucketstorefile) ReadAt(p []byte, off int64) (n int, err error) {
 
 func (bsf *bucketstorefile) WriteAt(p []byte, off int64) (n int, err error) {
 	bsf.apply(func() {
-		atomic.AddUint64(&bsf.stats.TotWrite, 1)
+		atomic.AddUint64(&bsf.stats.Writes, 1)
 		n, err = bsf.file.WriteAt(p, off)
 		if err != nil {
 			atomic.AddUint64(&bsf.stats.WriteErrors, 1)
@@ -516,7 +516,7 @@ func (bsf *bucketstorefile) WriteAt(p []byte, off int64) (n int, err error) {
 
 func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 	bsf.apply(func() {
-		atomic.AddUint64(&bsf.stats.TotStat, 1)
+		atomic.AddUint64(&bsf.stats.Stats, 1)
 		fi, err = bsf.file.Stat()
 		if err != nil {
 			atomic.AddUint64(&bsf.stats.StatErrors, 1)
@@ -526,12 +526,12 @@ func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 }
 
 func (bss *bucketstorestats) Add(in *bucketstorestats) {
-	bss.TotFlush += atomic.LoadUint64(&in.TotFlush)
-	bss.TotRead += atomic.LoadUint64(&in.TotRead)
-	bss.TotWrite += atomic.LoadUint64(&in.TotWrite)
-	bss.TotStat += atomic.LoadUint64(&in.TotStat)
-	bss.TotSleep += atomic.LoadUint64(&in.TotSleep)
-	bss.TotWake += atomic.LoadUint64(&in.TotWake)
+	bss.Flushes += atomic.LoadUint64(&in.Flushes)
+	bss.Reads += atomic.LoadUint64(&in.Reads)
+	bss.Writes += atomic.LoadUint64(&in.Writes)
+	bss.Stats += atomic.LoadUint64(&in.Stats)
+	bss.Sleeps += atomic.LoadUint64(&in.Sleeps)
+	bss.Wakes += atomic.LoadUint64(&in.Wakes)
 
 	bss.FlushErrors += atomic.LoadUint64(&in.FlushErrors)
 	bss.ReadErrors += atomic.LoadUint64(&in.ReadErrors)

@@ -249,17 +249,17 @@ func TestSaveLoadMutations(t *testing.T) {
 	if bss1 == nil {
 		t.Errorf("expected bucket store to have Stats()")
 	}
-	if bss1.TotFlush != 1 {
-		t.Errorf("expected bss1 to have 1 TotFlush")
+	if bss1.Flushes != 1 {
+		t.Errorf("expected bss1 to have 1 Flushes")
 	}
-	if bss1.TotRead == 0 {
-		t.Errorf("expected bss1 to have >0 TotRead")
+	if bss1.Reads == 0 {
+		t.Errorf("expected bss1 to have >0 Reads")
 	}
-	if bss1.TotWrite == 0 {
-		t.Errorf("expected bss1 to have >0 TotWrite")
+	if bss1.Writes == 0 {
+		t.Errorf("expected bss1 to have >0 Writes")
 	}
-	if bss1.TotStat == 0 {
-		t.Errorf("expected bss1 to have >0 TotStat")
+	if bss1.Stats == 0 {
+		t.Errorf("expected bss1 to have >0 Stats")
 	}
 	if bss1.FlushErrors != 0 {
 		t.Errorf("expected bss1 to have 0 FlushErrors")
@@ -309,17 +309,17 @@ func TestSaveLoadMutations(t *testing.T) {
 	if bss2 == nil {
 		t.Errorf("expected bucket store to have Stats()")
 	}
-	if bss2.TotFlush != 0 {
-		t.Errorf("expected bss2 to have 0 TotFlush")
+	if bss2.Flushes != 0 {
+		t.Errorf("expected bss2 to have 0 Flushes")
 	}
-	if bss2.TotRead == 0 {
-		t.Errorf("expected bss2 to have >0 TotRead")
+	if bss2.Reads == 0 {
+		t.Errorf("expected bss2 to have >0 Reads")
 	}
-	if bss2.TotWrite != 0 {
-		t.Errorf("expected bss2 to have 0 TotWrite")
+	if bss2.Writes != 0 {
+		t.Errorf("expected bss2 to have 0 Writes")
 	}
-	if bss2.TotStat == 0 {
-		t.Errorf("expected bss2 to have >0 TotStat")
+	if bss2.Stats == 0 {
+		t.Errorf("expected bss2 to have >0 Stats")
 	}
 	if bss2.FlushErrors != 0 {
 		t.Errorf("expected bss2 to have 0 FlushErrors")
@@ -538,11 +538,13 @@ func TestSleepInterval(t *testing.T) {
 		if bss1 == nil {
 			t.Errorf("expected bucket store to have Stats()")
 		}
-		if bss1.TotSleep != 1 {
-			t.Errorf("expected bss1 to have 1 TotSleep, got %v", bss1.TotSleep)
+		if bss1.Sleeps != 1 {
+			t.Errorf("expected bss1 to have 1 Sleeps, got %v",
+				bss1.Sleeps)
 		}
-		if bss1.TotWake != 1 {
-			t.Errorf("expected bss1 to have 1 TotWake, got %v", bss1.TotWake)
+		if bss1.Wakes != 1 {
+			t.Errorf("expected bss1 to have 1 Wakes, got %v",
+				bss1.Wakes)
 		}
 		if bss1.WakeErrors != 0 {
 			t.Errorf("expected bss1 to have 0 WakeErrors")

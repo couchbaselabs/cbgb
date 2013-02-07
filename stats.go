@@ -30,11 +30,11 @@ type Stats struct {
 	RGetResults uint64
 	Unknowns    uint64
 
-	ValueBytesIncoming uint64
-	ValueBytesOutgoing uint64
+	IncomingValueBytes uint64
+	OutgoingValueBytes uint64
 
-	ErrStore      uint64
-	ErrNotMyRange uint64
+	StoreErrors      uint64
+	NotMyRangeErrors uint64
 }
 
 func (s *Stats) Add(in *Stats) {
@@ -49,10 +49,10 @@ func (s *Stats) Add(in *Stats) {
 	s.RGets += atomic.LoadUint64(&in.RGets)
 	s.RGetResults += atomic.LoadUint64(&in.RGetResults)
 	s.Unknowns += atomic.LoadUint64(&in.Unknowns)
-	s.ValueBytesIncoming += atomic.LoadUint64(&in.ValueBytesIncoming)
-	s.ValueBytesOutgoing += atomic.LoadUint64(&in.ValueBytesOutgoing)
-	s.ErrStore += atomic.LoadUint64(&in.ErrStore)
-	s.ErrNotMyRange += atomic.LoadUint64(&in.ErrNotMyRange)
+	s.IncomingValueBytes += atomic.LoadUint64(&in.IncomingValueBytes)
+	s.OutgoingValueBytes += atomic.LoadUint64(&in.OutgoingValueBytes)
+	s.StoreErrors += atomic.LoadUint64(&in.StoreErrors)
+	s.NotMyRangeErrors += atomic.LoadUint64(&in.NotMyRangeErrors)
 }
 
 func (s *Stats) Send(ch chan<- statItem) {
@@ -67,10 +67,10 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"rgets", strconv.FormatUint(s.RGets, 10)}
 	ch <- statItem{"rget_results", strconv.FormatUint(s.RGetResults, 10)}
 	ch <- statItem{"unknowns", strconv.FormatUint(s.Unknowns, 10)}
-	ch <- statItem{"value_bytes_incoming", strconv.FormatUint(s.ValueBytesIncoming, 10)}
-	ch <- statItem{"value_bytes_outgoing", strconv.FormatUint(s.ValueBytesOutgoing, 10)}
-	ch <- statItem{"err_store", strconv.FormatUint(s.ErrStore, 10)}
-	ch <- statItem{"err_not_my_range", strconv.FormatUint(s.ErrNotMyRange, 10)}
+	ch <- statItem{"incoming_value_bytes", strconv.FormatUint(s.IncomingValueBytes, 10)}
+	ch <- statItem{"outgoing_value_bytes", strconv.FormatUint(s.OutgoingValueBytes, 10)}
+	ch <- statItem{"store_errors", strconv.FormatUint(s.StoreErrors, 10)}
+	ch <- statItem{"not_my_range_errors", strconv.FormatUint(s.NotMyRangeErrors, 10)}
 }
 
 func aggregateStats(b bucket, key string) (agg *Stats) {

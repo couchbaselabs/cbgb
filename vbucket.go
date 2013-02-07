@@ -293,12 +293,12 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 	if meta.KeyRange != nil {
 		if len(meta.KeyRange.MinKeyInclusive) > 0 &&
 			bytes.Compare(req.Key, meta.KeyRange.MinKeyInclusive) < 0 {
-			atomic.AddUint64(&v.stats.ErrNotMyRange, 1)
+			atomic.AddUint64(&v.stats.NotMyRangeErrors, 1)
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
 		if len(meta.KeyRange.MaxKeyExclusive) > 0 &&
 			bytes.Compare(req.Key, meta.KeyRange.MaxKeyExclusive) >= 0 {
-			atomic.AddUint64(&v.stats.ErrNotMyRange, 1)
+			atomic.AddUint64(&v.stats.NotMyRangeErrors, 1)
 			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
 		}
 	}
@@ -369,7 +369,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	})
 
 	if err != nil {
-		atomic.AddUint64(&v.stats.ErrStore, 1)
+		atomic.AddUint64(&v.stats.StoreErrors, 1)
 	} else {
 		if prevMeta != nil {
 			atomic.AddUint64(&v.stats.Updates, 1)
@@ -377,7 +377,7 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			atomic.AddUint64(&v.stats.Creates, 1)
 			atomic.AddInt64(&v.stats.Items, 1)
 		}
-		atomic.AddUint64(&v.stats.ValueBytesIncoming, uint64(len(req.Body)))
+		atomic.AddUint64(&v.stats.IncomingValueBytes, uint64(len(req.Body)))
 	}
 
 	if err == nil {
@@ -406,7 +406,7 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	if i == nil {
 		atomic.AddUint64(&v.stats.GetMisses, 1)
 	} else {
-		atomic.AddUint64(&v.stats.ValueBytesOutgoing, uint64(len(i.data)))
+		atomic.AddUint64(&v.stats.OutgoingValueBytes, uint64(len(i.data)))
 	}
 
 	if i == nil {
@@ -484,7 +484,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	})
 
 	if err != nil {
-		atomic.AddUint64(&v.stats.ErrStore, 1)
+		atomic.AddUint64(&v.stats.StoreErrors, 1)
 	} else if prevMeta != nil {
 		atomic.AddInt64(&v.stats.Items, -1)
 	}
@@ -615,7 +615,7 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 	}
 
 	visitRGetResults := uint64(0)
-	visitValueBytesOutgoing := uint64(0)
+	visitOutgoingValueBytes := uint64(0)
 
 	visitor := func(i *item) bool {
 		if bytes.Compare(i.key, req.Key) >= 0 {
@@ -631,7 +631,7 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 				return false
 			}
 			visitRGetResults++
-			visitValueBytesOutgoing += uint64(len(i.data))
+			visitOutgoingValueBytes += uint64(len(i.data))
 		}
 		return true
 	}
@@ -643,7 +643,7 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 
 	atomic.AddUint64(&v.stats.RGets, 1)
 	atomic.AddUint64(&v.stats.RGetResults, visitRGetResults)
-	atomic.AddUint64(&v.stats.ValueBytesOutgoing, visitValueBytesOutgoing)
+	atomic.AddUint64(&v.stats.OutgoingValueBytes, visitOutgoingValueBytes)
 
 	return res
 }

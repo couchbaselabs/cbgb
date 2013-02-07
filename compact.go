@@ -33,7 +33,7 @@ func (s *bucketstore) compact() error {
 		atomic.AddUint64(&s.stats.CompactErrors, 1)
 		return err
 	}
-	atomic.AddUint64(&s.stats.TotCompact, 1)
+	atomic.AddUint64(&s.stats.Compacts, 1)
 	return nil
 }
 
