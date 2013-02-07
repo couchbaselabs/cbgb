@@ -23,7 +23,7 @@ type bucketstore struct {
 	flushInterval   time.Duration // Time between checking whether to flush.
 	compactInterval time.Duration // Time between checking whether to compact.
 	purgeTimeout    time.Duration // Time to keep old, unused file after compaction..
-	stats           *bucketstorestats
+	stats           *BucketStoreStats
 
 	// Map of callbacks, which are invoked when we need the
 	// bucketstore client to pause its mutations and when we want to
@@ -40,10 +40,10 @@ type bucketstorefile struct {
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
 	sleepPurge    time.Duration // When >0, purge file after sleeping + this duration.
 	insomnia      bool          // When true, no sleeping.
-	stats         *bucketstorestats
+	stats         *BucketStoreStats
 }
 
-type bucketstorestats struct {
+type BucketStoreStats struct {
 	Flushes  uint64
 	Reads    uint64
 	Writes   uint64
@@ -73,7 +73,7 @@ func newBucketStore(path string,
 		return nil, err
 	}
 
-	bss := &bucketstorestats{}
+	bss := &BucketStoreStats{}
 	bsf := &bucketstorefile{
 		path:          path,
 		file:          file,
@@ -156,8 +156,8 @@ func (s *bucketstore) Close() {
 	})
 }
 
-func (s *bucketstore) Stats() *bucketstorestats {
-	bss := &bucketstorestats{}
+func (s *bucketstore) Stats() *BucketStoreStats {
+	bss := &BucketStoreStats{}
 	bss.Add(s.stats)
 	return bss
 }
@@ -525,7 +525,7 @@ func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 	return fi, err
 }
 
-func (bss *bucketstorestats) Add(in *bucketstorestats) {
+func (bss *BucketStoreStats) Add(in *BucketStoreStats) {
 	bss.Flushes += atomic.LoadUint64(&in.Flushes)
 	bss.Reads += atomic.LoadUint64(&in.Reads)
 	bss.Writes += atomic.LoadUint64(&in.Writes)
