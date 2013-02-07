@@ -413,6 +413,9 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		if b1.SetVBState(2, test.nextState) != nil {
 			t.Errorf("expected SetVBState to work")
 		}
+		if err = b1.Flush(); err != nil {
+			t.Errorf("expected flush to work, got: %v", err)
+		}
 		if withData {
 			testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload2")
 		}

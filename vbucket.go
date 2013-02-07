@@ -226,9 +226,6 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 	if err = v.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
 		return err
 	}
-	if err = v.bs.flush(); err != nil {
-		return err
-	}
 	atomic.StorePointer(&v.meta, unsafe.Pointer(newMeta))
 	return nil
 }
@@ -583,6 +580,14 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 						res = &gomemcached.MCResponse{
 							Status: gomemcached.TMPFAIL,
 							Body:   []byte(fmt.Sprintf("setVBMeta error %v", err)),
+						}
+						return
+					}
+
+					if err := v.bs.flush(); err != nil {
+						res = &gomemcached.MCResponse{
+							Status: gomemcached.TMPFAIL,
+							Body:   []byte(fmt.Sprintf("setVBMeta flush error %v", err)),
 						}
 						return
 					}

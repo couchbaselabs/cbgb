@@ -76,7 +76,8 @@ func main() {
 		log.Printf("creating default bucket: %v", *defaultBucketName)
 		defaultBucket, err := buckets.New(*defaultBucketName)
 		if err != nil {
-			log.Fatalf("Error creating default bucket: %s, %v", *defaultBucketName, err)
+			log.Fatalf("Error creating default bucket: %s, %v",
+				*defaultBucketName, err)
 		}
 
 		defaultBucket.Subscribe(mutationLogCh)
@@ -84,6 +85,11 @@ func main() {
 		for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
 			defaultBucket.CreateVBucket(uint16(vbid))
 			defaultBucket.SetVBState(uint16(vbid), cbgb.VBActive)
+		}
+
+		if err = defaultBucket.Flush(); err != nil {
+			log.Fatalf("Error flushing default bucket: %s, %v",
+				*defaultBucketName, err)
 		}
 	}
 
