@@ -12,27 +12,27 @@ import (
 )
 
 func restMain(rest string, staticPath string) {
-		r := mux.NewRouter()
-		r.HandleFunc("/api/buckets", restGetBuckets).Methods("GET")
-		r.HandleFunc("/api/buckets/{bucketName}", restGetBucket).Methods("GET")
-		r.HandleFunc("/api/settings", restGetSettings).Methods("GET")
-		r.PathPrefix("/static/").Handler(
-			http.StripPrefix("/static/",
-				http.FileServer(http.Dir(staticPath))))
-		r.Handle("/",
-			http.RedirectHandler("/static/app.html", 302))
-		log.Printf("listening rest on: %v", rest)
-		log.Fatal(http.ListenAndServe(rest, r))
+	r := mux.NewRouter()
+	r.HandleFunc("/api/buckets", restGetBuckets).Methods("GET")
+	r.HandleFunc("/api/buckets/{bucketName}", restGetBucket).Methods("GET")
+	r.HandleFunc("/api/settings", restGetSettings).Methods("GET")
+	r.PathPrefix("/static/").Handler(
+		http.StripPrefix("/static/",
+			http.FileServer(http.Dir(staticPath))))
+	r.Handle("/",
+		http.RedirectHandler("/static/app.html", 302))
+	log.Printf("listening rest on: %v", rest)
+	log.Fatal(http.ListenAndServe(rest, r))
 }
 
 func restGetSettings(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, map[string]interface{}{
-		"startTime": startTime,
-		"addr": *addr,
-		"data": *data,
-		"rest": *rest,
+		"startTime":         startTime,
+		"addr":              *addr,
+		"data":              *data,
+		"rest":              *rest,
 		"defaultBucketName": *defaultBucketName,
-		"bucketSettings": bucketSettings,
+		"bucketSettings":    bucketSettings,
 	})
 }
 
@@ -64,7 +64,7 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	mustEncode(w, map[string]interface{}{
-		"name": bucketName,
+		"name":       bucketName,
 		"partitions": partitions,
 	})
 }

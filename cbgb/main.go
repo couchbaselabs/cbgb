@@ -17,23 +17,23 @@ var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
 
 var defaultBucketName = flag.String("default-bucket-name",
-		cbgb.DEFAULT_BUCKET_NAME,
-		"name of the default bucket")
+	cbgb.DEFAULT_BUCKET_NAME,
+	"name of the default bucket")
 var flushInterval = flag.Duration("flush-interval",
-		10 * time.Second,
-		"duration between flushing or persisting mutations to storage")
+	10*time.Second,
+	"duration between flushing or persisting mutations to storage")
 var sleepInterval = flag.Duration("sleep-interval",
-		2 * time.Minute,
-		"duration until files are closed (to be reopened on the next request)")
+	2*time.Minute,
+	"duration until files are closed (to be reopened on the next request)")
 var compactInterval = flag.Duration("compact-interval",
-		10 * time.Minute,
-		"duration until files are compacted")
+	10*time.Minute,
+	"duration until files are compacted")
 var purgeTimeout = flag.Duration("purge-timeout",
-		10 * time.Second,
-		"duration until unused files are purged after compaction")
+	10*time.Second,
+	"duration until unused files are purged after compaction")
 var staticPath = flag.String("static-path",
-		"static",
-		"path to static content")
+	"static",
+	"path to static content")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
