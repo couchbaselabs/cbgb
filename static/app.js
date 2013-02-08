@@ -10,6 +10,9 @@ angular.module('cbgb', []).
       when('/buckets/:bucketName',
            {templateUrl: 'partials/bucket-detail.html',
             controller: BucketDetailCtrl}).
+      when('/buckets/:bucketName/stats',
+           {templateUrl: 'partials/bucket-stats.html',
+            controller: BucketStatsCtrl}).
       otherwise({redirectTo: '/server'});
 }]);
 
@@ -26,9 +29,19 @@ function BucketListCtrl($scope, $http) {
 }
 
 function BucketDetailCtrl($scope, $routeParams, $http) {
-  $http.get('/api/buckets/' + $routeParams.bucketName).success(function(data) {
-      $scope.bucket = data;
-      $scope.bucket.partitionsArray = _.values(data.partitions);
-  });
+  $http.get('/api/buckets/' + $routeParams.bucketName).
+    success(function(data) {
+        $scope.bucket = data;
+        $scope.bucket.partitionsArray = _.values(data.partitions);
+      });
   $scope.orderChoice = 'id';
+}
+
+function BucketStatsCtrl($scope, $routeParams, $http) {
+  var bucketName = $routeParams.bucketName
+  $http.get('/api/buckets/' + bucketName + '/stats').
+    success(function(data) {
+        $scope.bucketName = bucketName;
+        $scope.bucketStats = data;
+      });
 }

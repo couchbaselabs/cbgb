@@ -88,7 +88,7 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	mustEncode(w, map[string]interface{}{
-		"stats":            cbgb.AggregateStats(bucket, ""),
+		"bucketStats":      cbgb.AggregateStats(bucket, ""),
 		"bucketStoreStats": cbgb.AggregateBucketStoreStats(bucket, ""),
 	})
 }
