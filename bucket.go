@@ -21,7 +21,7 @@ const (
 	STORES_PER_BUCKET   = 4 // The # of *.store files per bucket (ignoring compaction).
 )
 
-type bucket interface {
+type Bucket interface {
 	Available() bool
 	Compact() error
 	Close() error
@@ -41,7 +41,7 @@ type bucket interface {
 
 // Holder of buckets.
 type Buckets struct {
-	buckets  map[string]bucket
+	buckets  map[string]Bucket
 	dir      string // Directory where all buckets are stored.
 	lock     sync.Mutex
 	settings *BucketSettings
@@ -69,7 +69,7 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
 	return &Buckets{
-		buckets:  map[string]bucket{},
+		buckets:  map[string]Bucket{},
 		dir:      dirForBuckets,
 		settings: settings.Copy(),
 	}, nil
@@ -80,7 +80,7 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 //
 // TODO: Need clearer names around New vs Create vs Open vs Destroy,
 // especially now that there's persistence.
-func (b *Buckets) New(name string) (rv bucket, err error) {
+func (b *Buckets) New(name string) (rv Bucket, err error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -103,7 +103,7 @@ func (b *Buckets) New(name string) (rv bucket, err error) {
 }
 
 // Get the named bucket (or nil if it doesn't exist).
-func (b *Buckets) Get(name string) bucket {
+func (b *Buckets) Get(name string) Bucket {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -176,7 +176,7 @@ type livebucket struct {
 	observer     *broadcaster
 }
 
-func NewBucket(dirForBucket string, settings *BucketSettings) (bucket, error) {
+func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 	fileNames, err := latestStoreFileNames(dirForBucket, STORES_PER_BUCKET)
 	if err != nil {
 		return nil, err
@@ -370,7 +370,7 @@ func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
 }
 
 type vbucketChange struct {
-	bucket             bucket
+	bucket             Bucket
 	vbid               uint16
 	oldState, newState VBState
 }

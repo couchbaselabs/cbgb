@@ -13,9 +13,14 @@ import (
 
 func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
-	r.HandleFunc("/api/buckets", restGetBuckets).Methods("GET")
-	r.HandleFunc("/api/buckets/{bucketName}", restGetBucket).Methods("GET")
-	r.HandleFunc("/api/settings", restGetSettings).Methods("GET")
+	r.HandleFunc("/api/buckets",
+		restGetBuckets).Methods("GET")
+	r.HandleFunc("/api/buckets/{bucketName}",
+		restGetBucket).Methods("GET")
+	r.HandleFunc("/api/buckets/{bucketName}/stats",
+		restGetBucketStats).Methods("GET")
+	r.HandleFunc("/api/settings",
+		restGetSettings).Methods("GET")
 	r.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/",
 			http.FileServer(http.Dir(staticPath))))
@@ -45,15 +50,23 @@ func restGetBuckets(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, names)
 }
 
-func restGetBucket(w http.ResponseWriter, r *http.Request) {
+func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucket) {
 	bucketName, ok := mux.Vars(r)["bucketName"]
 	if !ok {
 		http.Error(w, "missing bucketName parameter", 400)
-		return
+		return "", nil
 	}
 	bucket := buckets.Get(bucketName)
 	if bucket == nil {
 		http.Error(w, "no bucket with that bucketName", 404)
+		return bucketName, nil
+	}
+	return bucketName, bucket
+}
+
+func restGetBucket(w http.ResponseWriter, r *http.Request) {
+	bucketName, bucket := parseBucketName(w, r)
+	if bucket == nil {
 		return
 	}
 	partitions := map[string]interface{}{}
@@ -66,6 +79,17 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, map[string]interface{}{
 		"name":       bucketName,
 		"partitions": partitions,
+	})
+}
+
+func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
+	_, bucket := parseBucketName(w, r)
+	if bucket == nil {
+		return
+	}
+	mustEncode(w, map[string]interface{}{
+		"stats":            cbgb.AggregateStats(bucket, ""),
+		"bucketStoreStats": cbgb.AggregateBucketStoreStats(bucket, ""),
 	})
 }
 

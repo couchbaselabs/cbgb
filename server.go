@@ -14,7 +14,7 @@ const (
 )
 
 type reqHandler struct {
-	currentBucket bucket
+	currentBucket Bucket
 }
 
 func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {

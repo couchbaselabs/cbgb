@@ -11,7 +11,7 @@ import (
 // How often to send opaque "heartbeats" on tap streams.
 var tapTickFreq = time.Second
 
-func doTap(b bucket, req *gomemcached.MCRequest,
+func doTap(b Bucket, req *gomemcached.MCRequest,
 	chpkt chan<- transmissible, cherr <-chan error) error {
 
 	bch := make(chan interface{})

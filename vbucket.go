@@ -33,7 +33,7 @@ const (
 )
 
 type vbucket struct {
-	parent      bucket
+	parent      Bucket
 	vbid        uint16
 	meta        unsafe.Pointer // *VBMeta
 	bs          *bucketstore
@@ -90,7 +90,7 @@ var dispatchTable = [256]dispatchFun{
 
 const observerBroadcastMax = 100
 
-func newVBucket(parent bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
+func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
 	pauseSwapColls := func(cic collKeysChanges) {
 		rv.Mutate(func() {
 			collKeys, collChanges := cic()
