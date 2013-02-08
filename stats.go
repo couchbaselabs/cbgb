@@ -55,6 +55,24 @@ func (s *Stats) Add(in *Stats) {
 	s.NotMyRangeErrors += atomic.LoadUint64(&in.NotMyRangeErrors)
 }
 
+func (s *Stats) Equal(in *Stats) bool {
+	return s.Items == atomic.LoadInt64(&in.Items) &&
+		s.Ops == atomic.LoadUint64(&in.Ops) &&
+		s.Gets == atomic.LoadUint64(&in.Gets) &&
+		s.GetMisses == atomic.LoadUint64(&in.GetMisses) &&
+		s.Sets == atomic.LoadUint64(&in.Sets) &&
+		s.Deletes == atomic.LoadUint64(&in.Deletes) &&
+		s.Creates == atomic.LoadUint64(&in.Creates) &&
+		s.Updates == atomic.LoadUint64(&in.Updates) &&
+		s.RGets == atomic.LoadUint64(&in.RGets) &&
+		s.RGetResults == atomic.LoadUint64(&in.RGetResults) &&
+		s.Unknowns == atomic.LoadUint64(&in.Unknowns) &&
+		s.IncomingValueBytes == atomic.LoadUint64(&in.IncomingValueBytes) &&
+		s.OutgoingValueBytes == atomic.LoadUint64(&in.OutgoingValueBytes) &&
+		s.StoreErrors == atomic.LoadUint64(&in.StoreErrors) &&
+		s.NotMyRangeErrors == atomic.LoadUint64(&in.NotMyRangeErrors)
+}
+
 func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"items", strconv.FormatInt(s.Items, 10)}
 	ch <- statItem{"ops", strconv.FormatUint(s.Ops, 10)}
