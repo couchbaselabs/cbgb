@@ -17,24 +17,24 @@ type statItem struct {
 }
 
 type Stats struct {
-	Items int64
+	Items int64 `json:"items"`
 
-	Ops         uint64
-	Gets        uint64
-	GetMisses   uint64
-	Sets        uint64
-	Deletes     uint64
-	Creates     uint64
-	Updates     uint64
-	RGets       uint64
-	RGetResults uint64
-	Unknowns    uint64
+	Ops         uint64 `json:"ops"`
+	Gets        uint64 `json:"gets"`
+	GetMisses   uint64 `json:"getMisses"`
+	Sets        uint64 `json:"sets"`
+	Deletes     uint64 `json:"deletes"`
+	Creates     uint64 `json:"creates"`
+	Updates     uint64 `json:"updates"`
+	RGets       uint64 `json:"rGets"`
+	RGetResults uint64 `json:"rGetResults"`
+	Unknowns    uint64 `json:"unknowns"`
 
-	IncomingValueBytes uint64
-	OutgoingValueBytes uint64
+	IncomingValueBytes uint64 `json:"incomingValueBytes"`
+	OutgoingValueBytes uint64 `json:"outgoingValueBytes"`
 
-	StoreErrors      uint64
-	NotMyRangeErrors uint64
+	StoreErrors      uint64 `json:"storeErrors"`
+	NotMyRangeErrors uint64 `json:"notMyRangeErrors"`
 }
 
 func (s *Stats) Add(in *Stats) {

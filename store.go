@@ -44,23 +44,23 @@ type bucketstorefile struct {
 }
 
 type BucketStoreStats struct {
-	Flushes  uint64
-	Reads    uint64
-	Writes   uint64
-	Stats    uint64
-	Sleeps   uint64
-	Wakes    uint64
-	Compacts uint64
+	Flushes  uint64 `json:"flushes"`
+	Reads    uint64 `json:"reads"`
+	Writes   uint64 `json:"writes"`
+	Stats    uint64 `json:"stats"`
+	Sleeps   uint64 `json:"sleeps"`
+	Wakes    uint64 `json:"wakes"`
+	Compacts uint64 `json:"compacts"`
 
-	FlushErrors   uint64
-	ReadErrors    uint64
-	WriteErrors   uint64
-	StatErrors    uint64
-	WakeErrors    uint64
-	CompactErrors uint64
+	FlushErrors   uint64 `json:"flushErrors"`
+	ReadErrors    uint64 `json:"readErrors"`
+	WriteErrors   uint64 `json:"writeErrors"`
+	StatErrors    uint64 `json:"statErrors"`
+	WakeErrors    uint64 `json:"wakeErrors"`
+	CompactErrors uint64 `json:"compactErrors"`
 
-	ReadBytes  uint64
-	WriteBytes uint64
+	ReadBytes  uint64 `json:"readBytes"`
+	WriteBytes uint64 `json:"writeBytes"`
 }
 
 func newBucketStore(path string,
