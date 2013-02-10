@@ -46,6 +46,13 @@ func TestBucketRegistry(t *testing.T) {
 		t.Fatalf("Didn't get my default bucket back.")
 	}
 
+	namesGet := bs.GetNames()
+	if namesGet == nil ||
+		len(namesGet) != 1 ||
+		namesGet[0] != DEFAULT_BUCKET_NAME {
+		t.Fatalf("Expected namesGet to have an entry, got: %#v", namesGet)
+	}
+
 	bs.Close(DEFAULT_BUCKET_NAME, true)
 	if b2.Available() {
 		t.Fatalf("Destroyed bucket is available.")
@@ -64,6 +71,13 @@ func TestBucketRegistry(t *testing.T) {
 	}
 	if newb == newb2 {
 		t.Fatalf("Returned the bucket again.")
+	}
+
+	namesGet2 := bs.GetNames()
+	if namesGet2 == nil ||
+		len(namesGet2) != 1 ||
+		namesGet2[0] != DEFAULT_BUCKET_NAME {
+		t.Fatalf("Expected namesGet to have an entry, got: %#v", namesGet2)
 	}
 }
 
@@ -316,5 +330,10 @@ func TestBucketLoadNames(t *testing.T) {
 	names, err = b.LoadNames()
 	if err != nil || len(names) != 2 {
 		t.Fatalf("Expected names to be len(2), got: %v", names)
+	}
+
+	namesGet := b.GetNames()
+	if namesGet == nil || len(namesGet) != 0 {
+		t.Fatalf("Expected namesGet to be empty, got: %v", namesGet)
 	}
 }

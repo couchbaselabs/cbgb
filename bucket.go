@@ -45,6 +45,7 @@ type Buckets struct {
 	dir      string // Directory where all buckets are stored.
 	lock     sync.Mutex
 	settings *BucketSettings
+	ch       chan *funreq
 }
 
 type BucketSettings struct {
@@ -68,11 +69,31 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 	if !isDir(dirForBuckets) {
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
-	return &Buckets{
+	buckets := &Buckets{
 		buckets:  map[string]Bucket{},
 		dir:      dirForBuckets,
 		settings: settings.Copy(),
-	}, nil
+		ch:       make(chan *funreq),
+	}
+	go buckets.service()
+	return buckets, nil
+}
+
+func (b *Buckets) service() {
+	tickerS := time.NewTicker(time.Second)
+	defer tickerS.Stop()
+
+	for {
+		select {
+		case r, ok := <-b.ch:
+			if !ok {
+				return
+			}
+			r.fun()
+			close(r.res)
+		case <-tickerS.C:
+		}
+	}
 }
 
 // Create a new named bucket.
@@ -100,6 +121,17 @@ func (b *Buckets) New(name string) (rv Bucket, err error) {
 
 	b.buckets[name] = rv
 	return rv, nil
+}
+
+func (b *Buckets) GetNames() []string {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	res := make([]string, 0, len(b.buckets))
+	for name, _ := range b.buckets {
+		res = append(res, name)
+	}
+	return res
 }
 
 // Get the named bucket (or nil if it doesn't exist).

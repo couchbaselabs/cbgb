@@ -42,12 +42,7 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
-	names, err := buckets.LoadNames()
-	if err != nil {
-		http.Error(w, err.Error(), 500)
-		return
-	}
-	mustEncode(w, names)
+	mustEncode(w, buckets.GetNames())
 }
 
 func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucket) {
