@@ -38,7 +38,7 @@ func (s *bucketstore) compact() error {
 }
 
 func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error {
-	os.Remove(compactPath) // Ignore any previous attempts.
+	os.Remove(compactPath) // Clean up any previous attempts.
 
 	compactFile, err := os.OpenFile(compactPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
 	if err != nil {
