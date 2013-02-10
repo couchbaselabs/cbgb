@@ -34,6 +34,9 @@ var purgeTimeout = flag.Duration("purge-timeout",
 var staticPath = flag.String("static-path",
 	"static",
 	"path to static content")
+var defaultPartitions = flag.Int("default-partitions",
+	cbgb.MAX_VBUCKETS,
+	"default number of partitions for new buckets")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
@@ -77,7 +80,7 @@ func main() {
 
 		defaultBucket.Subscribe(mutationLogCh)
 
-		for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
+		for vbid := 0; vbid < *defaultPartitions; vbid++ {
 			defaultBucket.CreateVBucket(uint16(vbid))
 			defaultBucket.SetVBState(uint16(vbid), cbgb.VBActive)
 		}
