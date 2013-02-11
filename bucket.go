@@ -448,29 +448,14 @@ func (b *livebucket) GetAggBucketStoreStats() *AggStats {
 }
 
 func (b *livebucket) SampleStats() {
-	currStats := &Stats{}
-	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
-		vb := b.GetVBucket(i)
-		if vb != nil {
-			vb.AddStatsTo(currStats, "")
-		}
-	}
+	currStats := AggregateStats(b, "")
 	diffStats := &Stats{}
 	diffStats.Add(currStats)
 	diffStats.Sub(b.lastStats)
 	b.aggStats.addSample(diffStats)
 	b.lastStats = currStats
 
-	currBucketStoreStats := &BucketStoreStats{}
-	i := 0
-	for {
-		bs := b.GetBucketStore(i)
-		if bs == nil {
-			break
-		}
-		currBucketStoreStats.Add(bs.Stats())
-		i++
-	}
+	currBucketStoreStats := AggregateBucketStoreStats(b, "")
 	diffBucketStoreStats := &BucketStoreStats{}
 	diffBucketStoreStats.Add(currBucketStoreStats)
 	diffBucketStoreStats.Sub(b.lastBucketStoreStats)
