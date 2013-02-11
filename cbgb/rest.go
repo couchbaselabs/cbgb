@@ -88,6 +88,10 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		aggBucketStoreStats := cbgb.AggregateSamples(&cbgb.BucketStoreStats{},
 			bucket.GetAggBucketStoreStats().Levels[0])
 		mustEncode(w, map[string]interface{}{
+			"last": map[string]interface{}{
+				"bucketStats":      bucket.GetLastStats(),
+				"bucketStoreStats": bucket.GetLastBucketStoreStats(),
+			},
 			"bucketStats":      aggStats,
 			"bucketStoreStats": aggBucketStoreStats,
 		})

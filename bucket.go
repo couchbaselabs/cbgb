@@ -39,6 +39,8 @@ type Bucket interface {
 	GetBucketStore(int) *bucketstore
 
 	SampleStats()
+	GetLastStats() *Stats
+	GetLastBucketStoreStats() *BucketStoreStats
 	GetAggStats() *AggStats
 	GetAggBucketStoreStats() *AggStats
 }
@@ -445,6 +447,14 @@ func (b *livebucket) GetAggStats() *AggStats {
 
 func (b *livebucket) GetAggBucketStoreStats() *AggStats {
 	return b.aggBucketStoreStats
+}
+
+func (b *livebucket) GetLastStats() *Stats {
+	return b.lastStats
+}
+
+func (b *livebucket) GetLastBucketStoreStats() *BucketStoreStats {
+	return b.lastBucketStoreStats
 }
 
 func (b *livebucket) SampleStats() {
