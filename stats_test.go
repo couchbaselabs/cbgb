@@ -157,8 +157,8 @@ func TestNewBucketAggregateStats(t *testing.T) {
 		t.Errorf("Unexpected bss value: %v", bss)
 	}
 	if !bss.Equal(&BucketStoreStats{Stats: 4}) {
-		t.Errorf("Expected new bss to equal, got: %v",
-			bss)
+		t.Errorf("Expected new bss to equal %v, got: %v",
+			&BucketStoreStats{Stats: 4}, bss)
 	}
 }
 
