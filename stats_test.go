@@ -170,7 +170,7 @@ func TestBasicAggStats(t *testing.T) {
 		t.Errorf("Expected NewAggStats() to work")
 	}
 
-	if len(a.Levels) != len(aggStatsLevels) {
+	if len(a.Levels) != len(AggStatsLevels) {
 		t.Errorf("Expected levels to match")
 	}
 

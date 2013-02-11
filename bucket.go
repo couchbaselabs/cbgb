@@ -441,22 +441,27 @@ func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
 	return errors.New("no vbucket during SetVBState()")
 }
 
+// Call only during StatsApply/serviceStats().
 func (b *livebucket) GetAggStats() *AggStats {
 	return b.aggStats
 }
 
+// Call only during StatsApply/serviceStats().
 func (b *livebucket) GetAggBucketStoreStats() *AggStats {
 	return b.aggBucketStoreStats
 }
 
+// Call only during StatsApply/serviceStats().
 func (b *livebucket) GetLastStats() *Stats {
 	return b.lastStats
 }
 
+// Call only during StatsApply/serviceStats().
 func (b *livebucket) GetLastBucketStoreStats() *BucketStoreStats {
 	return b.lastBucketStoreStats
 }
 
+// Call only during StatsApply/serviceStats().
 func (b *livebucket) SampleStats() {
 	currStats := AggregateStats(b, "")
 	diffStats := &Stats{}

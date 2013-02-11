@@ -83,17 +83,16 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	buckets.StatsApply(func() {
-		aggStats := cbgb.AggregateSamples(&cbgb.Stats{},
-			bucket.GetAggStats().Levels[0])
-		aggBucketStoreStats := cbgb.AggregateSamples(&cbgb.BucketStoreStats{},
-			bucket.GetAggBucketStoreStats().Levels[0])
 		mustEncode(w, map[string]interface{}{
-			"last": map[string]interface{}{
+			"totals": map[string]interface{}{
 				"bucketStats":      bucket.GetLastStats(),
 				"bucketStoreStats": bucket.GetLastBucketStoreStats(),
 			},
-			"bucketStats":      aggStats,
-			"bucketStoreStats": aggBucketStoreStats,
+			"diffs": map[string]interface{}{
+				"bucketStats":      bucket.GetAggStats(),
+				"bucketStoreStats": bucket.GetAggBucketStoreStats(),
+			},
+			"levels": cbgb.AggStatsLevels,
 		})
 	})
 }
