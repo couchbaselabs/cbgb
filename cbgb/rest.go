@@ -82,9 +82,15 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	mustEncode(w, map[string]interface{}{
-		"bucketStats":      cbgb.AggregateStats(bucket, ""),
-		"bucketStoreStats": cbgb.AggregateBucketStoreStats(bucket, ""),
+	buckets.StatsApply(func() {
+		aggStats := cbgb.AggregateSamples(&cbgb.Stats{},
+			bucket.GetAggStats().Levels[0])
+		aggBucketStoreStats := cbgb.AggregateSamples(&cbgb.BucketStoreStats{},
+			bucket.GetAggBucketStoreStats().Levels[0])
+		mustEncode(w, map[string]interface{}{
+			"bucketStats":      aggStats,
+			"bucketStoreStats": aggBucketStoreStats,
+		})
 	})
 }
 

@@ -37,6 +37,10 @@ type Bucket interface {
 	SetVBState(vbid uint16, newState VBState) error
 
 	GetBucketStore(int) *bucketstore
+
+	SampleStats()
+	GetAggStats() *AggStats
+	GetAggBucketStoreStats() *AggStats
 }
 
 // Holder of buckets.
@@ -45,7 +49,7 @@ type Buckets struct {
 	dir      string // Directory where all buckets are stored.
 	lock     sync.Mutex
 	settings *BucketSettings
-	ch       chan *funreq
+	statsch  chan *funreq
 }
 
 type BucketSettings struct {
@@ -73,27 +77,43 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 		buckets:  map[string]Bucket{},
 		dir:      dirForBuckets,
 		settings: settings.Copy(),
-		ch:       make(chan *funreq),
+		statsch:  make(chan *funreq),
 	}
-	go buckets.service()
+	go buckets.serviceStats()
 	return buckets, nil
 }
 
-func (b *Buckets) service() {
+func (b *Buckets) serviceStats() {
 	tickerS := time.NewTicker(time.Second)
 	defer tickerS.Stop()
 
 	for {
 		select {
-		case r, ok := <-b.ch:
+		case r, ok := <-b.statsch:
 			if !ok {
 				return
 			}
 			r.fun()
 			close(r.res)
 		case <-tickerS.C:
+			b.sampleStats()
 		}
 	}
+}
+
+func (b *Buckets) sampleStats() {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	for _, bucket := range b.buckets {
+		bucket.SampleStats()
+	}
+}
+
+func (b *Buckets) StatsApply(fun func()) {
+	req := &funreq{fun: fun, res: make(chan bool)}
+	b.statsch <- req
+	<-req.res
 }
 
 // Create a new named bucket.
@@ -203,9 +223,15 @@ func (b *Buckets) Load() error {
 type livebucket struct {
 	availablech  chan bool
 	dir          string
-	bucketstores map[int]*bucketstore
 	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
+	bucketstores map[int]*bucketstore
 	observer     *broadcaster
+
+	lastStats            *Stats
+	lastBucketStoreStats *BucketStoreStats
+
+	aggStats            *AggStats
+	aggBucketStoreStats *AggStats
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
@@ -214,11 +240,22 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		return nil, err
 	}
 
+	aggStats := NewAggStats(func() Aggregatable {
+		return &Stats{}
+	})
+	aggBucketStoreStats := NewAggStats(func() Aggregatable {
+		return &BucketStoreStats{}
+	})
+
 	res := &livebucket{
-		availablech:  make(chan bool),
-		dir:          dirForBucket,
-		bucketstores: make(map[int]*bucketstore),
-		observer:     newBroadcaster(0),
+		availablech:          make(chan bool),
+		dir:                  dirForBucket,
+		bucketstores:         make(map[int]*bucketstore),
+		observer:             newBroadcaster(0),
+		lastStats:            &Stats{},
+		lastBucketStoreStats: &BucketStoreStats{},
+		aggStats:             aggStats,
+		aggBucketStoreStats:  aggBucketStoreStats,
 	}
 
 	for i, fileName := range fileNames {
@@ -234,6 +271,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		}
 		res.bucketstores[i] = bs
 	}
+
 	return res, nil
 }
 
@@ -399,6 +437,45 @@ func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
 		return err
 	}
 	return errors.New("no vbucket during SetVBState()")
+}
+
+func (b *livebucket) GetAggStats() *AggStats {
+	return b.aggStats
+}
+
+func (b *livebucket) GetAggBucketStoreStats() *AggStats {
+	return b.aggBucketStoreStats
+}
+
+func (b *livebucket) SampleStats() {
+	currStats := &Stats{}
+	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
+		vb := b.GetVBucket(i)
+		if vb != nil {
+			vb.AddStatsTo(currStats, "")
+		}
+	}
+	diffStats := &Stats{}
+	diffStats.Add(currStats)
+	diffStats.Sub(b.lastStats)
+	b.aggStats.addSample(diffStats)
+	b.lastStats = currStats
+
+	currBucketStoreStats := &BucketStoreStats{}
+	i := 0
+	for {
+		bs := b.GetBucketStore(i)
+		if bs == nil {
+			break
+		}
+		currBucketStoreStats.Add(bs.Stats())
+		i++
+	}
+	diffBucketStoreStats := &BucketStoreStats{}
+	diffBucketStoreStats.Add(currBucketStoreStats)
+	diffBucketStoreStats.Sub(b.lastBucketStoreStats)
+	b.aggBucketStoreStats.addSample(diffBucketStoreStats)
+	b.lastBucketStoreStats = currBucketStoreStats
 }
 
 type vbucketChange struct {

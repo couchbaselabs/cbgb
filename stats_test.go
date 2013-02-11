@@ -157,6 +157,121 @@ func TestNewBucketAggregateStats(t *testing.T) {
 		t.Errorf("Unexpected bss value: %v", bss)
 	}
 	if !bss.Equal(&BucketStoreStats{Stats: 4}) {
-		t.Errorf("Expected new bucketstorestats to equal, got: %v", bss)
+		t.Errorf("Expected new bss to equal, got: %v",
+			bss)
+	}
+}
+
+func TestBasicAggStats(t *testing.T) {
+	a := NewAggStats(func() Aggregatable {
+		return &Stats{}
+	})
+	if a == nil {
+		t.Errorf("Expected NewAggStats() to work")
+	}
+
+	if len(a.Levels) != len(aggStatsLevels) {
+		t.Errorf("Expected levels to match")
+	}
+
+	for i := 0; i < 59; i++ {
+		a.addSample(&Stats{Ops: uint64(i)})
+	}
+	if a.Counts[0] != uint64(59) {
+		t.Errorf("Expected 59 level-0 samples, got %v",
+			a.Counts[0])
+	}
+	if a.Counts[1] != uint64(0) {
+		t.Errorf("Expected 0 level-1 samples, got %v",
+			a.Counts[1])
+	}
+	if a.Counts[2] != uint64(0) {
+		t.Errorf("Expected 0 level-2 samples, got %v",
+			a.Counts[2])
+	}
+
+	var s *Stats
+
+	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
+	if s.Ops != uint64(1711) {
+		t.Errorf("Expected level[0] s.ops 1711, got %v",
+			s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
+	if s.Ops != uint64(0) {
+		t.Errorf("Expected level[1] s.ops 0, got %v",
+			s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
+	if s.Ops != uint64(0) {
+		t.Errorf("Expected level[2] s.ops 0, got %v",
+			s.Ops)
+	}
+
+	a.addSample(&Stats{Ops: uint64(60)})
+	if a.Counts[0] != uint64(60) {
+		t.Errorf("Expected 60 level-0 samples, got %v",
+			a.Counts[0])
+	}
+	if a.Counts[1] != uint64(1) {
+		t.Errorf("Expected 1 level-1 samples, got %v",
+			a.Counts[1])
+	}
+	if a.Counts[2] != uint64(0) {
+		t.Errorf("Expected 0 level-2 samples, got %v",
+			a.Counts[2])
+	}
+
+	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
+	if s.Ops != uint64(1771) {
+		t.Errorf("Expected level[0] s.ops 1771, got %v",
+			s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
+	if s.Ops != uint64(1771) {
+		t.Errorf("Expected level[1] s.ops 1771, got %v",
+			s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
+	if s.Ops != uint64(0) {
+		t.Errorf("Expected level[2] s.ops 0, got %v",
+			s.Ops)
+	}
+}
+
+func TestMultiDayAggStats(t *testing.T) {
+	a := NewAggStats(func() Aggregatable {
+		return &Stats{}
+	})
+	if a == nil {
+		t.Errorf("Expected NewAggStats() to work")
+	}
+
+	s := &Stats{Ops: uint64(10)}
+	n := 60 * 60 * 24 * 10 // 10 days worth
+
+	for i := 0; i < n; i++ {
+		a.addSample(s)
+	}
+
+	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
+	if s.Ops != uint64(60*10) {
+		t.Errorf("Expected level[0] s.ops %v, got %v",
+			60*10, s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
+	if s.Ops != uint64(60*60*10) {
+		t.Errorf("Expected level[1] s.ops %v, got %v",
+			60*60*10, s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
+	if s.Ops != uint64(24*60*60*10) {
+		t.Errorf("Expected level[2] s.ops %v, got %v",
+			24*60*60*10, s.Ops)
+	}
+	s = AggregateSamples(&Stats{}, a.Levels[3]).(*Stats)
+	if s.Ops != uint64(24*60*60*10) {
+		t.Errorf("Expected level[3] s.ops %v, got %v",
+			24*60*60*10, s.Ops)
 	}
 }

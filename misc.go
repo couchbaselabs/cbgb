@@ -7,6 +7,14 @@ import (
 	"os"
 )
 
+func addUint64(x, y uint64) uint64 {
+	return x + y
+}
+
+func subUint64(x, y uint64) uint64 {
+	return x - y
+}
+
 type funreq struct {
 	fun func()
 	res chan bool

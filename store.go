@@ -526,19 +526,34 @@ func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 }
 
 func (bss *BucketStoreStats) Add(in *BucketStoreStats) {
-	bss.Flushes += atomic.LoadUint64(&in.Flushes)
-	bss.Reads += atomic.LoadUint64(&in.Reads)
-	bss.Writes += atomic.LoadUint64(&in.Writes)
-	bss.Stats += atomic.LoadUint64(&in.Stats)
-	bss.Sleeps += atomic.LoadUint64(&in.Sleeps)
-	bss.Wakes += atomic.LoadUint64(&in.Wakes)
-	bss.FlushErrors += atomic.LoadUint64(&in.FlushErrors)
-	bss.ReadErrors += atomic.LoadUint64(&in.ReadErrors)
-	bss.WriteErrors += atomic.LoadUint64(&in.WriteErrors)
-	bss.StatErrors += atomic.LoadUint64(&in.StatErrors)
-	bss.WakeErrors += atomic.LoadUint64(&in.WakeErrors)
-	bss.ReadBytes += atomic.LoadUint64(&in.ReadBytes)
-	bss.WriteBytes += atomic.LoadUint64(&in.WriteBytes)
+	bss.Op(in, addUint64)
+}
+
+func (bss *BucketStoreStats) Sub(in *BucketStoreStats) {
+	bss.Op(in, subUint64)
+}
+
+func (bss *BucketStoreStats) Op(in *BucketStoreStats, op func(uint64, uint64) uint64) {
+	bss.Flushes = op(bss.Flushes, atomic.LoadUint64(&in.Flushes))
+	bss.Reads = op(bss.Reads, atomic.LoadUint64(&in.Reads))
+	bss.Writes = op(bss.Writes, atomic.LoadUint64(&in.Writes))
+	bss.Stats = op(bss.Stats, atomic.LoadUint64(&in.Stats))
+	bss.Sleeps = op(bss.Sleeps, atomic.LoadUint64(&in.Sleeps))
+	bss.Wakes = op(bss.Wakes, atomic.LoadUint64(&in.Wakes))
+	bss.FlushErrors = op(bss.FlushErrors, atomic.LoadUint64(&in.FlushErrors))
+	bss.ReadErrors = op(bss.ReadErrors, atomic.LoadUint64(&in.ReadErrors))
+	bss.WriteErrors = op(bss.WriteErrors, atomic.LoadUint64(&in.WriteErrors))
+	bss.StatErrors = op(bss.StatErrors, atomic.LoadUint64(&in.StatErrors))
+	bss.WakeErrors = op(bss.WakeErrors, atomic.LoadUint64(&in.WakeErrors))
+	bss.ReadBytes = op(bss.ReadBytes, atomic.LoadUint64(&in.ReadBytes))
+	bss.WriteBytes = op(bss.WriteBytes, atomic.LoadUint64(&in.WriteBytes))
+}
+
+func (bss *BucketStoreStats) Aggregate(in Aggregatable) {
+	if in == nil {
+		return
+	}
+	bss.Add(in.(*BucketStoreStats))
 }
 
 func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
