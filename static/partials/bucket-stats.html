@@ -10,31 +10,47 @@
     <li class="active"><i class="icon-align-left"></i> stats</li>
   </ul>
 
-  <div class="row-fluid">
-    <div class="span5">
-      <ul>
-        <li>
-          <ul class="nav nav-pills">
-            <li ng-repeat="level in bucketStats.levels">
-              <a>{{level.name}}</a>
-            </li>
-          </ul>
-        </li>
-        <li>
-          <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
-          <pre>{{bucketStats | json}}</pre>
+  <div style="padding-left: 20px;">
+    <div>
+      <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
+      <ul class="nav nav-pills"
+          style="border-bottom: 1px solid #ddd;">
+        <li ng-repeat="level in bucketStats.levels">
+        <a>{{level.name}}</a>
         </li>
       </ul>
     </div>
-    <div class="span7">
-      <div id="charts">
-        <svg id="chart" class="chart"></svg>
-        <style>
-          .chart rect {
-            stroke: white;
-            fill: steelblue;
-          }
-        </style>
+
+    <div class="row">
+      <div class="span3"
+           style="padding-left: 10px; border-right: 1px solid #ddd;">
+        <ul class="nav">
+          <li ng-repeat="statName in statNames">
+            <a>{{statName}}</a>
+          </li>
+        </ul>
+      </div>
+      <div class="span6">
+        <div id="charts">
+          <svg id="chart" class="chart"></svg>
+          <style>
+            .chart {
+              border: 1px solid #ddd;
+            }
+            .chart rect {
+              stroke: white;
+              fill: steelblue;
+            }
+          </style>
+        </div>
+      </div>
+    </div>
+
+    <hr/>
+
+    <div class="row" style="padding-left: 10px;">
+      <div class="span12">
+        <pre>{{bucketStats | json}}</pre>
       </div>
     </div>
   </div

@@ -62,9 +62,10 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
       success(function(data) {
         $scope.bucketName = bucketName;
         $scope.bucketStats = data;
+        $scope.statNames = _.keys(data.totals.bucketStats)
         $scope.err = null;
         if (!$scope.drawChart) {
-          $scope.drawChart = makeChart("ops", 60, 10, 100);
+          $scope.drawChart = makeChart("ops", 60, 10, 300);
         }
         $scope.drawChart(data.diffs.bucketStats.levels[0]);
         $timeout(go, 1000)
@@ -78,7 +79,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   go()
 }
 
-function makeChart(field, dataLength, barW, barH) {
+function makeChart(statName, dataLength, barW, barH) {
   var duration = 1000;
   var xMargin = 0.5;
   var yMargin = 0.5;
@@ -99,11 +100,11 @@ function makeChart(field, dataLength, barW, barH) {
     var yMin = 0xffffffff;
     var yMax = 0;
     for (var i = 0; i < data.length; i++) {
-      if (yMin > data[i][field]) {
-        yMin = data[i][field];
+      if (yMin > data[i][statName]) {
+        yMin = data[i][statName];
       }
-      if (yMax < data[i][field]) {
-        yMax = data[i][field];
+      if (yMax < data[i][statName]) {
+        yMax = data[i][statName];
       }
     }
     if (yMax - yMin < barH) {
@@ -125,19 +126,19 @@ function makeChart(field, dataLength, barW, barH) {
       .insert("rect")
       .attr("x", function(d, i) { return xScale(idx(i + 1)) - xMargin; })
       .attr("y", function(d) {
-          return barH - yScale(d[field]) - yMargin;
+          return barH - yScale(d[statName]) - yMargin;
         })
       .attr("width", barW)
-      .attr("height", function(d) { return yMin + yScale(d[field]); })
+      .attr("height", function(d) { return yMin + yScale(d[statName]); })
       .transition().duration(duration)
       .attr("x", function(d, i) { return xScale(idx(i)) - xMargin; });
 
     rect.transition().duration(duration)
       .attr("x", function(d, i) { return xScale(idx(i)) - xMargin; })
       .attr("y", function(d) {
-          return barH - yScale(d[field]) - yMargin;
+          return barH - yScale(d[statName]) - yMargin;
         })
-      .attr("height", function(d) { return yMin + yScale(d[field]); });
+      .attr("height", function(d) { return yMin + yScale(d[statName]); });
 
     rect.exit()
       .transition().duration(duration)
