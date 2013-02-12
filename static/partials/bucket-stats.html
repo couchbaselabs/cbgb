@@ -14,6 +14,13 @@
     <div class="span5">
       <ul>
         <li>
+          <ul class="nav nav-pills">
+            <li ng-repeat="level in bucketStats.levels">
+              <a>{{level.name}}</a>
+            </li>
+          </ul>
+        </li>
+        <li>
           <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
           <pre>{{bucketStats | json}}</pre>
         </li>

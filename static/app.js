@@ -55,7 +55,7 @@ function BucketDetailCtrl($scope, $routeParams, $http) {
 }
 
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
-  var drawChart = makeChart("ops", 60, 10, 100);
+  var drawChart = makeChart("ops", 10, 100);
   var bucketName = $routeParams.bucketName;
 
   function go() {
@@ -76,41 +76,66 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   go()
 }
 
-function makeChart(field, dataLength, barW, barH) {
-  var x = d3.scale.linear()
-    .domain([0, 1])
-    .range([0, barW]);
-
-  var y = d3.scale.linear()
-    .domain([0, 100])
-    .rangeRound([0, barH]);
-
+function makeChart(field, barW, barH) {
   return function(data) {
+    var yMin = 0xffffffff;
+    var yMax = 0;
+    for (var i = 0; i < data.length; i++) {
+      if (yMin > data[i][field]) {
+        yMin = data[i][field];
+      }
+      if (yMax < data[i][field]) {
+        yMax = data[i][field];
+      }
+    }
+    if (yMax - yMin < barH) {
+      yMax = yMin + barH;
+    }
+
+    var xScale = d3.scale.linear()
+      .domain([0, 1])
+      .range([0, barW]);
+
+    var yScale = d3.scale.linear()
+      .domain([yMin, yMax])
+      .rangeRound([0, barH]);
+
     var chart = d3.select("#chart")
-      .attr("width", barW * dataLength - 1)
+      .attr("width", barW * data.length - 1)
       .attr("height", barH);
 
     var rect = chart.selectAll("rect")
       .data(data, function(d) { return d.time; })
 
+    var duration = 1000;
+    var xMargin = 0.5;
+    var yMargin = 0.5;
+    var yMin = 2;
+
     rect.enter()
-        .insert("rect")
-          .attr("x", function(d, i) { return x(i + 1) - .5; })
-          .attr("y", function(d) { return barH - (5 + y(d[field])) - .5; })
-          .attr("width", barW)
-          .attr("height", function(d) { return 5 + y(d[field]); })
-        .transition()
-          .duration(1000)
-          .attr("x", function(d, i) { return x(i) - .5; });
+      .insert("rect")
+      .attr("x", function(d, i) { return xScale(i + 1) - xMargin; })
+      .attr("y", function(d) {
+          return barH - (yMin + yScale(d[field])) - yMargin;
+        })
+      .attr("width", barW)
+      .attr("height", function(d) { return yMin + yScale(d[field]); })
+      .transition()
+      .duration(duration)
+      .attr("x", function(d, i) { return xScale(i) - xMargin; });
 
     rect.transition()
-        .duration(1000)
-        .attr("x", function(d, i) { return x(i) - .5; });
+      .duration(duration)
+      .attr("x", function(d, i) { return xScale(i) - xMargin; })
+      .attr("y", function(d) {
+          return barH - (yMin + yScale(d[field])) - yMargin;
+        })
+      .attr("height", function(d) { return yMin + yScale(d[field]); });
 
     rect.exit()
-        .transition()
-          .duration(1000)
-          .attr("x", function(d, i) { return x(i - 1) - .5; })
-          .remove();
+      .transition()
+      .duration(duration)
+      .attr("x", function(d, i) { return -barW - xMargin; })
+      .remove();
   }
 }
