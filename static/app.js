@@ -50,88 +50,67 @@ function BucketDetailCtrl($scope, $routeParams, $http) {
     error(function() {
       $scope.err = restErrorMsg
     });
+
   $scope.orderChoice = 'id';
 }
 
-function BucketStatsCtrl($scope, $routeParams, $http) {
-  var bucketName = $routeParams.bucketName
-  $http.get('/api/buckets/' + bucketName + '/stats').
-    success(function(data) {
-      $scope.bucketName = bucketName;
-      $scope.bucketStats = data;
-      $scope.err = null;
-      go();
-    }).
-    error(function() {
-      $scope.err = restErrorMsg
-    });
+function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
+  var drawChart = makeChart("ops", 60, 10, 100);
+  var bucketName = $routeParams.bucketName;
+
+  function go() {
+    $http.get('/api/buckets/' + bucketName + '/stats').
+      success(function(data) {
+        $scope.bucketName = bucketName;
+        $scope.bucketStats = data;
+        $scope.err = null;
+        drawChart(data.diffs.bucketStats.levels[0]);
+        $timeout(go, 1000)
+      }).
+      error(function() {
+        $scope.err = restErrorMsg
+        $timeout(go, 1000)
+      });
+  }
+
+  go()
 }
 
-function go() {
- var r = 200;
- var vis = d3.select("#chart");
-
- var t = 1297110663, // start time (seconds since epoch)
-     v = 70, // start value (subscribers)
-     data = d3.range(33).map(next); // starting dataset
-
- function next() {
-  return {
-    time: ++t,
-    value: v = ~~Math.max(10, Math.min(90, v + 10 * (Math.random() - .5)))
-  };
- }
-
- interval = setInterval(function() {
-    data.shift();
-    data.push(next());
-    redraw();
- }, 1500);
-
- var w = 10,
-     h = 80;
-
- var x = d3.scale.linear()
+function makeChart(field, dataLength, barW, barH) {
+  var x = d3.scale.linear()
     .domain([0, 1])
-    .range([0, w]);
+    .range([0, barW]);
 
- var y = d3.scale.linear()
+  var y = d3.scale.linear()
     .domain([0, 100])
-    .rangeRound([0, h]);
+    .rangeRound([0, barH]);
 
- var chart = d3.select("#chart")
-    .attr("class", "chart")
-    .attr("width", w * data.length - 1)
-    .attr("height", h);
+  return function(data) {
+    var chart = d3.select("#chart")
+      .attr("width", barW * dataLength - 1)
+      .attr("height", barH);
 
- chart.selectAll("rect")
-    .data(data)
-  .enter().append("rect")
-    .attr("x", function(d, i) { return x(i) - .5; })
-    .attr("y", function(d) { return h - y(d.value) - .5; })
-    .attr("width", w)
-    .attr("height", function(d) { return y(d.value); });
+    var rect = chart.selectAll("rect")
+      .data(data, function(d) { return d.time; })
 
- function redraw() {
-  var rect = chart.selectAll("rect")
-      .data(data, function(d) { return d.time; });
+    rect.enter()
+        .insert("rect")
+          .attr("x", function(d, i) { return x(i + 1) - .5; })
+          .attr("y", function(d) { return barH - (5 + y(d[field])) - .5; })
+          .attr("width", barW)
+          .attr("height", function(d) { return 5 + y(d[field]); })
+        .transition()
+          .duration(1000)
+          .attr("x", function(d, i) { return x(i) - .5; });
 
-  rect.enter().insert("rect", "line")
-      .attr("x", function(d, i) { return x(i + 1) - .5; })
-      .attr("y", function(d) { return h - y(d.value) - .5; })
-      .attr("width", w)
-      .attr("height", function(d) { return y(d.value); })
-    .transition()
-      .duration(1000)
-      .attr("x", function(d, i) { return x(i) - .5; });
+    rect.transition()
+        .duration(1000)
+        .attr("x", function(d, i) { return x(i) - .5; });
 
-  rect.transition()
-      .duration(1000)
-      .attr("x", function(d, i) { return x(i) - .5; });
-
-  rect.exit().transition()
-      .duration(1000)
-      .attr("x", function(d, i) { return x(i - 1) - .5; })
-      .remove();
- }
+    rect.exit()
+        .transition()
+          .duration(1000)
+          .attr("x", function(d, i) { return x(i - 1) - .5; })
+          .remove();
+  }
 }
