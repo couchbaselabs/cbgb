@@ -1,5 +1,9 @@
 <div ng-controller="BucketListCtrl">
-  buckets:
+  <ul class="breadcrumb">
+    <li><a href="#/server">server</a><span class="divider">/</span></li>
+    <li class="active">buckets</li>
+  </ul>
+
   <ul>
     <li ng-repeat="name in names">
       <a href="#/buckets/{{name}}">{{name}}</a>

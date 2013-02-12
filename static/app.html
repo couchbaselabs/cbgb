@@ -2,13 +2,29 @@
 <html ng-app="cbgb">
 <head>
   <link href="bootstrap/css/bootstrap.min.css" rel="stylesheet" media="screen">
+  <style type="text/css">
+      body {
+        padding-top: 60px;
+        padding-bottom: 40px;
+      }
+  </style>
   <script src="angular.min.js"></script>
   <script src="lodash.min.js"></script>
   <script src="app.js"></script>
 </head>
 <body>
-  <h1><a href="#">cbgb</a></h1>
-  <div ng-view></div>
+  <div class="navbar navbar-inverse navbar-fixed-top">
+    <div class="navbar-inner">
+      <div class="container-fluid">
+        <a class="brand" href="#">cbgb</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="container-fluid">
+    <div ng-view></div>
+  </div>
+
   <script src="bootstrap/js/bootstrap.min.js"></script>
 </body>
 </html>

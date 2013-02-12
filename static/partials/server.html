@@ -1,7 +1,17 @@
 <div ng-controller="ServerCtrl">
-  <div>
-    settings:
-    <pre>{{settings | json}}</pre>
-  </div>
-  <a href="#/buckets">buckets</a>
+  <ul class="breadcrumb">
+    <li class="active">server</li>
+  </ul>
+
+  <ul>
+    <li>
+      <a href="#/buckets">buckets</a>
+    </li>
+    <li>
+      <div>
+        settings:
+        <pre>{{settings | json}}</pre>
+      </div>
+    </li>
+  </ul>
 </div>

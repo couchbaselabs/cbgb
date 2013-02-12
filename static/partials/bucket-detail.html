@@ -1,30 +1,38 @@
 <div ng-controller="BucketDetailCtrl">
-  <a href="#/buckets">buckets</a>
-  <div>
-    bucket: {{bucket.name}}
-  </div>
+  <ul class="breadcrumb">
+    <li><a href="#/server">server</a><span class="divider">/</span></li>
+    <li><a href="#/buckets">buckets</a><span class="divider">/</span></li>
+    <li class="active">{{bucket.name}}</li>
+  </ul>
 
-  <div>
-    <a href="#/buckets/{{bucket.name}}/stats">stats</a>
-  </div>
-
-  <div>
-    filter: <input ng-model="filterChoice">
-    order by:
-      <select ng-model="orderChoice">
-        <option value="id">id</option>
-        <option value="lastCas">lastCas</option>
-        <option value="metaCas">metaCas</option>
-        <option value="state">state</option>
-        <option value="keyRange">keyRange</option>
-      </select>
-  </div>
-  <div>
-    partitions:
-    <ul>
-      <li ng-repeat="partition in bucket.partitionsArray | filter:filterChoice | orderBy:orderChoice">
-        {{partition | json}}
-      </li>
-    </ul>
+  <ul>
+    <li>
+      <a href="#/buckets/{{bucket.name}}/stats">stats</a>
+    </li>
+    <li>
+      partitions:
+      <ul>
+        <li>
+          <div>
+            filter: <input ng-model="filterChoice">
+            order by:
+            <select ng-model="orderChoice">
+              <option value="id">id</option>
+              <option value="lastCas">lastCas</option>
+              <option value="metaCas">metaCas</option>
+              <option value="state">state</option>
+              <option value="keyRange">keyRange</option>
+            </select>
+          </div>
+        </li>
+        <li>
+          <ul>
+            <li ng-repeat="partition in bucket.partitionsArray | filter:filterChoice | orderBy:orderChoice">
+              {{partition | json}}
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
   </div>
 </div>

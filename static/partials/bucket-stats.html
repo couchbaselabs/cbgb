@@ -1,7 +1,15 @@
 <div ng-controller="BucketStatsCtrl">
-  <a href="#/buckets">buckets</a>
-  <div>
-    bucket: <a href="#/buckets/{{bucketName}}">{{bucketName}}</a>
-    <pre>{{bucketStats | json}}</pre>
-  </div>
+  <ul class="breadcrumb">
+    <li><a href="#/server">server</a><span class="divider">/</span></li>
+    <li><a href="#/buckets">buckets</a><span class="divider">/</span></li>
+    <li><a href="#/buckets/{{bucketName}}">{{bucketName}}</a><span class="divider">/</span></li>
+    <li class="active">stats</li>
+  </ul>
+
+  <ul>
+    <li>
+      stats for bucket: {{bucketName}}
+      <pre>{{bucketStats | json}}</pre>
+    </li>
+  </ul>
 </div>
