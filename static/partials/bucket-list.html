@@ -1,12 +1,12 @@
 <div ng-controller="BucketListCtrl">
   <ul class="breadcrumb">
-    <li><a href="#/server">server</a><span class="divider">/</span></li>
-    <li class="active">buckets</li>
+    <li><a href="#/server"><i class="icon-home"></i> server</a><span class="divider">/</span></li>
+    <li class="active"><i class="icon-book"></i> buckets</li>
   </ul>
 
   <ul>
     <li ng-repeat="name in names">
-      <a href="#/buckets/{{name}}">{{name}}</a>
+      <a href="#/buckets/{{name}}"><i class="icon-folder-open"></i> {{name}}</a>
     </li>
   </ul>
 </div>

@@ -1,14 +1,14 @@
 <div ng-controller="BucketStatsCtrl">
   <ul class="breadcrumb">
-    <li><a href="#/server">server</a><span class="divider">/</span></li>
-    <li><a href="#/buckets">buckets</a><span class="divider">/</span></li>
-    <li><a href="#/buckets/{{bucketName}}">{{bucketName}}</a><span class="divider">/</span></li>
-    <li class="active">stats</li>
+    <li><a href="#/server"><i class="icon-home"></i> server</a><span class="divider">/</span></li>
+    <li><a href="#/buckets"><i class="icon-book"></i> buckets</a><span class="divider">/</span></li>
+    <li><a href="#/buckets/{{bucketName}}"><i class="icon-folder-open"></i> {{bucketName}}</a><span class="divider">/</span></li>
+    <li class="active"><i class="icon-align-left"></i> stats</li>
   </ul>
 
   <ul>
     <li>
-      stats for bucket: {{bucketName}}
+      <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
       <pre>{{bucketStats | json}}</pre>
     </li>
   </ul>

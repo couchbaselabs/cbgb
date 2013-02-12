@@ -1,16 +1,16 @@
 <div ng-controller="BucketDetailCtrl">
   <ul class="breadcrumb">
-    <li><a href="#/server">server</a><span class="divider">/</span></li>
-    <li><a href="#/buckets">buckets</a><span class="divider">/</span></li>
-    <li class="active">{{bucket.name}}</li>
+    <li><a href="#/server"><i class="icon-home"></i> server</a><span class="divider">/</span></li>
+    <li><a href="#/buckets"><i class="icon-book"></i> buckets</a><span class="divider">/</span></li>
+    <li class="active"><i class="icon-folder-open"></i> {{bucket.name}}</li>
   </ul>
 
   <ul>
     <li>
-      <a href="#/buckets/{{bucket.name}}/stats">stats</a>
+      <a href="#/buckets/{{bucket.name}}/stats"><i class="icon-align-left"></i> stats</a>
     </li>
     <li>
-      partitions:
+      <i class="icon-tasks"></i> partitions:
       <ul>
         <li>
           <div>
