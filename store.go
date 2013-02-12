@@ -44,6 +44,8 @@ type bucketstorefile struct {
 }
 
 type BucketStoreStats struct {
+	Time int64 `json:"time"`
+
 	Flushes  uint64 `json:"flushes"`
 	Reads    uint64 `json:"reads"`
 	Writes   uint64 `json:"writes"`

@@ -38,7 +38,7 @@ type Bucket interface {
 
 	GetBucketStore(int) *bucketstore
 
-	SampleStats()
+	SampleStats(time.Time)
 	GetLastStats() *Stats
 	GetLastBucketStoreStats() *BucketStoreStats
 	GetAggStats() *AggStats
@@ -98,17 +98,17 @@ func (b *Buckets) serviceStats() {
 			r.fun()
 			close(r.res)
 		case <-tickerS.C:
-			b.sampleStats()
+			b.sampleStats(time.Now())
 		}
 	}
 }
 
-func (b *Buckets) sampleStats() {
+func (b *Buckets) sampleStats(t time.Time) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	for _, bucket := range b.buckets {
-		bucket.SampleStats()
+		bucket.SampleStats(t)
 	}
 }
 
@@ -462,11 +462,12 @@ func (b *livebucket) GetLastBucketStoreStats() *BucketStoreStats {
 }
 
 // Call only during StatsApply/serviceStats().
-func (b *livebucket) SampleStats() {
+func (b *livebucket) SampleStats(t time.Time) {
 	currStats := AggregateStats(b, "")
 	diffStats := &Stats{}
 	diffStats.Add(currStats)
 	diffStats.Sub(b.lastStats)
+	diffStats.Time = t.Unix()
 	b.aggStats.addSample(diffStats)
 	b.lastStats = currStats
 
@@ -474,6 +475,7 @@ func (b *livebucket) SampleStats() {
 	diffBucketStoreStats := &BucketStoreStats{}
 	diffBucketStoreStats.Add(currBucketStoreStats)
 	diffBucketStoreStats.Sub(b.lastBucketStoreStats)
+	diffBucketStoreStats.Time = t.Unix()
 	b.aggBucketStoreStats.addSample(diffBucketStoreStats)
 	b.lastBucketStoreStats = currBucketStoreStats
 }

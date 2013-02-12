@@ -18,6 +18,8 @@ type statItem struct {
 }
 
 type Stats struct {
+	Time int64 `json:"time"`
+
 	Items int64 `json:"items"`
 
 	Ops         uint64 `json:"ops"`
