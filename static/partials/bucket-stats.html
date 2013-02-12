@@ -10,10 +10,25 @@
     <li class="active"><i class="icon-align-left"></i> stats</li>
   </ul>
 
-  <ul>
-    <li>
-      <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
-      <pre>{{bucketStats | json}}</pre>
-    </li>
-  </ul>
+  <div class="row-fluid">
+    <div class="span5">
+      <ul>
+        <li>
+          <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
+          <pre>{{bucketStats | json}}</pre>
+        </li>
+      </ul>
+    </div>
+    <div class="span7">
+      <div id="charts">
+        <svg id="chart" width="200" height="100"></svg>
+        <style>
+          .chart rect {
+            stroke: white;
+            fill: steelblue;
+          }
+        </style>
+      </div>
+    </div>
+  </div
 </div>
