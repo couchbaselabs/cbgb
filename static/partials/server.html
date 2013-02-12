@@ -1,4 +1,8 @@
 <div ng-controller="ServerCtrl">
+  <div ng-show="err" class="alert alert-error">
+    <i class="icon-flag"></i> {{err}}
+  </div>
+
   <ul class="breadcrumb">
     <li class="active"><i class="icon-home"></i> server</li>
   </ul>
@@ -8,7 +12,7 @@
       <a href="#/buckets"><i class="icon-book"></i> buckets</a>
     </li>
     <li>
-      <i class="icon-wrench"></i> settings:
+      <i class="icon-info-sign"></i> settings:
       <pre>{{settings | json}}</pre>
     </li>
   </ul>

@@ -1,4 +1,8 @@
 <div ng-controller="BucketListCtrl">
+  <div ng-show="err" class="alert alert-error">
+    <i class="icon-flag"></i> {{err}}
+  </div>
+
   <ul class="breadcrumb">
     <li><a href="#/server"><i class="icon-home"></i> server</a><span class="divider">/</span></li>
     <li class="active"><i class="icon-book"></i> buckets</li>
