@@ -6,37 +6,46 @@
   <ul class="breadcrumb">
     <li><a href="#/server"><i class="icon-home"></i> server</a><span class="divider">/</span></li>
     <li><a href="#/buckets"><i class="icon-book"></i> buckets</a><span class="divider">/</span></li>
-    <li class="active"><i class="icon-folder-open"></i> {{bucket.name}}</li>
+    <li class="active"><i class="icon-folder-open"></i> {{bucketName}}</li>
   </ul>
 
-  <ul>
-    <li>
-      <a href="#/buckets/{{bucket.name}}/stats"><i class="icon-align-left"></i> stats</a>
-    </li>
-    <li>
-      <i class="icon-tasks"></i> partitions:
-      <ul>
-        <li>
-          <div>
-            filter: <input ng-model="filterChoice">
-            order by:
-            <select ng-model="orderChoice">
-              <option value="id">id</option>
-              <option value="lastCas">lastCas</option>
-              <option value="metaCas">metaCas</option>
-              <option value="state">state</option>
-              <option value="keyRange">keyRange</option>
-            </select>
-          </div>
-        </li>
-        <li>
-          <ul>
-            <li ng-repeat="partition in bucket.partitionsArray | filter:filterChoice | orderBy:orderChoice">
-              {{partition | json}}
-            </li>
-          </ul>
-        </li>
-      </ul>
-    </li>
+  <div class="row main">
+   <div class="span10">
+    <legend>Bucket: {{bucketName}}</legend>
+    <ul>
+      <li>
+        <a href="#/buckets/{{bucketName}}/stats"><i class="icon-align-left"></i> stats</a>
+      </li>
+      <li>
+        <i class="icon-tasks"></i> partitions:
+        <ul>
+          <li>
+            <div>
+              filter: <input ng-model="filterChoice">
+              order by:
+              <select ng-model="orderChoice">
+                <option value="id">id</option>
+                <option value="lastCas">lastCas</option>
+                <option value="metaCas">metaCas</option>
+                <option value="state">state</option>
+                <option value="keyRange">keyRange</option>
+              </select>
+            </div>
+          </li>
+          <li>
+            <ul>
+              <li ng-repeat="partition in bucket.partitionsArray | filter:filterChoice | orderBy:orderChoice">
+                {{partition | json}}
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+   </div>
+   <div class="span2">
+     <legend>Manage</legend>
+     <button class="btn" ng-click="deleteBucket()">Delete Bucket</bucket>
+   </div>
   </div>
 </div>

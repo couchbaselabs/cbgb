@@ -61,11 +61,11 @@ function BucketsCtrl($scope, $http) {
       }).
       success(function(data) {
         console.log(data);
-        $scope.bucketCreateResult = "created bucket: " + bucketName;
+        $scope.bucketCreateResult =
+          "created bucket: " + bucketName;
         retrieveBucketNames();
       }).
       error(function(data) {
-        console.log(data);
         $scope.bucketCreateResult =
           "error creating bucket: " + bucketName + "; error: " + data;
       });
@@ -85,8 +85,25 @@ function BucketsCtrl($scope, $http) {
   retrieveBucketNames();
 }
 
-function BucketCtrl($scope, $routeParams, $http) {
-  $http.get('/api/buckets/' + $routeParams.bucketName).
+function BucketCtrl($scope, $routeParams, $http, $location) {
+  $scope.bucketName = $routeParams.bucketName;
+
+  $scope.deleteBucket = function() {
+    if (confirm("Are you sure you want to permanently delete bucket '" +
+                $scope.bucketName +
+                "', including erasing all its data items?")) {
+      $http.delete("/api/buckets/" + $scope.bucketName).
+        success(function() {
+            $location.path("/buckets");
+            $scope.$apply();
+        }).
+        error(function(data) {
+            alert("Bucket '" + $scope.bucketName + "' was not deleted; error: " + data);
+        });
+    }
+  }
+
+  $http.get('/api/buckets/' + $scope.bucketName).
     success(function(data) {
       $scope.bucket = data;
       $scope.bucket.partitionsArray = _.values(data.partitions);
