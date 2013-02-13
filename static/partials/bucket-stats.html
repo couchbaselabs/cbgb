@@ -24,10 +24,11 @@
 
     <div class="row">
       <div class="span3"
-           style="padding-left: 10px; border-right: 1px solid #ddd;">
-        <ul class="nav">
-          <li ng-repeat="statName in statNames">
-            <a>{{statName}}</a>
+           style="padding-left: 10px">
+        <ul class="nav nav-tabs nav-stacked">
+          <li ng-repeat="statName in statNames"
+             ng-class="{active: statName == currStatName}">
+            <a ng-click="changeStat(statName)">{{statName}}</a>
           </li>
         </ul>
       </div>
