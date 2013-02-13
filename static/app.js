@@ -55,37 +55,42 @@ function BucketDetailCtrl($scope, $routeParams, $http) {
 }
 
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
-  var bucketName = $routeParams.bucketName;
+  $scope.bucketName = $routeParams.bucketName;
 
-  $scope.changeLevel = function(i) {
-    $scope.currLevel = i;
-    if ($scope.timeout) {
-      $timeout.cancel($scope.timeout);
-      $scope.timeout = null;
-    }
+  $scope.stopLevel = function() {
     if ($scope.drawChart) {
       $scope.drawChart(null);
       $scope.drawChart = null;
     }
+    if ($scope.timeout) {
+      $timeout.cancel($scope.timeout);
+      $scope.timeout = null;
+    }
+  }
+
+  $scope.changeLevel = function(i) {
+    $scope.stopLevel();
+    $scope.currLevel = i;
     go();
   };
 
   function go() {
-    $http.get('/api/buckets/' + bucketName + '/stats').
+    $http.get('/api/buckets/' + $scope.bucketName + '/stats').
       success(function(data) {
-        $scope.bucketName = bucketName;
         $scope.bucketStats = data;
         $scope.statNames = _.keys(data.totals.bucketStats);
         $scope.err = null;
         if (!$scope.drawChart) {
-          $scope.drawChart = makeChart("ops", 60, 10, 300);
+          $scope.drawChart =
+            makeChart("ops", data.levels[$scope.currLevel].numSamples,
+                      10, 300);
         }
         $scope.drawChart(data.diffs.bucketStats.levels[$scope.currLevel]);
         $scope.timeout = $timeout(go, 1000);
       }).
       error(function() {
         $scope.err = restErrorMsg;
-        $scope.timeout = $timeout(go, 1000);
+        $scope.stopLevel();
       });
   }
 
@@ -105,6 +110,11 @@ function makeChart(statName, dataLength, barW, barH) {
   return function(data) {
     if (!data) {
       done = true;
+      d3.select("#chart")
+        .selectAll("rect")
+        .data([])
+        .exit()
+        .remove()
     }
     if (done) {
       return;
