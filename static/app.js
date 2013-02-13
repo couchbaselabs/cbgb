@@ -90,7 +90,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
       }).
       error(function() {
         $scope.err = restErrorMsg;
-        $scope.stopLevel();
+        $scope.timeout = $timeout(go, 1000);
       });
   }
 
@@ -114,7 +114,7 @@ function makeChart(statName, dataLength, barW, barH) {
         .selectAll("rect")
         .data([])
         .exit()
-        .remove()
+        .remove();
     }
     if (done) {
       return;
