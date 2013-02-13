@@ -242,7 +242,7 @@ func (s *bucketstore) getItem(keys *gkvlite.Collection, changes *gkvlite.Collect
 		// TODO: What if a compaction happens in between the lookups,
 		// and the changes-feed no longer has the item?  Answer: compaction
 		// must not remove items that the key-index references.
-		cItem, err := changes.GetItem(iItem.Val, withValue)
+		cItem, err := changes.GetItem(iItem.Val, true)
 		if err != nil {
 			return nil, err
 		}
