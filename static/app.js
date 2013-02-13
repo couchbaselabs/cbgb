@@ -59,6 +59,7 @@ var lastChartId = (new Date()).getTime();
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.bucketName = $routeParams.bucketName;
   $scope.currLevel = 0;
+  $scope.currStatKind = "bucketStats";
   $scope.currStatName = "ops";
 
   $scope.stopChart = function() {
@@ -78,8 +79,9 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
     go();
   }
 
-  $scope.changeStat = function(statName) {
+  $scope.changeStat = function(kind, statName) {
     $scope.stopChart();
+    $scope.currStatKind = kind;
     $scope.currStatName = statName;
     go();
   }
@@ -88,16 +90,22 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
     $http.get('/api/buckets/' + $scope.bucketName + '/stats').
       success(function(data) {
         $scope.err = null;
-        $scope.bucketStats = data;
-        $scope.statNames = _.without(_.keys(data.totals.bucketStats), "time");
+        $scope.stats = data;
+        $scope.statNames =
+          _.union(_.map(_.without(_.keys(data.totals.bucketStats), "time"),
+                        function(x) { return ["bucketStats", x]; }),
+                  _.map(_.without(_.keys(data.totals.bucketStoreStats), "time"),
+                        function(x) { return ["bucketStoreStats", x]; }))
+
         if (!$scope.drawChart) {
           lastChartId++;
           $scope.drawChart =
-            makeChart(lastChartId, $scope.currStatName,
+            makeChart(lastChartId,
+                      $scope.currStatName,
                       data.levels[$scope.currLevel].numSamples,
                       10, 400);
         }
-        $scope.drawChart(data.diffs.bucketStats.levels[$scope.currLevel]);
+        $scope.drawChart(data.diffs[$scope.currStatKind].levels[$scope.currLevel]);
         $scope.timeout = $timeout(go, 1000);
       }).
       error(function() {

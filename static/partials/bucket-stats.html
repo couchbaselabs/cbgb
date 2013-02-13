@@ -15,7 +15,7 @@
       <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
       <ul class="nav nav-pills"
           style="padding: 15px 0 15px 0; border-bottom: 1px solid #ddd;">
-        <li ng-repeat="level in bucketStats.levels"
+        <li ng-repeat="level in stats.levels"
            ng-class="{active: $index == currLevel}">
           <a ng-click="changeLevel($index)">{{level.name}}</a>
         </li>
@@ -27,8 +27,8 @@
            style="padding-left: 10px">
         <ul class="nav nav-tabs nav-stacked">
           <li ng-repeat="statName in statNames"
-             ng-class="{active: statName == currStatName}">
-            <a ng-click="changeStat(statName)">{{statName}}</a>
+             ng-class="{active: statName[0] == currStatKind && statName[1] == currStatName}">
+            <a ng-click="changeStat(statName[0], statName[1])">{{statName[1]}}</a>
           </li>
         </ul>
       </div>
@@ -51,7 +51,7 @@
 
     <div class="row" style="padding-left: 10px;">
       <div class="span12">
-        <pre>{{bucketStats | json}}</pre>
+        <pre>{{stats | json}}</pre>
       </div>
     </div>
   </div
