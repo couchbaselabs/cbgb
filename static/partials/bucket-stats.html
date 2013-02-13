@@ -19,6 +19,9 @@
            ng-class="{active: $index == currLevel}">
           <a ng-click="changeLevel($index)">{{level.name}}</a>
         </li>
+        <li ng-class="{active: paused}">
+          <a ng-click="paused = !paused"><i class="icon-pause"></i> pause</a>
+        </li>
       </ul>
     </div>
 

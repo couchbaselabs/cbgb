@@ -61,6 +61,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.currLevel = 0;
   $scope.currStatKind = "bucketStats";
   $scope.currStatName = "ops";
+  $scope.paused = false;
 
   $scope.stopChart = function() {
     if ($scope.drawChart) {
@@ -76,6 +77,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.changeLevel = function(i) {
     $scope.stopChart();
     $scope.currLevel = i;
+    $scope.paused = false;
     go();
   }
 
@@ -83,10 +85,16 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
     $scope.stopChart();
     $scope.currStatKind = kind;
     $scope.currStatName = statName;
+    $scope.paused = false;
     go();
   }
 
   function go() {
+    if ($scope.paused) {
+        $scope.timeout = $timeout(go, 1000);
+        return;
+    }
+
     $http.get('/api/buckets/' + $scope.bucketName + '/stats').
       success(function(data) {
         $scope.err = null;
