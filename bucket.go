@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"path"
 	"strconv"
@@ -215,6 +216,7 @@ func (b *Buckets) Load() error {
 			return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
 				bucketName))
 		}
+		log.Printf("loading bucket: %v", bucketName)
 		if err = b.Load(); err != nil {
 			return err
 		}

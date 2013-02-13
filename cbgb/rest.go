@@ -21,6 +21,8 @@ func restMain(rest string, staticPath string) {
 		restPostBucket).Methods("POST")
 	r.HandleFunc("/api/buckets/{bucketName}",
 		restGetBucket).Methods("GET")
+	r.HandleFunc("/api/buckets/{bucketName}",
+		restDeleteBucket).Methods("DELETE")
 	r.HandleFunc("/api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
 	r.HandleFunc("/api/settings",
@@ -100,6 +102,14 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 		"name":       bucketName,
 		"partitions": partitions,
 	})
+}
+
+func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
+	bucketName, bucket := parseBucketName(w, r)
+	if bucket == nil {
+		return
+	}
+	buckets.Close(bucketName, true)
 }
 
 func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
