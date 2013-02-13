@@ -71,22 +71,9 @@ func main() {
 	}
 
 	if buckets.Get(*defaultBucketName) == nil {
-		log.Printf("creating default bucket: %v", *defaultBucketName)
-		defaultBucket, err := buckets.New(*defaultBucketName)
+		_, err := createBucket(*defaultBucketName, *defaultPartitions)
 		if err != nil {
-			log.Fatalf("Error creating default bucket: %s, %v",
-				*defaultBucketName, err)
-		}
-
-		defaultBucket.Subscribe(mutationLogCh)
-
-		for vbid := 0; vbid < *defaultPartitions; vbid++ {
-			defaultBucket.CreateVBucket(uint16(vbid))
-			defaultBucket.SetVBState(uint16(vbid), cbgb.VBActive)
-		}
-
-		if err = defaultBucket.Flush(); err != nil {
-			log.Fatalf("Error flushing default bucket: %s, %v",
+			log.Fatalf("Error creating default bucket: %s, err: %v",
 				*defaultBucketName, err)
 		}
 	}
@@ -102,4 +89,26 @@ func main() {
 
 	// Let goroutines do their work.
 	select {}
+}
+
+func createBucket(bucketName string, numPartitions int) (cbgb.Bucket, error) {
+	log.Printf("creating bucket: %v, numPartitions: %v", bucketName, numPartitions)
+
+	bucket, err := buckets.New(bucketName)
+	if err != nil {
+		return nil, err
+	}
+
+	bucket.Subscribe(mutationLogCh)
+
+	for vbid := 0; vbid < numPartitions; vbid++ {
+		bucket.CreateVBucket(uint16(vbid))
+		bucket.SetVBState(uint16(vbid), cbgb.VBActive)
+	}
+
+	if err = bucket.Flush(); err != nil {
+		return nil, err
+	}
+
+	return bucket, nil
 }

@@ -2,9 +2,11 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 
 	"github.com/couchbaselabs/cbgb"
@@ -15,6 +17,8 @@ func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
 	r.HandleFunc("/api/buckets",
 		restGetBuckets).Methods("GET")
+	r.HandleFunc("/api/buckets",
+		restPostBucket).Methods("POST")
 	r.HandleFunc("/api/buckets/{bucketName}",
 		restGetBucket).Methods("GET")
 	r.HandleFunc("/api/buckets/{bucketName}/stats",
@@ -57,6 +61,27 @@ func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucke
 		return bucketName, nil
 	}
 	return bucketName, bucket
+}
+
+func restPostBucket(w http.ResponseWriter, r *http.Request) {
+	name := r.FormValue("name")
+	if len(name) < 1 {
+		http.Error(w, "bucket name is too short or is missing", 400)
+		return
+	}
+	match, err := regexp.MatchString("^[A-Za-z0-9\\-_]+$", name)
+	if err != nil || !match {
+		http.Error(w,
+			fmt.Sprintf("illegal bucket name: %v, err: %v", name, err), 400)
+		return
+	}
+	_, err = createBucket(name, *defaultPartitions)
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("create bucket error; name: %v, err: %v", name, err), 500)
+		return
+	}
+	http.Redirect(w, r, "/api/buckets/"+name, 303)
 }
 
 func restGetBucket(w http.ResponseWriter, r *http.Request) {
