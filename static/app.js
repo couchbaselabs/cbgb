@@ -56,7 +56,7 @@ function BucketListCtrl($scope, $http) {
     $http({
         method: 'POST',
         url: '/api/buckets',
-        data: 'name=' + bucketName,
+        data: 'bucketName=' + encodeURIComponent(bucketName),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}
       }).
       success(function(data) {

@@ -64,24 +64,24 @@ func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucke
 }
 
 func restPostBucket(w http.ResponseWriter, r *http.Request) {
-	name := r.FormValue("name")
-	if len(name) < 1 {
+	bucketName := r.FormValue("bucketName")
+	if len(bucketName) < 1 {
 		http.Error(w, "bucket name is too short or is missing", 400)
 		return
 	}
-	match, err := regexp.MatchString("^[A-Za-z0-9\\-_]+$", name)
+	match, err := regexp.MatchString("^[A-Za-z0-9\\-_]+$", bucketName)
 	if err != nil || !match {
 		http.Error(w,
-			fmt.Sprintf("illegal bucket name: %v, err: %v", name, err), 400)
+			fmt.Sprintf("illegal bucket name: %v, err: %v", bucketName, err), 400)
 		return
 	}
-	_, err = createBucket(name, *defaultPartitions)
+	_, err = createBucket(bucketName, *defaultPartitions)
 	if err != nil {
 		http.Error(w,
-			fmt.Sprintf("create bucket error; name: %v, err: %v", name, err), 500)
+			fmt.Sprintf("create bucket error; name: %v, err: %v", bucketName, err), 500)
 		return
 	}
-	http.Redirect(w, r, "/api/buckets/"+name, 303)
+	http.Redirect(w, r, "/api/buckets/"+bucketName, 303)
 }
 
 func restGetBucket(w http.ResponseWriter, r *http.Request) {
