@@ -88,7 +88,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
       success(function(data) {
         $scope.err = null;
         $scope.bucketStats = data;
-        $scope.statNames = _.keys(data.totals.bucketStats);
+        $scope.statNames = _.without(_.keys(data.totals.bucketStats), "time");
         if (!$scope.drawChart) {
           $scope.drawChart =
             makeChart($scope.currChart++,
