@@ -56,6 +56,7 @@ function BucketDetailCtrl($scope, $routeParams, $http) {
 
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.bucketName = $routeParams.bucketName;
+  $scope.currChart = 0;
   $scope.currLevel = 0;
   $scope.currStatName = "ops";
 
@@ -73,24 +74,25 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.changeLevel = function(i) {
     $scope.stopChart();
     $scope.currLevel = i;
-    $scope.timeout = $timeout(go, 500);
+    go();
   }
 
   $scope.changeStat = function(statName) {
     $scope.stopChart();
     $scope.currStatName = statName;
-    $scope.timeout = $timeout(go, 500);
+    go();
   }
 
   function go() {
     $http.get('/api/buckets/' + $scope.bucketName + '/stats').
       success(function(data) {
+        $scope.err = null;
         $scope.bucketStats = data;
         $scope.statNames = _.keys(data.totals.bucketStats);
-        $scope.err = null;
         if (!$scope.drawChart) {
           $scope.drawChart =
-            makeChart($scope.currStatName,
+            makeChart($scope.currChart++,
+                      $scope.currStatName,
                       data.levels[$scope.currLevel].numSamples,
                       10, 400);
         }
@@ -106,7 +108,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   go();
 }
 
-function makeChart(statName, dataLength, barW, barH) {
+function makeChart(chartId, statName, dataLength, barW, barH) {
   var duration = 400;
   var xMargin = 0.5;
   var yMargin = 0.5;
@@ -119,10 +121,12 @@ function makeChart(statName, dataLength, barW, barH) {
   return function(data) {
     if (!data) {
       done = true;
-      d3.select("#chart")
+      d3.select("#chart" + chartId)
         .selectAll("rect")
         .data([])
         .exit()
+        .remove();
+      d3.select("#chart" + chartId)
         .remove();
     }
     if (done) {
@@ -155,9 +159,16 @@ function makeChart(statName, dataLength, barW, barH) {
       .domain([yMin, yMax])
       .rangeRound([2, barH]);
 
-    var chart = d3.select("#chart")
-      .attr("width", barW * dataLength - 1)
-      .attr("height", barH);
+    if (!document.getElementById("chart" + chartId)) {
+      d3.select("#charts")
+        .append("svg:svg")
+        .attr("id", "chart" + chartId)
+        .attr("class", "chart")
+        .attr("width", barW * dataLength - 1)
+        .attr("height", barH);
+    }
+
+    var chart = d3.select("#chart" + chartId);
 
     var rect = chart.selectAll("rect")
       .data(data, function(d) { return d.time; })
