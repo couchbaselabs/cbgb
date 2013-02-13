@@ -14,9 +14,10 @@
     <div>
       <i class="icon-align-left"></i> stats for bucket: {{bucketName}}
       <ul class="nav nav-pills"
-          style="border-bottom: 1px solid #ddd;">
-        <li ng-repeat="level in bucketStats.levels">
-        <a>{{level.name}}</a>
+          style="padding: 15px 0 15px 0; border-bottom: 1px solid #ddd;">
+        <li ng-repeat="level in bucketStats.levels"
+           ng-class="{active: $index == currLevel}">
+          <a ng-click="changeLevel($index)">{{level.name}}</a>
         </li>
       </ul>
     </div>

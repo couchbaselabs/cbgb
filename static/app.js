@@ -57,38 +57,59 @@ function BucketDetailCtrl($scope, $routeParams, $http) {
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   var bucketName = $routeParams.bucketName;
 
+  $scope.changeLevel = function(i) {
+    $scope.currLevel = i;
+    if ($scope.timeout) {
+      $timeout.cancel($scope.timeout);
+      $scope.timeout = null;
+    }
+    if ($scope.drawChart) {
+      $scope.drawChart(null);
+      $scope.drawChart = null;
+    }
+    go();
+  };
+
   function go() {
     $http.get('/api/buckets/' + bucketName + '/stats').
       success(function(data) {
         $scope.bucketName = bucketName;
         $scope.bucketStats = data;
-        $scope.statNames = _.keys(data.totals.bucketStats)
+        $scope.statNames = _.keys(data.totals.bucketStats);
         $scope.err = null;
         if (!$scope.drawChart) {
           $scope.drawChart = makeChart("ops", 60, 10, 300);
         }
-        $scope.drawChart(data.diffs.bucketStats.levels[0]);
-        $timeout(go, 1000)
+        $scope.drawChart(data.diffs.bucketStats.levels[$scope.currLevel]);
+        $scope.timeout = $timeout(go, 1000);
       }).
       error(function() {
-        $scope.err = restErrorMsg
-        $timeout(go, 1000)
+        $scope.err = restErrorMsg;
+        $scope.timeout = $timeout(go, 1000);
       });
   }
 
-  go()
+  $scope.changeLevel(0);
 }
 
 function makeChart(statName, dataLength, barW, barH) {
   var duration = 1000;
   var xMargin = 0.5;
   var yMargin = 0.5;
+  var done = false;
 
   var xScale = d3.scale.linear()
     .domain([0, 1])
     .range([0, barW]);
 
   return function(data) {
+    if (!data) {
+      done = true;
+    }
+    if (done) {
+      return;
+    }
+
     function idx(i) {
       // Handles when data length is too small.
       if (dataLength > data.length) {
