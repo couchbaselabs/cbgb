@@ -54,9 +54,10 @@ function BucketDetailCtrl($scope, $routeParams, $http) {
   $scope.orderChoice = 'id';
 }
 
+var lastChartId = (new Date()).getTime();
+
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.bucketName = $routeParams.bucketName;
-  $scope.currChart = 0;
   $scope.currLevel = 0;
   $scope.currStatName = "ops";
 
@@ -90,9 +91,9 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
         $scope.bucketStats = data;
         $scope.statNames = _.without(_.keys(data.totals.bucketStats), "time");
         if (!$scope.drawChart) {
+          lastChartId++;
           $scope.drawChart =
-            makeChart($scope.currChart++,
-                      $scope.currStatName,
+            makeChart(lastChartId, $scope.currStatName,
                       data.levels[$scope.currLevel].numSamples,
                       10, 400);
         }
@@ -119,7 +120,7 @@ function makeChart(chartId, statName, dataLength, barW, barH) {
     .range([0, barW]);
 
   return function(data) {
-    if (!data) {
+    if (!data || lastChartId != chartId) {
       done = true;
       d3.select("#chart" + chartId)
         .selectAll("rect")
