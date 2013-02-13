@@ -243,10 +243,10 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 	}
 
 	aggStats := NewAggStats(func() Aggregatable {
-		return &Stats{}
+		return &Stats{Time: int64(time.Now().Unix())}
 	})
 	aggBucketStoreStats := NewAggStats(func() Aggregatable {
-		return &BucketStoreStats{}
+		return &BucketStoreStats{Time: int64(time.Now().Unix())}
 	})
 
 	res := &livebucket{
