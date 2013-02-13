@@ -5,11 +5,11 @@ angular.module('cbgb', []).
            {templateUrl: 'partials/server.html',
             controller: ServerCtrl}).
       when('/buckets',
-           {templateUrl: 'partials/bucket-list.html',
-            controller: BucketListCtrl}).
+           {templateUrl: 'partials/buckets.html',
+            controller: BucketsCtrl}).
       when('/buckets/:bucketName',
-           {templateUrl: 'partials/bucket-detail.html',
-            controller: BucketDetailCtrl}).
+           {templateUrl: 'partials/bucket.html',
+            controller: BucketCtrl}).
       when('/buckets/:bucketName/stats',
            {templateUrl: 'partials/bucket-stats.html',
             controller: BucketStatsCtrl}).
@@ -29,7 +29,7 @@ function ServerCtrl($scope, $http) {
     });
 }
 
-function BucketListCtrl($scope, $http) {
+function BucketsCtrl($scope, $http) {
   $scope.bucketName = "";
   $scope.bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
 
@@ -85,7 +85,7 @@ function BucketListCtrl($scope, $http) {
   retrieveBucketNames();
 }
 
-function BucketDetailCtrl($scope, $routeParams, $http) {
+function BucketCtrl($scope, $routeParams, $http) {
   $http.get('/api/buckets/' + $routeParams.bucketName).
     success(function(data) {
       $scope.bucket = data;
