@@ -8,9 +8,32 @@
     <li class="active"><i class="icon-book"></i> buckets</li>
   </ul>
 
-  <ul>
-    <li ng-repeat="name in names">
-      <a href="#/buckets/{{name}}"><i class="icon-folder-open"></i> {{name}}</a>
-    </li>
-  </ul>
+  <div class="row" style="padding-left: 20px;">
+    <div class="span8">
+      <legend>Buckets</legend>
+      <ul>
+        <li ng-repeat="name in names">
+          <a href="#/buckets/{{name}}"><i class="icon-folder-open"></i> {{name}}</a>
+        </li>
+      </ul>
+    </div>
+    <div class="span4">
+      <form name="bucketCreateForm">
+        <legend>Create new bucket</legend>
+        <label>Bucket name</label>
+          <input type="text"
+                name="bucketName"
+                required
+                placeholder="your-bucket-name"
+                ng-model="bucketName"/>
+        </label>
+        <button type="submit" class="btn" ng-click="bucketCreate()">
+          Create Bucket
+        </button>
+      </form>
+      <div ng-show="bucketCreateResult">
+        {{bucketCreateResult}}
+      </div>
+    </div>
+  </div>
 </div>

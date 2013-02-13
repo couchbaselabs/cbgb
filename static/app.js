@@ -30,14 +30,59 @@ function ServerCtrl($scope, $http) {
 }
 
 function BucketListCtrl($scope, $http) {
-  $http.get('/api/buckets').
-    success(function(data) {
-      $scope.names = data;
-      $scope.err = null;
-    }).
-    error(function() {
-      $scope.err = restErrorMsg
-    });
+  $scope.bucketName = "";
+  $scope.bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
+
+  $scope.bucketCreate = function() {
+    var bucketName = $scope.bucketName;
+    if (bucketName.length <= 0) {
+      return
+    }
+
+    if (!bucketName.match($scope.bucketNamePattern)) {
+      $scope.bucketCreateResult =
+        "error: please use alphanumerics, dashes, and underscores only";
+      return
+    }
+
+    if (_.contains($scope.names, bucketName)) {
+      $scope.bucketCreateResult =
+      "error: bucket " + bucketName + " already exists";
+      return
+    }
+
+    $scope.bucketCreateResult = "creating bucket: " + bucketName + " ...";
+
+    $http({
+        method: 'POST',
+        url: '/api/buckets',
+        data: 'name=' + bucketName,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'}
+      }).
+      success(function(data) {
+        console.log(data);
+        $scope.bucketCreateResult = "created bucket: " + bucketName;
+        retrieveBucketNames();
+      }).
+      error(function(data) {
+        console.log(data);
+        $scope.bucketCreateResult =
+          "error creating bucket: " + bucketName + "; error: " + data;
+      });
+  }
+
+  function retrieveBucketNames() {
+    $http.get('/api/buckets').
+      success(function(data) {
+        $scope.names = data.sort();
+        $scope.err = null;
+      }).
+      error(function() {
+        $scope.err = restErrorMsg
+      });
+  }
+
+  retrieveBucketNames();
 }
 
 function BucketDetailCtrl($scope, $routeParams, $http) {
