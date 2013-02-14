@@ -355,7 +355,7 @@ func (s *bucketstore) del(keys *gkvlite.Collection, changes *gkvlite.Collection,
 		// update?  That could result in an inconsistent db file?
 		// Solution idea #1 is to have load-time fixup, that
 		// incorporates changes into the key-index.
-		if err := keys.Delete(key); err != nil {
+		if _, err := keys.Delete(key); err != nil {
 			return err
 		}
 	}
