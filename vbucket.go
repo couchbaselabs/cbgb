@@ -21,8 +21,8 @@ const (
 	SET_VBMETA           = gomemcached.CommandCode(0x62)
 	SPLIT_RANGE          = gomemcached.CommandCode(0x63)
 	NOT_MY_RANGE         = gomemcached.Status(0x60)
-	COLL_SUFFIX_KEYS     = ".a" // This suffix sorts before CHANGES suffix.
-	COLL_SUFFIX_CHANGES  = ".c"
+	COLL_SUFFIX_KEYS     = ".k" // This suffix sorts before CHANGES suffix.
+	COLL_SUFFIX_CHANGES  = ".s" // The changes is like a "sequence" stream.
 	COLL_VBMETA          = "vbm"
 	MAX_VBID             = 0x0000ffff // Due to uint16.
 	MAX_ITEM_KEY_LENGTH  = 250
