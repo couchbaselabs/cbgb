@@ -95,16 +95,15 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 			return fmt.Errorf("compact source colls missing: %v, vbid: %v",
 				bsf.path, vbid)
 		}
-		// Using mapPauseSwapColl to get a consistent snapshot (keys
-		// reflect all changes) of the keys & changes collections.
-		pauseSwapColls := s.mapPauseSwapColls[uint16(vbid)]
-		if pauseSwapColls == nil {
-			return fmt.Errorf("compact missing pauseSwapColls, vbid: %v", vbid)
+		// Get a consistent snapshot (keys reflect all changes) of the
+		// keys & changes collections.
+		ps := s.partitions[uint16(vbid)]
+		if ps == nil {
+			return fmt.Errorf("compact missing partition for vbid: %v", vbid)
 		}
 		var currSnapshot *gkvlite.Store
-		pauseSwapColls(func() (*gkvlite.Collection, *gkvlite.Collection) {
+		ps.mutate(func(key, changes *gkvlite.Collection) {
 			currSnapshot = bsf.store.Snapshot()
-			return kCurr, cCurr
 		})
 		if currSnapshot == nil {
 			return fmt.Errorf("compact source snapshot failed: %v, vbid: %v",
@@ -172,11 +171,11 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 		vbid := vbids[vbidIdx]
 		cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
 		kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
-		pauseSwapColls := s.mapPauseSwapColls[vbid]
-		if pauseSwapColls == nil {
-			return fmt.Errorf("compact missing pauseSwapColls, vbid: %v", vbid)
+		ps := s.partitions[vbid]
+		if ps == nil {
+			return fmt.Errorf("compact missing parititon for vbid: %v", vbid)
 		}
-		pauseSwapColls(func() (*gkvlite.Collection, *gkvlite.Collection) {
+		ps.collsPauseSwap(func() (*gkvlite.Collection, *gkvlite.Collection) {
 			_, err = copyDelta(lastChanges[vbid].Key, cName, kName,
 				bsf.store.Snapshot(), compactStore, writeEvery)
 			if err != nil {
