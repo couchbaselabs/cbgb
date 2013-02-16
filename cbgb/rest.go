@@ -6,8 +6,11 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
+	"runtime/pprof"
 	"strconv"
+	"time"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/gorilla/mux"
@@ -25,6 +28,8 @@ func restMain(rest string, staticPath string) {
 		restDeleteBucket).Methods("DELETE")
 	r.HandleFunc("/api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
+	r.HandleFunc("/api/profile",
+		restProfile).Methods("POST")
 	r.HandleFunc("/api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/static/").Handler(
@@ -130,6 +135,32 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 			"levels": cbgb.AggStatsLevels,
 		})
 	})
+}
+
+// To start a profiling...
+//    curl -X POST http://127.0.0.1:8077/api/profile -d secs=5
+// To analyze a profiling...
+//    go tool pprof ./cbgb/cbgb run.pprof
+func restProfile(w http.ResponseWriter, r *http.Request) {
+	fname := "./run.pprof"
+	secs, err := strconv.Atoi(r.FormValue("secs"))
+	if err != nil || secs <= 0 {
+		http.Error(w, "incorrect or missing secs parameter", 400)
+		return
+	}
+	os.Remove(fname)
+	f, err := os.Create(fname)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("couldn't create file: %v", fname), 500)
+		return
+	}
+
+	pprof.StartCPUProfile(f)
+	go func() {
+		<-time.After(time.Duration(secs) * time.Second)
+		pprof.StopCPUProfile()
+		f.Close()
+	}()
 }
 
 func mustEncode(w io.Writer, i interface{}) {
