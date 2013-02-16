@@ -24,17 +24,6 @@ type bucketstore struct {
 	stats           *BucketStoreStats
 }
 
-type bucketstorefile struct {
-	path          string
-	file          *os.File
-	store         *gkvlite.Store
-	ch            chan *funreq
-	sleepInterval time.Duration // Time until we sleep, closing file until next request.
-	sleepPurge    time.Duration // When >0, purge file after sleeping + this duration.
-	insomnia      bool          // When true, no sleeping.
-	stats         *BucketStoreStats
-}
-
 type BucketStoreStats struct {
 	Time int64 `json:"time"`
 
@@ -219,6 +208,20 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 }
 
 // ------------------------------------------------------------
+
+// Rather than having everything in a single bucketstore struct, the
+// additional/separate bucketstorefile allows us to track multiple
+// bucketstorefile's, such as during compaction.
+type bucketstorefile struct {
+	path          string
+	file          *os.File
+	store         *gkvlite.Store
+	ch            chan *funreq
+	sleepInterval time.Duration // Time until we sleep, closing file until next request.
+	sleepPurge    time.Duration // When >0, purge file after sleeping + this duration.
+	insomnia      bool          // When true, no sleeping.
+	stats         *BucketStoreStats
+}
 
 func (bsf *bucketstorefile) service() {
 	defer func() {
