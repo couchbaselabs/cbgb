@@ -67,7 +67,6 @@ func newBucketStore(path string,
 		return nil, err
 	}
 
-	bss := &BucketStoreStats{}
 	bsf := &bucketstorefile{
 		path:          path,
 		file:          file,
@@ -75,7 +74,7 @@ func newBucketStore(path string,
 		sleepInterval: sleepInterval,
 		sleepPurge:    time.Duration(0),
 		insomnia:      false,
-		stats:         bss,
+		stats:         &BucketStoreStats{},
 	}
 	go bsf.service()
 
@@ -93,7 +92,7 @@ func newBucketStore(path string,
 		compactInterval: compactInterval,
 		purgeTimeout:    purgeTimeout,
 		partitions:      make(map[uint16]*partitionstore),
-		stats:           bss,
+		stats:           bsf.stats,
 	}
 	go res.service()
 
