@@ -26,6 +26,8 @@ func restMain(rest string, staticPath string) {
 		restGetBucket).Methods("GET")
 	r.HandleFunc("/api/buckets/{bucketName}",
 		restDeleteBucket).Methods("DELETE")
+	r.HandleFunc("/api/buckets/{bucketName}/compact",
+		restPostBucketCompact).Methods("POST")
 	r.HandleFunc("/api/buckets/{bucketName}/flushDirty",
 		restPostBucketFlushDirty).Methods("POST")
 	r.HandleFunc("/api/buckets/{bucketName}/stats",
@@ -117,6 +119,17 @@ func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	buckets.Close(bucketName, true)
+}
+
+func restPostBucketCompact(w http.ResponseWriter, r *http.Request) {
+	bucketName, bucket := parseBucketName(w, r)
+	if bucket == nil {
+		return
+	}
+	if err := bucket.Compact(); err != nil {
+		http.Error(w, fmt.Sprintf("error compacting bucket: %v, err: %v",
+			bucketName, err), 500)
+	}
 }
 
 func restPostBucketFlushDirty(w http.ResponseWriter, r *http.Request) {
