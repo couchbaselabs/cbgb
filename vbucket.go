@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -328,9 +329,16 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			return
 		}
 
+		var flag, exp uint32
+		if req.Extras != nil {
+			flag = binary.BigEndian.Uint32(req.Extras)
+			exp = binary.BigEndian.Uint32(req.Extras[4:])
+		}
+
 		itemNew := &item{
-			// TODO: Extras
 			key:  req.Key,
+			flag: flag,
+			exp:  exp, // TODO: Handle expirations.
 			cas:  itemCas,
 			data: req.Body,
 		}
@@ -399,9 +407,10 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 
 	res = &gomemcached.MCResponse{
 		Cas:    i.cas,
-		Extras: make([]byte, 4), // TODO: Extras!
+		Extras: make([]byte, 4),
 		Body:   i.data,
 	}
+	binary.BigEndian.PutUint32(res.Extras, i.flag)
 	wantsKey := (req.Opcode == gomemcached.GETK || req.Opcode == gomemcached.GETKQ)
 	if wantsKey {
 		res.Key = req.Key
@@ -596,18 +605,22 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 		Cas:    req.Cas,
 	}
 
+	extras := make([]byte, 4)
+
 	visitRGetResults := uint64(0)
 	visitOutgoingValueBytes := uint64(0)
 
 	visitor := func(i *item) bool {
 		if bytes.Compare(i.key, req.Key) >= 0 {
-			err := (&gomemcached.MCResponse{
+			binary.BigEndian.PutUint32(extras, i.flag)
+			r := gomemcached.MCResponse{
 				Opcode: req.Opcode,
 				Key:    i.key,
 				Cas:    i.cas,
-				Extras: make([]byte, 4), // TODO: Extras.
+				Extras: extras,
 				Body:   i.data,
-			}).Transmit(w)
+			}
+			err := r.Transmit(w)
 			if err != nil {
 				res = &gomemcached.MCResponse{Fatal: true}
 				return false
