@@ -19,7 +19,7 @@ type bucketstore struct {
 	dirtiness       int64
 	flushInterval   time.Duration // Time between checking whether to flush.
 	compactInterval time.Duration // Time between checking whether to compact.
-	purgeTimeout    time.Duration // Time to keep old, unused file after compaction..
+	purgeTimeout    time.Duration // Time to keep old, unused file after compaction.
 	partitions      map[uint16]*partitionstore
 	stats           *BucketStoreStats
 }
@@ -239,6 +239,7 @@ func (bsf *bucketstorefile) service() {
 			r.fun()
 			close(r.res)
 		case <-time.After(bsf.sleepInterval):
+			// TODO: Check for dirtiness before we sleep?
 			if !bsf.insomnia && bsf.Sleep() != nil {
 				return
 			}
@@ -257,6 +258,7 @@ func (bsf *bucketstorefile) Close() {
 }
 
 func (bsf *bucketstorefile) Sleep() error {
+	// TODO: Flush before we sleep?
 	atomic.AddUint64(&bsf.stats.Sleeps, 1)
 
 	bsf.file.Close()
