@@ -32,8 +32,10 @@ func restMain(rest string, staticPath string) {
 		restPostBucketFlushDirty).Methods("POST")
 	r.HandleFunc("/api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
-	r.HandleFunc("/api/profile",
-		restProfile).Methods("POST")
+	r.HandleFunc("/api/profile/cpu",
+		restProfileCPU).Methods("POST")
+	r.HandleFunc("/api/profile/memory",
+		restProfileMemory).Methods("POST")
 	r.HandleFunc("/api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/static/").Handler(
@@ -163,12 +165,12 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// To start a profiling...
-//    curl -X POST http://127.0.0.1:8077/api/profile -d secs=5
+// To start a cpu profiling...
+//    curl -X POST http://127.0.0.1:8077/api/profile/cpu -d secs=5
 // To analyze a profiling...
-//    go tool pprof ./cbgb/cbgb run.pprof
-func restProfile(w http.ResponseWriter, r *http.Request) {
-	fname := "./run.pprof"
+//    go tool pprof ./cbgb/cbgb run-cpu.pprof
+func restProfileCPU(w http.ResponseWriter, r *http.Request) {
+	fname := "./run-cpu.pprof"
 	secs, err := strconv.Atoi(r.FormValue("secs"))
 	if err != nil || secs <= 0 {
 		http.Error(w, "incorrect or missing secs parameter", 400)
@@ -188,6 +190,23 @@ func restProfile(w http.ResponseWriter, r *http.Request) {
 		pprof.StopCPUProfile()
 		f.Close()
 	}()
+}
+
+// To grab a memory profiling...
+//    curl -X POST http://127.0.0.1:8077/api/profile/memory
+// To analyze a profiling...
+//    go tool pprof ./cbgb/cbgb run-memory.pprof
+func restProfileMemory(w http.ResponseWriter, r *http.Request) {
+	fname := "./run-memory.pprof"
+	os.Remove(fname)
+	f, err := os.Create(fname)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("couldn't create file: %v, err: %v",
+			fname, err), 500)
+		return
+	}
+	defer f.Close()
+	pprof.WriteHeapProfile(f)
 }
 
 func mustEncode(w io.Writer, i interface{}) {
