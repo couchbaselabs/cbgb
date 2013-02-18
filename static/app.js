@@ -88,6 +88,18 @@ function BucketsCtrl($scope, $http) {
 function BucketCtrl($scope, $routeParams, $http, $location) {
   $scope.bucketName = $routeParams.bucketName;
 
+  $scope.flushBucketDirtyItems = function() {
+    $http.post("/api/buckets/" + $scope.bucketName + "/flushDirty").
+      success(function() {
+          alert("Dirty items for bucket '" + $scope.bucketName +
+                "' were flushed to disk.");
+      }).
+      error(function(data) {
+          alert("Dirty items for bucket '" + $scope.bucketName +
+                "' were not flushed to disk; error: " + data);
+      });
+  }
+
   $scope.deleteBucket = function() {
     if (confirm("Are you sure you want to permanently delete bucket '" +
                 $scope.bucketName +
@@ -98,7 +110,8 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
             $scope.$apply();
         }).
         error(function(data) {
-            alert("Bucket '" + $scope.bucketName + "' was not deleted; error: " + data);
+            alert("Bucket '" + $scope.bucketName +
+                  "' was not deleted; error: " + data);
         });
     }
   }
