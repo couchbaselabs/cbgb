@@ -193,6 +193,9 @@ Parity TODO features
 The following features need implementation, but do not really break
 any new ground.
 
+SASL auth and bucket passwords
+------------------------------
+
 TAP receiving
 -------------
 
@@ -256,6 +259,9 @@ JSONPointer as an optional alternative to javascript map functions.
 Unified Protocol for Replication (UPR)
 --------------------------------------
 
+Compression
+-----------
+
 Immediately consistent views
 ----------------------------
 
@@ -301,3 +307,8 @@ trees.
 Sync-gateway integration
 ------------------------
 
+Key dictionary compression
+--------------------------
+
+Network compression
+-------------------
