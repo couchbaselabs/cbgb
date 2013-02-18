@@ -319,6 +319,11 @@ func (bsf *bucketstorefile) ReadAt(p []byte, off int64) (n int, err error) {
 
 func (bsf *bucketstorefile) WriteAt(p []byte, off int64) (n int, err error) {
 	bsf.apply(func() {
+		if bsf.sleepPurge > time.Duration(0) {
+			err = fmt.Errorf("WriteAt to purgable bucketstorefile: %v",
+				bsf.path)
+			return
+		}
 		atomic.AddUint64(&bsf.stats.Writes, 1)
 		n, err = bsf.file.WriteAt(p, off)
 		if err != nil {
