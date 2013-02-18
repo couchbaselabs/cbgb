@@ -60,7 +60,10 @@ mutations against those collections.
 Lock ordering
 =============
 
-bucketstore.apply
-  vbucket.apply
-    vbucket.mutate
-      partitionstore.apply
+For deadlock prevention, acquire left-ward/higher locks before
+right-ward/lower locks.
+
+    bucketstore.apply
+      vbucket.apply
+        vbucket.mutate
+          partitionstore.apply
