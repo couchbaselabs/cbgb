@@ -360,11 +360,13 @@ func (bss *BucketStoreStats) Op(in *BucketStoreStats, op func(uint64, uint64) ui
 	bss.Stats = op(bss.Stats, atomic.LoadUint64(&in.Stats))
 	bss.Sleeps = op(bss.Sleeps, atomic.LoadUint64(&in.Sleeps))
 	bss.Wakes = op(bss.Wakes, atomic.LoadUint64(&in.Wakes))
+	bss.Compacts = op(bss.Compacts, atomic.LoadUint64(&in.Compacts))
 	bss.FlushErrors = op(bss.FlushErrors, atomic.LoadUint64(&in.FlushErrors))
 	bss.ReadErrors = op(bss.ReadErrors, atomic.LoadUint64(&in.ReadErrors))
 	bss.WriteErrors = op(bss.WriteErrors, atomic.LoadUint64(&in.WriteErrors))
 	bss.StatErrors = op(bss.StatErrors, atomic.LoadUint64(&in.StatErrors))
 	bss.WakeErrors = op(bss.WakeErrors, atomic.LoadUint64(&in.WakeErrors))
+	bss.CompactErrors = op(bss.CompactErrors, atomic.LoadUint64(&in.CompactErrors))
 	bss.ReadBytes = op(bss.ReadBytes, atomic.LoadUint64(&in.ReadBytes))
 	bss.WriteBytes = op(bss.WriteBytes, atomic.LoadUint64(&in.WriteBytes))
 }
@@ -383,11 +385,13 @@ func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
 		bss.Stats == atomic.LoadUint64(&in.Stats) &&
 		bss.Sleeps == atomic.LoadUint64(&in.Sleeps) &&
 		bss.Wakes == atomic.LoadUint64(&in.Wakes) &&
+		bss.Compacts == atomic.LoadUint64(&in.Compacts) &&
 		bss.FlushErrors == atomic.LoadUint64(&in.FlushErrors) &&
 		bss.ReadErrors == atomic.LoadUint64(&in.ReadErrors) &&
 		bss.WriteErrors == atomic.LoadUint64(&in.WriteErrors) &&
 		bss.StatErrors == atomic.LoadUint64(&in.StatErrors) &&
 		bss.WakeErrors == atomic.LoadUint64(&in.WakeErrors) &&
+		bss.CompactErrors == atomic.LoadUint64(&in.CompactErrors) &&
 		bss.ReadBytes == atomic.LoadUint64(&in.ReadBytes) &&
 		bss.WriteBytes == atomic.LoadUint64(&in.WriteBytes)
 }
