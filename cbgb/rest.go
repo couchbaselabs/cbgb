@@ -26,6 +26,8 @@ func restMain(rest string, staticPath string) {
 		restGetBucket).Methods("GET")
 	r.HandleFunc("/api/buckets/{bucketName}",
 		restDeleteBucket).Methods("DELETE")
+	r.HandleFunc("/api/buckets/{bucketName}/flushDirty",
+		restPostBucketFlushDirty).Methods("POST")
 	r.HandleFunc("/api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
 	r.HandleFunc("/api/profile",
@@ -117,6 +119,17 @@ func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
 	buckets.Close(bucketName, true)
 }
 
+func restPostBucketFlushDirty(w http.ResponseWriter, r *http.Request) {
+	bucketName, bucket := parseBucketName(w, r)
+	if bucket == nil {
+		return
+	}
+	if err := bucket.Flush(); err != nil {
+		http.Error(w, fmt.Sprintf("error flushing bucket: %v, err: %v",
+			bucketName, err), 500)
+	}
+}
+
 func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 	_, bucket := parseBucketName(w, r)
 	if bucket == nil {
@@ -151,7 +164,8 @@ func restProfile(w http.ResponseWriter, r *http.Request) {
 	os.Remove(fname)
 	f, err := os.Create(fname)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("couldn't create file: %v", fname), 500)
+		http.Error(w, fmt.Sprintf("couldn't create file: %v, err: %v",
+			fname, err), 500)
 		return
 	}
 
