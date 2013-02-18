@@ -100,6 +100,18 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
       });
   }
 
+  $scope.compactBucket = function() {
+    $http.post("/api/buckets/" + $scope.bucketName + "/compact").
+      success(function() {
+          alert("Bucket '" + $scope.bucketName +
+                "' was compacted.");
+      }).
+      error(function(data) {
+          alert("Bucket '" + $scope.bucketName +
+                "' was not compacted; error: " + data);
+      });
+  }
+
   $scope.deleteBucket = function() {
     if (confirm("Are you sure you want to permanently delete bucket '" +
                 $scope.bucketName +
