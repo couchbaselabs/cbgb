@@ -42,6 +42,10 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 			return &gomemcached.MCResponse{Fatal: true}
 		}
 		return nil
+	case gomemcached.SASL_LIST_MECHS:
+		return &gomemcached.MCResponse{
+			Body: []byte("PLAIN"),
+		}
 	}
 
 	vb := rh.currentBucket.GetVBucket(req.VBucket)
