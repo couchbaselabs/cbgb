@@ -88,7 +88,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("illegal bucket name: %v, err: %v", bucketName, err), 400)
 		return
 	}
-	_, err = createBucket(bucketName, *defaultPartitions)
+	_, err = createBucket(bucketName, bucketSettings, *defaultPartitions)
 	if err != nil {
 		http.Error(w,
 			fmt.Sprintf("create bucket error; name: %v, err: %v", bucketName, err), 500)

@@ -70,7 +70,7 @@ func main() {
 	}
 
 	if buckets.Get(*defaultBucketName) == nil {
-		_, err := createBucket(*defaultBucketName, *defaultPartitions)
+		_, err := createBucket(*defaultBucketName, bucketSettings, *defaultPartitions)
 		if err != nil {
 			log.Fatalf("Error creating default bucket: %s, err: %v",
 				*defaultBucketName, err)
@@ -90,10 +90,12 @@ func main() {
 	select {}
 }
 
-func createBucket(bucketName string, numPartitions int) (cbgb.Bucket, error) {
-	log.Printf("creating bucket: %v, numPartitions: %v", bucketName, numPartitions)
+func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings,
+	numPartitions int) (cbgb.Bucket, error) {
+	log.Printf("creating bucket: %v, numPartitions: %v",
+		bucketName, numPartitions)
 
-	bucket, err := buckets.New(bucketName, nil)
+	bucket, err := buckets.New(bucketName, bucketSettings)
 	if err != nil {
 		return nil, err
 	}

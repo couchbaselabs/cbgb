@@ -190,6 +190,7 @@ func (b *Buckets) New(name string,
 		settings.CompactInterval = prioritySettings.CompactInterval
 		settings.PurgeTimeout = prioritySettings.PurgeTimeout
 	}
+	log.Printf("allocating bucket: %v, settings: %+v", name, settings)
 
 	if rv, err = NewBucket(bdir, settings); err != nil {
 		return nil, err
