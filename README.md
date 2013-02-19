@@ -167,13 +167,14 @@ planned support or machinery for memcached ascii protocol.
 Integrated profiling
 --------------------
 
-A REST API to capture process CPU profiling information for N seconds
-is supported.
+A REST API to capture CPU profiling information for N seconds is
+supported.  Another REST API to catpure memory profiling info is
+supported.  These can be used as input to the pprof tool.
 
 Relatively small codebase
 -------------------------
 
-2012/02/16 - ~3.5K lines of go code, not including unit test code or
+2012/02/19 - ~3.7K lines of go code, not including unit test code or
 library dependencies.
 
 Similar features
@@ -204,6 +205,9 @@ Currently, the project is only a TAP source, not a TAP receiver.
 TAP takeover
 ------------
 
+TAP filtering
+-------------
+
 Changes stream de-duplication
 -----------------------------
 
@@ -217,6 +221,9 @@ Expiration
 ----------
 
 Expiration needs implementation.
+
+Eviction policy
+---------------
 
 REST API compatibility
 ----------------------
