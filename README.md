@@ -307,11 +307,16 @@ trees.
 Sync-gateway integration
 ------------------------
 
-Key dictionary compression
---------------------------
+Document dictionary compression
+-------------------------------
 
 Network compression
 -------------------
 
 Bucket password hashing
 -----------------------
+
+Cluster orchestration
+---------------------
+
+This project is currently single node.
