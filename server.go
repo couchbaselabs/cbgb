@@ -43,6 +43,12 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		}
 		return nil
 	case gomemcached.SASL_LIST_MECHS:
+		if req.VBucket != 0 || req.Cas != 0 ||
+			len(req.Key) != 0 || len(req.Extras) != 0 || len(req.Body) != 0 {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+			}
+		}
 		return &gomemcached.MCResponse{
 			Body: []byte("PLAIN"),
 		}

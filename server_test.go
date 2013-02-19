@@ -19,4 +19,11 @@ func TestSaslListMechs(t *testing.T) {
 	if !bytes.Equal(res.Body, []byte("PLAIN")) {
 		t.Errorf("expected SASL_LIST_MECHS to be PLAIN")
 	}
+	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+		Opcode:  gomemcached.SASL_LIST_MECHS,
+		VBucket: 1,
+	})
+	if res.Status != gomemcached.EINVAL {
+		t.Errorf("expected SASL_LIST_MECHS to fail, got: %v", res)
+	}
 }
