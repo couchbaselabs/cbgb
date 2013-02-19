@@ -52,16 +52,16 @@ implemented.)
 Tree nodes are cached in memory
 -------------------------------
 
-For higher performance, tree nodes may be cached in memory to avoid
-disk seeks.
+For higher performance, tree nodes are cached in memory to avoid disk
+accesses.
 
 Multiple vbuckets per file
 --------------------------
 
 The data of a bucket is split across mutliple files (4 files is the
-current default).  The 1024 vbuckets or partitions of a buck are then
-modulus'ed into those files.  That is, each file has 256 vbuckets;
-and, 2 buckets would mean 8 files.
+current default).  The 1024 vbuckets or partitions of a bucket are
+then modulus'ed into those files.  That is, each file has 256
+vbuckets; so, 2 buckets would mean 8 files, etc.
 
 Copy on write, immutable tree instead of separate persistence queue
 -------------------------------------------------------------------
