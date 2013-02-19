@@ -143,7 +143,6 @@ func (p *partitionstore) set(newItem *item, oldMeta *item, numItems int64) (err 
 		vBytes := newItem.toValueBytes()
 		cBytes := casBytes(newItem.cas)
 
-		// TODO: should we be de-duplicating older changes from the changes feed?
 		if err = changes.Set(cBytes, vBytes); err != nil {
 			return
 		}
@@ -159,17 +158,21 @@ func (p *partitionstore) set(newItem *item, oldMeta *item, numItems int64) (err 
 			p.numItems = numItems
 			p.lastCas = newItem.cas
 		}
+		if oldMeta != nil {
+			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
+			changes.Delete(casBytes(oldMeta.cas))
+		}
 		p.parent.dirty()
 	})
 	return err
 }
 
-func (p *partitionstore) del(key []byte, cas uint64, numItems int64) (err error) {
+func (p *partitionstore) del(key []byte, cas uint64, oldMeta *item,
+	numItems int64) (err error) {
 	p.mutate(func(keys, changes *gkvlite.Collection) {
 		cBytes := casBytes(cas)
 		vBytes := (&item{key: key, cas: cas}).markAsDeletion().toValueBytes()
 
-		// TODO: should we be de-duplicating older changes from the changes feed?
 		if err = changes.Set(cBytes, vBytes); err != nil {
 			return
 		}
@@ -184,6 +187,10 @@ func (p *partitionstore) del(key []byte, cas uint64, numItems int64) (err error)
 			}
 			p.numItems = numItems
 			p.lastCas = cas
+		}
+		if oldMeta != nil {
+			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
+			changes.Delete(casBytes(oldMeta.cas))
 		}
 		p.parent.dirty()
 	})

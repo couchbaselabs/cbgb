@@ -460,7 +460,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		err = v.ps.del(req.Key, cas,
+		err = v.ps.del(req.Key, cas, prevMeta,
 			atomic.LoadInt64(&v.stats.Items)-1)
 		if err != nil {
 			res = &gomemcached.MCResponse{
