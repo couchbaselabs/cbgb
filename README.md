@@ -193,8 +193,8 @@ Parity TODO features
 The following features need implementation, but do not really break
 any new ground.
 
-SASL auth and bucket passwords
-------------------------------
+SASL auth
+---------
 
 TAP receiving
 -------------
@@ -312,3 +312,6 @@ Key dictionary compression
 
 Network compression
 -------------------
+
+Bucket password hashing
+-----------------------
