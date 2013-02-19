@@ -15,7 +15,9 @@ var startTime = time.Now()
 var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
-
+var staticPath = flag.String("static-path",
+	"static",
+	"path to static content")
 var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME,
 	"name of the default bucket")
@@ -31,9 +33,6 @@ var compactInterval = flag.Duration("compact-interval",
 var purgeTimeout = flag.Duration("purge-timeout",
 	10*time.Second,
 	"duration until unused files are purged after compaction")
-var staticPath = flag.String("static-path",
-	"static",
-	"path to static content")
 var defaultPartitions = flag.Int("default-partitions",
 	cbgb.MAX_VBUCKETS,
 	"default number of partitions for new buckets")
@@ -94,7 +93,7 @@ func main() {
 func createBucket(bucketName string, numPartitions int) (cbgb.Bucket, error) {
 	log.Printf("creating bucket: %v, numPartitions: %v", bucketName, numPartitions)
 
-	bucket, err := buckets.New(bucketName)
+	bucket, err := buckets.New(bucketName, nil)
 	if err != nil {
 		return nil, err
 	}

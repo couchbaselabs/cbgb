@@ -157,7 +157,7 @@ func TestEmptyFileCompaction(t *testing.T) {
 
 func TestCompactionNumFiles(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
+	// defer os.RemoveAll(testBucketDir)
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
@@ -180,6 +180,10 @@ func TestCompactionNumFiles(t *testing.T) {
 		}
 	}
 	preCompactFiles, err := ioutil.ReadDir(testBucketDir)
+	if len(preCompactFiles) != 5 {
+		t.Errorf("expected 5 preCompactFiles, got: %v",
+			len(preCompactFiles))
+	}
 	if err = b0.Compact(); err != nil {
 		t.Errorf("expected Compact to work, got: %v", err)
 	}
@@ -188,9 +192,9 @@ func TestCompactionNumFiles(t *testing.T) {
 	}
 	b0.Close()
 	postCompactFiles, err := ioutil.ReadDir(testBucketDir)
-	if len(postCompactFiles) != 2*len(preCompactFiles) {
-		t.Errorf("expected 2x postCompactFiles vs preCompactFiles, got: %v vs %v",
-			len(postCompactFiles), len(preCompactFiles))
+	if len(preCompactFiles) != 5 {
+		t.Errorf("expected 9 postCompactFiles, got: %v",
+			len(postCompactFiles))
 	}
 }
 

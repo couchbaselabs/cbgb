@@ -1,6 +1,7 @@
 package cbgb
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -56,19 +57,55 @@ type Buckets struct {
 }
 
 type BucketSettings struct {
-	FlushInterval   time.Duration `json:"flushInterval"`
-	SleepInterval   time.Duration `json:"sleepInterval"`
-	CompactInterval time.Duration `json:"compactInterval"`
-	PurgeTimeout    time.Duration `json:"purgeTimeout"`
+	// TODO: Bucket quotas.
+	PasswordHashFunc string        `json:"passwordHashFunc"`
+	PasswordHash     string        `json:"passwordHash"`
+	PasswordSalt     string        `json:"passwordSalt"`
+	FlushInterval    time.Duration `json:"flushInterval"`
+	SleepInterval    time.Duration `json:"sleepInterval"`
+	CompactInterval  time.Duration `json:"compactInterval"`
+	PurgeTimeout     time.Duration `json:"purgeTimeout"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
 	return &BucketSettings{
-		FlushInterval:   bs.FlushInterval,
-		SleepInterval:   bs.SleepInterval,
-		CompactInterval: bs.CompactInterval,
-		PurgeTimeout:    bs.PurgeTimeout,
+		PasswordHashFunc: bs.PasswordHashFunc,
+		PasswordHash:     bs.PasswordHash,
+		PasswordSalt:     bs.PasswordSalt,
+		FlushInterval:    bs.FlushInterval,
+		SleepInterval:    bs.SleepInterval,
+		CompactInterval:  bs.CompactInterval,
+		PurgeTimeout:     bs.PurgeTimeout,
 	}
+}
+
+func (bs *BucketSettings) load(bucketDir string) (exists bool, err error) {
+	b, err := ioutil.ReadFile(path.Join(bucketDir, "settings.json"))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, err
+	}
+	return true, json.Unmarshal(b, bs)
+}
+
+func (bs *BucketSettings) save(bucketDir string) error {
+	j, err := json.Marshal(bs)
+	if err != nil {
+		return err
+	}
+	fname := path.Join(bucketDir, "settings.json")
+	fnameNew := path.Join(bucketDir, "settings.json.new")
+	fnameOld := path.Join(bucketDir, "settings.json.old")
+	if err = ioutil.WriteFile(fnameNew, j, 0600); err != nil {
+		return err
+	}
+	os.Rename(fname, fnameOld)
+	if err = os.Rename(fnameNew, fname); err != nil {
+		return err
+	}
+	return nil
 }
 
 // Build a new holder of buckets.
@@ -124,7 +161,8 @@ func (b *Buckets) StatsApply(fun func()) {
 //
 // TODO: Need clearer names around New vs Create vs Open vs Destroy,
 // especially now that there's persistence.
-func (b *Buckets) New(name string) (rv Bucket, err error) {
+func (b *Buckets) New(name string,
+	prioritySettings *BucketSettings) (rv Bucket, err error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -138,7 +176,22 @@ func (b *Buckets) New(name string) (rv Bucket, err error) {
 		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 	}
 
-	if rv, err = NewBucket(bdir, b.settings); err != nil {
+	settings := &BucketSettings{}
+	if prioritySettings != nil {
+		settings = prioritySettings.Copy()
+	}
+	_, err = settings.load(bdir)
+	if err != nil {
+		return nil, err
+	}
+	if prioritySettings != nil {
+		settings.FlushInterval = prioritySettings.FlushInterval
+		settings.SleepInterval = prioritySettings.SleepInterval
+		settings.CompactInterval = prioritySettings.CompactInterval
+		settings.PurgeTimeout = prioritySettings.PurgeTimeout
+	}
+
+	if rv, err = NewBucket(bdir, settings); err != nil {
 		return nil, err
 	}
 
@@ -208,7 +261,7 @@ func (b *Buckets) Load() error {
 		return err
 	}
 	for _, bucketName := range bucketNames {
-		b, err := b.New(bucketName)
+		b, err := b.New(bucketName, b.settings)
 		if err != nil {
 			return err
 		}
@@ -227,6 +280,7 @@ func (b *Buckets) Load() error {
 type livebucket struct {
 	availablech  chan bool
 	dir          string
+	settings     *BucketSettings
 	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
 	bucketstores map[int]*bucketstore
 	observer     *broadcaster
@@ -244,6 +298,10 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		return nil, err
 	}
 
+	if err = settings.save(dirForBucket); err != nil {
+		return nil, err
+	}
+
 	aggStats := NewAggStats(func() Aggregatable {
 		return &Stats{Time: int64(time.Now().Unix())}
 	})
@@ -254,6 +312,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 	res := &livebucket{
 		availablech:          make(chan bool),
 		dir:                  dirForBucket,
+		settings:             settings,
 		bucketstores:         make(map[int]*bucketstore),
 		observer:             newBroadcaster(0),
 		lastStats:            &Stats{},
