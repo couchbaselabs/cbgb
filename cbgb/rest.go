@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"regexp"
+	"runtime"
 	"runtime/pprof"
 	"strconv"
 	"time"
@@ -36,6 +37,8 @@ func restMain(rest string, staticPath string) {
 		restProfileCPU).Methods("POST")
 	r.HandleFunc("/api/profile/memory",
 		restProfileMemory).Methods("POST")
+	r.HandleFunc("/api/memStats",
+		restGetMemStats).Methods("GET")
 	r.HandleFunc("/api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/static/").Handler(
@@ -214,6 +217,12 @@ func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 	}
 	defer f.Close()
 	pprof.WriteHeapProfile(f)
+}
+
+func restGetMemStats(w http.ResponseWriter, r *http.Request) {
+	m := runtime.MemStats{}
+	runtime.ReadMemStats(&m)
+	mustEncode(w, m)
 }
 
 func mustEncode(w io.Writer, i interface{}) {
