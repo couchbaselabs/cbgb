@@ -37,8 +37,10 @@ func restMain(rest string, staticPath string) {
 		restProfileCPU).Methods("POST")
 	r.HandleFunc("/api/profile/memory",
 		restProfileMemory).Methods("POST")
-	r.HandleFunc("/api/memStats",
-		restGetMemStats).Methods("GET")
+	r.HandleFunc("/api/runtime",
+		restGetRuntime).Methods("GET")
+	r.HandleFunc("/api/runtime/memStats",
+		restGetRuntimeMemStats).Methods("GET")
 	r.HandleFunc("/api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/static/").Handler(
@@ -52,7 +54,6 @@ func restMain(rest string, staticPath string) {
 
 func restGetSettings(w http.ResponseWriter, r *http.Request) {
 	mustEncode(w, map[string]interface{}{
-		"startTime":         startTime,
 		"addr":              *addr,
 		"data":              *data,
 		"rest":              *rest,
@@ -219,10 +220,20 @@ func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 	pprof.WriteHeapProfile(f)
 }
 
-func restGetMemStats(w http.ResponseWriter, r *http.Request) {
-	m := runtime.MemStats{}
-	runtime.ReadMemStats(&m)
-	mustEncode(w, m)
+func restGetRuntime(w http.ResponseWriter, r *http.Request) {
+	mustEncode(w, map[string]interface{}{
+		"startTime":  startTime,
+		"numCPU":     runtime.NumCPU(),
+		"goRoot":     runtime.GOROOT(),
+		"goVersion":  runtime.Version(),
+		"goRoutines": runtime.NumGoroutine(),
+	})
+}
+
+func restGetRuntimeMemStats(w http.ResponseWriter, r *http.Request) {
+	memStats := &runtime.MemStats{}
+	runtime.ReadMemStats(memStats)
+	mustEncode(w, memStats)
 }
 
 func mustEncode(w io.Writer, i interface{}) {

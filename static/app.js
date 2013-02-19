@@ -27,10 +27,17 @@ function ServerCtrl($scope, $http) {
     error(function() {
       $scope.err = restErrorMsg
     });
-
-  $http.get('/api/memStats').
+  $http.get('/api/runtime').
     success(function(data) {
-      $scope.memStats = data;
+      $scope.runtime = data;
+      $scope.err = null;
+    }).
+    error(function() {
+      $scope.err = restErrorMsg
+    });
+  $http.get('/api/runtime/memStats').
+    success(function(data) {
+      $scope.runtimeMemStats = data;
       $scope.err = null;
     }).
     error(function() {
