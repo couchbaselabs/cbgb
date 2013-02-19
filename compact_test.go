@@ -157,7 +157,7 @@ func TestEmptyFileCompaction(t *testing.T) {
 
 func TestCompactionNumFiles(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	// defer os.RemoveAll(testBucketDir)
+	defer os.RemoveAll(testBucketDir)
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
