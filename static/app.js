@@ -27,6 +27,15 @@ function ServerCtrl($scope, $http) {
     error(function() {
       $scope.err = restErrorMsg
     });
+
+  $http.get('/api/memStats').
+    success(function(data) {
+      $scope.memStats = data;
+      $scope.err = null;
+    }).
+    error(function() {
+      $scope.err = restErrorMsg
+    });
 }
 
 function BucketsCtrl($scope, $http) {
