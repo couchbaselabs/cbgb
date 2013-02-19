@@ -32,6 +32,7 @@ function ServerCtrl($scope, $http) {
 function BucketsCtrl($scope, $http) {
   $scope.bucketName = "";
   $scope.bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
+  $scope.bucketPassword = "";
 
   $scope.bucketCreate = function() {
     var bucketName = $scope.bucketName;
@@ -56,7 +57,8 @@ function BucketsCtrl($scope, $http) {
     $http({
         method: 'POST',
         url: '/api/buckets',
-        data: 'bucketName=' + encodeURIComponent(bucketName),
+        data: 'bucketName=' + encodeURIComponent(bucketName) +
+          '&bucketPassword=' + encodeURIComponent($scope.bucketPassword),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}
       }).
       success(function(data) {
