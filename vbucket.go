@@ -31,6 +31,8 @@ const (
 	DELETION_FLAG        = 0xffffffff // Deletion sentinel flag.
 )
 
+var ignore = errors.New("not-an-error/sentinel")
+
 type vbucket struct {
 	parent   Bucket
 	vbid     uint16
@@ -52,11 +54,20 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.GETQ:  vbGet,
 	gomemcached.GETKQ: vbGet,
 
-	gomemcached.SET:  vbSet,
-	gomemcached.SETQ: vbSet,
+	gomemcached.SET:  vbMutate,
+	gomemcached.SETQ: vbMutate,
 
 	gomemcached.DELETE:  vbDelete,
 	gomemcached.DELETEQ: vbDelete,
+
+	gomemcached.ADD:      vbMutate,
+	gomemcached.ADDQ:     vbMutate,
+	gomemcached.REPLACE:  vbMutate,
+	gomemcached.REPLACEQ: vbMutate,
+	gomemcached.APPEND:   vbMutate,
+	gomemcached.APPENDQ:  vbMutate,
+	gomemcached.PREPEND:  vbMutate,
+	gomemcached.PREPENDQ: vbMutate,
 
 	gomemcached.RGET: vbRGet,
 
@@ -270,8 +281,44 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 	return nil
 }
 
-func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	atomic.AddUint64(&v.stats.Sets, 1)
+func vbMutate(v *vbucket, w io.Writer,
+	req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+	atomic.AddUint64(&v.stats.Mutations, 1)
+
+	cmd := gomemcached.SET
+
+	switch req.Opcode {
+	case gomemcached.SET:
+		cmd = gomemcached.SET
+		atomic.AddUint64(&v.stats.Sets, 1)
+	case gomemcached.SETQ:
+		cmd = gomemcached.SET
+		atomic.AddUint64(&v.stats.Sets, 1)
+	case gomemcached.ADD:
+		cmd = gomemcached.ADD
+		atomic.AddUint64(&v.stats.Adds, 1)
+	case gomemcached.ADDQ:
+		cmd = gomemcached.ADD
+		atomic.AddUint64(&v.stats.Adds, 1)
+	case gomemcached.REPLACE:
+		cmd = gomemcached.REPLACE
+		atomic.AddUint64(&v.stats.Replaces, 1)
+	case gomemcached.REPLACEQ:
+		cmd = gomemcached.REPLACE
+		atomic.AddUint64(&v.stats.Replaces, 1)
+	case gomemcached.APPEND:
+		cmd = gomemcached.APPEND
+		atomic.AddUint64(&v.stats.Appends, 1)
+	case gomemcached.APPENDQ:
+		cmd = gomemcached.APPEND
+		atomic.AddUint64(&v.stats.Appends, 1)
+	case gomemcached.PREPEND:
+		cmd = gomemcached.PREPEND
+		atomic.AddUint64(&v.stats.Prepends, 1)
+	case gomemcached.PREPENDQ:
+		cmd = gomemcached.PREPEND
+		atomic.AddUint64(&v.stats.Prepends, 1)
+	}
 
 	res = v.checkRange(req)
 	if res != nil {
@@ -286,17 +333,28 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		}
 	}
 
+	if cmd == gomemcached.ADD && req.Cas != 0 {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body:   []byte(fmt.Sprintf("CAS should be 0 for ADD request")),
+		}
+	}
+
 	var itemCas uint64
 	v.Apply(func() {
 		// TODO: We have the apply to avoid races, but is there a better way?
 		itemCas = atomic.AddUint64(&v.Meta().LastCas, 1)
 	})
 
-	var prevMeta *item
+	var itemOld *item
 	var err error
 
 	v.Mutate(func() {
-		prevMeta, err = v.ps.getMeta(req.Key)
+		if cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND {
+			itemOld, err = v.ps.get(req.Key)
+		} else {
+			itemOld, err = v.ps.getMeta(req.Key)
+		}
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -304,8 +362,24 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			}
 			return
 		}
-		if req.Cas != 0 && (prevMeta == nil || prevMeta.cas != req.Cas) {
-			err = errors.New("CAS mismatch")
+		if cmd == gomemcached.ADD && itemOld != nil {
+			err = ignore
+			res = &gomemcached.MCResponse{
+				Status: gomemcached.KEY_EEXISTS,
+				Body:   []byte(fmt.Sprintf("ADD error because item exists")),
+			}
+			return
+		}
+		if cmd == gomemcached.REPLACE && itemOld == nil {
+			err = ignore
+			res = &gomemcached.MCResponse{
+				Status: gomemcached.KEY_ENOENT,
+				Body:   []byte(fmt.Sprintf("REPLACE error because item does not exist")),
+			}
+			return
+		}
+		if req.Cas != 0 && (itemOld == nil || itemOld.cas != req.Cas) {
+			err = ignore
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body:   []byte(fmt.Sprintf("CAS mismatch")),
@@ -327,8 +401,20 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 			data: req.Body,
 		}
 
-		err = v.ps.set(itemNew, prevMeta,
-			atomic.LoadInt64(&v.stats.Items)+1)
+		if itemOld != nil &&
+			(cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND) {
+			itemNewLen := len(req.Body) + len(itemOld.data)
+			itemNew.data = make([]byte, itemNewLen)
+			if cmd == gomemcached.APPEND {
+				copy(itemNew.data[0:len(itemOld.data)], itemOld.data)
+				copy(itemNew.data[len(itemOld.data):itemNewLen], req.Body)
+			} else {
+				copy(itemNew.data[0:len(req.Body)], req.Body)
+				copy(itemNew.data[len(req.Body):itemNewLen], itemOld.data)
+			}
+		}
+
+		err = v.ps.set(itemNew, itemOld, atomic.LoadInt64(&v.stats.Items)+1)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -342,9 +428,11 @@ func vbSet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	})
 
 	if err != nil {
-		atomic.AddUint64(&v.stats.StoreErrors, 1)
+		if err != ignore {
+			atomic.AddUint64(&v.stats.StoreErrors, 1)
+		}
 	} else {
-		if prevMeta != nil {
+		if itemOld != nil {
 			atomic.AddUint64(&v.stats.Updates, 1)
 		} else {
 			atomic.AddUint64(&v.stats.Creates, 1)

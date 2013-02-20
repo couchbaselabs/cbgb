@@ -82,6 +82,7 @@ func TestBasicOps(t *testing.T) {
 		Ops:                uint64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
 		Gets:               6,
 		GetMisses:          3,
+		Mutations:          2,
 		Sets:               2,
 		Deletes:            3,
 		Creates:            2,
@@ -132,7 +133,7 @@ func TestBasicOps(t *testing.T) {
 	time.Sleep(10 * time.Millisecond) // Let async stats catch up.
 
 	if !reflect.DeepEqual(&expStats, &vb.stats) {
-		t.Errorf("Expected stats of %v, got %v", expStats, vb.stats)
+		t.Errorf("Expected stats of %#v, got %#v", expStats, vb.stats)
 	}
 
 	expStatItems := make(chan statItem)
@@ -1448,6 +1449,163 @@ func TestStoreFrontBack(t *testing.T) {
 		if !bytes.Equal(results[i].Body, []byte(rgetExpected.val)) {
 			t.Errorf("Expected rget result val: %v, got: %v",
 				rgetExpected.val, string(results[i].Body))
+		}
+	}
+}
+
+func TestMutationOps(t *testing.T) {
+	empty := []byte{}
+	notempty := []byte("sentinel-for-not-empty")
+	active := uint16(3)
+	ignored := gomemcached.Status(32768)
+
+	tests := []struct {
+		op  gomemcached.CommandCode
+		vb  uint16
+		key string
+		val string
+
+		expStatus gomemcached.Status
+		expValue  []byte
+	}{
+		{gomemcached.REPLACE, active, "a", "irreplacable",
+			gomemcached.KEY_ENOENT, notempty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.KEY_ENOENT, empty},
+		{gomemcached.ADD, active, "a", "should-be-added",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("should-be-added")},
+		{gomemcached.APPEND, active, "a", "_suffix",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("should-be-added_suffix")},
+		{gomemcached.PREPEND, active, "a", "prefix_",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("prefix_should-be-added_suffix")},
+		{gomemcached.REPLACE, active, "a", "replacement",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("replacement")},
+		{gomemcached.ADD, active, "a", "not-added",
+			gomemcached.KEY_EEXISTS, notempty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("replacement")},
+
+		// quiet
+		{gomemcached.ADDQ, active, "a", "not-added",
+			gomemcached.KEY_EEXISTS, notempty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("replacement")},
+		{gomemcached.REPLACEQ, active, "a", "replacement2",
+			ignored, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("replacement2")},
+		{gomemcached.APPENDQ, active, "a", "_suffix2",
+			ignored, empty},
+		{gomemcached.PREPENDQ, active, "a", "prefix2_",
+			ignored, empty},
+		{gomemcached.GET, active, "a", "",
+			gomemcached.SUCCESS, []byte("prefix2_replacement2_suffix2")},
+		{gomemcached.DELETE, active, "a", "",
+			gomemcached.SUCCESS, empty},
+		{gomemcached.REPLACEQ, active, "a", "replacement2",
+			gomemcached.KEY_ENOENT, notempty},
+	}
+
+	expStats := Stats{
+		Items:              0,
+		Ops:                uint64(len(tests)),
+		Gets:               9,
+		GetMisses:          1,
+		Mutations:          11,
+		Sets:               0,
+		Adds:               3,
+		Replaces:           4,
+		Appends:            2,
+		Prepends:           2,
+		Deletes:            1,
+		Creates:            1,
+		Updates:            6,
+		Unknowns:           0,
+		IncomingValueBytes: 68,
+		OutgoingValueBytes: 139,
+	}
+
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   time.Second,
+			SleepInterval:   time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	defer testBucket.Close()
+	rh := reqHandler{currentBucket: testBucket}
+	vb, _ := testBucket.CreateVBucket(3)
+	testBucket.SetVBState(3, VBActive)
+
+	for _, x := range tests {
+		req := &gomemcached.MCRequest{
+			Opcode:  x.op,
+			VBucket: x.vb,
+			Key:     []byte(x.key),
+			Body:    []byte(x.val),
+		}
+
+		res := rh.HandleMessage(ioutil.Discard, req)
+
+		if res == nil && x.expStatus == ignored {
+			// this was a "normal" quiet command
+			continue
+		}
+
+		if res.Status != x.expStatus {
+			t.Errorf("Expected %v for %v:%v/%v, got %v",
+				x.expStatus, x.op, x.vb, x.key, res.Status)
+		}
+
+		if x.expValue != nil {
+			if bytes.Equal(x.expValue, notempty) {
+				if len(res.Body) <= 0 {
+					t.Errorf("Expected non-empty body of %v:%v/%v, got: %#v",
+						x.op, x.vb, x.key, res)
+				}
+			} else if !bytes.Equal(x.expValue, res.Body) {
+				t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
+					x.op, x.vb, x.key, x.expValue, res.Body)
+			}
+		}
+	}
+
+	time.Sleep(10 * time.Millisecond) // Let async stats catch up.
+
+	if !reflect.DeepEqual(&expStats, &vb.stats) {
+		t.Errorf("Expected stats of %#v, got %#v", expStats, vb.stats)
+	}
+
+	expStatItems := make(chan statItem)
+	actStatItems := make(chan statItem)
+
+	go func() {
+		expStats.Send(expStatItems)
+		close(expStatItems)
+	}()
+	go func() {
+		AggregateStats(testBucket, "").Send(actStatItems)
+		close(actStatItems)
+	}()
+
+	for expitem := range expStatItems {
+		actitem := <-actStatItems
+		if expitem.key != actitem.key {
+			t.Errorf("agg stats expected key %v, got %v",
+				expitem.key, actitem.key)
+		}
+		if expitem.val != actitem.val {
+			t.Errorf("agg stats expected val %v, got %v for key %v",
+				expitem.val, actitem.val, expitem.key)
 		}
 	}
 }

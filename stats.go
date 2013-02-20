@@ -25,7 +25,12 @@ type Stats struct {
 	Ops         uint64 `json:"ops"`
 	Gets        uint64 `json:"gets"`
 	GetMisses   uint64 `json:"getMisses"`
+	Mutations   uint64 `json:"mutations"`
 	Sets        uint64 `json:"sets"`
+	Adds        uint64 `json:"adds"`
+	Replaces    uint64 `json:"replaces"`
+	Appends     uint64 `json:"appends"`
+	Prepends    uint64 `json:"prepends"`
 	Deletes     uint64 `json:"deletes"`
 	Creates     uint64 `json:"creates"`
 	Updates     uint64 `json:"updates"`
@@ -53,7 +58,12 @@ func (s *Stats) Op(in *Stats, op func(uint64, uint64) uint64) {
 	s.Ops = op(s.Ops, atomic.LoadUint64(&in.Ops))
 	s.Gets = op(s.Gets, atomic.LoadUint64(&in.Gets))
 	s.GetMisses = op(s.GetMisses, atomic.LoadUint64(&in.GetMisses))
+	s.Mutations = op(s.Mutations, atomic.LoadUint64(&in.Mutations))
 	s.Sets = op(s.Sets, atomic.LoadUint64(&in.Sets))
+	s.Adds = op(s.Adds, atomic.LoadUint64(&in.Adds))
+	s.Replaces = op(s.Replaces, atomic.LoadUint64(&in.Replaces))
+	s.Appends = op(s.Appends, atomic.LoadUint64(&in.Appends))
+	s.Prepends = op(s.Prepends, atomic.LoadUint64(&in.Prepends))
 	s.Deletes = op(s.Deletes, atomic.LoadUint64(&in.Deletes))
 	s.Creates = op(s.Creates, atomic.LoadUint64(&in.Creates))
 	s.Updates = op(s.Updates, atomic.LoadUint64(&in.Updates))
@@ -78,7 +88,12 @@ func (s *Stats) Equal(in *Stats) bool {
 		s.Ops == atomic.LoadUint64(&in.Ops) &&
 		s.Gets == atomic.LoadUint64(&in.Gets) &&
 		s.GetMisses == atomic.LoadUint64(&in.GetMisses) &&
+		s.Mutations == atomic.LoadUint64(&in.Mutations) &&
 		s.Sets == atomic.LoadUint64(&in.Sets) &&
+		s.Adds == atomic.LoadUint64(&in.Adds) &&
+		s.Replaces == atomic.LoadUint64(&in.Replaces) &&
+		s.Appends == atomic.LoadUint64(&in.Appends) &&
+		s.Prepends == atomic.LoadUint64(&in.Prepends) &&
 		s.Deletes == atomic.LoadUint64(&in.Deletes) &&
 		s.Creates == atomic.LoadUint64(&in.Creates) &&
 		s.Updates == atomic.LoadUint64(&in.Updates) &&
@@ -96,7 +111,12 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"ops", strconv.FormatUint(s.Ops, 10)}
 	ch <- statItem{"gets", strconv.FormatUint(s.Gets, 10)}
 	ch <- statItem{"get_misses", strconv.FormatUint(s.GetMisses, 10)}
+	ch <- statItem{"mutations", strconv.FormatUint(s.Mutations, 10)}
 	ch <- statItem{"sets", strconv.FormatUint(s.Sets, 10)}
+	ch <- statItem{"adds", strconv.FormatUint(s.Adds, 10)}
+	ch <- statItem{"replaces", strconv.FormatUint(s.Replaces, 10)}
+	ch <- statItem{"appends", strconv.FormatUint(s.Appends, 10)}
+	ch <- statItem{"prepends", strconv.FormatUint(s.Prepends, 10)}
 	ch <- statItem{"deletes", strconv.FormatUint(s.Deletes, 10)}
 	ch <- statItem{"creates", strconv.FormatUint(s.Creates, 10)}
 	ch <- statItem{"updates", strconv.FormatUint(s.Updates, 10)}
