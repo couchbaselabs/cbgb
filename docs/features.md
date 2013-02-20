@@ -153,3 +153,6 @@ supported.  These can be used as input to the pprof tool.
 2012/02/19 - ~3.7K lines of go code, not including unit test code or
 library dependencies.
 
+## Add/Replace commands
+
+## Append/Prepend commands
