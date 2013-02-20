@@ -164,6 +164,42 @@ func doStats(b Bucket, w io.Writer, key string) error {
 	return <-errs
 }
 
+func updateMutationStats(cmdIn gomemcached.CommandCode, stats *Stats) (cmd gomemcached.CommandCode) {
+	switch cmdIn {
+	case gomemcached.SET:
+		cmd = gomemcached.SET
+		atomic.AddUint64(&stats.Sets, 1)
+	case gomemcached.SETQ:
+		cmd = gomemcached.SET
+		atomic.AddUint64(&stats.Sets, 1)
+	case gomemcached.ADD:
+		cmd = gomemcached.ADD
+		atomic.AddUint64(&stats.Adds, 1)
+	case gomemcached.ADDQ:
+		cmd = gomemcached.ADD
+		atomic.AddUint64(&stats.Adds, 1)
+	case gomemcached.REPLACE:
+		cmd = gomemcached.REPLACE
+		atomic.AddUint64(&stats.Replaces, 1)
+	case gomemcached.REPLACEQ:
+		cmd = gomemcached.REPLACE
+		atomic.AddUint64(&stats.Replaces, 1)
+	case gomemcached.APPEND:
+		cmd = gomemcached.APPEND
+		atomic.AddUint64(&stats.Appends, 1)
+	case gomemcached.APPENDQ:
+		cmd = gomemcached.APPEND
+		atomic.AddUint64(&stats.Appends, 1)
+	case gomemcached.PREPEND:
+		cmd = gomemcached.PREPEND
+		atomic.AddUint64(&stats.Prepends, 1)
+	case gomemcached.PREPENDQ:
+		cmd = gomemcached.PREPEND
+		atomic.AddUint64(&stats.Prepends, 1)
+	}
+	return cmd // Return the non-quiet CommandCode equivalent.
+}
+
 // ------------------------------------------------
 
 type Aggregatable interface {

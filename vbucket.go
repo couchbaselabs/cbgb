@@ -285,40 +285,7 @@ func vbMutate(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddUint64(&v.stats.Mutations, 1)
 
-	cmd := gomemcached.SET
-
-	switch req.Opcode {
-	case gomemcached.SET:
-		cmd = gomemcached.SET
-		atomic.AddUint64(&v.stats.Sets, 1)
-	case gomemcached.SETQ:
-		cmd = gomemcached.SET
-		atomic.AddUint64(&v.stats.Sets, 1)
-	case gomemcached.ADD:
-		cmd = gomemcached.ADD
-		atomic.AddUint64(&v.stats.Adds, 1)
-	case gomemcached.ADDQ:
-		cmd = gomemcached.ADD
-		atomic.AddUint64(&v.stats.Adds, 1)
-	case gomemcached.REPLACE:
-		cmd = gomemcached.REPLACE
-		atomic.AddUint64(&v.stats.Replaces, 1)
-	case gomemcached.REPLACEQ:
-		cmd = gomemcached.REPLACE
-		atomic.AddUint64(&v.stats.Replaces, 1)
-	case gomemcached.APPEND:
-		cmd = gomemcached.APPEND
-		atomic.AddUint64(&v.stats.Appends, 1)
-	case gomemcached.APPENDQ:
-		cmd = gomemcached.APPEND
-		atomic.AddUint64(&v.stats.Appends, 1)
-	case gomemcached.PREPEND:
-		cmd = gomemcached.PREPEND
-		atomic.AddUint64(&v.stats.Prepends, 1)
-	case gomemcached.PREPENDQ:
-		cmd = gomemcached.PREPEND
-		atomic.AddUint64(&v.stats.Prepends, 1)
-	}
+	cmd := updateMutationStats(req.Opcode, &v.stats)
 
 	res = v.checkRange(req)
 	if res != nil {
