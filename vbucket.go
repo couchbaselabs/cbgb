@@ -388,7 +388,7 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 
 		var flag, exp uint32
-		if req.Extras != nil {
+		if len(req.Extras) == 8 {
 			flag = binary.BigEndian.Uint32(req.Extras)
 			exp = binary.BigEndian.Uint32(req.Extras[4:])
 		}
