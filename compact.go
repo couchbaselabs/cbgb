@@ -18,21 +18,16 @@ func (s *bucketstore) compact() error {
 	// concurrent flushing.
 	bsf := s.BSF()
 
-	bsf.apply(func() {
-		bsf.insomnia = true // Turn off concurrent sleeping.
-	})
-	defer func() {
-		bsf.apply(func() {
-			bsf.insomnia = false
-		})
-	}()
+	// Turn off concurrent sleeping.
+	bsf.apply(func() { bsf.insomnia = true })
+	defer bsf.apply(func() { bsf.insomnia = false })
 
 	compactPath := bsf.path + ".compact"
-
 	if err := s.compactGo(bsf, compactPath); err != nil {
 		atomic.AddUint64(&s.stats.CompactErrors, 1)
 		return err
 	}
+
 	atomic.AddUint64(&s.stats.Compacts, 1)
 	return nil
 }
