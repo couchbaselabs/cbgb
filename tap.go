@@ -8,6 +8,22 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+// Message sent on object change
+type mutation struct {
+	vb      uint16
+	key     []byte
+	cas     uint64
+	deleted bool
+}
+
+func (m mutation) String() string {
+	sym := "M"
+	if m.deleted {
+		sym = "D"
+	}
+	return fmt.Sprintf("%v: vb:%v %s -> %v", sym, m.vb, m.key, m.cas)
+}
+
 // How often to send opaque "heartbeats" on tap streams.
 var tapTickFreq = time.Second
 
