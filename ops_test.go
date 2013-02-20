@@ -100,7 +100,7 @@ func TestBasicOps(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 
@@ -171,7 +171,7 @@ func TestMutationBroadcast(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
 
 	ch := make(chan interface{}, 16)
@@ -263,7 +263,7 @@ func TestCASDelete(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	testBucket.CreateVBucket(3)
 
 	testKey := "x"
@@ -309,7 +309,7 @@ func TestCASSet(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 
@@ -358,7 +358,7 @@ func TestVersionCommand(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.VERSION,
@@ -385,7 +385,7 @@ func TestVersionNOOP(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.NOOP,
@@ -408,7 +408,7 @@ func TestQuit(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.QUIT,
@@ -433,7 +433,7 @@ func TestTapSetup(t *testing.T) {
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.TAP_CONNECT,
@@ -471,7 +471,7 @@ func TestTapChanges(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	chpkt := make(chan transmissible, 128)
 	cherr := make(chan error, 1)
@@ -565,7 +565,7 @@ func TestStats(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.STAT,
@@ -595,7 +595,7 @@ func TestInvalidCommand(t *testing.T) {
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.CommandCode(255),
@@ -619,7 +619,7 @@ func BenchmarkInvalidCommand(b *testing.B) {
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.CommandCode(255),
@@ -653,7 +653,7 @@ func TestParallelMutations(t *testing.T) {
 		wg.Add(1)
 		go func(i int, key string) {
 			defer wg.Done()
-			rh := reqHandler{testBucket}
+			rh := reqHandler{currentBucket: testBucket}
 
 			seq := []gomemcached.CommandCode{
 				gomemcached.SET,
@@ -707,7 +707,7 @@ func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
 
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	wg := sync.WaitGroup{}
 	var parallel = 32
@@ -738,7 +738,7 @@ func BenchmarkDispatch(b *testing.B) {
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.GET,
@@ -770,7 +770,7 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	testBucket.CreateVBucket(0)
 
 	for i := 0; i < numItems; i++ {
@@ -872,7 +872,7 @@ func TestChangesSinceTransmitError(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	testBucket.CreateVBucket(0)
 	for _, k := range []string{"a", "b", "c"} {
 		rh.HandleMessage(nil, &gomemcached.MCRequest{
@@ -1062,7 +1062,7 @@ func TestVBMeta(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
 
 	for i, x := range tests {
@@ -1105,7 +1105,7 @@ func TestMinMaxRange(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	vb, _ := testBucket.CreateVBucket(3)
 
 	tests := []struct {
@@ -1197,7 +1197,7 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	vb, _ := testBucket.CreateVBucket(0)
 
 	for i := 0; i < numItems; i++ {
@@ -1290,7 +1290,7 @@ func TestSplitRange(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
 
@@ -1382,7 +1382,7 @@ func TestSlowClient(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	vb, _ := testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)
 
@@ -1478,7 +1478,7 @@ func TestStoreFrontBack(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
-	rh := reqHandler{testBucket}
+	rh := reqHandler{currentBucket: testBucket}
 	testBucket.CreateVBucket(3)
 	testBucket.SetVBState(3, VBActive)
 

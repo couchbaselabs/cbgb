@@ -1,6 +1,7 @@
 package cbgb
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -45,6 +46,8 @@ type Bucket interface {
 	GetLastBucketStoreStats() *BucketStoreStats
 	GetAggStats() *AggStats
 	GetAggBucketStoreStats() *AggStats
+
+	Auth([]byte) bool
 }
 
 // Holder of buckets.
@@ -501,6 +504,19 @@ func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
 		return err
 	}
 	return errors.New("no vbucket during SetVBState()")
+}
+
+func (b *livebucket) Auth(passwordClearText []byte) bool {
+	if b.settings == nil {
+		return false
+	}
+	// TODO: Have real password hash functions and salt.
+	if len(b.settings.PasswordHashFunc) <= 0 &&
+		len(b.settings.PasswordSalt) <= 0 &&
+		bytes.Equal([]byte(b.settings.PasswordHash), passwordClearText) {
+		return true
+	}
+	return false
 }
 
 // Call only during StatsApply/serviceStats().

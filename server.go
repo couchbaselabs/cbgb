@@ -1,6 +1,8 @@
 package cbgb
 
 import (
+	"bytes"
+	"fmt"
 	"io"
 	"log"
 	"net"
@@ -14,6 +16,7 @@ const (
 )
 
 type reqHandler struct {
+	buckets       *Buckets
 	currentBucket Bucket
 }
 
@@ -27,21 +30,8 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		return &gomemcached.MCResponse{
 			Body: []byte(VERSION),
 		}
-	case gomemcached.TAP_CONNECT:
-		chpkt, cherr := transmitPackets(w)
-		err := doTap(rh.currentBucket, req, chpkt, cherr)
-		// Currently no way for this to return without failing
-		log.Printf("Error tapping: %v", err)
-		return &gomemcached.MCResponse{Fatal: true}
 	case gomemcached.NOOP:
 		return &gomemcached.MCResponse{}
-	case gomemcached.STAT:
-		err := doStats(rh.currentBucket, w, string(req.Key))
-		if err != nil {
-			log.Printf("Error sending stats: %v", err)
-			return &gomemcached.MCResponse{Fatal: true}
-		}
-		return nil
 	case gomemcached.SASL_LIST_MECHS:
 		if req.VBucket != 0 || req.Cas != 0 ||
 			len(req.Key) != 0 || len(req.Extras) != 0 || len(req.Body) != 0 {
@@ -52,6 +42,54 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		return &gomemcached.MCResponse{
 			Body: []byte("PLAIN"),
 		}
+	case gomemcached.SASL_AUTH:
+		if req.VBucket != 0 || req.Cas != 0 ||
+			len(req.Extras) != 0 || len(req.Body) < 2 {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+			}
+		}
+		if !bytes.Equal(req.Key, []byte("PLAIN")) {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+				Body:   []byte(fmt.Sprintf("unsupported SASL auth mech: %v", req.Key)),
+			}
+		}
+		targetUserPswd := bytes.Split(req.Body, []byte("\x00"))
+		if len(targetUserPswd) != 3 {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+				Body:   []byte("invalid SASL auth body"),
+			}
+		}
+		targetBucket := rh.buckets.Get(string(targetUserPswd[1]))
+		if targetBucket == nil {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+				Body:   []byte("not a bucket"),
+			}
+		}
+		if !targetBucket.Auth(targetUserPswd[2]) {
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+				Body:   []byte("failed auth"),
+			}
+		}
+		rh.currentBucket = targetBucket
+		return &gomemcached.MCResponse{}
+	case gomemcached.TAP_CONNECT:
+		chpkt, cherr := transmitPackets(w)
+		err := doTap(rh.currentBucket, req, chpkt, cherr)
+		// Currently no way for this to return without failing
+		log.Printf("Error tapping: %v", err)
+		return &gomemcached.MCResponse{Fatal: true}
+	case gomemcached.STAT:
+		err := doStats(rh.currentBucket, w, string(req.Key))
+		if err != nil {
+			log.Printf("Error sending stats: %v", err)
+			return &gomemcached.MCResponse{Fatal: true}
+		}
+		return nil
 	}
 
 	vb := rh.currentBucket.GetVBucket(req.VBucket)
@@ -79,6 +117,7 @@ func waitForConnections(ls net.Listener, buckets *Buckets, defaultBucketName str
 			log.Printf("Got a connection from %v", s.RemoteAddr())
 			bucket := buckets.Get(defaultBucketName)
 			handler := &reqHandler{
+				buckets:       buckets,
 				currentBucket: bucket,
 			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler)

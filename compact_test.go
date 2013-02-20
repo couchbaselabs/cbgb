@@ -23,7 +23,7 @@ func TestCompaction(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	b0.SetVBState(2, VBActive)
 	for i := 0; i < 100; i++ {
@@ -106,7 +106,7 @@ func TestCompaction(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r1 := &reqHandler{b1}
+	r1 := &reqHandler{currentBucket: b1}
 	err = b1.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
@@ -128,7 +128,7 @@ func TestEmptyFileCompaction(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	b0.SetVBState(2, VBActive)
 	testExpectInts(t, r0, 2, []int{},
@@ -170,7 +170,7 @@ func TestCompactionNumFiles(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	b0.SetVBState(2, VBActive)
 	for i := 0; i < 100; i++ {
@@ -213,7 +213,7 @@ func TestCompactionPurgeTimeout(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	b0.SetVBState(2, VBActive)
 	for i := 0; i < 100; i++ {

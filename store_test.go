@@ -74,7 +74,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 	}
 	defer b0.Close()
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	b0.SetVBState(2, VBActive)
 
@@ -98,7 +98,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
 	defer b1.Close()
-	r1 := &reqHandler{b1}
+	r1 := &reqHandler{currentBucket: b1}
 	err = b1.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
@@ -120,7 +120,7 @@ func TestSaveLoadBasic(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
@@ -146,7 +146,7 @@ func TestSaveLoadBasic(t *testing.T) {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
 	defer b1.Close()
-	r1 := &reqHandler{b1}
+	r1 := &reqHandler{currentBucket: b1}
 	err = b1.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
@@ -168,7 +168,7 @@ func TestSaveLoadMutations(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
@@ -195,7 +195,7 @@ func TestSaveLoadMutations(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
-	r1 := &reqHandler{b1}
+	r1 := &reqHandler{currentBucket: b1}
 	err = b1.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
@@ -292,7 +292,7 @@ func TestSaveLoadMutations(t *testing.T) {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
 	defer b2.Close()
-	r2 := &reqHandler{b2}
+	r2 := &reqHandler{currentBucket: b2}
 	err = b2.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
@@ -360,7 +360,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
@@ -397,7 +397,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		if err != nil {
 			t.Errorf("expected NewBucket re-open to work, err: %v", err)
 		}
-		r1 := &reqHandler{b1}
+		r1 := &reqHandler{currentBucket: b1}
 		err = b1.Load()
 		if err != nil {
 			t.Errorf("expected Load to work, err: %v", err)
@@ -445,7 +445,7 @@ func testFlushCloseInterval(t *testing.T,
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
@@ -469,7 +469,7 @@ func testFlushCloseInterval(t *testing.T,
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
-	r1 := &reqHandler{b1}
+	r1 := &reqHandler{currentBucket: b1}
 	err = b1.Load()
 	if err != nil {
 		t.Errorf("expected Load to work, err: %v", err)
@@ -491,7 +491,7 @@ func TestSleepInterval(t *testing.T) {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
 
-	r0 := &reqHandler{b0}
+	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
 	if b0.SetVBState(2, VBActive) != nil {
 		t.Errorf("expected SetVBState to work")
@@ -522,7 +522,7 @@ func TestSleepInterval(t *testing.T) {
 		if err != nil {
 			t.Errorf("expected NewBucket re-open to work, err: %v", err)
 		}
-		r1 := &reqHandler{b1}
+		r1 := &reqHandler{currentBucket: b1}
 
 		err = b1.Load()
 		if err != nil {
