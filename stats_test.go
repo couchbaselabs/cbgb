@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"io/ioutil"
 	"os"
@@ -274,6 +275,25 @@ func TestMultiDayAggStats(t *testing.T) {
 	if s.Ops != uint64(24*60*60*10) {
 		t.Errorf("Expected level[3] s.ops %v, got %v",
 			24*60*60*10, s.Ops)
+	}
+}
+
+func TestAggStatsSampleJSON(t *testing.T) {
+	a := NewAggStats(func() Aggregatable {
+		return &Stats{}
+	})
+	if a == nil {
+		t.Errorf("Expected NewAggStats() to work")
+	}
+
+	s := &Stats{Ops: uint64(10)}
+	for i := 0; i < 5; i++ {
+		a.addSample(s)
+	}
+
+	_, err := json.Marshal(a.Levels[0])
+	if err != nil {
+		t.Errorf("Expect json marshal to work, got: %v", err)
 	}
 }
 
