@@ -52,12 +52,15 @@ func (p *partitionstore) getMeta(key []byte) (*item, error) {
 }
 
 func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error) {
-	keys, changes := p.colls()
-	iItem, err := keys.GetItem(key, true)
-	if err != nil {
-		return nil, err
-	}
-	if iItem != nil {
+	for {
+		keys, changes := p.colls()
+		iItem, err := keys.GetItem(key, true)
+		if err != nil {
+			return nil, err
+		}
+		if iItem == nil {
+			return nil, nil
+		}
 		// TODO: Use the Transient field in gkvlite to optimize away
 		// the double lookup here with memoization.
 		// TODO: What if a compaction happens in between the lookups,
@@ -74,8 +77,10 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 			}
 			return i, nil
 		}
+		// If cItem is nil, perhaps a concurrent set() happened after
+		// the keys.GetItem() and de-duped the old change.  So, retry.
 	}
-	return nil, nil
+	return nil, nil // Never reached.
 }
 
 func (p *partitionstore) visitItems(start []byte, withValue bool,
@@ -146,11 +151,6 @@ func (p *partitionstore) set(newItem *item, oldMeta *item, numItems int64) (err 
 		if err = changes.Set(cBytes, vBytes); err != nil {
 			return
 		}
-
-		// TODO: Race here where a reader (partitionstore.getItem())
-		// reads the keys collection right now, but we delete the
-		// oldMeta.cas from the changes collection before getItem()
-		// can finish reading the changes collection.
 
 		// An nil/empty key means this is a metadata change.
 		if newItem.key != nil && len(newItem.key) > 0 {
