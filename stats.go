@@ -31,6 +31,8 @@ type Stats struct {
 	Replaces    uint64 `json:"replaces"`
 	Appends     uint64 `json:"appends"`
 	Prepends    uint64 `json:"prepends"`
+	Incrs       uint64 `json:"incrs"`
+	Decrs       uint64 `json:"decrs"`
 	Deletes     uint64 `json:"deletes"`
 	Creates     uint64 `json:"creates"`
 	Updates     uint64 `json:"updates"`
@@ -64,6 +66,8 @@ func (s *Stats) Op(in *Stats, op func(uint64, uint64) uint64) {
 	s.Replaces = op(s.Replaces, atomic.LoadUint64(&in.Replaces))
 	s.Appends = op(s.Appends, atomic.LoadUint64(&in.Appends))
 	s.Prepends = op(s.Prepends, atomic.LoadUint64(&in.Prepends))
+	s.Incrs = op(s.Incrs, atomic.LoadUint64(&in.Incrs))
+	s.Decrs = op(s.Decrs, atomic.LoadUint64(&in.Decrs))
 	s.Deletes = op(s.Deletes, atomic.LoadUint64(&in.Deletes))
 	s.Creates = op(s.Creates, atomic.LoadUint64(&in.Creates))
 	s.Updates = op(s.Updates, atomic.LoadUint64(&in.Updates))
@@ -94,6 +98,8 @@ func (s *Stats) Equal(in *Stats) bool {
 		s.Replaces == atomic.LoadUint64(&in.Replaces) &&
 		s.Appends == atomic.LoadUint64(&in.Appends) &&
 		s.Prepends == atomic.LoadUint64(&in.Prepends) &&
+		s.Incrs == atomic.LoadUint64(&in.Incrs) &&
+		s.Decrs == atomic.LoadUint64(&in.Decrs) &&
 		s.Deletes == atomic.LoadUint64(&in.Deletes) &&
 		s.Creates == atomic.LoadUint64(&in.Creates) &&
 		s.Updates == atomic.LoadUint64(&in.Updates) &&
@@ -117,6 +123,8 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"replaces", strconv.FormatUint(s.Replaces, 10)}
 	ch <- statItem{"appends", strconv.FormatUint(s.Appends, 10)}
 	ch <- statItem{"prepends", strconv.FormatUint(s.Prepends, 10)}
+	ch <- statItem{"incrs", strconv.FormatUint(s.Incrs, 10)}
+	ch <- statItem{"decrs", strconv.FormatUint(s.Decrs, 10)}
 	ch <- statItem{"deletes", strconv.FormatUint(s.Deletes, 10)}
 	ch <- statItem{"creates", strconv.FormatUint(s.Creates, 10)}
 	ch <- statItem{"updates", strconv.FormatUint(s.Updates, 10)}
@@ -196,6 +204,18 @@ func updateMutationStats(cmdIn gomemcached.CommandCode, stats *Stats) (cmd gomem
 	case gomemcached.PREPENDQ:
 		cmd = gomemcached.PREPEND
 		atomic.AddUint64(&stats.Prepends, 1)
+	case gomemcached.INCREMENT:
+		cmd = gomemcached.INCREMENT
+		atomic.AddUint64(&stats.Incrs, 1)
+	case gomemcached.INCREMENTQ:
+		cmd = gomemcached.INCREMENT
+		atomic.AddUint64(&stats.Incrs, 1)
+	case gomemcached.DECREMENT:
+		cmd = gomemcached.DECREMENT
+		atomic.AddUint64(&stats.Decrs, 1)
+	case gomemcached.DECREMENTQ:
+		cmd = gomemcached.DECREMENT
+		atomic.AddUint64(&stats.Decrs, 1)
 	}
 	return cmd // Return the non-quiet CommandCode equivalent.
 }

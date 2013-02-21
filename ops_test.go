@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"encoding/binary"
 	"io"
 	"io/ioutil"
 	"log"
@@ -1575,6 +1576,150 @@ func TestMutationOps(t *testing.T) {
 			} else if !bytes.Equal(x.expValue, res.Body) {
 				t.Errorf("Expected body of %v:%v/%v to be\n%#v\ngot\n%#v",
 					x.op, x.vb, x.key, x.expValue, res.Body)
+			}
+		}
+	}
+
+	time.Sleep(10 * time.Millisecond) // Let async stats catch up.
+
+	if !reflect.DeepEqual(&expStats, &vb.stats) {
+		t.Errorf("Expected stats of %#v, got %#v", expStats, vb.stats)
+	}
+
+	expStatItems := make(chan statItem)
+	actStatItems := make(chan statItem)
+
+	go func() {
+		expStats.Send(expStatItems)
+		close(expStatItems)
+	}()
+	go func() {
+		AggregateStats(testBucket, "").Send(actStatItems)
+		close(actStatItems)
+	}()
+
+	for expitem := range expStatItems {
+		actitem := <-actStatItems
+		if expitem.key != actitem.key {
+			t.Errorf("agg stats expected key %v, got %v",
+				expitem.key, actitem.key)
+		}
+		if expitem.val != actitem.val {
+			t.Errorf("agg stats expected val %v, got %v for key %v",
+				expitem.val, actitem.val, expitem.key)
+		}
+	}
+}
+
+func TestArithOps(t *testing.T) {
+	empty := []byte{}
+	notempty := []byte("sentinel-for-not-empty")
+	active := uint16(3)
+	ignored := gomemcached.Status(32768)
+
+	tests := []struct {
+		op  gomemcached.CommandCode
+		vb  uint16
+		key string
+		amt uint64
+		def uint64
+
+		expStatus gomemcached.Status
+		expValue  []byte
+	}{
+		{gomemcached.INCREMENT, active, "a", 111, 222,
+			gomemcached.SUCCESS, []byte("222")},
+		{gomemcached.GET, active, "a", 0, 0,
+			gomemcached.SUCCESS, []byte("222")},
+		{gomemcached.INCREMENT, active, "a", 444, 333,
+			gomemcached.SUCCESS, []byte("666")},
+		{gomemcached.GET, active, "a", 0, 0,
+			gomemcached.SUCCESS, []byte("666")},
+		{gomemcached.DECREMENT, active, "a", 555, 777,
+			gomemcached.SUCCESS, []byte("111")},
+		{gomemcached.GET, active, "a", 0, 0,
+			gomemcached.SUCCESS, []byte("111")},
+
+		// quiet
+		{gomemcached.INCREMENTQ, active, "a", 10, 888,
+			ignored, empty},
+		{gomemcached.INCREMENTQ, active, "a", 3, 999,
+			ignored, empty},
+		{gomemcached.DECREMENTQ, active, "a", 1, 222,
+			ignored, empty},
+		{gomemcached.GET, active, "a", 0, 0,
+			gomemcached.SUCCESS, []byte("123")},
+	}
+
+	expStats := Stats{
+		Items:              1,
+		Ops:                uint64(len(tests)),
+		Gets:               4,
+		GetMisses:          0,
+		Mutations:          6,
+		Sets:               0,
+		Adds:               0,
+		Replaces:           0,
+		Appends:            0,
+		Prepends:           0,
+		Incrs:              4,
+		Decrs:              2,
+		Deletes:            0,
+		Creates:            1,
+		Updates:            5,
+		Unknowns:           0,
+		IncomingValueBytes: 0,
+		OutgoingValueBytes: 12,
+	}
+
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	defer testBucket.Close()
+	rh := reqHandler{currentBucket: testBucket}
+	vb, _ := testBucket.CreateVBucket(3)
+	testBucket.SetVBState(3, VBActive)
+
+	for idx, x := range tests {
+		req := &gomemcached.MCRequest{
+			Opcode:  x.op,
+			VBucket: x.vb,
+			Key:     []byte(x.key),
+			Body:    []byte{},
+		}
+		if x.op != gomemcached.GET {
+			req.Extras = make([]byte, 8+8+4)
+			binary.BigEndian.PutUint64(req.Extras[:8], x.amt)
+			binary.BigEndian.PutUint64(req.Extras[8:16], x.def)
+			binary.BigEndian.PutUint32(req.Extras[16:20], uint32(0))
+		}
+
+		res := rh.HandleMessage(ioutil.Discard, req)
+
+		if res == nil && x.expStatus == ignored {
+			// this was a "normal" quiet command
+			continue
+		}
+
+		if res.Status != x.expStatus {
+			t.Errorf("Expected %v for %v -  %v:%v/%v, got %v",
+				x.expStatus, idx, x.op, x.vb, x.key, res.Status)
+		}
+
+		if x.expValue != nil {
+			if bytes.Equal(x.expValue, notempty) {
+				if len(res.Body) <= 0 {
+					t.Errorf("Expected non-empty body of %v - %v:%v/%v, got: %#v",
+						idx, x.op, x.vb, x.key, res)
+				}
+			} else if !bytes.Equal(x.expValue, res.Body) {
+				t.Errorf("Expected body of %v - %v:%v/%v to be\n%#v\ngot\n%#v",
+					idx, x.op, x.vb, x.key, x.expValue, res.Body)
 			}
 		}
 	}
