@@ -350,10 +350,38 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 
 	bs.sampleStats(time.Now()) // Should not crash.
 
-	bs.New("mybucket", bs.settings)
+	b, _ := bs.New("mybucket", bs.settings)
 	bs.sampleStats(time.Now()) // Should be zeroes.
 
-	s := bs.Get("mybucket").GetLastStats()
+	s := b.GetLastStats()
+	if s == nil {
+		t.Errorf("Expected GetLastStats() to be non-nil")
+	}
+	sInitial := &Stats{}
+	if !s.Equal(sInitial) {
+		t.Errorf("Expected GetLastStats() to be zeroed, got: %#v", s)
+	}
+
+	bss := b.GetLastBucketStoreStats()
+	if bss == nil {
+		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
+	}
+	bssInitial := &BucketStoreStats{Stats: 4}
+	if !bss.Equal(bssInitial) {
+		t.Errorf("Expected GetLastBucketStoreStats() to be zeroed, got: %#v", bss)
+	}
+
+	b.CreateVBucket(0)
+	b.CreateVBucket(11)
+	b.CreateVBucket(222)
+
+	b.SetVBState(0, VBActive)
+	b.SetVBState(11, VBActive)
+	b.SetVBState(222, VBActive)
+
+	bs.sampleStats(time.Now()) // Should still be zeroes.
+
+	s = b.GetLastStats()
 	if s == nil {
 		t.Errorf("Expected GetLastStats() to be non-nil")
 	}
@@ -361,11 +389,33 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 		t.Errorf("Expected GetLastStats() to be zeroed, got: %#v", s)
 	}
 
-	bss := bs.Get("mybucket").GetLastBucketStoreStats()
+	bss = b.GetLastBucketStoreStats()
 	if bss == nil {
 		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
 	}
 	if !bss.Equal(&BucketStoreStats{Stats: 4}) {
 		t.Errorf("Expected GetLastBucketStoreStats() to be zeroed, got: %#v", bss)
+	}
+
+	as := b.GetAggStats()
+	if as == nil {
+		t.Errorf("Expected GetAggStats() to be non-nil")
+	}
+	for _, level := range as.Levels {
+		if level.Stats != nil && !level.Stats.(*Stats).Equal(sInitial) {
+			t.Errorf("Expected GetAggStats()[0] to be zeroed, got: %#v",
+				level.Stats)
+		}
+	}
+
+	abss := b.GetAggBucketStoreStats()
+	if abss == nil {
+		t.Errorf("Expected GetAggBucketStoreStats() to be non-nil")
+	}
+	for _, level := range abss.Levels {
+		if level.Stats != nil && !level.Stats.(*BucketStoreStats).Equal(bssInitial) {
+			t.Errorf("Expected GetAggBucketStoreStats()[0] to be zeroed, got: %#v",
+				level.Stats)
+		}
 	}
 }
