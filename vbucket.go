@@ -317,7 +317,8 @@ func vbMutate(v *vbucket, w io.Writer,
 		itemCas = atomic.AddUint64(&v.Meta().LastCas, 1)
 	})
 
-	var itemOld *item
+	var itemOld, itemNew *item
+	var aval uint64
 	var err error
 
 	v.Mutate(func() {
@@ -334,96 +335,14 @@ func vbMutate(v *vbucket, w io.Writer,
 			}
 			return
 		}
-		if cmd == gomemcached.ADD && itemOld != nil {
-			err = ignore
-			res = &gomemcached.MCResponse{
-				Status: gomemcached.KEY_EEXISTS,
-				Body:   []byte(fmt.Sprintf("ADD error because item exists")),
-			}
-			return
-		}
-		if cmd == gomemcached.REPLACE && itemOld == nil {
-			err = ignore
-			res = &gomemcached.MCResponse{
-				Status: gomemcached.KEY_ENOENT,
-				Body:   []byte(fmt.Sprintf("REPLACE error because item does not exist")),
-			}
-			return
-		}
-		if req.Cas != 0 && (itemOld == nil || itemOld.cas != req.Cas) {
-			err = ignore
-			res = &gomemcached.MCResponse{
-				Status: gomemcached.EINVAL,
-				Body:   []byte(fmt.Sprintf("CAS mismatch")),
-			}
+		res, err = vbMutateValidate(v, w, req, cmd, itemOld)
+		if err != nil {
 			return
 		}
 
-		var flag, exp uint32
-		var aval uint64
-
-		if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
-			if len(req.Extras) != 8+8+4 { // amount, initial, exp
-				err = ignore
-				res = &gomemcached.MCResponse{
-					Status: gomemcached.EINVAL,
-					Body: []byte(fmt.Sprintf("wrong extras size for incr/decr: %v",
-						len(req.Extras), req.Key)),
-				}
-				return
-			}
-			exp = binary.BigEndian.Uint32(req.Extras[16:])
-		} else {
-			if len(req.Extras) == 8 {
-				flag = binary.BigEndian.Uint32(req.Extras)
-				exp = binary.BigEndian.Uint32(req.Extras[4:])
-			}
-		}
-
-		itemNew := &item{
-			key:  req.Key,
-			flag: flag,
-			exp:  exp, // TODO: Handle expirations.
-			cas:  itemCas,
-		}
-
-		if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
-			amount := binary.BigEndian.Uint64(req.Extras)
-			initial := binary.BigEndian.Uint64(req.Extras[8:])
-
-			if itemOld != nil {
-				aval, err = strconv.ParseUint(string(itemOld.data), 10, 64)
-				if err != nil {
-					res = &gomemcached.MCResponse{
-						Status: gomemcached.EINVAL,
-						Body:   []byte(fmt.Sprintf("atoi current value err: %v", err)),
-					}
-					err = ignore
-					return
-				}
-				if cmd == gomemcached.INCREMENT {
-					aval += amount
-				} else {
-					aval -= amount
-				}
-			} else {
-				aval = initial
-			}
-			itemNew.data = []byte(strconv.FormatUint(aval, 10))
-		} else {
-			itemNew.data = req.Body
-			if itemOld != nil &&
-				(cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND) {
-				itemNewLen := len(req.Body) + len(itemOld.data)
-				itemNew.data = make([]byte, itemNewLen)
-				if cmd == gomemcached.APPEND {
-					copy(itemNew.data[0:len(itemOld.data)], itemOld.data)
-					copy(itemNew.data[len(itemOld.data):itemNewLen], req.Body)
-				} else {
-					copy(itemNew.data[0:len(req.Body)], req.Body)
-					copy(itemNew.data[len(req.Body):itemNewLen], itemOld.data)
-				}
-			}
+		res, itemNew, aval, err = vbMutateItemNew(v, w, req, cmd, itemCas, itemOld)
+		if err != nil {
+			return
 		}
 
 		items := atomic.LoadInt64(&v.stats.Items)
@@ -467,6 +386,98 @@ func vbMutate(v *vbucket, w io.Writer,
 	}
 
 	return res
+}
+
+func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
+	cmd gomemcached.CommandCode, itemOld *item) (*gomemcached.MCResponse, error) {
+	if cmd == gomemcached.ADD && itemOld != nil {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.KEY_EEXISTS,
+			Body:   []byte(fmt.Sprintf("ADD error because item exists")),
+		}, ignore
+	}
+	if cmd == gomemcached.REPLACE && itemOld == nil {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.KEY_ENOENT,
+			Body:   []byte(fmt.Sprintf("REPLACE error because item does not exist")),
+		}, ignore
+	}
+	if req.Cas != 0 && (itemOld == nil || itemOld.cas != req.Cas) {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body:   []byte(fmt.Sprintf("CAS mismatch")),
+		}, ignore
+	}
+	return nil, nil
+}
+
+func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
+	cmd gomemcached.CommandCode, itemCas uint64, itemOld *item) (*gomemcached.MCResponse, *item, uint64, error) {
+	var flag, exp uint32
+	var aval uint64
+	var err error
+
+	if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
+		if len(req.Extras) != 8+8+4 { // amount, initial, exp
+			return &gomemcached.MCResponse{
+				Status: gomemcached.EINVAL,
+				Body: []byte(fmt.Sprintf("wrong extras size for incr/decr: %v",
+					len(req.Extras), req.Key)),
+			}, nil, 0, ignore
+		}
+		exp = binary.BigEndian.Uint32(req.Extras[16:])
+	} else {
+		if len(req.Extras) == 8 {
+			flag = binary.BigEndian.Uint32(req.Extras)
+			exp = binary.BigEndian.Uint32(req.Extras[4:])
+		}
+	}
+
+	itemNew := &item{
+		key:  req.Key,
+		flag: flag,
+		exp:  exp, // TODO: Handle expirations.
+		cas:  itemCas,
+	}
+
+	if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
+		amount := binary.BigEndian.Uint64(req.Extras)
+		initial := binary.BigEndian.Uint64(req.Extras[8:])
+
+		if itemOld != nil {
+			aval, err = strconv.ParseUint(string(itemOld.data), 10, 64)
+			if err != nil {
+				return &gomemcached.MCResponse{
+					Status: gomemcached.EINVAL,
+					Body:   []byte(fmt.Sprintf("atoi current value err: %v", err)),
+				}, nil, 0, ignore
+			}
+			if cmd == gomemcached.INCREMENT {
+				aval += amount
+			} else {
+				aval -= amount
+			}
+		} else {
+			aval = initial
+		}
+		itemNew.data = []byte(strconv.FormatUint(aval, 10))
+	} else {
+		itemNew.data = req.Body
+		if itemOld != nil &&
+			(cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND) {
+			itemNewLen := len(req.Body) + len(itemOld.data)
+			itemNew.data = make([]byte, itemNewLen)
+			if cmd == gomemcached.APPEND {
+				copy(itemNew.data[0:len(itemOld.data)], itemOld.data)
+				copy(itemNew.data[len(itemOld.data):itemNewLen], req.Body)
+			} else {
+				copy(itemNew.data[0:len(req.Body)], req.Body)
+				copy(itemNew.data[len(req.Body):itemNewLen], itemOld.data)
+			}
+		}
+	}
+
+	return nil, itemNew, aval, nil
 }
 
 func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
