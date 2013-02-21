@@ -156,3 +156,5 @@ library dependencies.
 ## Add/Replace commands
 
 ## Append/Prepend commands
+
+## Incr/Decr commands

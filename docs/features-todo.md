@@ -18,7 +18,7 @@ Currently, the project is only a TAP source, not a TAP receiver.
 ## More memcached commands
 
 More memcached commands need implementation, including
-incr/decr, gat, touch, observe.
+gat, touch, observe.
 
 ## Expiration
 
