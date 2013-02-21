@@ -337,6 +337,17 @@ func TestStatsSub(t *testing.T) {
 	s2.Add(s1)
 	s2.Sub(s1)
 	if !s2.Equal(s1) {
-		t.Errorf("Expect stats Add & Sub to cancel, got %#v", s2)
+		t.Errorf("Expected stats Add & Sub to cancel, got %#v", s2)
+	}
+}
+
+func TestBucketStoreStatsAggregate(t *testing.T) {
+	b123 := &BucketStoreStats{Reads: 123}
+	b100 := &BucketStoreStats{Reads: 100}
+	b223 := &BucketStoreStats{}
+	b223.Aggregate(b123)
+	b223.Aggregate(b100)
+	if !b223.Equal(&BucketStoreStats{Reads: 223}) {
+		t.Errorf("Expected BucketStoreStats.Aggregate() to work, got %#v", b223)
 	}
 }
