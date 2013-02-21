@@ -360,6 +360,7 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 
 		var flag, exp uint32
+		var aval uint64
 
 		if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
 			if len(req.Extras) != 8+8+4 { // amount, initial, exp
@@ -391,7 +392,7 @@ func vbMutate(v *vbucket, w io.Writer,
 			initial := binary.BigEndian.Uint64(req.Extras[8:])
 
 			if itemOld != nil {
-				value, err := strconv.ParseUint(string(itemOld.data), 10, 64)
+				aval, err = strconv.ParseUint(string(itemOld.data), 10, 64)
 				if err != nil {
 					res = &gomemcached.MCResponse{
 						Status: gomemcached.EINVAL,
@@ -401,14 +402,14 @@ func vbMutate(v *vbucket, w io.Writer,
 					return
 				}
 				if cmd == gomemcached.INCREMENT {
-					value += amount
+					aval += amount
 				} else {
-					value -= amount
+					aval -= amount
 				}
-				itemNew.data = []byte(strconv.FormatUint(value, 10))
 			} else {
-				itemNew.data = []byte(strconv.FormatUint(initial, 10))
+				aval = initial
 			}
+			itemNew.data = []byte(strconv.FormatUint(aval, 10))
 		} else {
 			itemNew.data = req.Body
 			if itemOld != nil &&
@@ -440,7 +441,8 @@ func vbMutate(v *vbucket, w io.Writer,
 			if !req.Opcode.IsQuiet() {
 				res = &gomemcached.MCResponse{Cas: itemCas}
 				if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
-					res.Body = itemNew.data
+					res.Body = make([]byte, 8)
+					binary.BigEndian.PutUint64(res.Body, aval)
 				}
 			}
 		}

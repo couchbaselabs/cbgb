@@ -1628,15 +1628,15 @@ func TestArithOps(t *testing.T) {
 		expValue  []byte
 	}{
 		{gomemcached.INCREMENT, active, "a", 111, 222,
-			gomemcached.SUCCESS, []byte("222")},
+			gomemcached.SUCCESS, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 222}},
 		{gomemcached.GET, active, "a", 0, 0,
 			gomemcached.SUCCESS, []byte("222")},
 		{gomemcached.INCREMENT, active, "a", 444, 333,
-			gomemcached.SUCCESS, []byte("666")},
+			gomemcached.SUCCESS, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0x9a}},
 		{gomemcached.GET, active, "a", 0, 0,
 			gomemcached.SUCCESS, []byte("666")},
 		{gomemcached.DECREMENT, active, "a", 555, 777,
-			gomemcached.SUCCESS, []byte("111")},
+			gomemcached.SUCCESS, []byte{0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 111}},
 		{gomemcached.GET, active, "a", 0, 0,
 			gomemcached.SUCCESS, []byte("111")},
 
