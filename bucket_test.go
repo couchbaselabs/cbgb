@@ -419,3 +419,18 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 		}
 	}
 }
+
+func TestBucketStatsApply(t *testing.T) {
+	d, err := ioutil.TempDir("./tmp", "test")
+	if err != nil {
+		t.Fatalf("Expected TempDir to work, got: %v", err)
+	}
+	defer os.RemoveAll(d)
+	bs, err := NewBuckets(d,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	bs.StatsApply(func() {}) // Not much of a test, but it should not crash.
+}
