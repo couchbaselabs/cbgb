@@ -337,3 +337,35 @@ func TestBucketLoadNames(t *testing.T) {
 		t.Fatalf("Expected namesGet to be empty, got: %v", namesGet)
 	}
 }
+
+func TestEmptyBucketSampleStats(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	bs, _ := NewBuckets(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+
+	bs.sampleStats(time.Now()) // Should not crash.
+
+	bs.New("mybucket", bs.settings)
+	bs.sampleStats(time.Now()) // Should be zeroes.
+
+	s := bs.Get("mybucket").GetLastStats()
+	if s == nil {
+		t.Errorf("Expected GetLastStats() to be non-nil")
+	}
+	if !s.Equal(&Stats{}) {
+		t.Errorf("Expected GetLastStats() to be zeroed, got: %#v", s)
+	}
+
+	bss := bs.Get("mybucket").GetLastBucketStoreStats()
+	if bss == nil {
+		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
+	}
+	if !bss.Equal(&BucketStoreStats{Stats: 4}) {
+		t.Errorf("Expected GetLastBucketStoreStats() to be zeroed, got: %#v", bss)
+	}
+}
