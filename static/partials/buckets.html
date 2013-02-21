@@ -12,7 +12,10 @@
     <div class="span8">
       <legend>Buckets ({{names.length}})</legend>
       <ul>
-        <li ng-repeat="name in names">
+        <li>
+          filter: <input ng-model="filterChoice">
+        </li>
+        <li ng-repeat="name in names | filter:filterChoice">
           <a href="#/buckets/{{name}}"><i class="icon-folder-open"></i> {{name}}</a>
         </li>
       </ul>
