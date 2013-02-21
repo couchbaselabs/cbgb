@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -52,7 +53,7 @@ func (p *partitionstore) getMeta(key []byte) (*item, error) {
 }
 
 func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error) {
-	for {
+	for retries := 0; retries < 5; retries++ {
 		keys, changes := p.colls()
 		iItem, err := keys.GetItem(key, true)
 		if err != nil {
@@ -80,7 +81,7 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 		// If cItem is nil, perhaps a concurrent set() happened after
 		// the keys.GetItem() and de-duped the old change.  So, retry.
 	}
-	return nil, nil // Never reached.
+	return nil, fmt.Errorf("max getItem retries for key: %v", key)
 }
 
 func (p *partitionstore) visitItems(start []byte, withValue bool,
