@@ -434,3 +434,26 @@ func TestBucketStatsApply(t *testing.T) {
 		})
 	bs.StatsApply(func() {}) // Not much of a test, but it should not crash.
 }
+
+func TestMissingBucketsDir(t *testing.T) {
+	d, err := ioutil.TempDir("./tmp", "test")
+	b, err := NewBuckets(d,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	names, err := b.LoadNames()
+	if err != nil || len(names) != 0 {
+		t.Fatalf("Expected names to be empty")
+	}
+	os.RemoveAll(d)
+	names, err = b.LoadNames()
+	if err == nil {
+		t.Fatalf("Expected names to fail on missing dir")
+	}
+	err = b.Load()
+	if err == nil {
+		t.Fatalf("Expected load to fail on missing dir")
+	}
+}
