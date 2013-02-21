@@ -278,28 +278,28 @@ func TestMultiDayAggStats(t *testing.T) {
 
 func TestStatsSub(t *testing.T) {
 	s1 := &Stats{
-		Items: int64(1),
-		Ops         : uint64(1),
-		Gets        : uint64(1),
-		GetMisses   : uint64(1),
-		Mutations   : uint64(1),
-		Sets        : uint64(1),
-		Adds        : uint64(1),
-		Replaces    : uint64(1),
-		Appends     : uint64(1),
-		Prepends    : uint64(1),
-		Deletes     : uint64(1),
-		Creates     : uint64(1),
-		Updates     : uint64(1),
-		RGets       : uint64(1),
-		RGetResults : uint64(1),
-		Unknowns    : uint64(1),
+		Items:       int64(1),
+		Ops:         uint64(1),
+		Gets:        uint64(1),
+		GetMisses:   uint64(1),
+		Mutations:   uint64(1),
+		Sets:        uint64(1),
+		Adds:        uint64(1),
+		Replaces:    uint64(1),
+		Appends:     uint64(1),
+		Prepends:    uint64(1),
+		Deletes:     uint64(1),
+		Creates:     uint64(1),
+		Updates:     uint64(1),
+		RGets:       uint64(1),
+		RGetResults: uint64(1),
+		Unknowns:    uint64(1),
 
-		IncomingValueBytes : uint64(1),
-		OutgoingValueBytes : uint64(1),
+		IncomingValueBytes: uint64(1),
+		OutgoingValueBytes: uint64(1),
 
-		StoreErrors      : uint64(1),
-		NotMyRangeErrors : uint64(1),
+		StoreErrors:      uint64(1),
+		NotMyRangeErrors: uint64(1),
 	}
 
 	s2 := &Stats{}
@@ -310,4 +310,3 @@ func TestStatsSub(t *testing.T) {
 		t.Errorf("Expect stats Add & Sub to cancel, got %#v", s2)
 	}
 }
-
