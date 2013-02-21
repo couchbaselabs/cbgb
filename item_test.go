@@ -137,3 +137,33 @@ func TestCASSerialization(t *testing.T) {
 		t.Errorf("expected casBytesParse() to error on short bytes")
 	}
 }
+
+func TestKeyLess(t *testing.T) {
+	if KeyLess(&item{key: []byte("a")}, &item{key: []byte("b")}) >= 0 {
+		t.Errorf("expected KeyLess to work")
+	}
+	if KeyLess(&item{key: []byte("a")}, &item{key: []byte("aa")}) >= 0 {
+		t.Errorf("expected KeyLess to work")
+	}
+	if KeyLess(&item{key: []byte("a")}, &item{key: []byte("a")}) != 0 {
+		t.Errorf("expected KeyLess to work")
+	}
+	if KeyLess(&item{key: []byte("")}, &item{key: []byte("")}) != 0 {
+		t.Errorf("expected KeyLess to work for zero-length keys")
+	}
+	if KeyLess(&item{}, &item{}) != 0 {
+		t.Errorf("expected KeyLess to work for nil keys")
+	}
+}
+
+func TestCASLess(t *testing.T) {
+	if CASLess(&item{cas: 1}, &item{cas: 0}) < 0 {
+		t.Errorf("expected CASLess to work")
+	}
+	if CASLess(&item{cas: 0}, &item{cas: 1}) >= 0 {
+		t.Errorf("expected CASLess to work")
+	}
+	if CASLess(&item{cas: 1}, &item{cas: 1}) != 0 {
+		t.Errorf("expected CASLess to work")
+	}
+}
