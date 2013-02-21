@@ -53,7 +53,7 @@ func restMain(rest string, staticPath string) {
 }
 
 func restGetSettings(w http.ResponseWriter, r *http.Request) {
-	mustEncode(w, map[string]interface{}{
+	jsonEncode(w, map[string]interface{}{
 		"addr":              *addr,
 		"data":              *data,
 		"rest":              *rest,
@@ -63,7 +63,7 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
-	mustEncode(w, buckets.GetNames())
+	jsonEncode(w, buckets.GetNames())
 }
 
 func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucket) {
@@ -120,7 +120,7 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 			partitions[strconv.Itoa(int(vbid))] = vb.Meta()
 		}
 	}
-	mustEncode(w, map[string]interface{}{
+	jsonEncode(w, map[string]interface{}{
 		"name":       bucketName,
 		"partitions": partitions,
 	})
@@ -162,7 +162,7 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	buckets.StatsApply(func() {
-		mustEncode(w, map[string]interface{}{
+		jsonEncode(w, map[string]interface{}{
 			"totals": map[string]interface{}{
 				"bucketStats":      bucket.GetLastStats(),
 				"bucketStoreStats": bucket.GetLastBucketStoreStats(),
@@ -221,7 +221,7 @@ func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetRuntime(w http.ResponseWriter, r *http.Request) {
-	mustEncode(w, map[string]interface{}{
+	jsonEncode(w, map[string]interface{}{
 		"startTime":  startTime,
 		"numCPU":     runtime.NumCPU(),
 		"goRoot":     runtime.GOROOT(),
@@ -233,16 +233,13 @@ func restGetRuntime(w http.ResponseWriter, r *http.Request) {
 func restGetRuntimeMemStats(w http.ResponseWriter, r *http.Request) {
 	memStats := &runtime.MemStats{}
 	runtime.ReadMemStats(memStats)
-	mustEncode(w, memStats)
+	jsonEncode(w, memStats)
 }
 
-func mustEncode(w io.Writer, i interface{}) {
+func jsonEncode(w io.Writer, i interface{}) error {
 	if headered, ok := w.(http.ResponseWriter); ok {
 		headered.Header().Set("Cache-Control", "no-cache")
 		headered.Header().Set("Content-type", "application/json")
 	}
-	e := json.NewEncoder(w)
-	if err := e.Encode(i); err != nil {
-		panic(err)
-	}
+	return json.NewEncoder(w).Encode(i)
 }
