@@ -146,6 +146,12 @@ func (p *partitionstore) set(newItem *item, oldMeta *item, numItems int64) (err 
 		if err = changes.Set(cBytes, vBytes); err != nil {
 			return
 		}
+
+		// TODO: Race here where a reader (partitionstore.getItem())
+		// reads the keys collection right now, but we delete the
+		// oldMeta.cas from the changes collection before getItem()
+		// can finish reading the changes collection.
+
 		// An nil/empty key means this is a metadata change.
 		if newItem.key != nil && len(newItem.key) > 0 {
 			// TODO: What if we flush between the keys update and changes
