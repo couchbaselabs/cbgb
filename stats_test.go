@@ -291,9 +291,18 @@ func TestAggStatsSampleJSON(t *testing.T) {
 		a.addSample(s)
 	}
 
-	_, err := json.Marshal(a.Levels[0])
+	j0, err := json.Marshal(a.Levels[0])
 	if err != nil {
-		t.Errorf("Expect json marshal to work, got: %v", err)
+		t.Errorf("Expected json marshal to work, got: %v", err)
+	}
+
+	ja, err := json.Marshal(a)
+	if err != nil {
+		t.Errorf("Expected json marshal to work, got: %v", err)
+	}
+	if bytes.Index(ja, j0) <= 0 {
+		t.Errorf("Expected json to be in the larger json, got: %v versus %v",
+			j0, ja)
 	}
 }
 
