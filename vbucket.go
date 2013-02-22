@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io"
 	"log"
 	"strconv"
@@ -33,6 +34,10 @@ const (
 )
 
 var ignore = errors.New("not-an-error/sentinel")
+
+func VBucketIdForKey(key []byte, maxVBucketId int) uint16 {
+	return uint16((crc32.ChecksumIEEE(key) >> uint32(16)) & uint32(maxVBucketId-1))
+}
 
 type vbucket struct {
 	parent   Bucket
