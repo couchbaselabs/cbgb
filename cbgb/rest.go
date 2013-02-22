@@ -19,29 +19,29 @@ import (
 
 func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
-	r.HandleFunc("/api/buckets",
+	r.HandleFunc("/_api/buckets",
 		restGetBuckets).Methods("GET")
-	r.HandleFunc("/api/buckets",
+	r.HandleFunc("/_api/buckets",
 		restPostBucket).Methods("POST")
-	r.HandleFunc("/api/buckets/{bucketName}",
+	r.HandleFunc("/_api/buckets/{bucketName}",
 		restGetBucket).Methods("GET")
-	r.HandleFunc("/api/buckets/{bucketName}",
+	r.HandleFunc("/_api/buckets/{bucketName}",
 		restDeleteBucket).Methods("DELETE")
-	r.HandleFunc("/api/buckets/{bucketName}/compact",
+	r.HandleFunc("/_api/buckets/{bucketName}/compact",
 		restPostBucketCompact).Methods("POST")
-	r.HandleFunc("/api/buckets/{bucketName}/flushDirty",
+	r.HandleFunc("/_api/buckets/{bucketName}/flushDirty",
 		restPostBucketFlushDirty).Methods("POST")
-	r.HandleFunc("/api/buckets/{bucketName}/stats",
+	r.HandleFunc("/_api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
-	r.HandleFunc("/api/profile/cpu",
+	r.HandleFunc("/_api/profile/cpu",
 		restProfileCPU).Methods("POST")
-	r.HandleFunc("/api/profile/memory",
+	r.HandleFunc("/_api/profile/memory",
 		restProfileMemory).Methods("POST")
-	r.HandleFunc("/api/runtime",
+	r.HandleFunc("/_api/runtime",
 		restGetRuntime).Methods("GET")
-	r.HandleFunc("/api/runtime/memStats",
+	r.HandleFunc("/_api/runtime/memStats",
 		restGetRuntimeMemStats).Methods("GET")
-	r.HandleFunc("/api/settings",
+	r.HandleFunc("/_api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/",
@@ -105,7 +105,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("create bucket error; name: %v, err: %v", bucketName, err), 500)
 		return
 	}
-	http.Redirect(w, r, "/api/buckets/"+bucketName, 303)
+	http.Redirect(w, r, "/_api/buckets/"+bucketName, 303)
 }
 
 func restGetBucket(w http.ResponseWriter, r *http.Request) {
@@ -177,7 +177,7 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // To start a cpu profiling...
-//    curl -X POST http://127.0.0.1:8077/api/profile/cpu -d secs=5
+//    curl -X POST http://127.0.0.1:8077/_api/profile/cpu -d secs=5
 // To analyze a profiling...
 //    go tool pprof ./cbgb/cbgb run-cpu.pprof
 func restProfileCPU(w http.ResponseWriter, r *http.Request) {
@@ -204,7 +204,7 @@ func restProfileCPU(w http.ResponseWriter, r *http.Request) {
 }
 
 // To grab a memory profiling...
-//    curl -X POST http://127.0.0.1:8077/api/profile/memory
+//    curl -X POST http://127.0.0.1:8077/_api/profile/memory
 // To analyze a profiling...
 //    go tool pprof ./cbgb/cbgb run-memory.pprof
 func restProfileMemory(w http.ResponseWriter, r *http.Request) {

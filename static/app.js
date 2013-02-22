@@ -19,7 +19,7 @@ angular.module('cbgb', []).
 var restErrorMsg = "error communicating with server; please try again.";
 
 function ServerCtrl($scope, $http) {
-  $http.get('/api/settings').
+  $http.get('/_api/settings').
     success(function(data) {
       $scope.settings = data;
       $scope.err = null;
@@ -27,7 +27,7 @@ function ServerCtrl($scope, $http) {
     error(function() {
       $scope.err = restErrorMsg
     });
-  $http.get('/api/runtime').
+  $http.get('/_api/runtime').
     success(function(data) {
       $scope.runtime = data;
       $scope.err = null;
@@ -35,7 +35,7 @@ function ServerCtrl($scope, $http) {
     error(function() {
       $scope.err = restErrorMsg
     });
-  $http.get('/api/runtime/memStats').
+  $http.get('/_api/runtime/memStats').
     success(function(data) {
       $scope.runtimeMemStats = data;
       $scope.err = null;
@@ -72,7 +72,7 @@ function BucketsCtrl($scope, $http) {
 
     $http({
         method: 'POST',
-        url: '/api/buckets',
+        url: '/_api/buckets',
         data: 'bucketName=' + encodeURIComponent(bucketName) +
           '&bucketPassword=' + encodeURIComponent($scope.bucketPassword),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}
@@ -90,7 +90,7 @@ function BucketsCtrl($scope, $http) {
   }
 
   function retrieveBucketNames() {
-    $http.get('/api/buckets').
+    $http.get('/_api/buckets').
       success(function(data) {
         $scope.names = data.sort();
         $scope.err = null;
@@ -107,7 +107,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
   $scope.bucketName = $routeParams.bucketName;
 
   $scope.flushBucketDirtyItems = function() {
-    $http.post("/api/buckets/" + $scope.bucketName + "/flushDirty").
+    $http.post("/_api/buckets/" + $scope.bucketName + "/flushDirty").
       success(function() {
           alert("Dirty items for bucket '" + $scope.bucketName +
                 "' were flushed to disk.");
@@ -119,7 +119,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
   }
 
   $scope.compactBucket = function() {
-    $http.post("/api/buckets/" + $scope.bucketName + "/compact").
+    $http.post("/_api/buckets/" + $scope.bucketName + "/compact").
       success(function() {
           alert("Bucket '" + $scope.bucketName +
                 "' was compacted.");
@@ -134,7 +134,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
     if (confirm("Are you sure you want to permanently delete bucket '" +
                 $scope.bucketName +
                 "', including erasing all its data items?")) {
-      $http.delete("/api/buckets/" + $scope.bucketName).
+      $http.delete("/_api/buckets/" + $scope.bucketName).
         success(function() {
             $location.path("/buckets");
             $scope.$apply();
@@ -146,7 +146,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
     }
   }
 
-  $http.get('/api/buckets/' + $scope.bucketName).
+  $http.get('/_api/buckets/' + $scope.bucketName).
     success(function(data) {
       $scope.bucket = data;
       $scope.bucket.partitionsArray = _.values(data.partitions);
@@ -200,7 +200,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
         return;
     }
 
-    $http.get('/api/buckets/' + $scope.bucketName + '/stats').
+    $http.get('/_api/buckets/' + $scope.bucketName + '/stats').
       success(function(data) {
         $scope.err = null;
         $scope.stats = data;
