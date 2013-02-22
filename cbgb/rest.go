@@ -19,7 +19,6 @@ import (
 
 func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
-	restCouch(r)
 	r.HandleFunc("/_api/buckets",
 		restGetBuckets).Methods("GET")
 	r.HandleFunc("/_api/buckets",
@@ -47,6 +46,7 @@ func restMain(rest string, staticPath string) {
 	r.PathPrefix("/static/").Handler(
 		http.StripPrefix("/static/",
 			http.FileServer(http.Dir(staticPath))))
+	restCouch(r)
 	r.Handle("/",
 		http.RedirectHandler("/static/app.html", 302))
 	log.Printf("listening rest on: %v", rest)
