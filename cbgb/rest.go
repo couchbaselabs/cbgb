@@ -19,6 +19,7 @@ import (
 
 func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
+	restCouch(r)
 	r.HandleFunc("/_api/buckets",
 		restGetBuckets).Methods("GET")
 	r.HandleFunc("/_api/buckets",
