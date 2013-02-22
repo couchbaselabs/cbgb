@@ -20,10 +20,6 @@ func restCouch(r *mux.Router) {
 		http.HandlerFunc(couchDbBulkGet)).Methods("GET", "HEAD")
 	dbr.Handle("/_changes",
 		http.HandlerFunc(couchDbChanges)).Methods("GET", "HEAD")
-	dbr.Handle("/_design/sync_gateway",
-		http.HandlerFunc(couchDbDesign)).Methods("GET", "HEAD")
-	dbr.Handle("/_ensure_full_commit",
-		http.HandlerFunc(couchDbEFC)).Methods("POST")
 	dbr.Handle("/_revs_diff",
 		http.HandlerFunc(couchDbRevsDiff)).Methods("POST")
 
@@ -47,9 +43,6 @@ func restCouch(r *mux.Router) {
 		http.HandlerFunc(couchDbPutDoc)).Methods("PUT")
 	dbr.Handle("/{docid}",
 		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE")
-
-	dbr.Handle("/{docid}/{attach}",
-		http.HandlerFunc(couchDbGetAttachment)).Methods("GET", "HEAD")
 }
 
 func couchAllDbs(w http.ResponseWriter, r *http.Request) {
@@ -66,12 +59,6 @@ func couchDbBulkGet(w http.ResponseWriter, r *http.Request) {
 }
 
 func couchDbChanges(w http.ResponseWriter, r *http.Request) {
-}
-
-func couchDbDesign(w http.ResponseWriter, r *http.Request) {
-}
-
-func couchDbEFC(w http.ResponseWriter, r *http.Request) {
 }
 
 func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
@@ -102,7 +89,4 @@ func couchDbPutDoc(w http.ResponseWriter, r *http.Request) {
 }
 
 func couchDbDelDoc(w http.ResponseWriter, r *http.Request) {
-}
-
-func couchDbGetAttachment(w http.ResponseWriter, r *http.Request) {
 }
