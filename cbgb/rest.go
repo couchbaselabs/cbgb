@@ -43,12 +43,12 @@ func restMain(rest string, staticPath string) {
 		restGetRuntimeMemStats).Methods("GET")
 	r.HandleFunc("/_api/settings",
 		restGetSettings).Methods("GET")
-	r.PathPrefix("/static/").Handler(
-		http.StripPrefix("/static/",
+	r.PathPrefix("/_static/").Handler(
+		http.StripPrefix("/_static/",
 			http.FileServer(http.Dir(staticPath))))
 	restCouch(r)
 	r.Handle("/",
-		http.RedirectHandler("/static/app.html", 302))
+		http.RedirectHandler("/_static/app.html", 302))
 	log.Printf("listening rest on: %v", rest)
 	log.Fatal(http.ListenAndServe(rest, r))
 }
