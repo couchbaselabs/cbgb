@@ -3,6 +3,7 @@ package cbgb
 import (
 	"bytes"
 	"fmt"
+	"math/rand"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -62,14 +63,15 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 		if iItem == nil {
 			return nil, nil
 		}
-		// TODO: Use the Transient field in gkvlite to optimize away
-		// the double lookup here with memoization.
 		// TODO: What if a compaction happens in between the lookups,
 		// and the changes-feed no longer has the item?  Answer: compaction
 		// must not remove items that the key-index references.
-		cItem, err := changes.GetItem(iItem.Val, true)
-		if err != nil {
-			return nil, err
+		cItem := (*gkvlite.Item)(atomic.LoadPointer(&iItem.Transient))
+		if cItem == nil {
+			cItem, err = changes.GetItem(iItem.Val, true)
+			if err != nil {
+				return nil, err
+			}
 		}
 		if cItem != nil {
 			i := &item{key: key}
@@ -149,7 +151,8 @@ func (p *partitionstore) set(newItem *item, oldMeta *item, numItems int64) (err 
 		vBytes := newItem.toValueBytes()
 		cBytes := casBytes(newItem.cas)
 
-		if err = changes.Set(cBytes, vBytes); err != nil {
+		cItem := &gkvlite.Item{Key: cBytes, Val: vBytes, Priority: int32(rand.Int())}
+		if err = changes.SetItem(cItem); err != nil {
 			return
 		}
 
@@ -159,7 +162,9 @@ func (p *partitionstore) set(newItem *item, oldMeta *item, numItems int64) (err 
 			// update?  That could result in an inconsistent db file?
 			// Solution idea #1 is to have load-time fixup, that
 			// incorporates changes into the key-index.
-			if err = keys.Set(newItem.key, cBytes); err != nil {
+			kItem := &gkvlite.Item{Key: newItem.key, Val: cBytes, Priority: int32(rand.Int())}
+			kItem.Transient = unsafe.Pointer(cItem)
+			if err = keys.SetItem(kItem); err != nil {
 				return
 			}
 			p.numItems = numItems
