@@ -91,9 +91,12 @@ func (p *partitionstore) visitItems(start []byte, withValue bool,
 	keys, changes := p.colls()
 	var vErr error
 	v := func(iItem *gkvlite.Item) bool {
-		cItem, vErr := changes.GetItem(iItem.Val, withValue)
-		if vErr != nil {
-			return false
+		cItem := (*gkvlite.Item)(atomic.LoadPointer(&iItem.Transient))
+		if cItem == nil {
+			cItem, vErr = changes.GetItem(iItem.Val, withValue)
+			if vErr != nil {
+				return false
+			}
 		}
 		if cItem == nil {
 			return true // TODO: track this case; might have been compacted away.
