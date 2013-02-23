@@ -660,42 +660,45 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 
 func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
+	if req.Body == nil {
+		return
+	}
+	newMeta := &VBMeta{}
+	if err := json.Unmarshal(req.Body, newMeta); err != nil {
+		// XXX:  The test requires that we don't report what's wrong
+		// res.Body = []byte(err.Error())
+		return
+	}
+
 	// The bs.apply() ensures we're not compacting/flushing while
 	// changing vbstate, which is good for atomicity and to avoid
 	// deadlock when the compactor wants to swap collections.
 	v.bs.apply(func() {
 		v.Apply(func() {
 			v.Mutate(func() {
-				if req.Body != nil {
-					newMeta := &VBMeta{}
-					if err := json.Unmarshal(req.Body, newMeta); err != nil {
-						return
+				prevMeta := v.Meta()
+				casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
+
+				newMeta = prevMeta.Copy().update(newMeta)
+				newMeta.MetaCas = casMeta
+
+				if err := v.setVBMeta(newMeta); err != nil {
+					res = &gomemcached.MCResponse{
+						Status: gomemcached.TMPFAIL,
+						Body:   []byte(fmt.Sprintf("setVBMeta error %v", err)),
 					}
-
-					prevMeta := v.Meta()
-					casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
-
-					newMeta = prevMeta.Copy().update(newMeta)
-					newMeta.MetaCas = casMeta
-
-					if err := v.setVBMeta(newMeta); err != nil {
-						res = &gomemcached.MCResponse{
-							Status: gomemcached.TMPFAIL,
-							Body:   []byte(fmt.Sprintf("setVBMeta error %v", err)),
-						}
-						return
-					}
-
-					if err := v.bs.flush(); err != nil {
-						res = &gomemcached.MCResponse{
-							Status: gomemcached.TMPFAIL,
-							Body:   []byte(fmt.Sprintf("setVBMeta flush error %v", err)),
-						}
-						return
-					}
-
-					res = &gomemcached.MCResponse{}
+					return
 				}
+
+				if err := v.bs.flush(); err != nil {
+					res = &gomemcached.MCResponse{
+						Status: gomemcached.TMPFAIL,
+						Body:   []byte(fmt.Sprintf("setVBMeta flush error %v", err)),
+					}
+					return
+				}
+
+				res = &gomemcached.MCResponse{}
 			})
 		})
 	})
