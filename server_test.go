@@ -214,3 +214,63 @@ func TestSaslAuth(t *testing.T) {
 		t.Errorf("expected currentBucket to be nil")
 	}
 }
+
+func TestBucketGetItem(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Fatalf("Expected NewBucket() to work")
+	}
+
+	key := []byte("hello")
+	if 528 != VBucketIdForKey(key, 1024) {
+		t.Errorf("expect hello to be in vbucket 528")
+	}
+
+	res := GetItem(b, key, VBActive)
+	if res != nil {
+		t.Errorf("expected GetItem to fail on a missing vbucket")
+	}
+
+	b.CreateVBucket(528)
+
+	res = GetItem(b, key, VBActive)
+	if res != nil {
+		t.Errorf("expected GetItem to fail on a dead vbucket")
+	}
+
+	b.SetVBState(528, VBActive)
+
+	res = GetItem(b, key, VBActive)
+	if res == nil {
+		t.Errorf("expected GetItem to have a res on a active vbucket")
+	}
+	if res.Status == gomemcached.SUCCESS {
+		t.Errorf("expected GetItem to fail on a missing key")
+	}
+
+	rh := reqHandler{currentBucket: b, buckets: nil}
+	rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+		Opcode:  gomemcached.SET,
+		VBucket: 528,
+		Key:     key,
+		Body:    []byte("world"),
+	})
+
+	res = GetItem(b, key, VBActive)
+	if res == nil {
+		t.Errorf("expected GetItem to be non-nil")
+	}
+	if res.Status != gomemcached.SUCCESS {
+		t.Errorf("expected GetItem to succeed")
+	}
+	if !bytes.Equal(res.Body, []byte("world")) {
+		t.Errorf("expected GetItem to work")
+	}
+}

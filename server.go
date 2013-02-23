@@ -139,3 +139,28 @@ func StartServer(addr string, buckets *Buckets, defaultBucketName string) (net.L
 	go waitForConnections(ls, buckets, defaultBucketName)
 	return ls, nil
 }
+
+func GetVBucketForKey(b Bucket, key []byte) *vbucket {
+	return b.GetVBucket(VBucketIdForKey(key, MAX_VBUCKETS))
+}
+
+func GetVBucket(b Bucket, key []byte, vbs VBState) *vbucket {
+	vb := GetVBucketForKey(b, key)
+	if vb == nil || vb.GetVBState() != vbs {
+		return nil
+	}
+	return vb
+}
+
+func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
+	vb := GetVBucket(b, key, vbs)
+	if vb == nil {
+		return nil
+	}
+	// TODO: Possible race here with concurrent change to vbstate?
+	return vbGet(vb, nil, &gomemcached.MCRequest{
+		Opcode:  gomemcached.GET,
+		VBucket: vb.vbid,
+		Key:     key,
+	})
+}
