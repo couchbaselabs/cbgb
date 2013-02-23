@@ -428,7 +428,7 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 		if len(req.Extras) != 8+8+4 { // amount, initial, exp
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
-				Body: []byte(fmt.Sprintf("wrong extras size for incr/decr: %v",
+				Body: []byte(fmt.Sprintf("wrong extras size for incr/decr: %v on key %v",
 					len(req.Extras), req.Key)),
 			}, nil, 0, ignore
 		}
