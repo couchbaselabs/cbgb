@@ -106,6 +106,7 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not Found", 404)
 		return
 	}
+	// TODO: Content Type, Accepts, much to leverage from sync_gateway.
 	w.Write(res.Body)
 }
 
