@@ -312,7 +312,7 @@ func vbMutate(v *vbucket, w io.Writer,
 	if cmd == gomemcached.ADD && req.Cas != 0 {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.EINVAL,
-			Body:   []byte(fmt.Sprintf("CAS should be 0 for ADD request")),
+			Body:   []byte("CAS should be 0 for ADD request"),
 		}
 	}
 
@@ -398,19 +398,19 @@ func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	if cmd == gomemcached.ADD && itemOld != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.KEY_EEXISTS,
-			Body:   []byte(fmt.Sprintf("ADD error because item exists")),
+			Body:   []byte("ADD error because item exists"),
 		}, ignore
 	}
 	if cmd == gomemcached.REPLACE && itemOld == nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.KEY_ENOENT,
-			Body:   []byte(fmt.Sprintf("REPLACE error because item does not exist")),
+			Body:   []byte("REPLACE error because item does not exist"),
 		}, ignore
 	}
 	if req.Cas != 0 && (itemOld == nil || itemOld.cas != req.Cas) {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.EINVAL,
-			Body:   []byte(fmt.Sprintf("CAS mismatch")),
+			Body:   []byte("CAS mismatch"),
 		}, ignore
 	}
 	return nil, nil
@@ -558,7 +558,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		if req.Cas != 0 && (prevMeta == nil || prevMeta.cas != req.Cas) {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
-				Body:   []byte(fmt.Sprintf("CAS mismatch")),
+				Body:   []byte("CAS mismatch"),
 			}
 			return
 		}
