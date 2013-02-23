@@ -417,7 +417,9 @@ func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 }
 
 func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
-	cmd gomemcached.CommandCode, itemCas uint64, itemOld *item) (*gomemcached.MCResponse, *item, uint64, error) {
+	cmd gomemcached.CommandCode, itemCas uint64, itemOld *item) (*gomemcached.MCResponse,
+	*item, uint64, error) {
+
 	var flag, exp uint32
 	var aval uint64
 	var err error
