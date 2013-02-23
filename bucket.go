@@ -52,11 +52,12 @@ type Bucket interface {
 
 // Holder of buckets.
 type Buckets struct {
-	buckets  map[string]Bucket
-	dir      string // Directory where all buckets are stored.
-	lock     sync.Mutex
-	settings *BucketSettings
-	statsch  chan *funreq
+	buckets    map[string]Bucket
+	dir        string // Directory where all buckets are stored.
+	lock       sync.Mutex
+	settings   *BucketSettings
+	statsch    chan *funreq
+	statticker <-chan time.Time
 }
 
 type BucketSettings struct {
@@ -117,29 +118,24 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
 	buckets := &Buckets{
-		buckets:  map[string]Bucket{},
-		dir:      dirForBuckets,
-		settings: settings.Copy(),
-		statsch:  make(chan *funreq),
+		buckets:    map[string]Bucket{},
+		dir:        dirForBuckets,
+		settings:   settings.Copy(),
+		statsch:    make(chan *funreq),
+		statticker: time.Tick(time.Second),
 	}
 	go buckets.serviceStats()
 	return buckets, nil
 }
 
 func (b *Buckets) serviceStats() {
-	tickerS := time.NewTicker(time.Second)
-	defer tickerS.Stop()
-
 	for {
 		select {
-		case r, ok := <-b.statsch:
-			if !ok {
-				return
-			}
+		case r := <-b.statsch:
 			r.fun()
 			close(r.res)
-		case <-tickerS.C:
-			b.sampleStats(time.Now())
+		case t := <-b.statticker:
+			b.sampleStats(t)
 		}
 	}
 }
