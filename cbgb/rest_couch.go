@@ -10,28 +10,7 @@ import (
 )
 
 func restCouch(r *mux.Router) {
-	r.HandleFunc("/_all_dbs",
-		couchAllDbs).Methods("GET")
-
 	dbr := r.PathPrefix("/{db}/").Subrouter()
-
-	dbr.Handle("/_all_docs",
-		http.HandlerFunc(couchDbAllDocs)).Methods("GET", "HEAD", "POST")
-	dbr.Handle("/_bulk_docs",
-		http.HandlerFunc(couchDbBulkDocs)).Methods("POST")
-	dbr.Handle("/_bulk_get",
-		http.HandlerFunc(couchDbBulkGet)).Methods("GET", "HEAD")
-	dbr.Handle("/_changes",
-		http.HandlerFunc(couchDbChanges)).Methods("GET", "HEAD")
-	dbr.Handle("/_revs_diff",
-		http.HandlerFunc(couchDbRevsDiff)).Methods("POST")
-
-	dbr.Handle("/_local/{docid}",
-		http.HandlerFunc(couchDbGetLocalDoc)).Methods("GET", "HEAD")
-	dbr.Handle("/_local/{docid}",
-		http.HandlerFunc(couchDbPutLocalDoc)).Methods("PUT")
-	dbr.Handle("/_local/{docid}",
-		http.HandlerFunc(couchDbDelLocalDoc)).Methods("DELETE")
 
 	dbr.Handle("/_design/{docid}",
 		http.HandlerFunc(couchDbGetDesignDoc)).Methods("GET", "HEAD")
@@ -46,42 +25,6 @@ func restCouch(r *mux.Router) {
 		http.HandlerFunc(couchDbPutDoc)).Methods("PUT")
 	dbr.Handle("/{docid}",
 		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE")
-}
-
-func couchAllDbs(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, buckets.GetNames())
-}
-
-func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbBulkGet(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbChanges(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbGetLocalDoc(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbPutLocalDoc(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
-}
-
-func couchDbDelLocalDoc(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
 }
 
 func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
