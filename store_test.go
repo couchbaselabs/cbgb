@@ -529,25 +529,32 @@ func TestSleepInterval(t *testing.T) {
 			t.Errorf("expected Load to work, err: %v", err)
 		}
 
+		vb1 := b1.GetVBucket(2)
+
+		bss1before := vb1.bs.Stats()
+		if bss1before == nil {
+			t.Errorf("expected bucket store to have before Stats()")
+		}
+
 		time.Sleep(10 * time.Millisecond)
 
 		testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
 
-		vb1 := b1.GetVBucket(2)
 		bss1 := vb1.bs.Stats()
 		if bss1 == nil {
 			t.Errorf("expected bucket store to have Stats()")
 		}
-		if bss1.Sleeps != 1 {
-			t.Errorf("expected bss1 to have 1 Sleeps, got %v",
-				bss1.Sleeps)
+		if bss1.Sleeps != 1+bss1before.Sleeps {
+			t.Errorf("expected bss1 to have %v Sleeps, got %v",
+				1+bss1before.Sleeps, bss1.Sleeps)
 		}
-		if bss1.Wakes != 1 {
-			t.Errorf("expected bss1 to have 1 Wakes, got %v",
-				bss1.Wakes)
+		if bss1.Wakes != 1+bss1before.Wakes {
+			t.Errorf("expected bss1 to have %v Wakes, got %v",
+				1+bss1before.Wakes, bss1.Wakes)
 		}
-		if bss1.WakeErrors != 0 {
-			t.Errorf("expected bss1 to have 0 WakeErrors")
+		if bss1.WakeErrors != bss1before.WakeErrors {
+			t.Errorf("expected bss1 to have %v WakeErrors, got %v",
+				bss1before.Wakes, bss1.Wakes)
 		}
 
 		b1.Close()
