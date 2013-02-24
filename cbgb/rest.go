@@ -41,6 +41,8 @@ func restMain(rest string, staticPath string) {
 		restGetRuntime).Methods("GET")
 	r.HandleFunc("/_api/runtime/memStats",
 		restGetRuntimeMemStats).Methods("GET")
+	r.HandleFunc("/_api/runtime/gc",
+		restPostRuntimeGC).Methods("POST")
 	r.HandleFunc("/_api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/_static/").Handler(
@@ -235,6 +237,10 @@ func restGetRuntimeMemStats(w http.ResponseWriter, r *http.Request) {
 	memStats := &runtime.MemStats{}
 	runtime.ReadMemStats(memStats)
 	jsonEncode(w, memStats)
+}
+
+func restPostRuntimeGC(w http.ResponseWriter, r *http.Request) {
+	runtime.GC()
 }
 
 func jsonEncode(w io.Writer, i interface{}) error {
