@@ -15,6 +15,8 @@ import (
 	"sync/atomic"
 	"time"
 	"unsafe"
+
+	"github.com/dustin/go-broadcast"
 )
 
 const (
@@ -283,7 +285,7 @@ type livebucket struct {
 	settings     *BucketSettings
 	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
 	bucketstores map[int]*bucketstore
-	observer     *broadcaster
+	observer     broadcast.Broadcaster
 
 	lastStats            *Stats
 	lastBucketStoreStats *BucketStoreStats
@@ -314,7 +316,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		dir:                  dirForBucket,
 		settings:             settings,
 		bucketstores:         make(map[int]*bucketstore),
-		observer:             newBroadcaster(0),
+		observer:             broadcast.NewBroadcaster(0),
 		lastStats:            &Stats{},
 		lastBucketStoreStats: &BucketStoreStats{},
 		aggStats:             aggStats,

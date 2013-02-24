@@ -13,6 +13,7 @@ import (
 	"sync/atomic"
 	"unsafe"
 
+	"github.com/dustin/go-broadcast"
 	"github.com/dustin/gomemcached"
 )
 
@@ -48,7 +49,7 @@ type vbucket struct {
 	ach      chan *funreq // To access top-level vbucket fields & stats.
 	mch      chan *funreq // To mutate the keys/changes collections.
 	stats    Stats
-	observer *broadcaster
+	observer broadcast.Broadcaster
 }
 
 type dispatchFun func(v *vbucket, w io.Writer,
@@ -103,7 +104,7 @@ func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 		ps:       bs.getPartitionStore(vbid),
 		ach:      make(chan *funreq),
 		mch:      make(chan *funreq),
-		observer: newBroadcaster(observerBroadcastMax),
+		observer: broadcast.NewBroadcaster(observerBroadcastMax),
 	}
 
 	go funservice(rv.ach)
