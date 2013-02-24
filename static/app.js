@@ -19,6 +19,16 @@ angular.module('cbgb', []).
 var restErrorMsg = "error communicating with server; please try again.";
 
 function ServerCtrl($scope, $http) {
+  $scope.serverGC = function() {
+    $http.post("/_api/runtime/gc").
+      success(function() {
+          alert("Server GC succeeded");
+      }).
+      error(function(data) {
+          alert("Server GC failed");
+      });
+  }
+
   $http.get('/_api/settings').
     success(function(data) {
       $scope.settings = data;
