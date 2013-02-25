@@ -132,18 +132,14 @@ func CASLess(p, q interface{}) int {
 }
 
 func casBytes(cas uint64) []byte {
-	buf := bytes.NewBuffer(make([]byte, 8)[:0])
-	binary.Write(buf, binary.BigEndian, cas)
-	return buf.Bytes()
+	buf := make([]byte, 8)
+	binary.BigEndian.PutUint64(buf, cas)
+	return buf
 }
 
 func casBytesParse(b []byte) (cas uint64, err error) {
 	if len(b) < 8 {
 		return 0, fmt.Errorf("item.casBytesParse() arr len: %v", len(b))
 	}
-	buf := bytes.NewBuffer(b)
-	if err = binary.Read(buf, binary.BigEndian, &cas); err != nil {
-		return 0, err
-	}
-	return cas, nil
+	return binary.BigEndian.Uint64(b), nil
 }
