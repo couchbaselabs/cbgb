@@ -230,6 +230,7 @@ func restGetRuntime(w http.ResponseWriter, r *http.Request) {
 		"goRoot":     runtime.GOROOT(),
 		"goVersion":  runtime.Version(),
 		"goRoutines": runtime.NumGoroutine(),
+		"goCgoCalls": runtime.NumCgoCall(),
 	})
 }
 
