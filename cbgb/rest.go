@@ -225,12 +225,18 @@ func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 
 func restGetRuntime(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
-		"startTime":  startTime,
-		"numCPU":     runtime.NumCPU(),
-		"goRoot":     runtime.GOROOT(),
-		"goVersion":  runtime.Version(),
-		"goRoutines": runtime.NumGoroutine(),
-		"goCgoCalls": runtime.NumCgoCall(),
+		"startTime": startTime,
+		"arch":      runtime.GOARCH,
+		"os":        runtime.GOOS,
+		"numCPU":    runtime.NumCPU(),
+		"go": map[string]interface{}{
+			"GOROOT":         runtime.GOROOT(),
+			"version":        runtime.Version(),
+			"numGoroutine":   runtime.NumGoroutine(),
+			"numCgoCall":     runtime.NumCgoCall(),
+			"compiler":       runtime.Compiler,
+			"memProfileRate": runtime.MemProfileRate,
+		},
 	})
 }
 
