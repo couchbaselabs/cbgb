@@ -68,7 +68,7 @@ func TestItemSerialization(t *testing.T) {
 		t.Errorf("expected item.toValueBytes() to be the same")
 	}
 
-	kb := []byte("")
+	kb := []byte{}
 	k := &item{}
 	err = k.fromValueBytes(kb)
 	if err == nil {
@@ -127,7 +127,7 @@ func TestCASSerialization(t *testing.T) {
 		t.Errorf("expected cas to equal")
 	}
 
-	_, err = casBytesParse([]byte(""))
+	_, err = casBytesParse([]byte{})
 	if err == nil {
 		t.Errorf("expected casBytesParse() to error on short bytes")
 	}
@@ -148,7 +148,7 @@ func TestKeyLess(t *testing.T) {
 	if KeyLess(&item{key: []byte("a")}, &item{key: []byte("a")}) != 0 {
 		t.Errorf("expected KeyLess to work")
 	}
-	if KeyLess(&item{key: []byte("")}, &item{key: []byte("")}) != 0 {
+	if KeyLess(&item{key: []byte{}}, &item{key: []byte{}}) != 0 {
 		t.Errorf("expected KeyLess to work for zero-length keys")
 	}
 	if KeyLess(&item{}, &item{}) != 0 {

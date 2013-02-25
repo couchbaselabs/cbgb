@@ -107,12 +107,12 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 	if keylen > 0 {
 		i.key = b[hdrlen : hdrlen+int(keylen)]
 	} else {
-		i.key = []byte("")
+		i.key = []byte{}
 	}
 	if datalen > 0 {
 		i.data = b[hdrlen+int(keylen) : hdrlen+int(keylen)+int(datalen)]
 	} else {
-		i.data = []byte("")
+		i.data = []byte{}
 	}
 	return nil
 }
