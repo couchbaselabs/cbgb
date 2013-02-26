@@ -654,8 +654,8 @@ func TestFlushError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -726,5 +726,60 @@ func TestStatError(t *testing.T) {
 	}
 	if v0.bs.Stats().StatErrors != prevStatErrors+1 {
 		t.Errorf("expected staterrors to be higher")
+	}
+}
+
+func TestReadAtError(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	v0, _ := b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+
+	prevReads := v0.bs.Stats().Reads
+	prevReadErrors := v0.bs.Stats().ReadErrors
+
+	n, err := v0.bs.BSF().ReadAt(make([]byte, 10), -10000)
+	if err == nil {
+		t.Errorf("expected ReadAt() to fail")
+	}
+	if n != 0 {
+		t.Errorf("expected ReadAt() to read nothing")
+	}
+	if v0.bs.Stats().Reads != prevReads+1 {
+		t.Errorf("expected reads to be higher")
+	}
+	if v0.bs.Stats().ReadErrors != prevReadErrors+1 {
+		t.Errorf("expected readerrors to be higher")
+	}
+
+	v0.bs.BSF().file.Close() // Inject a bad condition.
+
+	prevReads = v0.bs.Stats().Reads
+	prevReadErrors = v0.bs.Stats().ReadErrors
+
+	n, err = v0.bs.BSF().ReadAt(make([]byte, 10), 0)
+	if err == nil {
+		t.Errorf("expected ReadAt() to fail")
+	}
+	if n != 0 {
+		t.Errorf("expected ReadAt() to read nothing")
+	}
+	if v0.bs.Stats().Reads != prevReads+1 {
+		t.Errorf("expected reads to be higher")
+	}
+	if v0.bs.Stats().ReadErrors != prevReadErrors+1 {
+		t.Errorf("expected readerrors to be higher")
 	}
 }
