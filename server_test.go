@@ -274,3 +274,9 @@ func TestBucketGetItem(t *testing.T) {
 		t.Errorf("expected GetItem to work")
 	}
 }
+
+func TestNoSettingsBucketAuth(t *testing.T) {
+	if (&livebucket{}).Auth(nil) {
+		t.Errorf("expected a nil-settings bucket to fail auth")
+	}
+}
