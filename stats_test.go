@@ -345,6 +345,7 @@ func TestBucketStoreStatsAggregate(t *testing.T) {
 	b123 := &BucketStoreStats{Reads: 123}
 	b100 := &BucketStoreStats{Reads: 100}
 	b223 := &BucketStoreStats{}
+	b223.Aggregate(nil)
 	b223.Aggregate(b123)
 	b223.Aggregate(b100)
 	if !b223.Equal(&BucketStoreStats{Reads: 223}) {
