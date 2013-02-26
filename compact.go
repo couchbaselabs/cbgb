@@ -77,7 +77,7 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 		vbids = append(vbids, uint16(vbid))
 	}
 
-	return s.copyDeltas(bsf, collRest, compactPath, compactFile, compactStore,
+	return s.copyBucketStoreDeltas(bsf, collRest, compactPath, compactFile, compactStore,
 		vbids, 0, lastChanges, writeEvery)
 }
 
@@ -306,7 +306,7 @@ func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
 // Copy any mutations that concurrently just came in.  We use
 // recursion to naturally have a phase of pausing & copying,
 // and then unpausing as the recursion unwinds.
-func (s *bucketstore) copyDeltas(bsf *bucketstorefile, collRest []string,
+func (s *bucketstore) copyBucketStoreDeltas(bsf *bucketstorefile, collRest []string,
 	compactPath string, compactFile *os.File, compactStore *gkvlite.Store,
 	vbids []uint16, vbidIdx int, lastChanges map[uint16]*gkvlite.Item,
 	writeEvery int) (err error) {
@@ -347,7 +347,8 @@ func (s *bucketstore) copyDeltas(bsf *bucketstorefile, collRest []string,
 		if err != nil {
 			return s.coll(kName), s.coll(cName)
 		}
-		err = s.copyDeltas(bsf, collRest, p.compactPath, p.compactFile, p.compactStore,
+		err = s.copyBucketStoreDeltas(bsf, collRest,
+			p.compactPath, p.compactFile, p.compactStore,
 			vbids, vbidIdx+1, lastChanges, writeEvery)
 		if err != nil {
 			return s.coll(kName), s.coll(cName)
