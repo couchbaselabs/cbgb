@@ -1,6 +1,7 @@
 package cbgb
 
 import (
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -235,5 +236,51 @@ func TestCompactionPurgeTimeout(t *testing.T) {
 	if len(postCompactFiles) != len(preCompactFiles) {
 		t.Errorf("expected purged postCompactFiles == preCompactFiles with, got: %v vs %v",
 			len(postCompactFiles), len(preCompactFiles))
+	}
+}
+
+func TestCopyDelta(t *testing.T) {
+	testCopyDelta(t, 1)
+	testCopyDelta(t, 0x0800000)
+}
+
+func testCopyDelta(t *testing.T, writeEvery int) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   time.Millisecond,
+			CompactInterval: 10 * time.Second,
+			PurgeTimeout:    time.Millisecond,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	r0 := &reqHandler{currentBucket: b0}
+	v0, _ := b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+	for i := 0; i < 100; i++ {
+		testLoadInts(t, r0, 2, 5)
+		if err = b0.Flush(); err != nil {
+			t.Errorf("expected Flush (loop) to work, got: %v", err)
+		}
+	}
+
+	testLoadInts(t, r0, 2, 5)
+
+	vbid := uint16(2)
+
+	cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
+	kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
+
+	numVisits, err := copyDelta(nil, cName, kName, v0.bs.BSF().store, v0.bs.BSF().store, writeEvery)
+	if err != nil {
+		t.Errorf("expected copyDelta to work, got: %v", err)
+	}
+	if numVisits <= 0 {
+		t.Errorf("expected copyDelta numVisits to be > 0")
 	}
 }
