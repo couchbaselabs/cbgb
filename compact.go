@@ -163,7 +163,7 @@ func copyColl(srcColl *gkvlite.Collection, dstColl *gkvlite.Collection,
 
 func copyDelta(lastChangeCAS []byte, cName string, kName string,
 	srcStore *gkvlite.Store, dstStore *gkvlite.Store,
-	writeEvery int) (numItems uint64, err error) {
+	writeEvery int) (numVisits uint64, err error) {
 	cSrc := srcStore.GetCollection(cName)
 	cDst := dstStore.GetCollection(cName)
 	kDst := dstStore.GetCollection(kName)
@@ -172,12 +172,13 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 			cName, kName)
 	}
 
-	var errVisit error = nil
+	var errVisit error
+
 	err = cSrc.VisitItemsAscend(lastChangeCAS, true, func(cItem *gkvlite.Item) bool {
-		if numItems <= 0 {
+		numVisits++
+		if numVisits <= 1 {
 			return true
 		}
-		numItems++
 		if errVisit = cDst.SetItem(cItem); errVisit != nil {
 			return false
 		}
@@ -199,7 +200,7 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 			}
 		}
 		// Persist to storage as needed.
-		if writeEvery > 0 && numItems%uint64(writeEvery) == 0 {
+		if writeEvery > 0 && numVisits%uint64(writeEvery) == 0 {
 			if errVisit = cDst.Write(); errVisit != nil {
 				return false
 			}
@@ -216,7 +217,7 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 		return 0, errVisit
 	}
 
-	return numItems, nil
+	return numVisits, nil
 }
 
 func (s *bucketstore) copyVBucketColls(bsf *bucketstorefile,
