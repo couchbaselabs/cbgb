@@ -252,9 +252,9 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   10 * time.Second,
-			SleepInterval:   time.Millisecond,
+			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,
-			PurgeTimeout:    time.Millisecond,
+			PurgeTimeout:    10 * time.Millisecond,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -308,9 +308,9 @@ func TestCopyDeltaBadNames(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			FlushInterval:   10 * time.Second,
-			SleepInterval:   time.Millisecond,
+			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,
-			PurgeTimeout:    time.Millisecond,
+			PurgeTimeout:    10 * time.Millisecond,
 		})
 	v0, _ := b0.CreateVBucket(2)
 
