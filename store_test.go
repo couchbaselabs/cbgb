@@ -690,3 +690,41 @@ func TestFlushError(t *testing.T) {
 		t.Errorf("expected still be dirty")
 	}
 }
+
+func TestStatError(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   time.Second,
+			SleepInterval:   time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	v0, _ := b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+
+	v0.bs.BSF().file.Close() // Inject a bad condition.
+
+	prevStats := v0.bs.Stats().Stats
+	prevStatErrors := v0.bs.Stats().StatErrors
+
+	fi, err := v0.bs.BSF().Stat()
+	if err == nil {
+		t.Errorf("expected Stat() to fail on a closed file")
+	}
+	if fi != nil {
+		t.Errorf("expected Stat() to give nil fileinfo on a closed file")
+	}
+	if v0.bs.Stats().Stats != prevStats+1 {
+		t.Errorf("expected stats to be higher")
+	}
+	if v0.bs.Stats().StatErrors != prevStatErrors+1 {
+		t.Errorf("expected staterrors to be higher")
+	}
+}
