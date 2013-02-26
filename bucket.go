@@ -44,6 +44,8 @@ type Bucket interface {
 	GetBucketStore(int) *bucketstore
 
 	Auth([]byte) bool
+
+	Statish
 }
 
 // Interface for things that interact with stats.
