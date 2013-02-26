@@ -68,56 +68,8 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 			}
 			continue
 		}
-		vbidStr := collName[0 : len(collName)-len(COLL_SUFFIX_CHANGES)]
-		vbid, err := strconv.Atoi(vbidStr)
-		if err != nil {
-			return err
-		}
-		if vbid < 0 || vbid > MAX_VBID {
-			return fmt.Errorf("compact vbid out of range: %v, vbid: %v",
-				bsf.path, vbid)
-		}
-		cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
-		kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
-		cDest := compactStore.SetCollection(cName, nil)
-		kDest := compactStore.SetCollection(kName, nil)
-		if cDest == nil || kDest == nil {
-			return fmt.Errorf("compact could not create colls: %v, vbid: %v",
-				compactPath, vbid)
-		}
-		cCurr := s.coll(cName) // The c prefix in cFooBar means 'changes'.
-		kCurr := s.coll(kName) // The k prefix in kFooBar means 'keys'.
-		if cCurr == nil || kCurr == nil {
-			return fmt.Errorf("compact source colls missing: %v, vbid: %v",
-				bsf.path, vbid)
-		}
-		// Get a consistent snapshot (keys reflect all changes) of the
-		// keys & changes collections.
-		ps := s.partitions[uint16(vbid)]
-		if ps == nil {
-			return fmt.Errorf("compact missing partition for vbid: %v", vbid)
-		}
-		var currSnapshot *gkvlite.Store
-		ps.mutate(func(key, changes *gkvlite.Collection) {
-			currSnapshot = bsf.store.Snapshot()
-		})
-		if currSnapshot == nil {
-			return fmt.Errorf("compact source snapshot failed: %v, vbid: %v",
-				bsf.path, vbid)
-		}
-		cCurrSnapshot := currSnapshot.GetCollection(cName)
-		kCurrSnapshot := currSnapshot.GetCollection(kName)
-		if cCurrSnapshot == nil || kCurrSnapshot == nil {
-			return fmt.Errorf("compact missing colls from snapshot: %v, vbid: %v",
-				bsf.path, vbid)
-		}
-		// TODO: Record stats on # changes processed.
-		_, lastChange, err := copyColl(cCurrSnapshot, cDest, writeEvery)
-		if err != nil {
-			return err
-		}
-		// TODO: Record stats on # keys processed.
-		_, _, err = copyColl(kCurrSnapshot, kDest, writeEvery)
+		vbid, lastChange, err :=
+			s.copyVBucketColls(bsf, collName, compactStore, writeEvery)
 		if err != nil {
 			return err
 		}
@@ -327,4 +279,63 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 	}
 
 	return numItems, nil
+}
+
+func (s *bucketstore) copyVBucketColls(bsf *bucketstorefile,
+	collName string, compactStore *gkvlite.Store, writeEvery int) (
+	uint16, *gkvlite.Item, error) {
+	vbidStr := collName[0 : len(collName)-len(COLL_SUFFIX_CHANGES)]
+	vbid, err := strconv.Atoi(vbidStr)
+	if err != nil {
+		return 0, nil, err
+	}
+	if vbid < 0 || vbid > MAX_VBID {
+		return 0, nil, fmt.Errorf("compact vbid out of range: %v, vbid: %v",
+			bsf.path, vbid)
+	}
+	cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
+	kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
+	cDest := compactStore.SetCollection(cName, nil)
+	kDest := compactStore.SetCollection(kName, nil)
+	if cDest == nil || kDest == nil {
+		return 0, nil, fmt.Errorf("compact could not create colls for vbid: %v",
+			vbid)
+	}
+	cCurr := s.coll(cName) // The c prefix in cFooBar means 'changes'.
+	kCurr := s.coll(kName) // The k prefix in kFooBar means 'keys'.
+	if cCurr == nil || kCurr == nil {
+		return 0, nil, fmt.Errorf("compact source colls missing: %v, vbid: %v",
+			bsf.path, vbid)
+	}
+	// Get a consistent snapshot (keys reflect all changes) of the
+	// keys & changes collections.
+	ps := s.partitions[uint16(vbid)]
+	if ps == nil {
+		return 0, nil, fmt.Errorf("compact missing partition for vbid: %v", vbid)
+	}
+	var currSnapshot *gkvlite.Store
+	ps.mutate(func(key, changes *gkvlite.Collection) {
+		currSnapshot = bsf.store.Snapshot()
+	})
+	if currSnapshot == nil {
+		return 0, nil, fmt.Errorf("compact source snapshot failed: %v, vbid: %v",
+			bsf.path, vbid)
+	}
+	cCurrSnapshot := currSnapshot.GetCollection(cName)
+	kCurrSnapshot := currSnapshot.GetCollection(kName)
+	if cCurrSnapshot == nil || kCurrSnapshot == nil {
+		return 0, nil, fmt.Errorf("compact missing colls from snapshot: %v, vbid: %v",
+			bsf.path, vbid)
+	}
+	// TODO: Record stats on # changes processed.
+	_, lastChange, err := copyColl(cCurrSnapshot, cDest, writeEvery)
+	if err != nil {
+		return 0, nil, err
+	}
+	// TODO: Record stats on # keys processed.
+	_, _, err = copyColl(kCurrSnapshot, kDest, writeEvery)
+	if err != nil {
+		return 0, nil, err
+	}
+	return uint16(vbid), lastChange, err
 }
