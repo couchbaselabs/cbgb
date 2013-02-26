@@ -1,7 +1,8 @@
 #*
-*~
 *.pprof
 *.test
+*~
+.#*
+_*
 cbgb/cbgb
 tmp
-_*
