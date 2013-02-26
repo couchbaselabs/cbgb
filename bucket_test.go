@@ -288,7 +288,7 @@ func TestBucketClose(t *testing.T) {
 	}
 }
 
-func TestBucketLoadNames(t *testing.T) {
+func TestBucketsLoadNames(t *testing.T) {
 	d, err := ioutil.TempDir("./tmp", "test")
 	if err != nil {
 		t.Fatalf("Expected TempDir to work, got: %v", err)
@@ -420,7 +420,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	}
 }
 
-func TestBucketStatsApply(t *testing.T) {
+func TestBucketsStatsApply(t *testing.T) {
 	d, err := ioutil.TempDir("./tmp", "test")
 	if err != nil {
 		t.Fatalf("Expected TempDir to work, got: %v", err)
@@ -455,5 +455,53 @@ func TestMissingBucketsDir(t *testing.T) {
 	err = b.Load()
 	if err == nil {
 		t.Fatalf("Expected load to fail on missing dir")
+	}
+}
+
+func TestBucketsLoad(t *testing.T) {
+	d, err := ioutil.TempDir("./tmp", "test")
+	if err != nil {
+		t.Fatalf("Expected TempDir to work, got: %v", err)
+	}
+	defer os.RemoveAll(d)
+	b, err := NewBuckets(d,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets() to work on temp dir")
+	}
+	b.New("b1", b.settings)
+	b.New("b2", b.settings)
+	b.Get("b1").Flush()
+	b.Get("b2").Flush()
+	err = b.Load()
+	if err == nil {
+		t.Errorf("expected re-Buckets.Load() to fail")
+	}
+
+	b2, err := NewBuckets(d,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets() to work on temp dir")
+	}
+	err = b2.Load()
+	if err != nil {
+		t.Errorf("expected re-Buckets.Load() to fail")
+	}
+	if b.Get("b0") != nil {
+		t.Errorf("expected Buckets.Get(b0) to fail")
+	}
+	if b.Get("b1") == nil {
+		t.Errorf("expected Buckets.Get(b1) to work")
+	}
+	if b.Get("b2") == nil {
+		t.Errorf("expected Buckets.Get(b2) to work")
 	}
 }
