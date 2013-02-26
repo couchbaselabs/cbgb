@@ -507,3 +507,18 @@ func TestBucketsLoad(t *testing.T) {
 		t.Errorf("expected Buckets.Get(b2) to work")
 	}
 }
+
+func TestSetVBState(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	err = b.SetVBState(0, VBActive)
+	if err == nil {
+		t.Errorf("expected SetVBState to fail on a missing vbucket")
+	}
+}
