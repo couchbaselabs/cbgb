@@ -284,3 +284,22 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 		t.Errorf("expected copyDelta numVisits to be > 0")
 	}
 }
+
+func TestCopyDeltaBadNames(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   time.Millisecond,
+			CompactInterval: 10 * time.Second,
+			PurgeTimeout:    time.Millisecond,
+		})
+	v0, _ := b0.CreateVBucket(2)
+
+	_, err = copyDelta(nil, "foo", "bar", v0.bs.BSF().store, v0.bs.BSF().store, 0)
+	if err == nil {
+		t.Errorf("expected copyDelta to fail on bad coll names")
+	}
+}
