@@ -10,3 +10,9 @@ func TestVBucketHash(t *testing.T) {
 		t.Errorf("expected vbid of 528, got: %v", vbid)
 	}
 }
+
+func TestVBKeyRangeEqual(t *testing.T) {
+	if (&VBKeyRange{}).Equal(nil) {
+		t.Errorf("expected non-nil to not equal nil")
+	}
+}
