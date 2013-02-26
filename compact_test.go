@@ -319,3 +319,29 @@ func TestCopyDeltaBadNames(t *testing.T) {
 		t.Errorf("expected copyDelta to fail on bad coll names")
 	}
 }
+
+func TestBadCompactSwapFile(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Millisecond,
+			CompactInterval: 10 * time.Second,
+			PurgeTimeout:    10 * time.Millisecond,
+		})
+	v0, _ := b0.CreateVBucket(2)
+
+	err = v0.bs.compactSwapFile(v0.bs.BSF(), "/thisIsABadPath")
+	if err == nil {
+		t.Errorf("expected compactSwapFile to fail on bad compactPath")
+	}
+
+	v0.bs.BSF().path = "/whoaAnUnexpectedPath"
+
+	err = v0.bs.compactSwapFile(v0.bs.BSF(), testBucketDir+"foo")
+	if err == nil {
+		t.Errorf("expected compactSwapFile to fail on bad compactPath")
+	}
+}
