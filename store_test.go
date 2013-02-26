@@ -647,3 +647,46 @@ func TestStoreFiles(t *testing.T) {
 		t.Errorf("expected err")
 	}
 }
+
+func TestFlushError(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			FlushInterval:   time.Second,
+			SleepInterval:   time.Second,
+			CompactInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	r0 := &reqHandler{currentBucket: b0}
+	v0, _ := b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+
+	testLoadInts(t, r0, 2, 0)
+	testExpectInts(t, r0, 2, []int{}, "initial data load")
+
+	if v0.bs.dirtiness == 0 {
+		t.Errorf("expected dirtiness")
+	}
+
+	v0.bs.BSF().file.Close() // Inject a bad condition.
+
+	err = b0.Flush()
+	if err == nil {
+		t.Errorf("expected flush error")
+	}
+	if v0.bs.Stats().FlushErrors != 1 {
+		t.Errorf("expected 1 flusherrors")
+	}
+	if v0.bs.Stats().Flushes != 0 {
+		t.Errorf("expected 0 flushes")
+	}
+	if v0.bs.dirtiness == 0 {
+		t.Errorf("expected still be dirty")
+	}
+}
