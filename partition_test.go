@@ -54,3 +54,103 @@ func TestPartitionStoreEmptyVisit(t *testing.T) {
 		t.Errorf("expected only 1 change(s), got: %v", numVisits)
 	}
 }
+
+func TestCollRangeCopy(t *testing.T) {
+	s, _ := gkvlite.NewStore(nil)
+	x := s.SetCollection("x", nil)
+	testFillColl(x, []string{"b", "c", "d"})
+
+	d, _ := gkvlite.NewStore(nil)
+	dx := d.SetCollection("dx", nil)
+	err := collRangeCopy(x, dx, []byte("a"), []byte("a"), []byte("z"))
+	testCheckColl(t, dx, "a", []string{"b", "c", "d"}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("a"), []byte("a"), []byte("a"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("z"), []byte("z"), []byte("a"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("a"), []byte("a"), []byte("b"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("d"), []byte("z"), []byte("z"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("d"), []byte("d"), []byte("z"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{"d"}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("a"), []byte("c"), []byte("d"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{"c"}, nil)
+
+	d, _ = gkvlite.NewStore(nil)
+	dx = d.SetCollection("dx", nil)
+	err = collRangeCopy(x, dx, []byte("a"), []byte("b"), []byte("c"))
+	if err != nil {
+		t.Errorf("expected collRangeCopy to not have error")
+	}
+	testCheckColl(t, dx, "a", []string{"b"}, nil)
+}
+
+func testFillColl(x *gkvlite.Collection, arr []string) {
+	for i, s := range arr {
+		x.SetItem(&gkvlite.Item{
+			Key:      []byte(s),
+			Val:      []byte(s),
+			Priority: int32(i),
+		})
+	}
+}
+
+func testCheckColl(t *testing.T, x *gkvlite.Collection, start string, arr []string, cb func(i *gkvlite.Item)) {
+	n := 0
+	err := x.VisitItemsAscend([]byte(start), true, func(i *gkvlite.Item) bool {
+		if cb != nil {
+			cb(i)
+		}
+		if n >= len(arr) {
+			t.Errorf("visited more than expected: %v, saw: %v", len(arr), n+1)
+		}
+		if string(i.Key) != arr[n] {
+			t.Errorf("expected visit item: %v, saw: %v", arr[n], i)
+		}
+		n++
+		return true
+	})
+	if err != nil {
+		t.Errorf("expected no visit error, got: %v", err)
+	}
+	if n != len(arr) {
+		t.Errorf("expected # visit callbacks: %v, saw: %v", len(arr), n)
+	}
+}
