@@ -77,44 +77,24 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 		vbids = append(vbids, uint16(vbid))
 	}
 
-	// Copy any remaining (simple) collections (like COLL_VBMETA).
-	// And, swap the compacted file into use.
-	copyRemainingColls := func() error {
-		currSnapshot := bsf.store.Snapshot()
-		if currSnapshot == nil {
-			return fmt.Errorf("compact source snapshot failed: %v", bsf.path)
-		}
-		for _, collName := range collRest {
-			collCurr := currSnapshot.GetCollection(collName)
-			if collCurr == nil {
-				return fmt.Errorf("compact rest coll missing: %v, collName: %v",
-					bsf.path, collName)
-			}
-			collNext := compactStore.SetCollection(collName, nil)
-			if collCurr == nil {
-				return fmt.Errorf("compact rest dest missing: %v, collName: %v",
-					bsf.path, collName)
-			}
-			_, _, err = copyColl(collCurr, collNext, writeEvery)
-			if err != nil {
-				return err
-			}
-		}
-		if err = compactStore.Flush(); err != nil {
-			return err
-		}
-		compactFile.Close()
-		compactFile = nil
-		return s.compactSwapFile(bsf, compactPath)
-	}
-
 	// Copy any mutations that concurrently just came in.  We use
 	// recursion to naturally have a phase of pausing & copying,
 	// and then unpausing as the recursion unwinds.
 	var copyDeltas func(vbidIdx int) (err error)
 	copyDeltas = func(vbidIdx int) (err error) {
 		if vbidIdx >= len(vbids) {
-			return copyRemainingColls()
+			// Copy any remaining (simple) collections (lifke COLL_VBMETA).
+			// And, swap the compacted file into use.
+			if err = s.copyRemainingColls(bsf, collRest, compactStore,
+				writeEvery); err != nil {
+				return err
+			}
+			if err = compactStore.Flush(); err != nil {
+				return err
+			}
+			compactFile.Close()
+			compactFile = nil
+			return s.compactSwapFile(bsf, compactPath)
 		}
 		vbid := vbids[vbidIdx]
 		cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
@@ -338,4 +318,29 @@ func (s *bucketstore) copyVBucketColls(bsf *bucketstorefile,
 		return 0, nil, err
 	}
 	return uint16(vbid), lastChange, err
+}
+
+func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
+	collRest []string, compactStore *gkvlite.Store, writeEvery int) error {
+	currSnapshot := bsf.store.Snapshot()
+	if currSnapshot == nil {
+		return fmt.Errorf("compact source snapshot failed: %v", bsf.path)
+	}
+	for _, collName := range collRest {
+		collCurr := currSnapshot.GetCollection(collName)
+		if collCurr == nil {
+			return fmt.Errorf("compact rest coll missing: %v, collName: %v",
+				bsf.path, collName)
+		}
+		collNext := compactStore.SetCollection(collName, nil)
+		if collCurr == nil {
+			return fmt.Errorf("compact rest dest missing: %v, collName: %v",
+				bsf.path, collName)
+		}
+		_, _, err := copyColl(collCurr, collNext, writeEvery)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
