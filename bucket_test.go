@@ -348,10 +348,10 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 			CompactInterval: 10 * time.Second,
 		})
 
-	bs.sampleStats(time.Now()) // Should not crash.
-
-	b, _ := bs.New("mybucket", bs.settings)
-	bs.sampleStats(time.Now()) // Should be zeroes.
+	buck, _ := bs.New("mybucket", bs.settings)
+	b := buck.(Statish)
+	b.stopStats()
+	b.(*livebucket).sampleStats(time.Now()) // Should be zeroes.
 
 	s := b.GetLastStats()
 	if s == nil {
@@ -371,15 +371,15 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 		t.Errorf("Expected GetLastBucketStoreStats() to be zeroed, got: %#v", bss)
 	}
 
-	b.CreateVBucket(0)
-	b.CreateVBucket(11)
-	b.CreateVBucket(222)
+	buck.CreateVBucket(0)
+	buck.CreateVBucket(11)
+	buck.CreateVBucket(222)
 
-	b.SetVBState(0, VBActive)
-	b.SetVBState(11, VBActive)
-	b.SetVBState(222, VBActive)
+	buck.SetVBState(0, VBActive)
+	buck.SetVBState(11, VBActive)
+	buck.SetVBState(222, VBActive)
 
-	bs.sampleStats(time.Now()) // Should still be zeroes.
+	b.(*livebucket).sampleStats(time.Now()) // Should still be zeroes.
 
 	s = b.GetLastStats()
 	if s == nil {
@@ -418,6 +418,9 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 				level.Stats)
 		}
 	}
+
+	buck.Close()
+	b.stopStats() // Should not hang.
 }
 
 func TestBucketsStatsApply(t *testing.T) {

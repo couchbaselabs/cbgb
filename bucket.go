@@ -43,23 +43,27 @@ type Bucket interface {
 
 	GetBucketStore(int) *bucketstore
 
-	SampleStats(time.Time)
+	Auth([]byte) bool
+}
+
+// Interface for things that interact with stats.
+type Statish interface {
 	GetLastStats() *Stats
 	GetLastBucketStoreStats() *BucketStoreStats
 	GetAggStats() *AggStats
 	GetAggBucketStoreStats() *AggStats
 
-	Auth([]byte) bool
+	startStats(d time.Duration)
+	stopStats()
 }
 
 // Holder of buckets.
 type Buckets struct {
-	buckets    map[string]Bucket
-	dir        string // Directory where all buckets are stored.
-	lock       sync.Mutex
-	settings   *BucketSettings
-	statsch    chan *funreq
-	statticker <-chan time.Time
+	buckets  map[string]Bucket
+	dir      string // Directory where all buckets are stored.
+	lock     sync.Mutex
+	settings *BucketSettings
+	statsch  chan *funreq
 }
 
 type BucketSettings struct {
@@ -120,34 +124,19 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
 	}
 	buckets := &Buckets{
-		buckets:    map[string]Bucket{},
-		dir:        dirForBuckets,
-		settings:   settings.Copy(),
-		statsch:    make(chan *funreq),
-		statticker: time.Tick(time.Second),
+		buckets:  map[string]Bucket{},
+		dir:      dirForBuckets,
+		settings: settings.Copy(),
+		statsch:  make(chan *funreq),
 	}
 	go buckets.serviceStats()
 	return buckets, nil
 }
 
 func (b *Buckets) serviceStats() {
-	for {
-		select {
-		case r := <-b.statsch:
-			r.fun()
-			close(r.res)
-		case t := <-b.statticker:
-			b.sampleStats(t)
-		}
-	}
-}
-
-func (b *Buckets) sampleStats(t time.Time) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	for _, bucket := range b.buckets {
-		bucket.SampleStats(t)
+	for r := range b.statsch {
+		r.fun()
+		close(r.res)
 	}
 }
 
@@ -290,6 +279,7 @@ type livebucket struct {
 	lastStats            *Stats
 	lastBucketStoreStats *BucketStoreStats
 
+	stattickerch        chan *time.Ticker
 	aggStats            *AggStats
 	aggBucketStoreStats *AggStats
 }
@@ -321,6 +311,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		lastBucketStoreStats: &BucketStoreStats{},
 		aggStats:             aggStats,
 		aggBucketStoreStats:  aggBucketStoreStats,
+		stattickerch:         make(chan *time.Ticker),
 	}
 
 	for i, fileName := range fileNames {
@@ -336,6 +327,9 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		}
 		res.bucketstores[i] = bs
 	}
+
+	go res.runSamples()
+	res.startStats(time.Second)
 
 	return res, nil
 }
@@ -538,7 +532,7 @@ func (b *livebucket) GetLastBucketStoreStats() *BucketStoreStats {
 }
 
 // Call only during StatsApply/serviceStats().
-func (b *livebucket) SampleStats(t time.Time) {
+func (b *livebucket) sampleStats(t time.Time) {
 	currStats := AggregateStats(b, "")
 	diffStats := &Stats{}
 	diffStats.Add(currStats)
@@ -554,6 +548,48 @@ func (b *livebucket) SampleStats(t time.Time) {
 	diffBucketStoreStats.Time = t.Unix()
 	b.aggBucketStoreStats.addSample(diffBucketStoreStats)
 	b.lastBucketStoreStats = currBucketStoreStats
+}
+
+func (b *livebucket) runSamples() {
+	var ticker *time.Ticker
+	var timech <-chan time.Time
+	for {
+		select {
+		case t := <-timech: // Time for stats
+			b.sampleStats(t)
+		case <-b.availablech: // Bucket is shutting down
+			if ticker != nil {
+				ticker.Stop()
+			}
+			return
+		case c := <-b.stattickerch:
+			// We are receiving a new ticker.  If we
+			// already had one, shut it down.  If we
+			// receive one, set it to our channel.  This
+			// allows both starting and stopping stat
+			// collection in a fairly straightforward way.
+			if ticker != nil {
+				ticker.Stop()
+			}
+			ticker = c
+			timech = nil
+			if ticker != nil {
+				timech = ticker.C
+			}
+		}
+	}
+}
+
+// Start the stats at the given interval.
+func (b *livebucket) startStats(d time.Duration) {
+	b.stattickerch <- time.NewTicker(d)
+}
+
+func (b *livebucket) stopStats() {
+	select {
+	case b.stattickerch <- nil:
+	case <-b.availablech:
+	}
 }
 
 type vbucketChange struct {
