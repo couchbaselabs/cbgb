@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"testing"
 	"time"
 
@@ -268,6 +269,18 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 			t.Errorf("expected Flush (loop) to work, got: %v", err)
 		}
 	}
+
+	// Also exercise deletion codepaths.
+	r0.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+		Opcode:  gomemcached.DELETE,
+		VBucket: uint16(2),
+		Key:     []byte(strconv.Itoa(3)),
+	})
+	r0.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+		Opcode:  gomemcached.DELETE,
+		VBucket: uint16(2),
+		Key:     []byte(strconv.Itoa(4)),
+	})
 
 	testLoadInts(t, r0, 2, 5)
 
