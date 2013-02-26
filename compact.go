@@ -77,50 +77,8 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 		vbids = append(vbids, uint16(vbid))
 	}
 
-	// Copy any mutations that concurrently just came in.  We use
-	// recursion to naturally have a phase of pausing & copying,
-	// and then unpausing as the recursion unwinds.
-	var copyDeltas func(vbidIdx int) (err error)
-	copyDeltas = func(vbidIdx int) (err error) {
-		if vbidIdx >= len(vbids) {
-			// Copy any remaining (simple) collections (lifke COLL_VBMETA).
-			// And, swap the compacted file into use.
-			if err = s.copyRemainingColls(bsf, collRest, compactStore,
-				writeEvery); err != nil {
-				return err
-			}
-			if err = compactStore.Flush(); err != nil {
-				return err
-			}
-			compactFile.Close()
-			compactFile = nil
-			return s.compactSwapFile(bsf, compactPath)
-		}
-		vbid := vbids[vbidIdx]
-		cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
-		kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
-		ps := s.partitions[vbid]
-		if ps == nil {
-			return fmt.Errorf("compact missing parititon for vbid: %v", vbid)
-		}
-		ps.collsPauseSwap(func() (*gkvlite.Collection, *gkvlite.Collection) {
-			_, err = copyDelta(lastChanges[vbid].Key, cName, kName,
-				bsf.store.Snapshot(), compactStore, writeEvery)
-			if err != nil {
-				return s.coll(kName), s.coll(cName)
-			}
-			err = copyDeltas(vbidIdx + 1)
-			if err != nil {
-				return s.coll(kName), s.coll(cName)
-			}
-			// If it all succeeded, then we will provide new
-			// collections to be used as we unwind / unpause.
-			return s.coll(kName), s.coll(cName)
-		})
-		return err
-	}
-
-	return copyDeltas(0)
+	return s.copyDeltas(bsf, collRest, compactPath, compactFile, compactStore,
+		vbids, 0, lastChanges, writeEvery)
 }
 
 func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) error {
@@ -343,4 +301,60 @@ func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
 		}
 	}
 	return nil
+}
+
+// Copy any mutations that concurrently just came in.  We use
+// recursion to naturally have a phase of pausing & copying,
+// and then unpausing as the recursion unwinds.
+func (s *bucketstore) copyDeltas(bsf *bucketstorefile, collRest []string,
+	compactPath string, compactFile *os.File, compactStore *gkvlite.Store,
+	vbids []uint16, vbidIdx int, lastChanges map[uint16]*gkvlite.Item,
+	writeEvery int) (err error) {
+	// Workaround for go compiler/runtime limitation of "closure needs too
+	// many variables; runtime will reject it"
+	p := struct {
+		compactPath  string
+		compactFile  *os.File
+		compactStore *gkvlite.Store
+	}{compactPath, compactFile, compactStore}
+
+	if vbidIdx >= len(vbids) {
+		// Copy any remaining (simple) collections (lifke COLL_VBMETA).
+		if err = s.copyRemainingColls(bsf, collRest, compactStore, writeEvery); err != nil {
+			return err
+		}
+		if err = compactStore.Flush(); err != nil {
+			return err
+		}
+
+		// Before we unwind the recursion (which has everything
+		// paused), swap the compacted file into use.
+		compactFile.Close()
+		compactFile = nil
+		return s.compactSwapFile(bsf, compactPath)
+	}
+
+	vbid := vbids[vbidIdx]
+	cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
+	kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
+	ps := s.partitions[vbid]
+	if ps == nil {
+		return fmt.Errorf("compact missing parititon for vbid: %v", vbid)
+	}
+	ps.collsPauseSwap(func() (*gkvlite.Collection, *gkvlite.Collection) {
+		_, err = copyDelta(lastChanges[vbid].Key, cName, kName,
+			bsf.store.Snapshot(), p.compactStore, writeEvery)
+		if err != nil {
+			return s.coll(kName), s.coll(cName)
+		}
+		err = s.copyDeltas(bsf, collRest, p.compactPath, p.compactFile, p.compactStore,
+			vbids, vbidIdx+1, lastChanges, writeEvery)
+		if err != nil {
+			return s.coll(kName), s.coll(cName)
+		}
+		// If it all succeeded, then we will provide new
+		// collections to be used as we unwind / unpause.
+		return s.coll(kName), s.coll(cName)
+	})
+	return err
 }
