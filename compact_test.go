@@ -282,6 +282,9 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 		Key:     []byte(strconv.Itoa(4)),
 	})
 
+	b0.SetVBState(2, VBReplica)
+	b0.SetVBState(2, VBActive)
+
 	testLoadInts(t, r0, 2, 5)
 
 	vbid := uint16(2)
