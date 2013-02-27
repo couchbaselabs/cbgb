@@ -120,7 +120,17 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 	for vbid := uint16(0); vbid < uint16(cbgb.MAX_VBUCKETS); vbid++ {
 		vb := bucket.GetVBucket(vbid)
 		if vb != nil {
-			partitions[strconv.Itoa(int(vbid))] = vb.Meta()
+			vbm := vb.Meta()
+			if vbm != nil {
+				partitions[strconv.Itoa(int(vbm.Id))] = vbm
+			}
+		}
+	}
+	vb := bucket.GetDDocVBucket()
+	if vb != nil {
+		vbm := vb.Meta()
+		if vbm != nil {
+			partitions[strconv.Itoa(int(vbm.Id))] = vbm
 		}
 	}
 	jsonEncode(w, map[string]interface{}{

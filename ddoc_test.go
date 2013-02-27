@@ -24,6 +24,10 @@ func TestGetSetDDoc(t *testing.T) {
 
 	b, _ := bs.New("thebucket", bs.settings)
 
+	if b.GetDDocVBucket() == nil {
+		t.Errorf("expected to have a ddoc vbucket")
+	}
+
 	v, err := b.GetDDoc("hi")
 	if err != nil {
 		t.Errorf("expecting no ddoc get error for missing ddoc")
@@ -66,6 +70,9 @@ func TestGetSetDDoc(t *testing.T) {
 	b = b2.Get("thebucket")
 	if b == nil {
 		t.Errorf("expected the bucket")
+	}
+	if b.GetDDocVBucket() == nil {
+		t.Errorf("expected to have a ddoc vbucket")
 	}
 	v, err = b.GetDDoc("hi")
 	if err != nil {

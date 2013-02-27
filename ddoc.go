@@ -6,6 +6,10 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+func (b *livebucket) GetDDocVBucket() *vbucket {
+	return b.vbucketDDoc
+}
+
 func (b *livebucket) GetDDoc(ddocId string) ([]byte, error) {
 	res := b.vbucketDDoc.get([]byte(ddocId))
 	if res.Status == gomemcached.KEY_ENOENT {

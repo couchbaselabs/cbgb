@@ -48,6 +48,7 @@ type Bucket interface {
 
 	Statish
 
+	GetDDocVBucket() *vbucket
 	GetDDoc(ddocId string) ([]byte, error)
 	SetDDoc(ddocId string, body []byte) error
 }
