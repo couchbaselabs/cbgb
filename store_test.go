@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"bytes"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -10,6 +11,26 @@ import (
 
 	"github.com/dustin/gomemcached"
 )
+
+type brokenFile struct {
+	error
+}
+
+func (b brokenFile) ReadAt([]byte, int64) (int, error) {
+	return 0, b.error
+}
+
+func (b brokenFile) WriteAt([]byte, int64) (int, error) {
+	return 0, b.error
+}
+
+func (b brokenFile) Close() error {
+	return b.error
+}
+
+func (b brokenFile) Stat() (os.FileInfo, error) {
+	return nil, b.error
+}
 
 func testLoadInts(t *testing.T, rh *reqHandler, vbid int, numItems int) {
 	for i := 0; i < numItems; i++ {
@@ -674,7 +695,7 @@ func TestFlushError(t *testing.T) {
 		t.Errorf("expected dirtiness")
 	}
 
-	v0.bs.BSF().file.Close() // Inject a bad condition.
+	v0.bs.BSF().file = brokenFile{fmt.Errorf("I'm broken")}
 
 	err = b0.Flush()
 	if err == nil {
@@ -709,7 +730,7 @@ func TestStatError(t *testing.T) {
 	v0, _ := b0.CreateVBucket(2)
 	b0.SetVBState(2, VBActive)
 
-	v0.bs.BSF().file.Close() // Inject a bad condition.
+	v0.bs.BSF().file = brokenFile{fmt.Errorf("I'm broken")}
 
 	prevStats := v0.bs.Stats().Stats
 	prevStatErrors := v0.bs.Stats().StatErrors
@@ -764,7 +785,7 @@ func TestReadAtError(t *testing.T) {
 		t.Errorf("expected readerrors to be higher")
 	}
 
-	v0.bs.BSF().file.Close() // Inject a bad condition.
+	v0.bs.BSF().file = brokenFile{fmt.Errorf("I'm broken")}
 
 	prevReads = v0.bs.Stats().Reads
 	prevReadErrors = v0.bs.Stats().ReadErrors

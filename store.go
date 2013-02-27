@@ -13,6 +13,10 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
+// TODO: Make this configurable.  Note totally obvious since the
+// actual server is a different package.
+var fileService = NewFileService(32)
+
 type bucketstore struct {
 	bsf             unsafe.Pointer // *bucketstorefile
 	ch              chan *funreq
@@ -51,7 +55,7 @@ func newBucketStore(path string,
 	sleepInterval time.Duration,
 	compactInterval time.Duration,
 	purgeTimeout time.Duration) (*bucketstore, error) {
-	file, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0600)
+	file, err := fileService.OpenFile(path, os.O_RDWR|os.O_CREATE)
 	if err != nil {
 		return nil, err
 	}
@@ -214,7 +218,7 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 // bucketstorefile's, such as during compaction.
 type bucketstorefile struct {
 	path          string
-	file          *os.File
+	file          FileLike
 	store         *gkvlite.Store
 	ch            chan *funreq
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
@@ -288,7 +292,7 @@ func (bsf *bucketstorefile) Sleep() error {
 
 	atomic.AddUint64(&bsf.stats.Wakes, 1)
 
-	file, err := os.OpenFile(bsf.path, os.O_RDWR|os.O_CREATE, 0600)
+	file, err := fileService.OpenFile(bsf.path, os.O_RDWR|os.O_CREATE)
 	if err != nil {
 		// TODO: Log this siesta-wakeup / re-open error.
 		atomic.AddUint64(&bsf.stats.WakeErrors, 1)

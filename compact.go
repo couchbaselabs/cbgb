@@ -36,7 +36,7 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 	// TODO: Should cleanup all old, previous attempts to rescue disk space.
 	os.Remove(compactPath) // Clean up any previous attempts.
 
-	compactFile, err := os.OpenFile(compactPath, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0600)
+	compactFile, err := fileService.OpenFile(compactPath, os.O_RDWR|os.O_CREATE|os.O_EXCL)
 	if err != nil {
 		return err
 	}
@@ -94,7 +94,7 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 		return err
 	}
 
-	nextFile, err := os.OpenFile(nextPath, os.O_RDWR|os.O_CREATE, 0600)
+	nextFile, err := fileService.OpenFile(nextPath, os.O_RDWR|os.O_CREATE)
 	if err != nil {
 		return err
 	}
@@ -308,14 +308,14 @@ func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
 // recursion to naturally have a phase of pausing & copying,
 // and then unpausing as the recursion unwinds.
 func (s *bucketstore) copyBucketStoreDeltas(bsf *bucketstorefile, collRest []string,
-	compactPath string, compactFile *os.File, compactStore *gkvlite.Store,
+	compactPath string, compactFile FileLike, compactStore *gkvlite.Store,
 	vbids []uint16, vbidIdx int, lastChanges map[uint16]*gkvlite.Item,
 	writeEvery int) (err error) {
 	// Workaround for go compiler/runtime limitation of "closure needs too
 	// many variables; runtime will reject it"
 	p := struct {
 		compactPath  string
-		compactFile  *os.File
+		compactFile  FileLike
 		compactStore *gkvlite.Store
 	}{compactPath, compactFile, compactStore}
 
