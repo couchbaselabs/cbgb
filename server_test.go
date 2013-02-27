@@ -215,7 +215,7 @@ func TestSaslAuth(t *testing.T) {
 	}
 }
 
-func TestBucketGetItem(t *testing.T) {
+func TestBucketGetSetItem(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
@@ -255,13 +255,10 @@ func TestBucketGetItem(t *testing.T) {
 		t.Errorf("expected GetItem to fail on a missing key")
 	}
 
-	rh := reqHandler{currentBucket: b, buckets: nil}
-	rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
-		Opcode:  gomemcached.SET,
-		VBucket: 528,
-		Key:     key,
-		Body:    []byte("world"),
-	})
+	res = SetItem(b, key, []byte("world"), VBActive)
+	if res.Status != gomemcached.SUCCESS {
+		t.Errorf("expected SetItem to work, got: %v", res)
+	}
 
 	res = GetItem(b, key, VBActive)
 	if res == nil {

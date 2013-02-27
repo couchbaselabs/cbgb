@@ -164,3 +164,16 @@ func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
 		Key:     key,
 	})
 }
+
+func SetItem(b Bucket, key []byte, val []byte, vbs VBState) *gomemcached.MCResponse {
+	vb := GetVBucket(b, key, vbs)
+	if vb == nil {
+		return nil
+	}
+	return vbMutate(vb, nil, &gomemcached.MCRequest{
+		Opcode:  gomemcached.SET,
+		VBucket: vb.vbid,
+		Key:     key,
+		Body:    val,
+	})
+}
