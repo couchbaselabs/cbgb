@@ -26,7 +26,12 @@ type fileLike struct {
 
 // Open a FileLike thing that works within this FileService
 func (fs *FileService) OpenFile(path string, mode int) (FileLike, error) {
-	return &fileLike{fs, path, mode}, nil
+	rv := &fileLike{fs, path, mode}
+	err := fs.Do(rv.path, rv.mode, func(*os.File) error { return nil })
+	// Clear out bits that only make sense the first time
+	// you open something.
+	rv.mode = rv.mode &^ (os.O_EXCL | os.O_APPEND | os.O_TRUNC)
+	return rv, err
 }
 
 func (f *fileLike) Close() error {
@@ -55,9 +60,6 @@ func (f *fileLike) WriteAt(p []byte, off int64) (n int, err error) {
 	}
 
 	err = f.fs.Do(f.path, f.mode, func(file *os.File) error {
-		// Clear out bits that only make sense the first time
-		// you open something.
-		f.mode = f.mode &^ (os.O_EXCL | os.O_APPEND | os.O_TRUNC)
 		n, err = file.WriteAt(p, off)
 		return err
 	})
