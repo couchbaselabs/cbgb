@@ -11,6 +11,8 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+const MAX_STAT_SECONDS = 30
+
 var serverStart = time.Now()
 
 type statItem struct {
@@ -165,8 +167,16 @@ func doStats(b Bucket, w io.Writer, key string) error {
 	ch <- statItem{"uptime", time.Since(serverStart).String()}
 	ch <- statItem{"version", VERSION}
 
-	agg := AggregateStats(b, key)
-	agg.Send(ch)
+	statAge := b.statAge()
+	ch <- statItem{"stateAge", statAge.String()}
+
+	if statAge > time.Second*30 {
+		log.Printf("Stats are too old.  Starting them up.")
+		b.startStats(time.Second)
+	} else {
+		agg := AggregateStats(b, key)
+		agg.Send(ch)
+	}
 
 	close(ch)
 	return <-errs

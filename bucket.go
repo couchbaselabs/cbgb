@@ -62,6 +62,7 @@ type Statish interface {
 
 	startStats(d time.Duration)
 	stopStats()
+	statAge() time.Duration
 }
 
 // Holder of buckets.
@@ -286,6 +287,9 @@ type livebucket struct {
 	lastStats            *Stats
 	lastBucketStoreStats *BucketStoreStats
 
+	// Mark request for stat (returns when the last update was)
+	statreq chan chan time.Time
+	// Resettable timer of stat updates
 	stattickerch        chan *time.Ticker
 	aggStats            *AggStats
 	aggBucketStoreStats *AggStats
@@ -318,6 +322,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		lastBucketStoreStats: &BucketStoreStats{},
 		aggStats:             aggStats,
 		aggBucketStoreStats:  aggBucketStoreStats,
+		statreq:              make(chan chan time.Time),
 		stattickerch:         make(chan *time.Ticker),
 	}
 
@@ -336,7 +341,6 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 	}
 
 	go res.runSamples()
-	res.startStats(time.Second)
 
 	return res, nil
 }
@@ -560,15 +564,29 @@ func (b *livebucket) sampleStats(t time.Time) {
 func (b *livebucket) runSamples() {
 	var ticker *time.Ticker
 	var timech <-chan time.Time
+	quiesceTimer := time.NewTicker(time.Minute)
+	latestTick := time.Now()
+	reqs := 0
 	for {
 		select {
 		case t := <-timech: // Time for stats
+			latestTick = t
 			b.sampleStats(t)
 		case <-b.availablech: // Bucket is shutting down
 			if ticker != nil {
 				ticker.Stop()
 			}
 			return
+		case <-quiesceTimer.C:
+			if reqs == 0 && timech != nil {
+				log.Printf("Quiesceing bucket stats")
+				ticker.Stop()
+				timech = nil
+			}
+			reqs = 0
+		case ch := <-b.statreq:
+			reqs++
+			ch <- latestTick
 		case c := <-b.stattickerch:
 			// We are receiving a new ticker.  If we
 			// already had one, shut it down.  If we
@@ -583,6 +601,7 @@ func (b *livebucket) runSamples() {
 			if ticker != nil {
 				timech = ticker.C
 			}
+			reqs = 0
 		}
 	}
 }
@@ -597,6 +616,16 @@ func (b *livebucket) stopStats() {
 	case b.stattickerch <- nil:
 	case <-b.availablech:
 	}
+}
+
+func (b *livebucket) statAge() time.Duration {
+	ch := make(chan time.Time)
+	select {
+	case b.statreq <- ch:
+	case <-b.availablech:
+		return 0
+	}
+	return time.Since(<-ch)
 }
 
 func (b *livebucket) GetDDoc(ddocId string) ([]byte, error) {

@@ -350,7 +350,6 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 		})
 
 	b, _ := bs.New("mybucket", bs.settings)
-	b.stopStats()
 	b.(*livebucket).sampleStats(time.Now()) // Should be zeroes.
 
 	s := b.GetLastStats()
