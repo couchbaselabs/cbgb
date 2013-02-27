@@ -287,10 +287,7 @@ type livebucket struct {
 	lastStats            *Stats
 	lastBucketStoreStats *BucketStoreStats
 
-	// Mark request for stat (returns when the last update was)
-	statreq chan chan time.Time
-	// Resettable timer of stat updates
-	stattickerch        chan *time.Ticker
+	statticker          *qticker
 	aggStats            *AggStats
 	aggBucketStoreStats *AggStats
 }
@@ -312,8 +309,9 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		return &BucketStoreStats{Time: int64(time.Now().Unix())}
 	})
 
+	availablech := make(chan bool)
 	res := &livebucket{
-		availablech:          make(chan bool),
+		availablech:          availablech,
 		dir:                  dirForBucket,
 		settings:             settings,
 		bucketstores:         make(map[int]*bucketstore),
@@ -322,8 +320,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		lastBucketStoreStats: &BucketStoreStats{},
 		aggStats:             aggStats,
 		aggBucketStoreStats:  aggBucketStoreStats,
-		statreq:              make(chan chan time.Time),
-		stattickerch:         make(chan *time.Ticker),
+		statticker:           newQTicker(time.Minute, availablech),
 	}
 
 	for i, fileName := range fileNames {
@@ -562,70 +559,22 @@ func (b *livebucket) sampleStats(t time.Time) {
 }
 
 func (b *livebucket) runSamples() {
-	var ticker *time.Ticker
-	var timech <-chan time.Time
-	quiesceTimer := time.NewTicker(time.Minute)
-	latestTick := time.Now()
-	reqs := 0
-	for {
-		select {
-		case t := <-timech: // Time for stats
-			latestTick = t
-			b.sampleStats(t)
-		case <-b.availablech: // Bucket is shutting down
-			if ticker != nil {
-				ticker.Stop()
-			}
-			return
-		case <-quiesceTimer.C:
-			if reqs == 0 && timech != nil {
-				log.Printf("Quiesceing bucket stats")
-				ticker.Stop()
-				timech = nil
-			}
-			reqs = 0
-		case ch := <-b.statreq:
-			reqs++
-			ch <- latestTick
-		case c := <-b.stattickerch:
-			// We are receiving a new ticker.  If we
-			// already had one, shut it down.  If we
-			// receive one, set it to our channel.  This
-			// allows both starting and stopping stat
-			// collection in a fairly straightforward way.
-			if ticker != nil {
-				ticker.Stop()
-			}
-			ticker = c
-			timech = nil
-			if ticker != nil {
-				timech = ticker.C
-			}
-			reqs = 0
-		}
+	for t := range b.statticker.C {
+		b.sampleStats(t)
 	}
 }
 
 // Start the stats at the given interval.
 func (b *livebucket) startStats(d time.Duration) {
-	b.stattickerch <- time.NewTicker(d)
+	b.statticker.resumeTicker(d)
 }
 
 func (b *livebucket) stopStats() {
-	select {
-	case b.stattickerch <- nil:
-	case <-b.availablech:
-	}
+	b.statticker.pauseTicker()
 }
 
 func (b *livebucket) statAge() time.Duration {
-	ch := make(chan time.Time)
-	select {
-	case b.statreq <- ch:
-	case <-b.availablech:
-		return 0
-	}
-	return time.Since(<-ch)
+	return b.statticker.age()
 }
 
 func (b *livebucket) GetDDoc(ddocId string) ([]byte, error) {
