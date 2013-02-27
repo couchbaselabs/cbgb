@@ -17,7 +17,6 @@ import (
 	"unsafe"
 
 	"github.com/dustin/go-broadcast"
-	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -25,7 +24,7 @@ const (
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
 	STORES_PER_BUCKET   = 4 // The # of *.store files per bucket (ignoring compaction).
-	COLL_DDOC           = "ddoc"
+	VBID_DDOC           = uint16(0xffff)
 )
 
 type Bucket interface {
@@ -280,7 +279,8 @@ type livebucket struct {
 	availablech  chan bool
 	dir          string
 	settings     *BucketSettings
-	vbuckets     [MAX_VBUCKETS]unsafe.Pointer
+	vbuckets     [MAX_VBUCKETS]unsafe.Pointer // *vbucket
+	vbucketDDoc  *vbucket
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
 
@@ -337,6 +337,18 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		res.bucketstores[i] = bs
 	}
 
+	vbucketDDoc, err := newVBucket(res, VBID_DDOC, res.bucketstores[0])
+	if err != nil {
+		res.Close()
+		return nil, err
+	}
+	_, err = vbucketDDoc.SetVBState(VBActive, nil)
+	if err != nil {
+		res.Close()
+		return nil, err
+	}
+	res.vbucketDDoc = vbucketDDoc
+
 	go res.runSamples()
 
 	return res, nil
@@ -384,6 +396,7 @@ func (b *livebucket) Close() error {
 			vb.Close()
 		}
 	}
+	b.vbucketDDoc.Close()
 	for _, bs := range b.bucketstores {
 		bs.Close()
 	}
@@ -431,6 +444,9 @@ func (b *livebucket) Load() (err error) {
 			if err != nil {
 				return err
 			}
+			if vbid > 0x0000ffff {
+				return fmt.Errorf("load failed with vbid too big: %v", vbid)
+			}
 			vb, err := newVBucket(b, uint16(vbid), bs)
 			if err != nil {
 				return err
@@ -438,9 +454,18 @@ func (b *livebucket) Load() (err error) {
 			if err = vb.load(); err != nil {
 				return err
 			}
-			if !b.casVBucket(uint16(vbid), vb, nil) {
-				return errors.New(fmt.Sprintf("loading vbucket: %v,"+
-					" but it already exists", vbid))
+			if vbid < MAX_VBUCKETS {
+				if !b.casVBucket(uint16(vbid), vb, nil) {
+					return fmt.Errorf("loading vbucket: %v, but it already exists",
+						vbid)
+				}
+			} else if uint16(vbid) == VBID_DDOC {
+				if b.vbucketDDoc != nil {
+					b.vbucketDDoc.Close()
+				}
+				b.vbucketDDoc = vb
+			} else {
+				return fmt.Errorf("vbid out of range during load: %v", vbid)
 			}
 			// TODO: Need to poke observers with changed vbstate?
 		}
@@ -575,31 +600,6 @@ func (b *livebucket) stopStats() {
 
 func (b *livebucket) statAge() time.Duration {
 	return b.statticker.age()
-}
-
-func (b *livebucket) GetDDoc(ddocId string) ([]byte, error) {
-	return b.ddocColl().Get([]byte(ddocId))
-}
-
-func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
-	if err := b.ddocColl().Set([]byte(ddocId), body); err != nil {
-		return err
-	}
-	b.ddocBucketStore().dirty()
-	return nil
-}
-
-func (b *livebucket) ddocBucketStore() *bucketstore {
-	return b.bucketstores[0]
-}
-
-func (b *livebucket) ddocColl() *gkvlite.Collection {
-	store := b.ddocBucketStore().BSF().store
-	c := store.GetCollection(COLL_DDOC)
-	if c == nil {
-		c = store.SetCollection(COLL_DDOC, nil)
-	}
-	return c
 }
 
 type vbucketChange struct {

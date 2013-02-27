@@ -118,6 +118,9 @@ func (v *vbucket) Meta() *VBMeta {
 }
 
 func (v *vbucket) Close() error {
+	if v == nil {
+		return nil
+	}
 	// TODO: Can get panics if goroutines send to closed channels.
 	// Perhaps use atomic pointer CAS on channels as the way out?
 	close(v.ach)
