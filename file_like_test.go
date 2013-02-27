@@ -98,3 +98,41 @@ func TestFileLike(t *testing.T) {
 		t.Fatalf("Misread:  %q", s)
 	}
 }
+
+func TestFileLikeRW(t *testing.T) {
+	fn := ",file-like-thing"
+	defer os.Remove(fn)
+
+	fs := NewFileService(1)
+	defer fs.Close()
+	f, err := fs.OpenFile(fn, os.O_CREATE|os.O_RDWR|os.O_EXCL)
+	if err != nil {
+		t.Fatalf("Error opening file: %v", err)
+	}
+
+	buf := make([]byte, 4096)
+	copy(buf, []byte("a write"))
+
+	n, err := f.WriteAt(buf, 8192)
+	if err != nil {
+		t.Fatalf("Error writing: %v", err)
+	}
+	if n != 4096 {
+		t.Fatalf("Short write: %v", n)
+	}
+
+	buf[0] = 'x'
+
+	n, err = f.ReadAt(buf, 8192)
+	if err != nil {
+		t.Fatalf("Error reading data: %v", err)
+	}
+	if n != 4096 {
+		t.Fatalf("Short read: %v", n)
+	}
+
+	s := string(buf[:len("a write")])
+	if s != "a write" {
+		t.Fatalf("Misread:  %q", s)
+	}
+}

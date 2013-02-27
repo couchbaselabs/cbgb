@@ -44,7 +44,7 @@ func (f *fileLike) Stat() (os.FileInfo, error) {
 }
 
 func (f *fileLike) ReadAt(p []byte, off int64) (n int, err error) {
-	if f.mode&^(os.O_WRONLY) != 0 {
+	if f.mode&^os.O_WRONLY == os.O_WRONLY {
 		return 0, unReadable
 	}
 	err = f.fs.Do(f.path, f.mode, func(file *os.File) error {
