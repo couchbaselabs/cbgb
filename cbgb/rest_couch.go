@@ -14,18 +14,18 @@ import (
 func restCouch(r *mux.Router) {
 	dbr := r.PathPrefix("/{db}/").Subrouter()
 
-	dbr.Handle("/_design/{docid}",
+	dbr.Handle("/_design/{docId}",
 		http.HandlerFunc(couchDbGetDesignDoc)).Methods("GET", "HEAD")
-	dbr.Handle("/_design/{docid}",
+	dbr.Handle("/_design/{docId}",
 		http.HandlerFunc(couchDbPutDesignDoc)).Methods("PUT")
-	dbr.Handle("/_design/{docid}",
+	dbr.Handle("/_design/{docId}",
 		http.HandlerFunc(couchDbDelDesignDoc)).Methods("DELETE")
 
-	dbr.Handle("/{docid}",
+	dbr.Handle("/{docId}",
 		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD")
-	dbr.Handle("/{docid}",
+	dbr.Handle("/{docId}",
 		http.HandlerFunc(couchDbPutDoc)).Methods("PUT")
-	dbr.Handle("/{docid}",
+	dbr.Handle("/{docId}",
 		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE")
 }
 
@@ -115,9 +115,9 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 	if bucket == nil {
 		return vars, bucketName, bucket, ""
 	}
-	docId, ok := vars["docid"]
+	docId, ok := vars["docId"]
 	if !ok {
-		http.Error(w, "missing docid parameter", 400)
+		http.Error(w, "missing docId from path", 400)
 		return vars, bucketName, bucket, ""
 	}
 	return vars, bucketName, bucket, docId
