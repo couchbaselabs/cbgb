@@ -19,6 +19,15 @@ import (
 
 func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
+	restAPI(r, staticPath)
+	restCouchAPI(r)
+	r.Handle("/",
+		http.RedirectHandler("/_static/app.html", 302))
+	log.Printf("listening rest on: %v", rest)
+	log.Fatal(http.ListenAndServe(rest, r))
+}
+
+func restAPI(r *mux.Router, staticPath string) {
 	r.HandleFunc("/_api/buckets",
 		restGetBuckets).Methods("GET")
 	r.HandleFunc("/_api/buckets",
@@ -48,11 +57,6 @@ func restMain(rest string, staticPath string) {
 	r.PathPrefix("/_static/").Handler(
 		http.StripPrefix("/_static/",
 			http.FileServer(http.Dir(staticPath))))
-	restCouch(r)
-	r.Handle("/",
-		http.RedirectHandler("/_static/app.html", 302))
-	log.Printf("listening rest on: %v", rest)
-	log.Fatal(http.ListenAndServe(rest, r))
 }
 
 func restGetSettings(w http.ResponseWriter, r *http.Request) {

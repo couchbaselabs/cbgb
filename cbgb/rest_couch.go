@@ -11,8 +11,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func restCouch(r *mux.Router) {
+func restCouchAPI(r *mux.Router) *mux.Router {
 	dbr := r.PathPrefix("/{db}/").Subrouter()
+
+	dbr.Handle("/_design/{docId}/_view/{viewId}",
+		http.HandlerFunc(couchDbGetView)).Methods("GET")
 
 	dbr.Handle("/_design/{docId}",
 		http.HandlerFunc(couchDbGetDesignDoc)).Methods("GET", "HEAD")
@@ -27,6 +30,8 @@ func restCouch(r *mux.Router) {
 		http.HandlerFunc(couchDbPutDoc)).Methods("PUT")
 	dbr.Handle("/{docId}",
 		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE")
+
+	return dbr
 }
 
 func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
@@ -90,6 +95,19 @@ func couchDbPutDoc(w http.ResponseWriter, r *http.Request) {
 }
 
 func couchDbDelDoc(w http.ResponseWriter, r *http.Request) {
+	http.Error(w, "unimplemented", 501)
+}
+
+func couchDbGetView(w http.ResponseWriter, r *http.Request) {
+	vars, _, bucket, ddocId := checkDocId(w, r)
+	if bucket == nil || len(ddocId) <= 0 {
+		return
+	}
+	_, ok := vars["viewId"]
+	if !ok {
+		http.Error(w, "missing viewId from path", 400)
+		return
+	}
 	http.Error(w, "unimplemented", 501)
 }
 
