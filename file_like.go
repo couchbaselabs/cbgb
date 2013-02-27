@@ -19,13 +19,13 @@ type FileLike interface {
 }
 
 type fileLike struct {
-	fs   *fileService
+	fs   *FileService
 	path string
 	mode int
 }
 
-// Open a FileLike thing that works within this fileService
-func (fs *fileService) OpenFile(path string, mode int) (FileLike, error) {
+// Open a FileLike thing that works within this FileService
+func (fs *FileService) OpenFile(path string, mode int) (FileLike, error) {
 	return &fileLike{fs, path, mode}, nil
 }
 
