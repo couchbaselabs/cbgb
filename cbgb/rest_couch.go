@@ -1,7 +1,9 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 
 	"github.com/couchbaselabs/cbgb"
@@ -28,11 +30,41 @@ func restCouch(r *mux.Router) {
 }
 
 func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
+	_, _, bucket, ddocId := checkDocId(w, r)
+	if bucket == nil || len(ddocId) <= 0 {
+		return
+	}
+	body, err := bucket.GetDDoc(ddocId)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("getDDoc err: %v", err), 500)
+		return
+	}
+	if body == nil {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+	w.Write(body)
 }
 
 func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
+	_, _, bucket, ddocId := checkDocId(w, r)
+	if bucket == nil || len(ddocId) <= 0 {
+		return
+	}
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Bad Request, err: %v", err), 400)
+		return
+	}
+	var into map[string]interface{}
+	if err = json.Unmarshal(body, &into); err != nil {
+		http.Error(w, fmt.Sprintf("Bad Request, err: %v", err), 400)
+		return
+	}
+	if err = bucket.SetDDoc(ddocId, body); err != nil {
+		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
+		return
+	}
 }
 
 func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {

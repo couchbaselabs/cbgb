@@ -17,6 +17,7 @@ import (
 	"unsafe"
 
 	"github.com/dustin/go-broadcast"
+	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -24,6 +25,7 @@ const (
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
 	STORES_PER_BUCKET   = 4 // The # of *.store files per bucket (ignoring compaction).
+	COLL_DDOC           = "ddoc"
 )
 
 type Bucket interface {
@@ -46,6 +48,9 @@ type Bucket interface {
 	Auth([]byte) bool
 
 	Statish
+
+	GetDDoc(ddocId string) ([]byte, error)
+	SetDDoc(ddocId string, body []byte) error
 }
 
 // Interface for things that interact with stats.
@@ -592,6 +597,31 @@ func (b *livebucket) stopStats() {
 	case b.stattickerch <- nil:
 	case <-b.availablech:
 	}
+}
+
+func (b *livebucket) GetDDoc(ddocId string) ([]byte, error) {
+	return b.ddocColl().Get([]byte(ddocId))
+}
+
+func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
+	if err := b.ddocColl().Set([]byte(ddocId), body); err != nil {
+		return err
+	}
+	b.ddocBucketStore().dirty()
+	return nil
+}
+
+func (b *livebucket) ddocBucketStore() *bucketstore {
+	return b.bucketstores[0]
+}
+
+func (b *livebucket) ddocColl() *gkvlite.Collection {
+	store := b.ddocBucketStore().BSF().store
+	c := store.GetCollection(COLL_DDOC)
+	if c == nil {
+		c = store.SetCollection(COLL_DDOC, nil)
+	}
+	return c
 }
 
 type vbucketChange struct {
