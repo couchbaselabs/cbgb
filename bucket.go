@@ -391,6 +391,7 @@ func (b *livebucket) Close() error {
 	for _, bs := range b.bucketstores {
 		bs.Close()
 	}
+	b.observer.Close()
 	return nil
 }
 
