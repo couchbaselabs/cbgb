@@ -44,6 +44,7 @@ type Bucket interface {
 	DestroyVBucket(vbid uint16) (destroyed bool)
 	GetVBucket(vbid uint16) *vbucket
 	SetVBState(vbid uint16, newState VBState) error
+
 	GetBucketStore(int) *bucketstore
 
 	Auth([]byte) bool
