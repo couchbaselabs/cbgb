@@ -182,9 +182,9 @@ func TestCompactionNumFiles(t *testing.T) {
 		}
 	}
 	preCompactFiles, err := ioutil.ReadDir(testBucketDir)
-	if len(preCompactFiles) != 5 {
-		t.Errorf("expected 5 preCompactFiles, got: %v",
-			len(preCompactFiles))
+	if len(preCompactFiles) != STORES_PER_BUCKET+1 {
+		t.Errorf("expected %v preCompactFiles, got: %v",
+			STORES_PER_BUCKET+1, len(preCompactFiles))
 	}
 	if err = b0.Compact(); err != nil {
 		t.Errorf("expected Compact to work, got: %v", err)
@@ -194,9 +194,9 @@ func TestCompactionNumFiles(t *testing.T) {
 	}
 	b0.Close()
 	postCompactFiles, err := ioutil.ReadDir(testBucketDir)
-	if len(preCompactFiles) != 5 {
-		t.Errorf("expected 9 postCompactFiles, got: %v",
-			len(postCompactFiles))
+	if len(postCompactFiles) != STORES_PER_BUCKET+2 {
+		t.Errorf("expected %v postCompactFiles, got: %v",
+			STORES_PER_BUCKET+2, len(postCompactFiles))
 	}
 }
 

@@ -364,9 +364,10 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if bss == nil {
 		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
 	}
-	bssInitial := &BucketStoreStats{Stats: 4}
+	bssInitial := &BucketStoreStats{Stats: STORES_PER_BUCKET}
 	if !bss.Equal(bssInitial) {
-		t.Errorf("Expected GetLastBucketStoreStats() to be zeroed, got: %#v", bss)
+		t.Errorf("Expected GetLastBucketStoreStats() to be %#v, got: %#v",
+			bssInitial, bss)
 	}
 
 	b.CreateVBucket(0)
@@ -391,8 +392,9 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if bss == nil {
 		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
 	}
-	if !bss.Equal(&BucketStoreStats{Stats: 4}) {
-		t.Errorf("Expected GetLastBucketStoreStats() to be zeroed, got: %#v", bss)
+	if !bss.Equal(bssInitial) {
+		t.Errorf("Expected GetLastBucketStoreStats() to be %#v, got: %#v",
+			bssInitial, bss)
 	}
 
 	as := b.GetAggStats()

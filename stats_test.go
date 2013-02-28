@@ -157,7 +157,7 @@ func TestNewBucketAggregateStats(t *testing.T) {
 	if bss.Flushes != 0 {
 		t.Errorf("Unexpected bss value: %v", bss)
 	}
-	bssExp := &BucketStoreStats{Stats: 4}
+	bssExp := &BucketStoreStats{Stats: STORES_PER_BUCKET}
 	if !bss.Equal(bssExp) {
 		t.Errorf("Expected new bss to equal %#v, got: %#v",
 			bssExp, bss)
