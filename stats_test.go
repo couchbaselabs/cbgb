@@ -140,8 +140,8 @@ func TestNewBucketAggregateStats(t *testing.T) {
 
 	b0, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Millisecond,
-			SleepInterval:   time.Millisecond,
+			FlushInterval:   10 * time.Millisecond,
+			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,
 		})
 
