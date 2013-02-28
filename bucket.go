@@ -282,7 +282,7 @@ type livebucket struct {
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
 
-	statticker *qticker
+	statticker *periodically
 	stats      BucketStats
 	statLock   sync.Mutex
 }
@@ -318,7 +318,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 			AggBucketStore: aggBucketStoreStats,
 		},
 	}
-	res.statticker = newQApply(time.Minute, mkSampleStats(res), availablech)
+	res.statticker = newPeriodic(time.Minute, mkSampleStats(res), availablech)
 
 	for i, fileName := range fileNames {
 		p := path.Join(dirForBucket, fileName)

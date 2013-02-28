@@ -1,17 +1,29 @@
 package cbgb
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
 
-func TestQuiescingTickerDefault(t *testing.T) {
+func periodicNoop(time.Time) {}
+
+func TestPeriodicallyNil(t *testing.T) {
+	stopch := make(chan bool)
+	defer close(stopch)
+	qt := newPeriodic(5*time.Millisecond, nil, stopch)
+	if qt != nil {
+		t.Fatalf("Expected nil for nil, got %v", qt)
+	}
+}
+
+func TestPeriodicallyDefault(t *testing.T) {
 	t.Parallel()
 
 	stopch := make(chan bool)
 	defer close(stopch)
 
-	qt := newQTicker(5*time.Millisecond, stopch)
+	qt := newPeriodic(5*time.Millisecond, periodicNoop, stopch)
 	time.Sleep(5 * time.Millisecond)
 
 	age := qt.age()
@@ -20,13 +32,13 @@ func TestQuiescingTickerDefault(t *testing.T) {
 	}
 }
 
-func TestQuiescingTickerActive(t *testing.T) {
+func TestPeriodicallyActive(t *testing.T) {
 	t.Parallel()
 
 	stopch := make(chan bool)
 	defer close(stopch)
 
-	qt := newQTicker(5*time.Millisecond, stopch)
+	qt := newPeriodic(5*time.Millisecond, periodicNoop, stopch)
 
 	qt.resumeTicker(time.Millisecond)
 	time.Sleep(5 * time.Millisecond)
@@ -37,13 +49,33 @@ func TestQuiescingTickerActive(t *testing.T) {
 	}
 }
 
-func TestQuiescingTickerDeactivated(t *testing.T) {
+func TestPeriodicallyApplyActive(t *testing.T) {
 	t.Parallel()
 
 	stopch := make(chan bool)
 	defer close(stopch)
 
-	qt := newQTicker(5*time.Millisecond, stopch)
+	var ran int32
+
+	qt := newPeriodic(5*time.Millisecond, func(time.Time) {
+		atomic.AddInt32(&ran, 1)
+	}, stopch)
+
+	qt.resumeTicker(time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
+
+	if atomic.LoadInt32(&ran) < 2 {
+		t.Fatalf("Expected a few runs, got %v", ran)
+	}
+}
+
+func TestPeriodicallyDeactivated(t *testing.T) {
+	t.Parallel()
+
+	stopch := make(chan bool)
+	defer close(stopch)
+
+	qt := newPeriodic(5*time.Millisecond, periodicNoop, stopch)
 
 	qt.resumeTicker(time.Millisecond)
 	time.Sleep(2 * time.Millisecond)
@@ -56,13 +88,13 @@ func TestQuiescingTickerDeactivated(t *testing.T) {
 	}
 }
 
-func TestQuiescingTickerQuiescing(t *testing.T) {
+func TestPeriodicallyQuiescing(t *testing.T) {
 	t.Parallel()
 
 	stopch := make(chan bool)
 	defer close(stopch)
 
-	qt := newQTicker(5*time.Millisecond, stopch)
+	qt := newPeriodic(5*time.Millisecond, periodicNoop, stopch)
 
 	qt.resumeTicker(time.Millisecond)
 	time.Sleep(10 * time.Millisecond)
@@ -73,12 +105,12 @@ func TestQuiescingTickerQuiescing(t *testing.T) {
 	}
 }
 
-func TestQuiescingClosedAge(t *testing.T) {
+func TestPeriodicClosedAge(t *testing.T) {
 	t.Parallel()
 
 	stopch := make(chan bool)
 
-	qt := newQTicker(5*time.Millisecond, stopch)
+	qt := newPeriodic(5*time.Millisecond, periodicNoop, stopch)
 	qt.resumeTicker(time.Millisecond)
 
 	close(stopch)
