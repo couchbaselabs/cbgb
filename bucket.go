@@ -27,6 +27,7 @@ const (
 )
 
 var everySecond = newPeriodically(time.Second, 10)
+var everyFiveMinutes = newPeriodically(time.Second*15, 10)
 
 type Bucket interface {
 	Available() bool
@@ -226,6 +227,8 @@ type BucketStats struct {
 	Agg            *AggStats
 	AggBucketStore *AggStats
 	LatestUpdate   time.Time
+
+	requests int
 }
 
 func (b BucketStats) Copy() BucketStats {
@@ -235,6 +238,7 @@ func (b BucketStats) Copy() BucketStats {
 		&(*b.Agg),
 		&(*b.AggBucketStore),
 		b.LatestUpdate,
+		0,
 	}
 }
 
@@ -511,6 +515,8 @@ func (b *livebucket) GetStats() BucketStats {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
 
+	b.stats.requests++
+
 	return b.stats.Copy()
 }
 
@@ -536,10 +542,30 @@ func (b *livebucket) sampleStats(t time.Time) {
 	b.stats.LatestUpdate = t
 }
 
-func mkSampleStats(b *livebucket) func(time.Time) bool {
+func (b *livebucket) shouldContinueDoingStats(t time.Time) bool {
+	b.statLock.Lock()
+	defer b.statLock.Unlock()
+
+	o := b.stats.requests
+	b.stats.requests = 0
+
+	return o > 0
+}
+
+func (b *livebucket) mkSampleStats() func(time.Time) bool {
 	return func(t time.Time) bool {
 		b.sampleStats(t)
 		return true
+	}
+}
+
+func (b *livebucket) mkQuiesceStats() func(time.Time) bool {
+	return func(t time.Time) bool {
+		keepGoing := b.shouldContinueDoingStats(t)
+		if !keepGoing {
+			everySecond.Unregister(b.availablech)
+		}
+		return keepGoing
 	}
 }
 
@@ -548,7 +574,8 @@ func (b *livebucket) StartStats(d time.Duration) {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
 
-	everySecond.Register(b.availablech, mkSampleStats(b))
+	everySecond.Register(b.availablech, b.mkSampleStats())
+	everyFiveMinutes.Register(b.availablech, b.mkQuiesceStats())
 }
 
 func (b *livebucket) StopStats() {
@@ -556,11 +583,14 @@ func (b *livebucket) StopStats() {
 	defer b.statLock.Unlock()
 
 	everySecond.Unregister(b.availablech)
+	everyFiveMinutes.Unregister(b.availablech)
 }
 
 func (b *livebucket) StatAge() time.Duration {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
+
+	b.stats.requests++
 
 	return time.Since(b.stats.LatestUpdate)
 }
