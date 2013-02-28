@@ -18,8 +18,9 @@ func TestMutationLogger(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	b.CreateVBucket(0)
@@ -52,8 +53,9 @@ func TestMutationInvalid(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	b.CreateVBucket(0)
@@ -92,8 +94,9 @@ func TestListener(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBuckets(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
@@ -124,8 +127,9 @@ func TestListenerFail(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBuckets(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()

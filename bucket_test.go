@@ -10,8 +10,9 @@ import (
 func TestBucketRegistry(t *testing.T) {
 	_, err := NewBuckets("./this-is-not-a-directory",
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err == nil {
@@ -21,8 +22,9 @@ func TestBucketRegistry(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	bs, err := NewBuckets(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer bs.CloseAll()
@@ -89,8 +91,9 @@ func TestBucketNotifications(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -148,8 +151,9 @@ func TestNewBucket(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -180,8 +184,9 @@ func TestCreateDestroyVBucket(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -259,8 +264,9 @@ func TestBucketClose(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -298,8 +304,9 @@ func TestBucketsLoadNames(t *testing.T) {
 	defer os.RemoveAll(d)
 	b, err := NewBuckets(d,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
@@ -346,6 +353,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	bs, _ := NewBuckets(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -431,6 +439,7 @@ func TestMissingBucketsDir(t *testing.T) {
 	d, err := ioutil.TempDir("./tmp", "test")
 	b, err := NewBuckets(d,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -459,6 +468,7 @@ func TestBucketsLoad(t *testing.T) {
 	defer os.RemoveAll(d)
 	b, err := NewBuckets(d,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -478,6 +488,7 @@ func TestBucketsLoad(t *testing.T) {
 
 	b2, err := NewBuckets(d,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -506,6 +517,7 @@ func TestSetVBState(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,

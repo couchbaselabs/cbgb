@@ -52,6 +52,7 @@ func main() {
 	var err error
 
 	bucketSettings = &cbgb.BucketSettings{
+		NumPartitions:   *defaultPartitions,
 		FlushInterval:   *flushInterval,
 		SleepInterval:   *sleepInterval,
 		CompactInterval: *compactInterval,
@@ -69,7 +70,7 @@ func main() {
 	}
 
 	if buckets.Get(*defaultBucketName) == nil {
-		_, err := createBucket(*defaultBucketName, bucketSettings, *defaultPartitions)
+		_, err := createBucket(*defaultBucketName, bucketSettings)
 		if err != nil {
 			log.Fatalf("Error creating default bucket: %s, err: %v",
 				*defaultBucketName, err)
@@ -89,10 +90,10 @@ func main() {
 	select {}
 }
 
-func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings,
-	numPartitions int) (cbgb.Bucket, error) {
+func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
+	cbgb.Bucket, error) {
 	log.Printf("creating bucket: %v, numPartitions: %v",
-		bucketName, numPartitions)
+		bucketName, bucketSettings.NumPartitions)
 
 	bucket, err := buckets.New(bucketName, bucketSettings)
 	if err != nil {
@@ -101,7 +102,7 @@ func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings,
 
 	bucket.Subscribe(mutationLogCh)
 
-	for vbid := 0; vbid < numPartitions; vbid++ {
+	for vbid := 0; vbid < bucketSettings.NumPartitions; vbid++ {
 		bucket.CreateVBucket(uint16(vbid))
 		bucket.SetVBState(uint16(vbid), cbgb.VBActive)
 	}

@@ -19,6 +19,7 @@ func testSetupBuckets(t *testing.T) (string, *cbgb.Buckets) {
 	d, _ := ioutil.TempDir("./tmp", "test")
 	var err error
 	bucketSettings = &cbgb.BucketSettings{
+		NumPartitions:   cbgb.MAX_VBUCKETS,
 		FlushInterval:   10 * time.Second,
 		SleepInterval:   10 * time.Second,
 		CompactInterval: 10 * time.Second,

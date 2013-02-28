@@ -106,7 +106,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 		bSettings.PasswordHash = bucketPassword
 	}
 
-	_, err = createBucket(bucketName, bSettings, *defaultPartitions)
+	_, err = createBucket(bucketName, bSettings)
 	if err != nil {
 		http.Error(w,
 			fmt.Sprintf("create bucket error; name: %v, err: %v", bucketName, err), 500)
@@ -121,7 +121,8 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	partitions := map[string]interface{}{}
-	for vbid := uint16(0); vbid < uint16(cbgb.MAX_VBUCKETS); vbid++ {
+	settings := bucket.GetBucketSettings()
+	for vbid := uint16(0); vbid < uint16(settings.NumPartitions); vbid++ {
 		vb := bucket.GetVBucket(vbid)
 		if vb != nil {
 			vbm := vb.Meta()

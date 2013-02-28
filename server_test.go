@@ -77,6 +77,7 @@ func TestSaslRejectedAuth(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -138,6 +139,7 @@ func TestSaslAuth(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -148,12 +150,14 @@ func TestSaslAuth(t *testing.T) {
 	}
 	nopwd, err := buckets.New("nopwd",
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	haspwd, err := buckets.New("haspwd",
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			PasswordHash:    "a nice password",
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
@@ -222,6 +226,7 @@ func TestBucketGetSetItem(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,

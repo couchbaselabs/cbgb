@@ -17,6 +17,7 @@ func TestCompaction(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -100,6 +101,7 @@ func TestCompaction(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   11 * time.Second,
 			SleepInterval:   11 * time.Second,
 			CompactInterval: 11 * time.Second,
@@ -122,6 +124,7 @@ func TestEmptyFileCompaction(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -163,6 +166,7 @@ func TestCompactionNumFiles(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -206,6 +210,7 @@ func TestCompactionPurgeTimeout(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   time.Millisecond,
 			CompactInterval: 10 * time.Second,
@@ -251,6 +256,7 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,
@@ -307,6 +313,7 @@ func TestCopyDeltaBadNames(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,
@@ -326,6 +333,7 @@ func TestBadCompactSwapFile(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,

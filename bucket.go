@@ -38,11 +38,12 @@ type Bucket interface {
 	Subscribe(ch chan<- interface{})
 	Unsubscribe(ch chan<- interface{})
 
+	GetBucketSettings() *BucketSettings
+
 	CreateVBucket(vbid uint16) (*vbucket, error)
 	DestroyVBucket(vbid uint16) (destroyed bool)
 	GetVBucket(vbid uint16) *vbucket
 	SetVBState(vbid uint16, newState VBState) error
-
 	GetBucketStore(int) *bucketstore
 
 	Auth([]byte) bool
@@ -306,13 +307,17 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 	return res, nil
 }
 
+func (b *livebucket) GetBucketSettings() *BucketSettings {
+	return b.settings
+}
+
 // Subscribe to bucket events.
 //
 // Note that this is retroactive -- it will send existing states.
 func (b *livebucket) Subscribe(ch chan<- interface{}) {
 	b.observer.Register(ch)
 	go func() {
-		for i := uint16(0); i < MAX_VBUCKETS; i++ {
+		for i := uint16(0); i < uint16(b.settings.NumPartitions); i++ {
 			c := vbucketChange{bucket: b,
 				vbid:     i,
 				oldState: VBDead,
@@ -410,7 +415,7 @@ func (b *livebucket) Load() (err error) {
 			if err = vb.load(); err != nil {
 				return err
 			}
-			if vbid < MAX_VBUCKETS {
+			if vbid < b.settings.NumPartitions {
 				if !b.casVBucket(uint16(vbid), vb, nil) {
 					return fmt.Errorf("loading vbucket: %v, but it already exists",
 						vbid)
@@ -421,7 +426,8 @@ func (b *livebucket) Load() (err error) {
 				}
 				b.vbucketDDoc = vb
 			} else {
-				return fmt.Errorf("vbid out of range during load: %v", vbid)
+				return fmt.Errorf("vbid out of range during load: %v versus %v",
+					vbid, b.settings.NumPartitions)
 			}
 			// TODO: Need to poke observers with changed vbstate?
 		}

@@ -96,8 +96,9 @@ func TestBasicOps(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -167,8 +168,9 @@ func TestMutationBroadcast(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -259,8 +261,9 @@ func TestCASDelete(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -305,8 +308,9 @@ func TestCASSet(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -354,8 +358,9 @@ func TestVersionCommand(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -381,8 +386,9 @@ func TestVersionNOOP(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -404,8 +410,9 @@ func TestQuit(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -427,8 +434,9 @@ func TestTapSetup(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -467,8 +475,9 @@ func TestTapChanges(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -561,8 +570,9 @@ func TestStats(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -590,8 +600,9 @@ func TestInvalidCommand(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -614,8 +625,9 @@ func BenchmarkInvalidCommand(b *testing.B) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -640,8 +652,9 @@ func TestParallelMutations(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -701,8 +714,9 @@ func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -733,8 +747,9 @@ func BenchmarkDispatch(b *testing.B) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -766,8 +781,9 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -868,8 +884,9 @@ func TestChangesSinceTransmitError(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1058,8 +1075,9 @@ func TestVBMeta(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1101,8 +1119,9 @@ func TestMinMaxRange(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1193,8 +1212,9 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1283,8 +1303,9 @@ func TestSlowClient(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1379,8 +1400,9 @@ func TestStoreFrontBack(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1538,8 +1560,9 @@ func TestMutationOps(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
@@ -1676,6 +1699,7 @@ func TestArithOps(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,

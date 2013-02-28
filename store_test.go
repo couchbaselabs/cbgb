@@ -86,8 +86,9 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -111,8 +112,9 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -133,8 +135,9 @@ func TestSaveLoadBasic(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -159,8 +162,9 @@ func TestSaveLoadBasic(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -181,8 +185,9 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -209,8 +214,9 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -305,8 +311,9 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b2, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -373,8 +380,9 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -411,8 +419,9 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	for _, test := range tests {
 		b1, err := NewBucket(testBucketDir,
 			&BucketSettings{
-				FlushInterval:   time.Second,
-				SleepInterval:   time.Second,
+				NumPartitions:   MAX_VBUCKETS,
+				FlushInterval:   10 * time.Second,
+				SleepInterval:   10 * time.Second,
 				CompactInterval: 10 * time.Second,
 			})
 		if err != nil {
@@ -458,6 +467,7 @@ func testFlushCloseInterval(t *testing.T,
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   flushInterval,
 			SleepInterval:   sleepInterval,
 			CompactInterval: 10 * time.Second,
@@ -483,8 +493,9 @@ func testFlushCloseInterval(t *testing.T,
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -504,8 +515,9 @@ func TestSleepInterval(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Millisecond,
-			SleepInterval:   time.Millisecond,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Millisecond,
+			SleepInterval:   10 * time.Millisecond,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -536,6 +548,7 @@ func TestSleepInterval(t *testing.T) {
 	testWithFlushInterval := func(flushInterval time.Duration) {
 		b1, err := NewBucket(testBucketDir,
 			&BucketSettings{
+				NumPartitions:   MAX_VBUCKETS,
 				FlushInterval:   flushInterval,
 				SleepInterval:   time.Millisecond,
 				CompactInterval: 10 * time.Second,
@@ -675,6 +688,7 @@ func TestFlushError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -718,8 +732,9 @@ func TestStatError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
@@ -756,6 +771,7 @@ func TestReadAtError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
+			NumPartitions:   MAX_VBUCKETS,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,

@@ -18,8 +18,9 @@ func TestSplitRange(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			FlushInterval:   time.Second,
-			SleepInterval:   time.Second,
+			NumPartitions:   MAX_VBUCKETS,
+			FlushInterval:   10 * time.Second,
+			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()

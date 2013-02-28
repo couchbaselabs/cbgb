@@ -83,7 +83,8 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || len(docId) <= 0 {
 		return
 	}
-	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive, *defaultPartitions)
+	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive,
+		bucket.GetBucketSettings().NumPartitions)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		http.Error(w, "Not Found", 404)
 		return
