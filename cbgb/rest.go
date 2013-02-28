@@ -251,6 +251,7 @@ func restGetRuntime(w http.ResponseWriter, r *http.Request) {
 		"os":        runtime.GOOS,
 		"numCPU":    runtime.NumCPU(),
 		"go": map[string]interface{}{
+			"GOMAXPROCS":     runtime.GOMAXPROCS(0),
 			"GOROOT":         runtime.GOROOT(),
 			"version":        runtime.Version(),
 			"numGoroutine":   runtime.NumGoroutine(),
