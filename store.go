@@ -51,11 +51,7 @@ type BucketStoreStats struct {
 	WriteBytes uint64 `json:"writeBytes"`
 }
 
-func newBucketStore(path string,
-	flushInterval time.Duration,
-	sleepInterval time.Duration,
-	compactInterval time.Duration,
-	purgeTimeout time.Duration) (*bucketstore, error) {
+func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) {
 	file, err := fileService.OpenFile(path, os.O_RDWR|os.O_CREATE)
 	if err != nil {
 		return nil, err
@@ -66,7 +62,7 @@ func newBucketStore(path string,
 		file:          file,
 		endch:         make(chan bool),
 		ch:            make(chan *funreq),
-		sleepInterval: sleepInterval,
+		sleepInterval: settings.SleepInterval,
 		sleepPurge:    time.Duration(0),
 		insomnia:      false,
 		stats:         &BucketStoreStats{},
@@ -84,9 +80,9 @@ func newBucketStore(path string,
 		bsf:             unsafe.Pointer(bsf),
 		endch:           make(chan bool),
 		ch:              make(chan *funreq),
-		flushInterval:   flushInterval,
-		compactInterval: compactInterval,
-		purgeTimeout:    purgeTimeout,
+		flushInterval:   settings.FlushInterval,
+		compactInterval: settings.CompactInterval,
+		purgeTimeout:    settings.PurgeTimeout,
 		partitions:      make(map[uint16]*partitionstore),
 		stats:           bsf.stats,
 	}

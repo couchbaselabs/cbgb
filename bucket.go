@@ -322,11 +322,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 
 	for i, fileName := range fileNames {
 		p := path.Join(dirForBucket, fileName)
-		bs, err := newBucketStore(p,
-			settings.FlushInterval,
-			settings.SleepInterval,
-			settings.CompactInterval,
-			settings.PurgeTimeout)
+		bs, err := newBucketStore(p, *settings)
 		if err != nil {
 			res.Close()
 			return nil, err
