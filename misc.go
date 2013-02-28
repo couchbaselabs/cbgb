@@ -20,13 +20,6 @@ type funreq struct {
 	res chan bool
 }
 
-func funservice(ch chan *funreq) {
-	for r := range ch {
-		r.fun()
-		close(r.res)
-	}
-}
-
 type transmissible interface {
 	Transmit(io.Writer) error
 }

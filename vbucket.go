@@ -10,6 +10,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"sync"
 	"sync/atomic"
 	"unsafe"
 
@@ -46,8 +47,8 @@ type vbucket struct {
 	meta     unsafe.Pointer // *VBMeta
 	bs       *bucketstore
 	ps       *partitionstore
-	ach      chan *funreq // To access top-level vbucket fields & stats.
-	mch      chan *funreq // To mutate the keys/changes collections.
+	alock    sync.Mutex // To access top-level vbucket fields & stats.
+	mlock    sync.Mutex // To mutate the keys/changes collections.
 	stats    Stats
 	observer broadcast.Broadcaster
 }
@@ -102,13 +103,8 @@ func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 		meta:     unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
 		bs:       bs,
 		ps:       bs.getPartitionStore(vbid),
-		ach:      make(chan *funreq),
-		mch:      make(chan *funreq),
 		observer: broadcast.NewBroadcaster(observerBroadcastMax),
 	}
-
-	go funservice(rv.ach)
-	go funservice(rv.mch)
 
 	return rv, nil
 }
@@ -121,10 +117,6 @@ func (v *vbucket) Close() error {
 	if v == nil {
 		return nil
 	}
-	// TODO: Can get panics if goroutines send to closed channels.
-	// Perhaps use atomic pointer CAS on channels as the way out?
-	close(v.ach)
-	close(v.mch)
 	return v.observer.Close()
 }
 
@@ -150,15 +142,15 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 }
 
 func (v *vbucket) Apply(fun func()) {
-	req := &funreq{fun: fun, res: make(chan bool)}
-	v.ach <- req
-	<-req.res
+	v.alock.Lock()
+	defer v.alock.Unlock()
+	fun()
 }
 
 func (v *vbucket) Mutate(fun func()) {
-	req := &funreq{fun: fun, res: make(chan bool)}
-	v.mch <- req
-	<-req.res
+	v.mlock.Lock()
+	defer v.mlock.Unlock()
+	fun()
 }
 
 func (v *vbucket) GetVBState() (res VBState) {
