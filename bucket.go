@@ -27,7 +27,7 @@ const (
 )
 
 var everySecond = newPeriodically(time.Second, 10)
-var everyFiveMinutes = newPeriodically(time.Second*15, 10)
+var everyFiveMinutes = newPeriodically(time.Minute*5, 10)
 
 type Bucket interface {
 	Available() bool
