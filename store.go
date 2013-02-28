@@ -144,9 +144,9 @@ func (s *bucketstore) Close() {
 	s.apply(func() {
 		select {
 		case <-s.endch:
+		default:
 			close(s.endch)
 			s.BSF().Close()
-		default:
 		}
 	})
 }

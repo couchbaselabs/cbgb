@@ -102,6 +102,7 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 	nextBSF := &bucketstorefile{
 		path:          nextPath,
 		file:          nextFile,
+		endch:         make(chan bool),
 		ch:            make(chan *funreq),
 		sleepInterval: bsf.sleepInterval,
 		stats:         bsf.stats,
