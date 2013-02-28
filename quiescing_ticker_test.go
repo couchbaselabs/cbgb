@@ -1,6 +1,7 @@
 package cbgb
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -43,21 +44,16 @@ func TestQuiescingTickerApplyActive(t *testing.T) {
 	stopch := make(chan bool)
 	defer close(stopch)
 
-	var ran int
+	var ran int32
 
 	qt := newQApply(5*time.Millisecond, func(time.Time) {
-		ran++
+		atomic.AddInt32(&ran, 1)
 	}, stopch)
 
 	qt.resumeTicker(time.Millisecond)
-	time.Sleep(5 * time.Millisecond)
+	time.Sleep(10 * time.Millisecond)
 
-	age := qt.age()
-	if age > 3*time.Millisecond {
-		t.Fatalf("Ticker seems to not be updating: %v", age)
-	}
-
-	if ran < 3 {
+	if atomic.LoadInt32(&ran) < 2 {
 		t.Fatalf("Expected a few runs, got %v", ran)
 	}
 }
