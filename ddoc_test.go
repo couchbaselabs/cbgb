@@ -21,6 +21,7 @@ func TestGetSetDDoc(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer bs.CloseAll()
 
 	b, _ := bs.New("thebucket", bs.settings)
 
@@ -60,6 +61,7 @@ func TestGetSetDDoc(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b2.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}

@@ -81,6 +81,7 @@ func TestSaslRejectedAuth(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer buckets.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
@@ -141,6 +142,7 @@ func TestSaslAuth(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer buckets.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}

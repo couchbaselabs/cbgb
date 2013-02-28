@@ -25,6 +25,8 @@ func TestBucketRegistry(t *testing.T) {
 			SleepInterval:   time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer bs.CloseAll()
+
 	if err != nil {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
@@ -300,6 +302,7 @@ func TestBucketsLoadNames(t *testing.T) {
 			SleepInterval:   time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
@@ -347,6 +350,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer bs.CloseAll()
 
 	b, _ := bs.New("mybucket", bs.settings)
 	b.(*livebucket).sampleStats(time.Now()) // Should be zeroes.
@@ -431,6 +435,7 @@ func TestMissingBucketsDir(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b.CloseAll()
 	names, err := b.LoadNames()
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
@@ -458,6 +463,7 @@ func TestBucketsLoad(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
@@ -476,6 +482,7 @@ func TestBucketsLoad(t *testing.T) {
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b2.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}

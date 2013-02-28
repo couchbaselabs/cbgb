@@ -96,6 +96,7 @@ func TestListener(t *testing.T) {
 			SleepInterval:   time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b.CloseAll()
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}
@@ -127,6 +128,7 @@ func TestListenerFail(t *testing.T) {
 			SleepInterval:   time.Second,
 			CompactInterval: 10 * time.Second,
 		})
+	defer b.CloseAll()
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}

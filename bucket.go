@@ -213,6 +213,18 @@ func (b *Buckets) Close(name string, purgeFiles bool) {
 	}
 }
 
+func (b *Buckets) CloseAll() {
+	if b == nil {
+		return
+	}
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	for _, bucket := range b.buckets {
+		bucket.Close()
+	}
+}
+
 func (b *Buckets) Path(name string) string {
 	return path.Join(b.dir, name+BUCKET_DIR_SUFFIX)
 }
@@ -380,6 +392,9 @@ func (b *livebucket) Available() bool {
 }
 
 func (b *livebucket) Close() error {
+	if !b.Available() {
+		return nil
+	}
 	close(b.availablech)
 	for vbid, _ := range b.vbuckets {
 		if vbp := atomic.LoadPointer(&b.vbuckets[vbid]); vbp != nil {
