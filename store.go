@@ -246,6 +246,7 @@ func (bsf *bucketstorefile) service() {
 			return
 		case r, ok := <-bsf.ch:
 			if !ok {
+				bsf.end()
 				return
 			}
 			r.fun()
@@ -253,6 +254,7 @@ func (bsf *bucketstorefile) service() {
 		case <-time.After(bsf.sleepInterval):
 			// TODO: Check for dirtiness before we sleep?
 			if !bsf.insomnia && bsf.Sleep() != nil {
+				bsf.end()
 				return
 			}
 		}
@@ -267,12 +269,23 @@ func (bsf *bucketstorefile) apply(fun func()) {
 
 func (bsf *bucketstorefile) Close() {
 	bsf.apply(func() {
-		select {
-		case <-bsf.endch:
-		default:
-			close(bsf.endch)
-		}
+		bsf.end()
 	})
+}
+
+func (bsf *bucketstorefile) end() {
+	if !bsf.isEnded() {
+		close(bsf.endch)
+	}
+}
+
+func (bsf *bucketstorefile) isEnded() bool {
+	select {
+	case <-bsf.endch:
+		return true
+	default:
+	}
+	return false
 }
 
 func (bsf *bucketstorefile) Sleep() error {
@@ -288,24 +301,28 @@ func (bsf *bucketstorefile) Sleep() error {
 	if bsf.sleepPurge > time.Duration(0) {
 		select {
 		case <-bsf.endch:
-			return nil
+			os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
+			return fmt.Errorf("ended while sleeping to purge: %v", bsf.path)
 		case r, ok = <-bsf.ch:
 			if !ok {
+				bsf.end()
 				os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
-				return nil
+				return fmt.Errorf("closed while sleeping to purge: %v", bsf.path)
 			}
+			// Reach here if we need to wake up from sleeping.
 		case <-time.After(bsf.sleepPurge):
-			close(bsf.ch)
+			bsf.end()
 			os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
-			return nil
+			return fmt.Errorf("purged after sleeping: %v", bsf.path)
 		}
 	} else {
 		select {
 		case <-bsf.endch:
-			return nil
+			return fmt.Errorf("ended while sleeping: %v", bsf.path)
 		case r, ok = <-bsf.ch:
 			if !ok {
-				return nil
+				bsf.end()
+				return fmt.Errorf("closed while sleeping: %v", bsf.path)
 			}
 		}
 	}
@@ -316,7 +333,7 @@ func (bsf *bucketstorefile) Sleep() error {
 	if err != nil {
 		// TODO: Log this siesta-wakeup / re-open error.
 		atomic.AddUint64(&bsf.stats.WakeErrors, 1)
-		bsf.Close()
+		bsf.end()
 		return err
 	}
 	bsf.file = file
