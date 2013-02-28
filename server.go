@@ -140,20 +140,21 @@ func StartServer(addr string, buckets *Buckets, defaultBucketName string) (net.L
 	return ls, nil
 }
 
-func GetVBucketForKey(b Bucket, key []byte) *vbucket {
-	return b.GetVBucket(VBucketIdForKey(key, MAX_VBUCKETS))
+func GetVBucketForKey(b Bucket, key []byte, numVBuckets int) *vbucket {
+	return b.GetVBucket(VBucketIdForKey(key, numVBuckets))
 }
 
-func GetVBucket(b Bucket, key []byte, vbs VBState) *vbucket {
-	vb := GetVBucketForKey(b, key)
+func GetVBucket(b Bucket, key []byte, vbs VBState, numVBuckets int) *vbucket {
+	vb := GetVBucketForKey(b, key, numVBuckets)
 	if vb == nil || vb.GetVBState() != vbs {
 		return nil
 	}
 	return vb
 }
 
-func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
-	vb := GetVBucket(b, key, vbs)
+func GetItem(b Bucket, key []byte, vbs VBState,
+	numVBuckets int) *gomemcached.MCResponse {
+	vb := GetVBucket(b, key, vbs, numVBuckets)
 	if vb == nil {
 		return nil
 	}
@@ -165,8 +166,9 @@ func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
 	})
 }
 
-func SetItem(b Bucket, key []byte, val []byte, vbs VBState) *gomemcached.MCResponse {
-	vb := GetVBucket(b, key, vbs)
+func SetItem(b Bucket, key []byte, val []byte, vbs VBState,
+	numVBuckets int) *gomemcached.MCResponse {
+	vb := GetVBucket(b, key, vbs, numVBuckets)
 	if vb == nil {
 		return nil
 	}

@@ -759,3 +759,9 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcach
 
 	return res
 }
+
+func (v *vbucket) Visit(start []byte, visitor func(key []byte, data []byte) bool) error {
+	return v.ps.visitItems(start, true, func(i *item) bool {
+		return visitor(i.key, i.data)
+	})
+}

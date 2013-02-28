@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"sort"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/walrus"
@@ -82,7 +83,7 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || len(docId) <= 0 {
 		return
 	}
-	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive)
+	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive, *defaultPartitions)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		http.Error(w, "Not Found", 404)
 		return
@@ -105,7 +106,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	viewId, ok := vars["viewId"]
-	if !ok {
+	if !ok || len(viewId) <= 0 {
 		http.Error(w, "missing viewId from path", 400)
 		return
 	}
@@ -123,12 +124,54 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "could not unmarshal design doc", 500)
 		return
 	}
-	_, ok = ddoc.Views[viewId]
+	view, ok := ddoc.Views[viewId]
 	if !ok {
 		http.Error(w, "view not found", 404)
 		return
 	}
-	http.Error(w, "unimplemented", 501)
+	if len(view.Map) <= 0 {
+		http.Error(w, "view map function missing", 400)
+		return
+	}
+	mf, err := walrus.NewJSMapFunction(view.Map)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
+		return
+	}
+	vr := cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
+	for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
+		vb := bucket.GetVBucket(uint16(vbid))
+		if vb != nil {
+			var errVisit error
+			err = vb.Visit(nil, func(key []byte, data []byte) bool {
+				docId := string(key)
+				var emits []walrus.ViewRow
+				emits, errVisit = mf.CallFunction(string(data), docId)
+				if errVisit != nil {
+					return false
+				}
+				for _, emit := range emits {
+					vr.Rows = append(vr.Rows, &cbgb.ViewRow{
+						Id:    docId,
+						Key:   emit.Key,
+						Value: emit.Value,
+					})
+				}
+				return true
+			})
+			if err != nil {
+				http.Error(w, fmt.Sprintf("view visit error: %v",
+					err), 400)
+			}
+			if errVisit != nil {
+				http.Error(w, fmt.Sprintf("view visit function error: %v",
+					errVisit), 400)
+			}
+		}
+	}
+	sort.Sort(vr.Rows)
+	vr.TotalRows = len(vr.Rows)
+	jsonEncode(w, vr)
 }
 
 func checkDb(w http.ResponseWriter, r *http.Request) (

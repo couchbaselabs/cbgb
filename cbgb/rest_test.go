@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
@@ -71,7 +72,12 @@ func TestRestAPIBuckets(t *testing.T) {
 }
 
 func TestCouchDocGet(t *testing.T) {
-	d, _, bucket := testSetupDefaultBucket(t, uint16(528)) // "hello" hash is 528.
+	dp := *defaultPartitions
+	defer func() { *defaultPartitions = dp }()
+	*defaultPartitions = 1024
+
+	// "hello" hash is 528 with 1024 vbuckets.
+	d, _, bucket := testSetupDefaultBucket(t, uint16(528))
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 
@@ -83,7 +89,8 @@ func TestCouchDocGet(t *testing.T) {
 			rr, rr.Body.String())
 	}
 
-	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"), cbgb.VBActive)
+	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"),
+		cbgb.VBActive, 1024)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
@@ -98,7 +105,7 @@ func TestCouchDocGet(t *testing.T) {
 }
 
 func TestCouchViewBasic(t *testing.T) {
-	d, _, bucket := testSetupDefaultBucket(t, uint16(528)) // "hello" hash is 528.
+	d, _, bucket := testSetupDefaultBucket(t, uint16(0))
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 
@@ -114,7 +121,7 @@ func TestCouchViewBasic(t *testing.T) {
 		"_id":"_design/d0",
 		"language": "javascript",
 		"views": {
-			"all": {
+			"v0": {
 				"map": "function(doc) { emit(doc.amount, null) }"
 			}
 		}
@@ -134,23 +141,32 @@ func TestCouchViewBasic(t *testing.T) {
 	}
 
 	var res *gomemcached.MCResponse
+	nitems := 0
 
-	res = cbgb.SetItem(bucket, []byte("hello"), []byte(`{"amount": 1}`), cbgb.VBActive)
+	res = cbgb.SetItem(bucket, []byte("a"), []byte(`{"amount": 1}`),
+		cbgb.VBActive, 1)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	res = cbgb.SetItem(bucket, []byte("hello"), []byte(`{"amount": 3}`), cbgb.VBActive)
+	nitems++
+	res = cbgb.SetItem(bucket, []byte("b"), []byte(`{"amount": 3}`),
+		cbgb.VBActive, 1)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	res = cbgb.SetItem(bucket, []byte("hello"), []byte(`{"amount": 4}`), cbgb.VBActive)
+	nitems++
+	res = cbgb.SetItem(bucket, []byte("c"), []byte(`{"amount": 4}`),
+		cbgb.VBActive, 1)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	res = cbgb.SetItem(bucket, []byte("hello"), []byte(`{"amount": 2}`), cbgb.VBActive)
+	nitems++
+	res = cbgb.SetItem(bucket, []byte("d"), []byte(`{"amount": 2}`),
+		cbgb.VBActive, 1)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
+	nitems++
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
@@ -168,5 +184,33 @@ func TestCouchViewBasic(t *testing.T) {
 	if rr.Code != 404 {
 		t.Errorf("expected req to 404, got: %#v, %v",
 			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd := &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	if dd.TotalRows != nitems {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			nitems, dd.TotalRows, dd, rr.Body.String())
+	}
+	k := []string{"a", "d", "b", "c"}
+	a := []int{1, 2, 3, 4}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+		if a[i] != int(row.Key.(float64)) {
+			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
 	}
 }
