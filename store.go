@@ -141,14 +141,12 @@ func (s *bucketstore) apply(fun func()) {
 }
 
 func (s *bucketstore) Close() {
-	s.apply(func() {
-		select {
-		case <-s.endch:
-		default:
-			close(s.endch)
-			s.BSF().Close()
-		}
-	})
+	select {
+	case <-s.endch:
+	default:
+		close(s.endch)
+		s.BSF().Close()
+	}
 }
 
 func (s *bucketstore) Stats() *BucketStoreStats {
@@ -270,13 +268,11 @@ func (bsf *bucketstorefile) apply(fun func()) {
 }
 
 func (bsf *bucketstorefile) Close() {
-	bsf.apply(func() {
-		select {
-		case <-bsf.endch:
-		default:
-			close(bsf.endch)
-		}
-	})
+	select {
+	case <-bsf.endch:
+	default:
+		close(bsf.endch)
+	}
 }
 
 func (bsf *bucketstorefile) Sleep() error {
