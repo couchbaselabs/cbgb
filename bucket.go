@@ -317,8 +317,8 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 			Agg:            aggStats,
 			AggBucketStore: aggBucketStoreStats,
 		},
-		statticker: newQTicker(time.Minute, availablech),
 	}
+	res.statticker = newQApply(time.Minute, mkSampleStats(res), availablech)
 
 	for i, fileName := range fileNames {
 		p := path.Join(dirForBucket, fileName)
@@ -345,8 +345,6 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		return nil, err
 	}
 	res.vbucketDDoc = vbucketDDoc
-
-	go res.runSamples()
 
 	return res, nil
 }
@@ -569,8 +567,8 @@ func (b *livebucket) sampleStats(t time.Time) {
 	b.stats.BucketStore = currBucketStoreStats
 }
 
-func (b *livebucket) runSamples() {
-	for t := range b.statticker.C {
+func mkSampleStats(b *livebucket) func(time.Time) {
+	return func(t time.Time) {
 		b.sampleStats(t)
 	}
 }

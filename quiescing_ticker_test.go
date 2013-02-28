@@ -37,6 +37,31 @@ func TestQuiescingTickerActive(t *testing.T) {
 	}
 }
 
+func TestQuiescingTickerApplyActive(t *testing.T) {
+	t.Parallel()
+
+	stopch := make(chan bool)
+	defer close(stopch)
+
+	var ran int
+
+	qt := newQApply(5*time.Millisecond, func(time.Time) {
+		ran++
+	}, stopch)
+
+	qt.resumeTicker(time.Millisecond)
+	time.Sleep(5 * time.Millisecond)
+
+	age := qt.age()
+	if age > 3*time.Millisecond {
+		t.Fatalf("Ticker seems to not be updating: %v", age)
+	}
+
+	if ran < 3 {
+		t.Fatalf("Expected a few runs, got %v", ran)
+	}
+}
+
 func TestQuiescingTickerDeactivated(t *testing.T) {
 	t.Parallel()
 

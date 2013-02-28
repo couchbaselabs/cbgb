@@ -13,6 +13,8 @@ type qticker struct {
 	lastch   chan chan time.Time
 	quiescer *time.Ticker
 
+	f func(time.Time)
+
 	// This channel produces ticks.
 	C chan time.Time
 	// Anything sent on this channel shuts us down (including close)
@@ -42,6 +44,23 @@ func newQTicker(quiescePeriod time.Duration,
 	return rv
 }
 
+func newQApply(quiescePeriod time.Duration, f func(time.Time),
+	stopChan <-chan bool) *qticker {
+
+	rv := &qticker{
+		f:        f,
+		ctl:      make(chan *time.Ticker),
+		quiescer: time.NewTicker(quiescePeriod),
+		lastch:   make(chan chan time.Time),
+		C:        make(chan time.Time, 1),
+		StopChan: stopChan,
+	}
+
+	go rv.run()
+
+	return rv
+}
+
 func (q *qticker) run() {
 	defer q.quiescer.Stop()
 	defer close(q.C)
@@ -57,6 +76,9 @@ func (q *qticker) run() {
 			select {
 			case q.C <- t:
 			default:
+			}
+			if q.f != nil {
+				q.f(t)
 			}
 		case <-q.StopChan: // Shutdown requested
 			if ticker != nil {
