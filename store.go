@@ -19,6 +19,7 @@ var fileService = NewFileService(32)
 
 type bucketstore struct {
 	bsf             unsafe.Pointer // *bucketstorefile
+	endch           chan bool
 	ch              chan *funreq
 	dirtiness       int64
 	flushInterval   time.Duration // Time between checking whether to flush.
@@ -63,6 +64,7 @@ func newBucketStore(path string,
 	bsf := &bucketstorefile{
 		path:          path,
 		file:          file,
+		endch:         make(chan bool),
 		ch:            make(chan *funreq),
 		sleepInterval: sleepInterval,
 		sleepPurge:    time.Duration(0),
@@ -80,6 +82,7 @@ func newBucketStore(path string,
 
 	res := &bucketstore{
 		bsf:             unsafe.Pointer(bsf),
+		endch:           make(chan bool),
 		ch:              make(chan *funreq),
 		flushInterval:   flushInterval,
 		compactInterval: compactInterval,
@@ -108,6 +111,8 @@ func (s *bucketstore) service() {
 
 	for {
 		select {
+		case <-s.endch:
+			return
 		case r, ok := <-s.ch:
 			if !ok {
 				return
@@ -137,8 +142,12 @@ func (s *bucketstore) apply(fun func()) {
 
 func (s *bucketstore) Close() {
 	s.apply(func() {
-		close(s.ch)
-		s.BSF().Close()
+		select {
+		case <-s.endch:
+			close(s.endch)
+			s.BSF().Close()
+		default:
+		}
 	})
 }
 
@@ -220,6 +229,7 @@ type bucketstorefile struct {
 	path          string
 	file          FileLike
 	store         *gkvlite.Store
+	endch         chan bool
 	ch            chan *funreq
 	sleepInterval time.Duration // Time until we sleep, closing file until next request.
 	sleepPurge    time.Duration // When >0, purge file after sleeping + this duration.
@@ -236,6 +246,8 @@ func (bsf *bucketstorefile) service() {
 
 	for {
 		select {
+		case <-bsf.endch:
+			return
 		case r, ok := <-bsf.ch:
 			if !ok {
 				return
@@ -258,7 +270,13 @@ func (bsf *bucketstorefile) apply(fun func()) {
 }
 
 func (bsf *bucketstorefile) Close() {
-	close(bsf.ch)
+	bsf.apply(func() {
+		select {
+		case <-bsf.endch:
+		default:
+			close(bsf.endch)
+		}
+	})
 }
 
 func (bsf *bucketstorefile) Sleep() error {
@@ -273,6 +291,8 @@ func (bsf *bucketstorefile) Sleep() error {
 
 	if bsf.sleepPurge > time.Duration(0) {
 		select {
+		case <-bsf.endch:
+			return nil
 		case r, ok = <-bsf.ch:
 			if !ok {
 				os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
@@ -284,9 +304,13 @@ func (bsf *bucketstorefile) Sleep() error {
 			return nil
 		}
 	} else {
-		r, ok = <-bsf.ch
-		if !ok {
+		select {
+		case <-bsf.endch:
 			return nil
+		case r, ok = <-bsf.ch:
+			if !ok {
+				return nil
+			}
 		}
 	}
 
