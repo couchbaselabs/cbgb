@@ -178,18 +178,24 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	buckets.StatsApply(func() {
-		jsonEncode(w, map[string]interface{}{
-			"totals": map[string]interface{}{
-				"bucketStats":      bucket.GetLastStats(),
-				"bucketStoreStats": bucket.GetLastBucketStoreStats(),
-			},
-			"diffs": map[string]interface{}{
-				"bucketStats":      bucket.GetAggStats(),
-				"bucketStoreStats": bucket.GetAggBucketStoreStats(),
-			},
-			"levels": cbgb.AggStatsLevels,
-		})
+	age := bucket.StatAge()
+	if age > time.Second*30 {
+		bucket.StartStats(time.Second)
+		// Go ahead and let this delay slightly to catch up
+		// the stats.
+		time.Sleep(time.Millisecond * 2100)
+	}
+	st := bucket.GetStats()
+	jsonEncode(w, map[string]interface{}{
+		"totals": map[string]interface{}{
+			"bucketStats":      st.Current,
+			"bucketStoreStats": st.BucketStore,
+		},
+		"diffs": map[string]interface{}{
+			"bucketStats":      st.Agg,
+			"bucketStoreStats": st.AggBucketStore,
+		},
+		"levels": cbgb.AggStatsLevels,
 	})
 }
 

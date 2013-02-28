@@ -351,18 +351,18 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	b, _ := bs.New("mybucket", bs.settings)
 	b.(*livebucket).sampleStats(time.Now()) // Should be zeroes.
 
-	s := b.GetLastStats()
-	if s == nil {
-		t.Errorf("Expected GetLastStats() to be non-nil")
+	s := b.GetStats()
+	if s.Current == nil {
+		t.Errorf("Expected stats.current to be non-nil")
 	}
 	sInitial := &Stats{}
-	if !s.Equal(sInitial) {
-		t.Errorf("Expected GetLastStats() to be zeroed, got: %#v", s)
+	if !s.Current.Equal(sInitial) {
+		t.Errorf("Expected initial to be zeroed, got: %#v", s)
 	}
 
-	bss := b.GetLastBucketStoreStats()
+	bss := s.BucketStore
 	if bss == nil {
-		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
+		t.Errorf("Expected stats.bucketStore to be non-nil")
 	}
 	bssInitial := &BucketStoreStats{Stats: STORES_PER_BUCKET}
 	if !bss.Equal(bssInitial) {
@@ -380,26 +380,26 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 
 	b.(*livebucket).sampleStats(time.Now()) // Should still be zeroes.
 
-	s = b.GetLastStats()
-	if s == nil {
-		t.Errorf("Expected GetLastStats() to be non-nil")
+	s = b.GetStats()
+	if s.Current == nil {
+		t.Errorf("Expected current stats to be non-nil")
 	}
-	if !s.Equal(&Stats{}) {
-		t.Errorf("Expected GetLastStats() to be zeroed, got: %#v", s)
+	if !s.Current.Equal(&Stats{}) {
+		t.Errorf("Expected initial stats to be zeroed, got: %#v", s)
 	}
 
-	bss = b.GetLastBucketStoreStats()
+	bss = s.BucketStore
 	if bss == nil {
-		t.Errorf("Expected GetLastBucketStoreStats() to be non-nil")
+		t.Errorf("Expected bucket store stats to be non-nil")
 	}
 	if !bss.Equal(bssInitial) {
-		t.Errorf("Expected GetLastBucketStoreStats() to be %#v, got: %#v",
+		t.Errorf("Expected bucket store stats to be %#v, got: %#v",
 			bssInitial, bss)
 	}
 
-	as := b.GetAggStats()
+	as := s.Agg
 	if as == nil {
-		t.Errorf("Expected GetAggStats() to be non-nil")
+		t.Errorf("Expected agg stats to be non-nil")
 	}
 	for _, level := range as.Levels {
 		if level.Stats != nil && !level.Stats.(*Stats).Equal(sInitial) {
@@ -408,7 +408,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 		}
 	}
 
-	abss := b.GetAggBucketStoreStats()
+	abss := s.AggBucketStore
 	if abss == nil {
 		t.Errorf("Expected GetAggBucketStoreStats() to be non-nil")
 	}
@@ -420,22 +420,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	}
 
 	b.Close()
-	b.stopStats() // Should not hang.
-}
-
-func TestBucketsStatsApply(t *testing.T) {
-	d, err := ioutil.TempDir("./tmp", "test")
-	if err != nil {
-		t.Fatalf("Expected TempDir to work, got: %v", err)
-	}
-	defer os.RemoveAll(d)
-	bs, err := NewBuckets(d,
-		&BucketSettings{
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
-		})
-	bs.StatsApply(func() {}) // Not much of a test, but it should not crash.
+	b.StopStats() // Should not hang.
 }
 
 func TestMissingBucketsDir(t *testing.T) {

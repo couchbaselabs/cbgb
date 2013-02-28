@@ -167,12 +167,12 @@ func doStats(b Bucket, w io.Writer, key string) error {
 	ch <- statItem{"uptime", time.Since(serverStart).String()}
 	ch <- statItem{"version", VERSION}
 
-	statAge := b.statAge()
+	statAge := b.StatAge()
 	ch <- statItem{"stateAge", statAge.String()}
 
 	if statAge > time.Second*30 {
 		log.Printf("Stats are too old.  Starting them up.")
-		b.startStats(time.Second)
+		b.StartStats(time.Second)
 	} else {
 		agg := AggregateStats(b, key)
 		agg.Send(ch)

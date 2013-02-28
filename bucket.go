@@ -55,14 +55,11 @@ type Bucket interface {
 
 // Interface for things that interact with stats.
 type Statish interface {
-	GetLastStats() *Stats
-	GetLastBucketStoreStats() *BucketStoreStats
-	GetAggStats() *AggStats
-	GetAggBucketStoreStats() *AggStats
+	GetStats() BucketStats
 
-	startStats(d time.Duration)
-	stopStats()
-	statAge() time.Duration
+	StartStats(d time.Duration)
+	StopStats()
+	StatAge() time.Duration
 }
 
 // Holder of buckets.
@@ -71,7 +68,6 @@ type Buckets struct {
 	dir      string // Directory where all buckets are stored.
 	lock     sync.Mutex
 	settings *BucketSettings
-	statsch  chan *funreq
 }
 
 type BucketSettings struct {
@@ -135,23 +131,8 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 		buckets:  map[string]Bucket{},
 		dir:      dirForBuckets,
 		settings: settings.Copy(),
-		statsch:  make(chan *funreq),
 	}
-	go buckets.serviceStats()
 	return buckets, nil
-}
-
-func (b *Buckets) serviceStats() {
-	for r := range b.statsch {
-		r.fun()
-		close(r.res)
-	}
-}
-
-func (b *Buckets) StatsApply(fun func()) {
-	req := &funreq{fun: fun, res: make(chan bool)}
-	b.statsch <- req
-	<-req.res
 }
 
 // Create a new named bucket.
@@ -276,6 +257,22 @@ func (b *Buckets) Load() error {
 	return nil
 }
 
+type BucketStats struct {
+	Current        *Stats
+	BucketStore    *BucketStoreStats
+	Agg            *AggStats
+	AggBucketStore *AggStats
+}
+
+func (b BucketStats) Copy() BucketStats {
+	return BucketStats{
+		&(*b.Current),
+		&(*b.BucketStore),
+		&(*b.Agg),
+		&(*b.AggBucketStore),
+	}
+}
+
 type livebucket struct {
 	availablech  chan bool
 	dir          string
@@ -285,12 +282,9 @@ type livebucket struct {
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
 
-	lastStats            *Stats
-	lastBucketStoreStats *BucketStoreStats
-
-	statticker          *qticker
-	aggStats            *AggStats
-	aggBucketStoreStats *AggStats
+	statticker *qticker
+	stats      BucketStats
+	statLock   sync.Mutex
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
@@ -312,16 +306,18 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 
 	availablech := make(chan bool)
 	res := &livebucket{
-		availablech:          availablech,
-		dir:                  dirForBucket,
-		settings:             settings,
-		bucketstores:         make(map[int]*bucketstore),
-		observer:             broadcast.NewBroadcaster(0),
-		lastStats:            &Stats{},
-		lastBucketStoreStats: &BucketStoreStats{},
-		aggStats:             aggStats,
-		aggBucketStoreStats:  aggBucketStoreStats,
-		statticker:           newQTicker(time.Minute, availablech),
+		availablech:  availablech,
+		dir:          dirForBucket,
+		settings:     settings,
+		bucketstores: make(map[int]*bucketstore),
+		observer:     broadcast.NewBroadcaster(0),
+		stats: BucketStats{
+			Current:        &Stats{},
+			BucketStore:    &BucketStoreStats{},
+			Agg:            aggStats,
+			AggBucketStore: aggBucketStoreStats,
+		},
+		statticker: newQTicker(time.Minute, availablech),
 	}
 
 	for i, fileName := range fileNames {
@@ -545,43 +541,32 @@ func (b *livebucket) Auth(passwordClearText []byte) bool {
 	return false
 }
 
-// Call only during StatsApply/serviceStats().
-func (b *livebucket) GetAggStats() *AggStats {
-	return b.aggStats
+func (b *livebucket) GetStats() BucketStats {
+	b.statLock.Lock()
+	defer b.statLock.Unlock()
+
+	return b.stats.Copy()
 }
 
-// Call only during StatsApply/serviceStats().
-func (b *livebucket) GetAggBucketStoreStats() *AggStats {
-	return b.aggBucketStoreStats
-}
-
-// Call only during StatsApply/serviceStats().
-func (b *livebucket) GetLastStats() *Stats {
-	return b.lastStats
-}
-
-// Call only during StatsApply/serviceStats().
-func (b *livebucket) GetLastBucketStoreStats() *BucketStoreStats {
-	return b.lastBucketStoreStats
-}
-
-// Call only during StatsApply/serviceStats().
 func (b *livebucket) sampleStats(t time.Time) {
+	b.statLock.Lock()
+	defer b.statLock.Unlock()
+
 	currStats := AggregateStats(b, "")
 	diffStats := &Stats{}
 	diffStats.Add(currStats)
-	diffStats.Sub(b.lastStats)
+	diffStats.Sub(b.stats.Current)
 	diffStats.Time = t.Unix()
-	b.aggStats.addSample(diffStats)
-	b.lastStats = currStats
+	b.stats.Agg.addSample(diffStats)
+	b.stats.Current = currStats
 
 	currBucketStoreStats := AggregateBucketStoreStats(b, "")
 	diffBucketStoreStats := &BucketStoreStats{}
 	diffBucketStoreStats.Add(currBucketStoreStats)
-	diffBucketStoreStats.Sub(b.lastBucketStoreStats)
+	diffBucketStoreStats.Sub(b.stats.BucketStore)
 	diffBucketStoreStats.Time = t.Unix()
-	b.aggBucketStoreStats.addSample(diffBucketStoreStats)
-	b.lastBucketStoreStats = currBucketStoreStats
+	b.stats.AggBucketStore.addSample(diffBucketStoreStats)
+	b.stats.BucketStore = currBucketStoreStats
 }
 
 func (b *livebucket) runSamples() {
@@ -591,15 +576,15 @@ func (b *livebucket) runSamples() {
 }
 
 // Start the stats at the given interval.
-func (b *livebucket) startStats(d time.Duration) {
+func (b *livebucket) StartStats(d time.Duration) {
 	b.statticker.resumeTicker(d)
 }
 
-func (b *livebucket) stopStats() {
+func (b *livebucket) StopStats() {
 	b.statticker.pauseTicker()
 }
 
-func (b *livebucket) statAge() time.Duration {
+func (b *livebucket) StatAge() time.Duration {
 	return b.statticker.age()
 }
 
