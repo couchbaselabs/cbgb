@@ -80,4 +80,6 @@ func main() {
 		ch <- i
 	}
 	close(ch)
+
+	wg.Wait()
 }
