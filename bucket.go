@@ -26,6 +26,8 @@ const (
 	VBID_DDOC           = uint16(0xffff)
 )
 
+var everySecond = newPeriodically(time.Second, 10)
+
 type Bucket interface {
 	Available() bool
 	Compact() error
@@ -221,6 +223,7 @@ type BucketStats struct {
 	BucketStore    *BucketStoreStats
 	Agg            *AggStats
 	AggBucketStore *AggStats
+	LatestUpdate   time.Time
 }
 
 func (b BucketStats) Copy() BucketStats {
@@ -229,6 +232,7 @@ func (b BucketStats) Copy() BucketStats {
 		&(*b.BucketStore),
 		&(*b.Agg),
 		&(*b.AggBucketStore),
+		b.LatestUpdate,
 	}
 }
 
@@ -241,9 +245,8 @@ type livebucket struct {
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
 
-	statticker *periodically
-	stats      BucketStats
-	statLock   sync.Mutex
+	stats    BucketStats
+	statLock sync.Mutex
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
@@ -277,7 +280,6 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 			AggBucketStore: aggBucketStoreStats,
 		},
 	}
-	res.statticker = newPeriodic(time.Minute, mkSampleStats(res), availablech)
 
 	for i, fileName := range fileNames {
 		p := path.Join(dirForBucket, fileName)
@@ -524,25 +526,36 @@ func (b *livebucket) sampleStats(t time.Time) {
 	diffBucketStoreStats.Time = t.Unix()
 	b.stats.AggBucketStore.addSample(diffBucketStoreStats)
 	b.stats.BucketStore = currBucketStoreStats
+	b.stats.LatestUpdate = t
 }
 
-func mkSampleStats(b *livebucket) func(time.Time) {
-	return func(t time.Time) {
+func mkSampleStats(b *livebucket) func(time.Time) bool {
+	return func(t time.Time) bool {
 		b.sampleStats(t)
+		return true
 	}
 }
 
 // Start the stats at the given interval.
 func (b *livebucket) StartStats(d time.Duration) {
-	b.statticker.resumeTicker(d)
+	b.statLock.Lock()
+	defer b.statLock.Unlock()
+
+	everySecond.Register(b.availablech, mkSampleStats(b))
 }
 
 func (b *livebucket) StopStats() {
-	b.statticker.pauseTicker()
+	b.statLock.Lock()
+	defer b.statLock.Unlock()
+
+	everySecond.Unregister(b.availablech)
 }
 
 func (b *livebucket) StatAge() time.Duration {
-	return b.statticker.age()
+	b.statLock.Lock()
+	defer b.statLock.Unlock()
+
+	return time.Since(b.stats.LatestUpdate)
 }
 
 type vbucketChange struct {

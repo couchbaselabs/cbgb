@@ -4,105 +4,133 @@ import (
 	"time"
 )
 
-type periodically struct {
-	ctl      chan *time.Ticker
-	lastch   chan chan time.Time
-	quiescer *time.Ticker
-	f        func(time.Time)
-	stopChan <-chan bool
+type periodicRequest struct {
+	k <-chan bool
+	f func(time.Time) bool
 }
 
-// Build a new, quiesceable periodic function invoker.
-func newPeriodic(quiescePeriod time.Duration, f func(time.Time),
-	stopChan <-chan bool) *periodically {
+type periodicWorkItem struct {
+	t  time.Time
+	f  func(time.Time) bool
+	rv chan bool
+}
 
-	if f == nil {
+type periodically struct {
+	funcs   map[<-chan bool]func(time.Time) bool
+	ctl     chan periodicRequest
+	ticker  tickSrc
+	work    chan periodicWorkItem
+	running chan bool
+}
+
+type tickSrc interface {
+	C() <-chan time.Time
+	Stop() // hammertime
+}
+
+type realTicker struct {
+	t *time.Ticker
+}
+
+func (t realTicker) C() <-chan time.Time {
+	return t.t.C
+}
+
+func (t realTicker) Stop() {
+	t.t.Stop()
+}
+
+func newPeriodically(period time.Duration, workers int) *periodically {
+	if period == 0 {
 		return nil
 	}
 
-	rv := &periodically{
-		f:        f,
-		ctl:      make(chan *time.Ticker),
-		quiescer: time.NewTicker(quiescePeriod),
-		lastch:   make(chan chan time.Time),
-		stopChan: stopChan,
+	return newPeriodicallyInt(realTicker{time.NewTicker(period)}, workers)
+}
+
+// When you want to supply your own time source.
+func newPeriodicallyInt(ticker tickSrc, workers int) *periodically {
+	if workers < 1 {
+		return nil
 	}
-
-	go rv.run()
-
+	rv := &periodically{
+		funcs:   map[<-chan bool]func(time.Time) bool{},
+		ctl:     make(chan periodicRequest),
+		ticker:  ticker,
+		work:    make(chan periodicWorkItem),
+		running: make(chan bool),
+	}
+	for i := 0; i < workers; i++ {
+		go periodicWorker(rv.work)
+	}
+	go rv.service()
 	return rv
 }
 
-func (p *periodically) run() {
-	defer p.quiescer.Stop()
+func periodicWorker(ch <-chan periodicWorkItem) {
+	for i := range ch {
+		i.rv <- i.f(i.t)
+	}
+}
 
-	var ticker *time.Ticker
-	var timech <-chan time.Time
-	latestTick := time.Now()
-	reqs := 0
+func (p *periodically) service() {
+	defer close(p.work)
+	defer close(p.running)
+	defer p.ticker.Stop()
 	for {
 		select {
-		case t := <-timech: // Ticker sent us a time
-			latestTick = t
-			p.f(t)
-		case <-p.stopChan: // Shutdown requested
-			if ticker != nil {
-				ticker.Stop()
+		case t := <-p.ticker.C():
+			p.doWork(t)
+		case req := <-p.ctl:
+			switch {
+			case req.k == nil && req.f == nil:
+				return
+			case req.f == nil:
+				delete(p.funcs, req.k)
+			default:
+				p.funcs[req.k] = req.f
 			}
-			return
-		case <-p.quiescer.C: // Periodic check for activity
-			if reqs == 0 && ticker != nil {
-				ticker.Stop()
-				ticker = nil
-				timech = nil
-			}
-			reqs = 0
-		case ch := <-p.lastch: // Activity marker
-			reqs++
-			ch <- latestTick
-		case c := <-p.ctl:
-			// We are receiving a new ticker.  If we
-			// already had one, shut it down.  If we
-			// receive one, set it to our channel.  This
-			// allows both starting and stopping stat
-			// collection in a fairly straightforward way.
-			if ticker != nil {
-				ticker.Stop()
-			}
-			ticker = c
-			timech = nil
-			if ticker != nil {
-				timech = ticker.C
-			}
-			reqs = 0
 		}
 	}
 }
 
-// Resume/start a ticker ticking at the given interval.
-func (p *periodically) resumeTicker(d time.Duration) {
-	p.ctl <- time.NewTicker(d)
-}
-
-// Pause a (potentially) running ticker.
-func (p *periodically) pauseTicker() {
-	select {
-	case p.ctl <- nil:
-	case <-p.stopChan:
+func (p *periodically) doWork(t time.Time) {
+	var remove []<-chan bool
+	results := map[<-chan bool]chan bool{}
+	for ch, f := range p.funcs {
+		select {
+		case <-ch:
+			remove = append(remove, ch)
+		default:
+			rv := make(chan bool, 1)
+			p.work <- periodicWorkItem{t, f, rv}
+			results[ch] = rv
+		}
+	}
+	// Harvest the results and verify they want to keep tickin'
+	for kch, rvch := range results {
+		if !<-rvch {
+			delete(p.funcs, kch)
+		}
+	}
+	// Delete all the ones that were implicitly closed.
+	for _, ch := range remove {
+		delete(p.funcs, ch)
 	}
 }
 
-// Get the age of the latest tick delivered from this ticker.
-//
-// This has a side-effect of marking the timer as active.  The ticker
-// will go inactive after an inactivity period where it's not
-// receiving sufficient age requests.
-func (p *periodically) age() time.Duration {
-	ch := make(chan time.Time)
+func (p *periodically) Stop() {
 	select {
-	case p.lastch <- ch:
-	case <-p.stopChan:
-		return 0
+	case p.ctl <- periodicRequest{}:
+	case <-p.running:
+		// already stopped
 	}
-	return time.Since(<-ch)
+}
+
+func (p *periodically) Register(k <-chan bool, f func(time.Time) bool) {
+	p.ctl <- periodicRequest{k, f}
+}
+
+func (p *periodically) Unregister(k <-chan bool) {
+	p.ctl <- periodicRequest{k, nil}
 }
