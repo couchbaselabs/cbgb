@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/couchbaselabs/cbgb"
+	"github.com/couchbaselabs/walrus"
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
 )
@@ -39,7 +40,7 @@ func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || len(ddocId) <= 0 {
 		return
 	}
-	body, err := bucket.GetDDoc(ddocId)
+	body, err := bucket.GetDDoc("_design/" + ddocId)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("getDDoc err: %v", err), 500)
 		return
@@ -66,7 +67,7 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Bad Request, err: %v", err), 400)
 		return
 	}
-	if err = bucket.SetDDoc(ddocId, body); err != nil {
+	if err = bucket.SetDDoc("_design/"+ddocId, body); err != nil {
 		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
 		return
 	}
@@ -103,9 +104,28 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || len(ddocId) <= 0 {
 		return
 	}
-	_, ok := vars["viewId"]
+	viewId, ok := vars["viewId"]
 	if !ok {
 		http.Error(w, "missing viewId from path", 400)
+		return
+	}
+	body, err := bucket.GetDDoc("_design/" + ddocId)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("getDDoc err: %v", err), 500)
+		return
+	}
+	if body == nil {
+		http.Error(w, "design doc not found", 404)
+		return
+	}
+	var ddoc walrus.DesignDoc
+	if err = json.Unmarshal(body, &ddoc); err != nil {
+		http.Error(w, "could not unmarshal design doc", 500)
+		return
+	}
+	_, ok = ddoc.Views[viewId]
+	if !ok {
+		http.Error(w, "view not found", 404)
 		return
 	}
 	http.Error(w, "unimplemented", 501)
