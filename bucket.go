@@ -23,7 +23,7 @@ const (
 	MAX_VBUCKETS        = 1024
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
-	STORES_PER_BUCKET   = 4 // The # of *.store files per bucket (ignoring compaction).
+	STORES_PER_BUCKET   = 1 // The # of *.store files per bucket (ignoring compaction).
 	VBID_DDOC           = uint16(0xffff)
 )
 

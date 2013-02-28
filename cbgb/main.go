@@ -34,8 +34,7 @@ var purgeTimeout = flag.Duration("purge-timeout",
 	10*time.Second,
 	"duration until unused files are purged after compaction")
 var defaultPartitions = flag.Int("default-partitions",
-	cbgb.MAX_VBUCKETS,
-	"default number of partitions for new buckets")
+	1, "default number of partitions for new buckets")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
