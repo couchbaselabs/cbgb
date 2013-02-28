@@ -226,7 +226,7 @@ func TestBucketGetSetItem(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
+			NumPartitions:   1024,
 			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
 			CompactInterval: 10 * time.Second,
@@ -240,21 +240,21 @@ func TestBucketGetSetItem(t *testing.T) {
 		t.Errorf("expect hello to be in vbucket 528")
 	}
 
-	res := GetItem(b, key, VBActive, 1024)
+	res := GetItem(b, key, VBActive)
 	if res != nil {
 		t.Errorf("expected GetItem to fail on a missing vbucket")
 	}
 
 	b.CreateVBucket(528)
 
-	res = GetItem(b, key, VBActive, 1024)
+	res = GetItem(b, key, VBActive)
 	if res != nil {
 		t.Errorf("expected GetItem to fail on a dead vbucket")
 	}
 
 	b.SetVBState(528, VBActive)
 
-	res = GetItem(b, key, VBActive, 1024)
+	res = GetItem(b, key, VBActive)
 	if res == nil {
 		t.Errorf("expected GetItem to have a res on a active vbucket")
 	}
@@ -262,12 +262,12 @@ func TestBucketGetSetItem(t *testing.T) {
 		t.Errorf("expected GetItem to fail on a missing key")
 	}
 
-	res = SetItem(b, key, []byte("world"), VBActive, 1024)
+	res = SetItem(b, key, []byte("world"), VBActive)
 	if res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
 
-	res = GetItem(b, key, VBActive, 1024)
+	res = GetItem(b, key, VBActive)
 	if res == nil {
 		t.Errorf("expected GetItem to be non-nil")
 	}

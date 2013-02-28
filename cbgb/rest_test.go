@@ -15,11 +15,11 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func testSetupBuckets(t *testing.T) (string, *cbgb.Buckets) {
+func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
 	d, _ := ioutil.TempDir("./tmp", "test")
 	var err error
 	bucketSettings = &cbgb.BucketSettings{
-		NumPartitions:   cbgb.MAX_VBUCKETS,
+		NumPartitions:   numPartitions,
 		FlushInterval:   10 * time.Second,
 		SleepInterval:   10 * time.Second,
 		CompactInterval: 10 * time.Second,
@@ -34,8 +34,9 @@ func testSetupBuckets(t *testing.T) (string, *cbgb.Buckets) {
 	return d, buckets
 }
 
-func testSetupDefaultBucket(t *testing.T, vbid uint16) (string, *cbgb.Buckets, cbgb.Bucket) {
-	d, buckets := testSetupBuckets(t)
+func testSetupDefaultBucket(t *testing.T, numPartitions int,
+	vbid uint16) (string, *cbgb.Buckets, cbgb.Bucket) {
+	d, buckets := testSetupBuckets(t, numPartitions)
 	bucket, err := buckets.New("default", bucketSettings)
 	if err != nil {
 		t.Fatalf("testSetupDefaultBucket failed: %v", err)
@@ -59,7 +60,7 @@ func testSetupMux(dir string) *mux.Router {
 }
 
 func TestRestAPIBuckets(t *testing.T) {
-	d, _ := testSetupBuckets(t)
+	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 
@@ -73,12 +74,8 @@ func TestRestAPIBuckets(t *testing.T) {
 }
 
 func TestCouchDocGet(t *testing.T) {
-	dp := *defaultPartitions
-	defer func() { *defaultPartitions = dp }()
-	*defaultPartitions = 1024
-
 	// "hello" hash is 528 with 1024 vbuckets.
-	d, _, bucket := testSetupDefaultBucket(t, uint16(528))
+	d, _, bucket := testSetupDefaultBucket(t, 1024, uint16(528))
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 
@@ -90,8 +87,7 @@ func TestCouchDocGet(t *testing.T) {
 			rr, rr.Body.String())
 	}
 
-	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"),
-		cbgb.VBActive, 1024)
+	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"), cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
@@ -106,7 +102,7 @@ func TestCouchDocGet(t *testing.T) {
 }
 
 func TestCouchViewBasic(t *testing.T) {
-	d, _, bucket := testSetupDefaultBucket(t, uint16(0))
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 
@@ -145,25 +141,25 @@ func TestCouchViewBasic(t *testing.T) {
 	nitems := 0
 
 	res = cbgb.SetItem(bucket, []byte("a"), []byte(`{"amount": 1}`),
-		cbgb.VBActive, 1)
+		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
 	nitems++
 	res = cbgb.SetItem(bucket, []byte("b"), []byte(`{"amount": 3}`),
-		cbgb.VBActive, 1)
+		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
 	nitems++
 	res = cbgb.SetItem(bucket, []byte("c"), []byte(`{"amount": 4}`),
-		cbgb.VBActive, 1)
+		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
 	nitems++
 	res = cbgb.SetItem(bucket, []byte("d"), []byte(`{"amount": 2}`),
-		cbgb.VBActive, 1)
+		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
