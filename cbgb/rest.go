@@ -179,14 +179,14 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	age := bucket.StatAge()
-	if age > time.Second*30 {
+	st := bucket.GetStats()
+	if time.Since(st.LatestUpdate) > time.Second*30 {
 		bucket.StartStats(time.Second)
 		// Go ahead and let this delay slightly to catch up
 		// the stats.
 		time.Sleep(time.Millisecond * 2100)
+		st = bucket.GetStats()
 	}
-	st := bucket.GetStats()
 	jsonEncode(w, map[string]interface{}{
 		"totals": map[string]interface{}{
 			"bucketStats":      st.Current,
