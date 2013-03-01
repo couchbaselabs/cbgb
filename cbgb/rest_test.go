@@ -101,6 +101,65 @@ func TestCouchDocGet(t *testing.T) {
 	}
 }
 
+func TestCouchPutDDoc(t *testing.T) {
+	testCouchPutDDoc(t, 1)
+	testCouchPutDDoc(t, cbgb.MAX_VBUCKETS)
+}
+
+func testCouchPutDDoc(t *testing.T, numPartitions int) {
+	d, _, _ := testSetupDefaultBucket(t, numPartitions, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	d0 := []byte(`{
+		"_id":"_design/d0",
+		"language": "not-javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`)
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("PUT",
+		"http://127.0.0.1/default/_design/d0",
+		bytes.NewBuffer([]byte(d0)))
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 400 {
+		t.Errorf("expected req to 400, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	d0 = []byte{}
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT",
+		"http://127.0.0.1/default/_design/d0",
+		bytes.NewBuffer([]byte(d0)))
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 400 {
+		t.Errorf("expected req to 400, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	d0 = []byte(`{
+		"_id":"_design/d0",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`)
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("PUT",
+		"http://127.0.0.1/default/_design/d0",
+		bytes.NewBuffer([]byte(d0)))
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+}
+
 func TestCouchViewBasic(t *testing.T) {
 	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
 	defer os.RemoveAll(d)

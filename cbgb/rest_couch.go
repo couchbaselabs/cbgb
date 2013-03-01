@@ -68,10 +68,15 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Bad Request, err: %v", err), 400)
 		return
 	}
+	if _, err = walrus.CheckDDoc(into); err != nil {
+		http.Error(w, fmt.Sprintf("Bad Request, err: %v", err), 400)
+		return
+	}
 	if err = bucket.SetDDoc("_design/"+ddocId, body); err != nil {
 		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
 		return
 	}
+	w.Write([]byte(http.StatusText(200)))
 }
 
 func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
