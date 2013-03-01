@@ -1,3 +1,14 @@
+//  Copyright (c) 2013 Couchbase, Inc.
+//  Licensed under the Apache License, Version 2.0 (the "License");
+//  you may not use this file except in compliance with the
+//  License. You may obtain a copy of the License at
+//    http://www.apache.org/licenses/LICENSE-2.0
+//  Unless required by applicable law or agreed to in writing,
+//  software distributed under the License is distributed on an "AS
+//  IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either
+//  express or implied. See the License for the specific language
+//  governing permissions and limitations under the License.
+
 package main
 
 import (
@@ -106,6 +117,11 @@ func couchDbDelDoc(w http.ResponseWriter, r *http.Request) {
 }
 
 func couchDbGetView(w http.ResponseWriter, r *http.Request) {
+	p, err := cbgb.ParseViewParams(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("view param parsing err: %v", err), 400)
+		return
+	}
 	vars, _, bucket, ddocId := checkDocId(w, r)
 	if bucket == nil || len(ddocId) <= 0 {
 		return
@@ -143,7 +159,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
 		return
 	}
-	vr := cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
+	vr := &cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
 	for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
 		vb := bucket.GetVBucket(uint16(vbid))
 		if vb != nil {
@@ -167,14 +183,21 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				http.Error(w, fmt.Sprintf("view visit error: %v",
 					err), 400)
+				return
 			}
 			if errVisit != nil {
 				http.Error(w, fmt.Sprintf("view visit function error: %v",
 					errVisit), 400)
+				return
 			}
 		}
 	}
 	sort.Sort(vr.Rows)
+	vr, err = processViewResult(bucket, vr, "", p)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("processViewResult error: %v", err), 400)
+		return
+	}
 	vr.TotalRows = len(vr.Rows)
 	jsonEncode(w, vr)
 }
@@ -207,4 +230,47 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 		return vars, bucketName, bucket, ""
 	}
 	return vars, bucketName, bucket, docId
+}
+
+// Originally from github.com/couchbaselabs/walrus, but modified to
+// use ViewParams.
+
+func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
+	reduceFunction string, p *cbgb.ViewParams) (*cbgb.ViewResult, error) {
+	if p.Descending {
+		return result, fmt.Errorf("descending is not supported yet, sorry") // TODO.
+	}
+
+	if len(p.Key) > 0 {
+		p.StartKey = p.Key
+		p.EndKey = p.Key
+	}
+
+	if len(p.StartKey) > 0 {
+		i := sort.Search(len(result.Rows), func(i int) bool {
+			return walrus.CollateJSON(result.Rows[i].Key, p.StartKey) >= 0
+		})
+		result.Rows = result.Rows[i:]
+	}
+
+	if p.Limit > 0 && uint64(len(result.Rows)) > p.Limit {
+		result.Rows = result.Rows[:p.Limit]
+	}
+
+	if len(p.EndKey) > 0 {
+		i := sort.Search(len(result.Rows), func(i int) bool {
+			return walrus.CollateJSON(result.Rows[i].Key, p.EndKey) > 0
+		})
+		result.Rows = result.Rows[:i]
+	}
+
+	if p.IncludeDocs {
+		return result, fmt.Errorf("includeDocs is not supported yet, sorry") // TODO.
+	}
+
+	if p.Reduce && len(reduceFunction) > 0 {
+		return result, fmt.Errorf("reduce is not supported yet, sorry") // TODO.
+	}
+
+	return result, nil
 }
