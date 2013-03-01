@@ -197,12 +197,6 @@ func TestCompactionNumFiles(t *testing.T) {
 }
 
 func TestCompactionPurgeTimeout(t *testing.T) {
-	if true {
-		// 1.0.3 doesn't have t.Skipf
-		t.Logf("http://cbugg.hq.couchbase.com/bug/bug-385")
-		return
-	}
-
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
