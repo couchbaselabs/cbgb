@@ -14,9 +14,7 @@ type BucketSettings struct {
 	PasswordHashFunc string        `json:"passwordHashFunc"`
 	PasswordHash     string        `json:"passwordHash"`
 	PasswordSalt     string        `json:"passwordSalt"`
-	FlushInterval    time.Duration `json:"flushInterval"`
 	SleepInterval    time.Duration `json:"sleepInterval"`
-	CompactInterval  time.Duration `json:"compactInterval"`
 	PurgeTimeout     time.Duration `json:"purgeTimeout"`
 }
 
@@ -26,9 +24,7 @@ func (bs *BucketSettings) Copy() *BucketSettings {
 		PasswordHashFunc: bs.PasswordHashFunc,
 		PasswordHash:     bs.PasswordHash,
 		PasswordSalt:     bs.PasswordSalt,
-		FlushInterval:    bs.FlushInterval,
 		SleepInterval:    bs.SleepInterval,
-		CompactInterval:  bs.CompactInterval,
 		PurgeTimeout:     bs.PurgeTimeout,
 	}
 }

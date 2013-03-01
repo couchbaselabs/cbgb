@@ -86,10 +86,8 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -112,10 +110,8 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -135,10 +131,8 @@ func TestSaveLoadBasic(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -163,9 +157,7 @@ func TestSaveLoadBasic(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -185,10 +177,8 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -214,10 +204,8 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -311,10 +299,8 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b2, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -381,9 +367,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -419,10 +403,8 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	for _, test := range tests {
 		b1, err := NewBucket(testBucketDir,
 			&BucketSettings{
-				NumPartitions:   MAX_VBUCKETS,
-				FlushInterval:   10 * time.Second,
-				SleepInterval:   10 * time.Second,
-				CompactInterval: 10 * time.Second,
+				NumPartitions: MAX_VBUCKETS,
+				SleepInterval: 10 * time.Second,
 			})
 		if err != nil {
 			t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -458,8 +440,7 @@ func TestFlushCloseInterval(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -482,9 +463,7 @@ func TestFlushCloseInterval(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -504,10 +483,8 @@ func TestSleepInterval(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Millisecond,
-			SleepInterval:   10 * time.Millisecond,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Millisecond,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -537,10 +514,8 @@ func TestSleepInterval(t *testing.T) {
 	testWithFlushInterval := func(flushInterval time.Duration) {
 		b1, err := NewBucket(testBucketDir,
 			&BucketSettings{
-				NumPartitions:   MAX_VBUCKETS,
-				FlushInterval:   flushInterval,
-				SleepInterval:   time.Millisecond,
-				CompactInterval: 10 * time.Second,
+				NumPartitions: MAX_VBUCKETS,
+				SleepInterval: time.Millisecond,
 			})
 		if err != nil {
 			t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -677,10 +652,8 @@ func TestFlushError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -721,10 +694,8 @@ func TestStatError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -760,10 +731,8 @@ func TestReadAtError(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)

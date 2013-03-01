@@ -14,10 +14,8 @@ func TestPartitionStoreEmptyVisit(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")

@@ -116,9 +116,7 @@ func (b *Buckets) New(name string,
 		return nil, err
 	}
 	if prioritySettings != nil {
-		settings.FlushInterval = prioritySettings.FlushInterval
 		settings.SleepInterval = prioritySettings.SleepInterval
-		settings.CompactInterval = prioritySettings.CompactInterval
 		settings.PurgeTimeout = prioritySettings.PurgeTimeout
 	}
 	log.Printf("allocating bucket: %v, settings: %+v", name, settings)

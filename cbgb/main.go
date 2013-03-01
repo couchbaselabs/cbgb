@@ -21,15 +21,9 @@ var staticPath = flag.String("static-path",
 var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME,
 	"name of the default bucket")
-var flushInterval = flag.Duration("flush-interval",
-	10*time.Second,
-	"duration between flushing or persisting mutations to storage")
 var sleepInterval = flag.Duration("sleep-interval",
 	2*time.Minute,
 	"duration until files are closed (to be reopened on the next request)")
-var compactInterval = flag.Duration("compact-interval",
-	10*time.Minute,
-	"duration until files are compacted")
 var purgeTimeout = flag.Duration("purge-timeout",
 	10*time.Second,
 	"duration until unused files are purged after compaction")
@@ -52,11 +46,9 @@ func main() {
 	var err error
 
 	bucketSettings = &cbgb.BucketSettings{
-		NumPartitions:   *defaultPartitions,
-		FlushInterval:   *flushInterval,
-		SleepInterval:   *sleepInterval,
-		CompactInterval: *compactInterval,
-		PurgeTimeout:    *purgeTimeout,
+		NumPartitions: *defaultPartitions,
+		SleepInterval: *sleepInterval,
+		PurgeTimeout:  *purgeTimeout,
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
 	if err != nil {

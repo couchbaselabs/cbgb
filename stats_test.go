@@ -140,10 +140,8 @@ func TestNewBucketAggregateStats(t *testing.T) {
 
 	b0, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 
 	s := AggregateStats(b0, "")

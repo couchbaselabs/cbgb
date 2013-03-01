@@ -17,10 +17,8 @@ func TestGetSetDDoc(t *testing.T) {
 
 	bs, err := NewBuckets(d,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer bs.CloseAll()
 
@@ -58,10 +56,8 @@ func TestGetSetDDoc(t *testing.T) {
 
 	b2, err := NewBuckets(d,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer b2.CloseAll()
 	if err != nil {

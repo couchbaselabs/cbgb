@@ -17,10 +17,8 @@ func TestCompaction(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -102,9 +100,7 @@ func TestCompaction(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   11 * time.Second,
 			SleepInterval:   11 * time.Second,
-			CompactInterval: 11 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -124,10 +120,8 @@ func TestEmptyFileCompaction(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -167,9 +161,7 @@ func TestCompactionNumFiles(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
 			PurgeTimeout:    20 * time.Second,
 		})
 	if err != nil {
@@ -216,11 +208,9 @@ func TestCompactionPurgeTimeout(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   time.Millisecond,
-			CompactInterval: 10 * time.Second,
-			PurgeTimeout:    time.Millisecond,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: time.Millisecond,
+			PurgeTimeout:  time.Millisecond,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -263,9 +253,7 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Millisecond,
-			CompactInterval: 10 * time.Second,
 			PurgeTimeout:    10 * time.Millisecond,
 		})
 	if err != nil {
@@ -319,11 +307,9 @@ func TestCopyDeltaBadNames(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Millisecond,
-			CompactInterval: 10 * time.Second,
-			PurgeTimeout:    10 * time.Millisecond,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Millisecond,
+			PurgeTimeout:  10 * time.Millisecond,
 		})
 	v0, _ := b0.CreateVBucket(2)
 
@@ -339,11 +325,9 @@ func TestBadCompactSwapFile(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Millisecond,
-			CompactInterval: 10 * time.Second,
-			PurgeTimeout:    10 * time.Millisecond,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Millisecond,
+			PurgeTimeout:  10 * time.Millisecond,
 		})
 	v0, _ := b0.CreateVBucket(2)
 

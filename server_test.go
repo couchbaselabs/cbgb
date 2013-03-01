@@ -77,10 +77,8 @@ func TestSaslRejectedAuth(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer buckets.CloseAll()
 	if err != nil {
@@ -140,9 +138,7 @@ func TestSaslAuth(t *testing.T) {
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
 			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
 		})
 	defer buckets.CloseAll()
 	if err != nil {
@@ -150,18 +146,14 @@ func TestSaslAuth(t *testing.T) {
 	}
 	nopwd, err := buckets.New("nopwd",
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	haspwd, err := buckets.New("haspwd",
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			PasswordHash:    "a nice password",
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			PasswordHash:  "a nice password",
+			SleepInterval: 10 * time.Second,
 		})
 	rh := reqHandler{currentBucket: nil, buckets: buckets}
 	res := rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
@@ -226,10 +218,8 @@ func TestBucketGetSetItem(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   1024,
-			FlushInterval:   10 * time.Second,
-			SleepInterval:   10 * time.Second,
-			CompactInterval: 10 * time.Second,
+			NumPartitions: 1024,
+			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
