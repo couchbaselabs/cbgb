@@ -8,7 +8,7 @@ import (
 	"github.com/couchbaselabs/cbgb"
 )
 
-var mutationLogCh = make(chan interface{})
+var mutationLogCh = make(chan interface{}, 1024)
 
 var startTime = time.Now()
 
