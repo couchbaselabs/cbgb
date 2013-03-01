@@ -99,8 +99,8 @@ func TestCompaction(t *testing.T) {
 
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   11 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 11 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -160,9 +160,9 @@ func TestCompactionNumFiles(t *testing.T) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
-			PurgeTimeout:    20 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
+			PurgeTimeout:  20 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -252,9 +252,9 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Millisecond,
-			PurgeTimeout:    10 * time.Millisecond,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Millisecond,
+			PurgeTimeout:  10 * time.Millisecond,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)

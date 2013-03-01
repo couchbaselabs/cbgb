@@ -166,8 +166,8 @@ func TestMutationBroadcast(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -302,8 +302,8 @@ func TestCASSet(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -376,8 +376,8 @@ func TestVersionNOOP(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -420,8 +420,8 @@ func TestTapSetup(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
@@ -552,8 +552,8 @@ func TestStats(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -603,8 +603,8 @@ func BenchmarkInvalidCommand(b *testing.B) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
@@ -688,8 +688,8 @@ func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
@@ -751,8 +751,8 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1041,8 +1041,8 @@ func TestVBMeta(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1174,8 +1174,8 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1358,8 +1358,8 @@ func TestStoreFrontBack(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}

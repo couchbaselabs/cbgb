@@ -137,8 +137,8 @@ func TestSaslAuth(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer buckets.CloseAll()
 	if err != nil {

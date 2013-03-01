@@ -292,8 +292,8 @@ func TestBucketsLoadNames(t *testing.T) {
 	defer os.RemoveAll(d)
 	b, err := NewBuckets(d,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	if err != nil {
@@ -423,8 +423,8 @@ func TestMissingBucketsDir(t *testing.T) {
 	d, err := ioutil.TempDir("./tmp", "test")
 	b, err := NewBuckets(d,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	names, err := b.LoadNames()
@@ -468,8 +468,8 @@ func TestBucketsLoad(t *testing.T) {
 
 	b2, err := NewBuckets(d,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	defer b2.CloseAll()
 	if err != nil {

@@ -51,8 +51,8 @@ func TestMutationInvalid(t *testing.T) {
 	defer os.RemoveAll(testBucketDir)
 	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
-			NumPartitions:   MAX_VBUCKETS,
-			SleepInterval:   10 * time.Second,
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
 		})
 	b.CreateVBucket(0)
 
