@@ -26,6 +26,8 @@ const (
 	VBID_DDOC           = uint16(0xffff)
 )
 
+var broadcastMux = broadcast.NewMuxObserver(0, 0)
+
 var everySecond = newPeriodically(time.Second, 10)
 var everyFiveMinutes = newPeriodically(time.Minute*5, 10)
 
@@ -276,7 +278,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		dir:          dirForBucket,
 		settings:     settings,
 		bucketstores: make(map[int]*bucketstore),
-		observer:     broadcast.NewBroadcaster(0),
+		observer:     broadcastMux.Sub(),
 		stats: BucketStats{
 			Current:        &Stats{},
 			BucketStore:    &BucketStoreStats{},

@@ -94,8 +94,6 @@ var dispatchTable = [256]dispatchFun{
 	SPLIT_RANGE: vbSplitRange,
 }
 
-const observerBroadcastMax = 100
-
 func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
 	rv = &vbucket{
 		parent:   parent,
@@ -103,7 +101,7 @@ func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err e
 		meta:     unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
 		bs:       bs,
 		ps:       bs.getPartitionStore(vbid),
-		observer: broadcast.NewBroadcaster(observerBroadcastMax),
+		observer: broadcastMux.Sub(),
 	}
 
 	return rv, nil
