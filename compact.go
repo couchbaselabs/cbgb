@@ -123,6 +123,7 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 	bsf.apply(func() {
 		bsf.sleepInterval = s.purgeTimeout
 		bsf.sleepPurge = s.purgeTimeout
+		bsf.end()
 	})
 
 	return nil
