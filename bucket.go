@@ -375,7 +375,7 @@ func (b *livebucket) GetBucketStore(idx int) *bucketstore {
 
 func (b *livebucket) Flush() error {
 	for _, bs := range b.bucketstores {
-		err := bs.Flush()
+		_, err := bs.Flush()
 		if err != nil {
 			return err
 		}

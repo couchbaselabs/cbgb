@@ -3,9 +3,11 @@ package cbgb
 import (
 	"fmt"
 	"io/ioutil"
+	"log"
 	"os"
 	"strconv"
 	"strings"
+	"sync"
 	"sync/atomic"
 	"time"
 	"unsafe"
@@ -17,28 +19,32 @@ import (
 // actual server is a different package.
 var fileService = NewFileService(32)
 
+var flushRunner = newPeriodically(10*time.Second, 5)
+
+const compact_every = 10000
+
 type bucketstore struct {
-	bsf             unsafe.Pointer // *bucketstorefile
-	endch           chan bool
-	ch              chan *funreq
-	dirtiness       int64
-	flushInterval   time.Duration // Time between checking whether to flush.
-	compactInterval time.Duration // Time between checking whether to compact.
-	purgeTimeout    time.Duration // Time to keep old, unused file after compaction.
-	partitions      map[uint16]*partitionstore
-	stats           *BucketStoreStats
+	bsf          unsafe.Pointer // *bucketstorefile
+	endch        chan bool
+	dirtiness    int64
+	purgeTimeout time.Duration // Time to keep old, unused file after compaction.
+	partitions   map[uint16]*partitionstore
+	stats        *BucketStoreStats
+
+	diskLock sync.Mutex
 }
 
 type BucketStoreStats struct {
 	Time int64 `json:"time"`
 
-	Flushes  uint64 `json:"flushes"`
-	Reads    uint64 `json:"reads"`
-	Writes   uint64 `json:"writes"`
-	Stats    uint64 `json:"stats"`
-	Sleeps   uint64 `json:"sleeps"`
-	Wakes    uint64 `json:"wakes"`
-	Compacts uint64 `json:"compacts"`
+	Flushes       uint64 `json:"flushes"`
+	Reads         uint64 `json:"reads"`
+	Writes        uint64 `json:"writes"`
+	Stats         uint64 `json:"stats"`
+	Sleeps        uint64 `json:"sleeps"`
+	Wakes         uint64 `json:"wakes"`
+	Compacts      uint64 `json:"compacts"`
+	LastCompactAt uint64 `json:"lastCompactAt"`
 
 	FlushErrors   uint64 `json:"flushErrors"`
 	ReadErrors    uint64 `json:"readErrors"`
@@ -77,16 +83,12 @@ func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) 
 	bsf.store = store
 
 	res := &bucketstore{
-		bsf:             unsafe.Pointer(bsf),
-		endch:           make(chan bool),
-		ch:              make(chan *funreq),
-		flushInterval:   settings.FlushInterval,
-		compactInterval: settings.CompactInterval,
-		purgeTimeout:    settings.PurgeTimeout,
-		partitions:      make(map[uint16]*partitionstore),
-		stats:           bsf.stats,
+		bsf:          unsafe.Pointer(bsf),
+		endch:        make(chan bool),
+		purgeTimeout: settings.PurgeTimeout,
+		partitions:   make(map[uint16]*partitionstore),
+		stats:        bsf.stats,
 	}
-	go res.service()
 
 	return res, nil
 }
@@ -95,56 +97,13 @@ func (s *bucketstore) BSF() *bucketstorefile {
 	return (*bucketstorefile)(atomic.LoadPointer(&s.bsf))
 }
 
-func (s *bucketstore) service() {
-	tickerF := time.NewTicker(s.flushInterval)
-	defer tickerF.Stop()
-
-	tickerC := time.NewTicker(s.compactInterval)
-	defer tickerC.Stop()
-
-	numFlushes := uint64(0)
-	lastCompact := uint64(0)
-
-	for {
-		select {
-		case <-s.endch:
-			return
-		case r, ok := <-s.ch:
-			if !ok {
-				return
-			}
-			r.fun()
-			close(r.res)
-		case <-tickerF.C:
-			d := atomic.LoadInt64(&s.dirtiness)
-			if d > 0 {
-				s.flush()
-				numFlushes++
-			}
-		case <-tickerC.C:
-			if lastCompact != numFlushes {
-				s.compact()
-				lastCompact = numFlushes
-			}
-		}
-	}
-}
-
-func (s *bucketstore) apply(fun func()) {
-	req := &funreq{fun: fun, res: make(chan bool)}
-	s.ch <- req
-	<-req.res
-}
-
 func (s *bucketstore) Close() {
-	s.apply(func() {
-		select {
-		case <-s.endch:
-		default:
-			close(s.endch)
-			s.BSF().Close()
-		}
-	})
+	select {
+	case <-s.endch:
+	default:
+		close(s.endch)
+		s.BSF().Close()
+	}
 }
 
 func (s *bucketstore) Stats() *BucketStoreStats {
@@ -153,33 +112,47 @@ func (s *bucketstore) Stats() *BucketStoreStats {
 	return bss
 }
 
-func (s *bucketstore) Flush() (err error) {
-	s.apply(func() {
-		err = s.flush()
-	})
-	return err
+// Returns the number of unprocessed dirty items and an error if we
+// had an issue doing things.
+func (s *bucketstore) Flush() (int64, error) {
+	s.diskLock.Lock()
+	defer s.diskLock.Unlock()
+	return s.flush_unlocked()
 }
 
-func (s *bucketstore) flush() error {
+func (s *bucketstore) flush_unlocked() (int64, error) {
 	d := atomic.LoadInt64(&s.dirtiness)
 	if err := s.BSF().store.Flush(); err != nil {
 		atomic.AddUint64(&s.stats.FlushErrors, 1)
-		return err
+		return atomic.LoadInt64(&s.dirtiness), err
 	}
-	atomic.AddInt64(&s.dirtiness, -d)
 	atomic.AddUint64(&s.stats.Flushes, 1)
-	return nil
+	return atomic.AddInt64(&s.dirtiness, -d), nil
+}
+
+func (s *bucketstore) periodicFlushAndCompact(time.Time) bool {
+	d, _ := s.Flush()
+	if s.stats.Writes-s.stats.LastCompactAt > compact_every {
+		s.stats.LastCompactAt = s.stats.Writes
+		s.Compact()
+	}
+	if d > 0 {
+		log.Printf("Flushed all but %v items (retrying)", d)
+	}
+	return d > 0
+}
+
+func (s *bucketstore) mkFlushFun() func(time.Time) bool {
+	return func(t time.Time) bool {
+		return s.periodicFlushAndCompact(t)
+	}
 }
 
 func (s *bucketstore) dirty() {
-	atomic.AddInt64(&s.dirtiness, 1)
-}
-
-func (s *bucketstore) Compact() (err error) {
-	s.apply(func() {
-		err = s.compact()
-	})
-	return err
+	newval := atomic.AddInt64(&s.dirtiness, 1)
+	if newval == 1 {
+		flushRunner.Register(s.endch, s.mkFlushFun())
+	}
 }
 
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
@@ -198,21 +171,27 @@ func (s *bucketstore) collExists(collName string) bool {
 	return s.BSF().store.GetCollection(collName) != nil
 }
 
-func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
-	s.apply(func() {
-		k := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS))
-		c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
+func (s *bucketstore) apply(f func()) {
+	s.diskLock.Lock()
+	defer s.diskLock.Unlock()
+	f()
+}
 
-		// TODO: Handle numItems and lastCas initialization.
-		// TODO: Handle cleanup of partitions when bucket/vbucket closes.
-		res = s.partitions[vbid]
-		if res == nil {
-			res = &partitionstore{parent: s}
-			s.partitions[vbid] = res
-		}
-		res.keys = unsafe.Pointer(k)
-		res.changes = unsafe.Pointer(c)
-	})
+func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
+	s.diskLock.Lock()
+	defer s.diskLock.Unlock()
+	k := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS))
+	c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
+
+	// TODO: Handle numItems and lastCas initialization.
+	// TODO: Handle cleanup of partitions when bucket/vbucket closes.
+	res = s.partitions[vbid]
+	if res == nil {
+		res = &partitionstore{parent: s}
+		s.partitions[vbid] = res
+	}
+	res.keys = unsafe.Pointer(k)
+	res.changes = unsafe.Pointer(c)
 	return res
 }
 

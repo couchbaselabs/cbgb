@@ -13,14 +13,15 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
-func (s *bucketstore) compact() error {
-	// This should be invoked via bucketstore.service(), so there's no
-	// concurrent flushing.
+func (s *bucketstore) Compact() error {
+	s.diskLock.Lock()
+	defer s.diskLock.Unlock()
+
 	bsf := s.BSF()
 
 	// Turn off concurrent sleeping.
-	bsf.apply(func() { bsf.insomnia = true })
-	defer bsf.apply(func() { bsf.insomnia = false })
+	bsf.insomnia = true
+	defer func() { bsf.insomnia = false }()
 
 	compactPath := bsf.path + ".compact"
 	if err := s.compactGo(bsf, compactPath); err != nil {

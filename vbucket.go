@@ -686,7 +686,7 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 					return
 				}
 
-				if err := v.bs.flush(); err != nil {
+				if _, err := v.bs.flush_unlocked(); err != nil {
 					res = &gomemcached.MCResponse{
 						Status: gomemcached.TMPFAIL,
 						Body:   []byte(fmt.Sprintf("setVBMeta flush error %v", err)),

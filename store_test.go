@@ -453,28 +453,18 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 }
 
 func TestFlushCloseInterval(t *testing.T) {
-	testFlushCloseInterval(t, time.Millisecond, time.Second)
-	testFlushCloseInterval(t, time.Millisecond, time.Millisecond)
-	testFlushCloseInterval(t, 2*time.Millisecond, time.Millisecond)
-	testFlushCloseInterval(t, time.Millisecond, 2*time.Millisecond)
-}
-
-func testFlushCloseInterval(t *testing.T,
-	flushInterval time.Duration,
-	sleepInterval time.Duration) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions:   MAX_VBUCKETS,
-			FlushInterval:   flushInterval,
-			SleepInterval:   sleepInterval,
 			CompactInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
 	}
+	defer b0.Close()
 
 	r0 := &reqHandler{currentBucket: b0}
 	b0.CreateVBucket(2)
@@ -485,9 +475,7 @@ func testFlushCloseInterval(t *testing.T,
 	testLoadInts(t, r0, 2, 5)
 	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "initial data load")
 
-	// We don't do an explicit Flush() here.  Instead, we sleep longer
-	// than the flushInterval so there's a background Flush() for us.
-	time.Sleep(10 * time.Millisecond)
+	b0.Flush()
 
 	b0.Close()
 
@@ -501,6 +489,7 @@ func testFlushCloseInterval(t *testing.T,
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
 	}
+	defer b1.Close()
 	r1 := &reqHandler{currentBucket: b1}
 	err = b1.Load()
 	if err != nil {
