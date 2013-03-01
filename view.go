@@ -12,6 +12,8 @@
 package cbgb
 
 import (
+	"fmt"
+	"reflect"
 	"strconv"
 
 	"github.com/couchbaselabs/walrus"
@@ -75,76 +77,45 @@ func NewViewParams() *ViewParams {
 		InclusiveEnd: true,
 	}
 }
+
+func paramFieldName(sf reflect.StructField) string {
+	fieldName := sf.Tag.Get("json")
+	if fieldName == "" {
+		fieldName = sf.Name
+	}
+	return fieldName
+}
+
 func ParseViewParams(params Form) (p *ViewParams, err error) {
 	p = NewViewParams()
 	if params == nil {
 		return p, nil
 	}
-	p.Key = params.FormValue("key")
-	p.Keys = params.FormValue("keys")
-	p.StartKey = params.FormValue("startkey")
-	p.StartKeyDocId = params.FormValue("startkey_docid")
-	p.EndKey = params.FormValue("endkey")
-	p.EndKeyDocId = params.FormValue("endkey_docid")
-	p.Stale = params.FormValue("stale")
 
-	var bv bool
-	var iv uint64
-	var s string
+	val := reflect.Indirect(reflect.ValueOf(p))
 
-	if s = params.FormValue("descending"); len(s) > 0 {
-		if bv, err = strconv.ParseBool(s); err != nil {
-			return p, err
+	for i := 0; i < val.NumField(); i++ {
+		sf := val.Type().Field(i)
+		paramName := paramFieldName(sf)
+		paramVal := params.FormValue(paramName)
+
+		switch {
+		case paramVal == "":
+			// Skip this one
+		case sf.Type.Kind() == reflect.String:
+			val.Field(i).SetString(paramVal)
+		case sf.Type.Kind() == reflect.Uint64:
+			v := uint64(0)
+			v, err = strconv.ParseUint(paramVal, 10, 64)
+			if err != nil {
+				return nil, err
+			}
+			val.Field(i).SetUint(v)
+		case sf.Type.Kind() == reflect.Bool:
+			val.Field(i).SetBool(paramVal == "true")
+		default:
+			return nil, fmt.Errorf("Unhandled type in field %v", sf.Name)
 		}
-		p.Descending = bv
-	}
-	if s = params.FormValue("group"); len(s) > 0 {
-		if bv, err = strconv.ParseBool(s); err != nil {
-			return p, err
-		}
-		p.Group = bv
-	}
-	if s = params.FormValue("group_level"); len(s) > 0 {
-		if iv, err = strconv.ParseUint(s, 10, 64); err != nil {
-			return p, err
-		}
-		p.GroupLevel = iv
-	}
-	if s = params.FormValue("include_docs"); len(s) > 0 {
-		if bv, err = strconv.ParseBool(s); err != nil {
-			return p, err
-		}
-		p.IncludeDocs = bv
-	}
-	if s = params.FormValue("inclusive_end"); len(s) > 0 {
-		if bv, err = strconv.ParseBool(s); err != nil {
-			return p, err
-		}
-		p.InclusiveEnd = bv
-	}
-	if s = params.FormValue("limit"); len(s) > 0 {
-		if iv, err = strconv.ParseUint(s, 10, 64); err != nil {
-			return p, err
-		}
-		p.Limit = iv
-	}
-	if s = params.FormValue("reduce"); len(s) > 0 {
-		if bv, err = strconv.ParseBool(s); err != nil {
-			return p, err
-		}
-		p.Reduce = bv
-	}
-	if s = params.FormValue("skip"); len(s) > 0 {
-		if iv, err = strconv.ParseUint(s, 10, 64); err != nil {
-			return p, err
-		}
-		p.Skip = iv
-	}
-	if s = params.FormValue("update_seq"); len(s) > 0 {
-		if bv, err = strconv.ParseBool(s); err != nil {
-			return p, err
-		}
-		p.UpdateSeq = bv
 	}
 
 	return p, nil
