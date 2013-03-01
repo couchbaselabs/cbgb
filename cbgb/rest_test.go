@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -14,6 +15,11 @@ import (
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
 )
+
+// Don't do any normal logging while running tests.
+func init() {
+	log.SetOutput(ioutil.Discard)
+}
 
 func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
 	d, _ := ioutil.TempDir("./tmp", "test")
