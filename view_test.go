@@ -58,9 +58,9 @@ func TestParseViewParams(t *testing.T) {
 		m: map[string]string{
 			"key":            "aaa",
 			"keys":           "1,2,3",
-			"startkey":       "AA",
+			"startkey":       `"AA"`,
 			"startkey_docid": "AADD",
-			"endkey":         "ZZ",
+			"endkey":         `"ZZ"`,
 			"endkey_docid":   "ZZDD",
 			"stale":          "ok",
 			"descending":     "true",
@@ -75,8 +75,8 @@ func TestParseViewParams(t *testing.T) {
 		},
 	}
 	p, err = ParseViewParams(f)
-	if err != nil || p == nil {
-		t.Errorf("unexpected error parsing view params")
+	if err != nil {
+		t.Errorf("unexpected error parsing view params: %v", err)
 	}
 	exp := &ViewParams{
 		Key:           "aaa",

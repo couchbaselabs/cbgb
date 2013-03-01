@@ -12,6 +12,7 @@
 package cbgb
 
 import (
+	"encoding/json"
 	"fmt"
 	"reflect"
 	"strconv"
@@ -53,22 +54,22 @@ func (rows ViewRows) Less(i, j int) bool {
 
 // From http://wiki.apache.org/couchdb/HTTP_view_API
 type ViewParams struct {
-	Key           string `json:"key"`
-	Keys          string `json:"keys"`
-	StartKey      string `json:"startkey"`
-	StartKeyDocId string `json:"startkey_docid"`
-	EndKey        string `json:"endkey"`
-	EndKeyDocId   string `json:"endkey_docid"`
-	Stale         string `json:"stale"`
-	Descending    bool   `json:"descending"`
-	Group         bool   `json:"group"`
-	GroupLevel    uint64 `json:"group_level"`
-	IncludeDocs   bool   `json:"include_docs"`
-	InclusiveEnd  bool   `json:"inclusive_end"`
-	Limit         uint64 `json:"limit"`
-	Reduce        bool   `json:"reduce"`
-	Skip          uint64 `json:"skip"`
-	UpdateSeq     bool   `json:"update_seq"`
+	Key           string      `json:"key"`
+	Keys          string      `json:"keys"`
+	StartKey      interface{} `json:"startkey"`
+	StartKeyDocId string      `json:"startkey_docid"`
+	EndKey        interface{} `json:"endkey"`
+	EndKeyDocId   string      `json:"endkey_docid"`
+	Stale         string      `json:"stale"`
+	Descending    bool        `json:"descending"`
+	Group         bool        `json:"group"`
+	GroupLevel    uint64      `json:"group_level"`
+	IncludeDocs   bool        `json:"include_docs"`
+	InclusiveEnd  bool        `json:"inclusive_end"`
+	Limit         uint64      `json:"limit"`
+	Reduce        bool        `json:"reduce"`
+	Skip          uint64      `json:"skip"`
+	UpdateSeq     bool        `json:"update_seq"`
 }
 
 func NewViewParams() *ViewParams {
@@ -113,6 +114,13 @@ func ParseViewParams(params Form) (p *ViewParams, err error) {
 			val.Field(i).SetUint(v)
 		case sf.Type.Kind() == reflect.Bool:
 			val.Field(i).SetBool(paramVal == "true")
+		case sf.Type.Kind() == reflect.Interface:
+			var ob interface{}
+			err := json.Unmarshal([]byte(paramVal), &ob)
+			if err != nil {
+				return p, err
+			}
+			val.Field(i).Set(reflect.ValueOf(ob))
 		default:
 			return nil, fmt.Errorf("Unhandled type in field %v", sf.Name)
 		}

@@ -246,13 +246,9 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		p.EndKey = p.Key
 	}
 
-	if len(p.StartKey) > 0 {
-		var startKey interface{}
-		if err := json.Unmarshal([]byte(p.StartKey), &startKey); err != nil {
-			return result, fmt.Errorf("could not parse startkey, err: %v", err)
-		}
+	if p.StartKey != nil {
 		i := sort.Search(len(result.Rows), func(i int) bool {
-			return walrus.CollateJSON(result.Rows[i].Key, startKey) >= 0
+			return walrus.CollateJSON(result.Rows[i].Key, p.StartKey) >= 0
 		})
 		result.Rows = result.Rows[i:]
 	}
@@ -261,13 +257,9 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		result.Rows = result.Rows[:p.Limit]
 	}
 
-	if len(p.EndKey) > 0 {
-		var endKey interface{}
-		if err := json.Unmarshal([]byte(p.EndKey), &endKey); err != nil {
-			return result, fmt.Errorf("could not parse endkey, err: %v", err)
-		}
+	if p.EndKey != nil {
 		i := sort.Search(len(result.Rows), func(i int) bool {
-			return walrus.CollateJSON(result.Rows[i].Key, endKey) > 0
+			return walrus.CollateJSON(result.Rows[i].Key, p.EndKey) > 0
 		})
 		result.Rows = result.Rows[:i]
 	}
