@@ -49,7 +49,7 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 
 func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
 	_, _, bucket, ddocId := checkDocId(w, r)
-	if bucket == nil || len(ddocId) <= 0 {
+	if bucket == nil || ddocId == "" {
 		return
 	}
 	body, err := bucket.GetDDoc("_design/" + ddocId)
@@ -66,7 +66,7 @@ func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
 
 func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 	_, _, bucket, ddocId := checkDocId(w, r)
-	if bucket == nil || len(ddocId) <= 0 {
+	if bucket == nil || ddocId == "" {
 		return
 	}
 	body, err := ioutil.ReadAll(r.Body)
@@ -96,7 +96,7 @@ func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
 
 func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 	_, _, bucket, docId := checkDocId(w, r)
-	if bucket == nil || len(docId) <= 0 {
+	if bucket == nil || docId == "" {
 		return
 	}
 	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive)
@@ -123,11 +123,11 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vars, _, bucket, ddocId := checkDocId(w, r)
-	if bucket == nil || len(ddocId) <= 0 {
+	if bucket == nil || ddocId == "" {
 		return
 	}
 	viewId, ok := vars["viewId"]
-	if !ok || len(viewId) <= 0 {
+	if !ok || viewId == "" {
 		http.Error(w, "missing viewId from path", 400)
 		return
 	}
@@ -150,7 +150,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "view not found", 404)
 		return
 	}
-	if len(view.Map) <= 0 {
+	if view.Map == "" {
 		http.Error(w, "view map function missing", 400)
 		return
 	}
@@ -193,9 +193,14 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sort.Sort(vr.Rows)
-	vr, err = processViewResult(bucket, vr, "", p)
+	vr, err = processViewResult(bucket, vr, p)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("processViewResult error: %v", err), 400)
+		return
+	}
+	vr, err = reduceViewResult(bucket, vr, p, view.Reduce)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("reduceViewResult error: %v", err), 400)
 		return
 	}
 	vr.TotalRows = len(vr.Rows)
@@ -236,7 +241,7 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 // use ViewParams.
 
 func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
-	reduceFunction string, p *cbgb.ViewParams) (*cbgb.ViewResult, error) {
+	p *cbgb.ViewParams) (*cbgb.ViewResult, error) {
 	if p.Descending {
 		return result, fmt.Errorf("descending is not supported yet, sorry") // TODO.
 	}
@@ -268,9 +273,17 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		return result, fmt.Errorf("includeDocs is not supported yet, sorry") // TODO.
 	}
 
-	if p.Reduce && len(reduceFunction) > 0 {
-		return result, fmt.Errorf("reduce is not supported yet, sorry") // TODO.
+	return result, nil
+}
+
+func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
+	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
+	if reduceFunction == "" {
+		return result, nil
+	}
+	if p.Reduce == false {
+		return result, nil
 	}
 
-	return result, nil
+	return result, fmt.Errorf("reduce is not supported yet, sorry") // TODO.
 }
