@@ -54,8 +54,8 @@ func (rows ViewRows) Less(i, j int) bool {
 
 // From http://wiki.apache.org/couchdb/HTTP_view_API
 type ViewParams struct {
-	Key           string      `json:"key"`
-	Keys          string      `json:"keys"`
+	Key           interface{} `json:"key"`
+	Keys          string      `json:"keys"` // TODO: should be []interface{}.
 	StartKey      interface{} `json:"startkey"`
 	StartKeyDocId string      `json:"startkey_docid"`
 	EndKey        interface{} `json:"endkey"`

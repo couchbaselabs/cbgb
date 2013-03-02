@@ -241,7 +241,7 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		return result, fmt.Errorf("descending is not supported yet, sorry") // TODO.
 	}
 
-	if len(p.Key) > 0 {
+	if p.Key != nil {
 		p.StartKey = p.Key
 		p.EndKey = p.Key
 	}

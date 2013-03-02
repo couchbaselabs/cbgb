@@ -56,7 +56,7 @@ func TestParseViewParams(t *testing.T) {
 
 	f := &testform{
 		m: map[string]string{
-			"key":            "aaa",
+			"key":            `"aaa"`,
 			"keys":           "1,2,3",
 			"startkey":       `"AA"`,
 			"startkey_docid": "AADD",
