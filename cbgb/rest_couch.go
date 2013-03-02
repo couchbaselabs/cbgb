@@ -159,6 +159,8 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
 		return
 	}
+	defer mf.Stop()
+
 	vr := &cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
 	for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
 		vb := bucket.GetVBucket(uint16(vbid))
@@ -193,6 +195,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	sort.Sort(vr.Rows)
+
 	vr, err = processViewResult(bucket, vr, p)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("processViewResult error: %v", err), 400)
@@ -204,6 +207,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	vr.TotalRows = len(vr.Rows)
+
 	jsonEncode(w, vr)
 }
 
