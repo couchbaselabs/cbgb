@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -164,28 +165,8 @@ func testCouchPutDDoc(t *testing.T, numPartitions int) {
 	}
 }
 
-func TestCouchViewBasic(t *testing.T) {
-	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
-	defer os.RemoveAll(d)
-	mr := testSetupMux(d)
-
-	rr := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "http://127.0.0.1/default/hello", nil)
-	mr.ServeHTTP(rr, r)
-	if rr.Code != 404 {
-		t.Errorf("expected req to 404, got: %#v, %v",
-			rr, rr.Body.String())
-	}
-
-	d0 := []byte(`{
-		"_id":"_design/d0",
-		"language": "javascript",
-		"views": {
-			"v0": {
-				"map": "function(doc) { emit(doc.amount, null) }"
-			}
-		}
-    }`)
+func testSetupDDoc(t *testing.T, bucket cbgb.Bucket, ddoc string) {
+	d0 := []byte(strings.Replace(ddoc, "\n", "", -1))
 
 	err := bucket.SetDDoc("_design/d0", d0)
 	if err != nil {
@@ -201,32 +182,51 @@ func TestCouchViewBasic(t *testing.T) {
 	}
 
 	var res *gomemcached.MCResponse
-	nitems := 0
 
 	res = cbgb.SetItem(bucket, []byte("a"), []byte(`{"amount": 1}`),
 		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	nitems++
 	res = cbgb.SetItem(bucket, []byte("b"), []byte(`{"amount": 3}`),
 		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	nitems++
 	res = cbgb.SetItem(bucket, []byte("c"), []byte(`{"amount": 4}`),
 		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	nitems++
 	res = cbgb.SetItem(bucket, []byte("d"), []byte(`{"amount": 2}`),
 		cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	nitems++
+}
+
+func TestCouchViewBasic(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://127.0.0.1/default/hello", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected req to 404, got: %#v, %v",
+			rr, rr.Body.String())
+	}
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
@@ -255,7 +255,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &cbgb.ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err := json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -384,5 +384,51 @@ func TestCouchViewBasic(t *testing.T) {
 		if a[i] != int(row.Key.(float64)) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
+	}
+}
+
+func TestCouchViewReduceBasic(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, 1); }",
+				"reduce": "function(keys, values, rereduce) {
+                              var sum = 0;
+                              for (var i = 0; i < values.length; i++) {
+                                sum = sum + values[i];
+                              }
+                              return sum;
+                           }"
+			}
+		}
+    }`)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd := &cbgb.ViewResult{}
+	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	if dd.TotalRows != 1 {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			1, dd.TotalRows, dd, rr.Body.String())
+	}
+	exp := 4
+	if exp != int(dd.Rows[0].Value.(float64)) {
+		t.Errorf("expected row value %#v to match %#v in row %#v",
+			dd.Rows[0].Value, exp, dd.Rows[0])
 	}
 }

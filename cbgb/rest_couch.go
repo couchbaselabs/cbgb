@@ -17,11 +17,13 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sort"
+	"strconv"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/walrus"
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
+	"github.com/robertkrimen/otto"
 )
 
 func restCouchAPI(r *mux.Router) *mux.Router {
@@ -142,7 +144,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	}
 	var ddoc walrus.DesignDoc
 	if err = json.Unmarshal(body, &ddoc); err != nil {
-		http.Error(w, "could not unmarshal design doc", 500)
+		http.Error(w, fmt.Sprintf("could not unmarshal design doc, err: %v", err), 500)
 		return
 	}
 	view, ok := ddoc.Views[viewId]
@@ -289,5 +291,118 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		return result, nil
 	}
 
-	return result, fmt.Errorf("reduce is not supported yet, sorry") // TODO.
+	o := otto.New()
+	fn, err := o.Object("(" + reduceFunction + ")")
+	if err != nil {
+		return result, fmt.Errorf("could not eval reduceFunction, err: %v", err)
+	}
+	if fn.Class() != "Function" {
+		return result, fmt.Errorf("fn not a function, was: %v", fn.Class())
+	}
+	fnv := fn.Value()
+	if fnv.Class() != "Function" {
+		return result, fmt.Errorf("fnv not a function, was: %v", fnv.Class())
+	}
+
+	keys := make([]interface{}, len(result.Rows))
+	values := make([]interface{}, len(result.Rows))
+	for i, row := range result.Rows {
+		keys[i] = row.Key
+		values[i] = row.Value
+	}
+
+	jkeys, err := json.Marshal(keys)
+	if err != nil {
+		return result, fmt.Errorf("could not jsonify keys, err: %v", err)
+	}
+	jvalues, err := json.Marshal(values)
+	if err != nil {
+		return result, fmt.Errorf("could not jsonify values, err: %v", err)
+	}
+
+	okeys, err := o.Object("({v:" + string(jkeys) + "})")
+	if err != nil {
+		return result, fmt.Errorf("could not convert keys, err: %v", err)
+	}
+	ovalues, err := o.Object("({v:" + string(jvalues) + "})")
+	if err != nil {
+		return result, fmt.Errorf("could not convert values, err: %v", err)
+	}
+
+	ovkeys, err := okeys.Get("v")
+	if err != nil {
+		return result, fmt.Errorf("could not convert okeys, err: %v", err)
+	}
+	if ovkeys.Class() != "Array" {
+		return result, fmt.Errorf("expected ovkeys to be array, got: %#v, %v, jkeys: %v",
+			ovkeys, ovkeys.Class(), string(jkeys))
+	}
+	ovvalues, err := ovalues.Get("v")
+	if err != nil {
+		return result, fmt.Errorf("could not convert ovalues, err: %v", err)
+	}
+	if ovvalues.Class() != "Array" {
+		return result, fmt.Errorf("expected ovvalues to be array, got: %#v, %v, jvalues: %v",
+			ovvalues, ovvalues.Class(), string(jvalues))
+	}
+
+	ores, err := fnv.Call(fnv, ovkeys, ovvalues, otto.FalseValue())
+	if err != nil {
+		return result, fmt.Errorf("call reduce err: %v, reduceFunction: %v, %v, %v",
+			err, reduceFunction, ovkeys, ovvalues)
+	}
+	gres, err := OttoToGo(ores)
+	if err != nil {
+		return result, fmt.Errorf("converting reduce result err: %v", err)
+	}
+
+	result.Rows = []*cbgb.ViewRow{&cbgb.ViewRow{Value: gres}}
+	return result, nil
+}
+
+// Originally from github.com/couchbaselabs/walrus, but capitalized.
+// TODO: Push this back to walrus.
+// Converts an Otto value to a Go value. Handles all JSON-compatible types.
+func OttoToGo(value otto.Value) (interface{}, error) {
+	if value.IsBoolean() {
+		return value.ToBoolean()
+	} else if value.IsNull() || value.IsUndefined() {
+		return nil, nil
+	} else if value.IsNumber() {
+		return value.ToFloat()
+	} else if value.IsString() {
+		return value.ToString()
+	} else {
+		switch value.Class() {
+		case "Array":
+			return OttoToGoArray(value.Object())
+		}
+	}
+	return nil, fmt.Errorf("Unsupported Otto value: %v", value)
+}
+
+// Originally from github.com/couchbaselabs/walrus, but capitalized.
+// TODO: Push this back to walrus.
+func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
+	lengthVal, err := array.Get("length")
+	if err != nil {
+		return nil, err
+	}
+	length, err := lengthVal.ToInteger()
+	if err != nil {
+		return nil, err
+	}
+
+	result := make([]interface{}, length)
+	for i := 0; i < int(length); i++ {
+		item, err := array.Get(strconv.Itoa(i))
+		if err != nil {
+			return nil, err
+		}
+		result[i], err = OttoToGo(item)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return result, nil
 }
