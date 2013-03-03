@@ -274,7 +274,10 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 
 	if p.EndKey != nil {
 		i := sort.Search(len(result.Rows), func(i int) bool {
-			return walrus.CollateJSON(result.Rows[i].Key, p.EndKey) > 0
+			if p.InclusiveEnd {
+				return walrus.CollateJSON(result.Rows[i].Key, p.EndKey) > 0
+			}
+			return walrus.CollateJSON(result.Rows[i].Key, p.EndKey) >= 0
 		})
 		result.Rows = result.Rows[:i]
 	}
