@@ -586,6 +586,30 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
 	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"reduce=true&descending=true", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	if dd.TotalRows != 1 {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			1, dd.TotalRows, dd, rr.Body.String())
+	}
+	exp = 4
+	if exp != int(dd.Rows[0].Value.(float64)) {
+		t.Errorf("expected row value %#v to match %#v in row %#v",
+			dd.Rows[0].Value, exp, dd.Rows[0])
+	}
 }
 
 func TestReverseViewRows(t *testing.T) {
