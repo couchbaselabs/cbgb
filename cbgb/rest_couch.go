@@ -311,45 +311,19 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		values[i] = row.Value
 	}
 
-	jkeys, err := json.Marshal(keys)
+	okeys, err := OttoFromGoArray(o, keys)
 	if err != nil {
-		return result, fmt.Errorf("could not jsonify keys, err: %v", err)
+		return result, err
 	}
-	jvalues, err := json.Marshal(values)
+	ovalues, err := OttoFromGoArray(o, values)
 	if err != nil {
-		return result, fmt.Errorf("could not jsonify values, err: %v", err)
+		return result, err
 	}
 
-	okeys, err := o.Object("({v:" + string(jkeys) + "})")
-	if err != nil {
-		return result, fmt.Errorf("could not convert keys, err: %v", err)
-	}
-	ovalues, err := o.Object("({v:" + string(jvalues) + "})")
-	if err != nil {
-		return result, fmt.Errorf("could not convert values, err: %v", err)
-	}
-
-	ovkeys, err := okeys.Get("v")
-	if err != nil {
-		return result, fmt.Errorf("could not convert okeys, err: %v", err)
-	}
-	if ovkeys.Class() != "Array" {
-		return result, fmt.Errorf("expected ovkeys to be array, got: %#v, %v, jkeys: %v",
-			ovkeys, ovkeys.Class(), string(jkeys))
-	}
-	ovvalues, err := ovalues.Get("v")
-	if err != nil {
-		return result, fmt.Errorf("could not convert ovalues, err: %v", err)
-	}
-	if ovvalues.Class() != "Array" {
-		return result, fmt.Errorf("expected ovvalues to be array, got: %#v, %v, jvalues: %v",
-			ovvalues, ovvalues.Class(), string(jvalues))
-	}
-
-	ores, err := fnv.Call(fnv, ovkeys, ovvalues, otto.FalseValue())
+	ores, err := fnv.Call(fnv, okeys, ovalues, otto.FalseValue())
 	if err != nil {
 		return result, fmt.Errorf("call reduce err: %v, reduceFunction: %v, %v, %v",
-			err, reduceFunction, ovkeys, ovvalues)
+			err, reduceFunction, okeys, ovalues)
 	}
 	gres, err := OttoToGo(ores)
 	if err != nil {
@@ -405,6 +379,30 @@ func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
 		}
 	}
 	return result, nil
+}
+
+func OttoFromGoArray(o *otto.Otto, arr []interface{}) (otto.Value, error) {
+	jarr, err := json.Marshal(arr)
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not jsonify arr, err: %v", err)
+	}
+	oarr, err := o.Object("({v:" + string(jarr) + "})")
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not convert arr, err: %v", err)
+	}
+	ovarr, err := oarr.Get("v")
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not convert oarr, err: %v", err)
+	}
+	if ovarr.Class() != "Array" {
+		return otto.UndefinedValue(),
+			fmt.Errorf("expected ovarr to be array, got: %#v, %v, jarr: %v",
+				ovarr, ovarr.Class(), string(jarr))
+	}
+	return ovarr, nil
 }
 
 func OttoNewFunction(o *otto.Otto, f string) (otto.Value, error) {
