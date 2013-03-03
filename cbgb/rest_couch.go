@@ -299,16 +299,9 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	}
 
 	o := otto.New()
-	fn, err := o.Object("(" + reduceFunction + ")")
+	fnv, err := OttoNewFunction(o, reduceFunction)
 	if err != nil {
-		return result, fmt.Errorf("could not eval reduceFunction, err: %v", err)
-	}
-	if fn.Class() != "Function" {
-		return result, fmt.Errorf("fn not a function, was: %v", fn.Class())
-	}
-	fnv := fn.Value()
-	if fnv.Class() != "Function" {
-		return result, fmt.Errorf("fnv not a function, was: %v", fnv.Class())
+		return result, err
 	}
 
 	keys := make([]interface{}, len(result.Rows))
@@ -412,4 +405,22 @@ func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
 		}
 	}
 	return result, nil
+}
+
+func OttoNewFunction(o *otto.Otto, f string) (otto.Value, error) {
+	fn, err := o.Object("(" + f + ")")
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not eval function, err: %v", err)
+	}
+	if fn.Class() != "Function" {
+		return otto.UndefinedValue(),
+			fmt.Errorf("fn not a function, was: %v", fn.Class())
+	}
+	fnv := fn.Value()
+	if fnv.Class() != "Function" {
+		return otto.UndefinedValue(),
+			fmt.Errorf("fnv not a function, was: %v", fnv.Class())
+	}
+	return fnv, nil
 }
