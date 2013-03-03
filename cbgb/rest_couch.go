@@ -250,10 +250,6 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	// TODO: Handle p.Skip.
 	// TODO: Handle p.UpdateSeq.
 
-	if p.Descending {
-		return result, fmt.Errorf("descending is not supported yet, sorry") // TODO.
-	}
-
 	if p.Key != nil {
 		p.StartKey = p.Key
 		p.EndKey = p.Key
@@ -263,12 +259,20 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		i := sort.Search(len(result.Rows), func(i int) bool {
 			return walrus.CollateJSON(result.Rows[i].Key, p.StartKey) >= 0
 		})
-		result.Rows = result.Rows[i:]
+		if p.Descending {
+			result.Rows = result.Rows[:i+1]
+		} else {
+			result.Rows = result.Rows[i:]
+		}
 	}
 
 	// TODO: Does the limit get processed after reduce?
 	if p.Limit > 0 && uint64(len(result.Rows)) > p.Limit {
-		result.Rows = result.Rows[:p.Limit]
+		if p.Descending {
+			result.Rows = result.Rows[len(result.Rows)-int(p.Limit):]
+		} else {
+			result.Rows = result.Rows[:p.Limit]
+		}
 	}
 
 	if p.EndKey != nil {
@@ -278,7 +282,24 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 			}
 			return walrus.CollateJSON(result.Rows[i].Key, p.EndKey) >= 0
 		})
-		result.Rows = result.Rows[:i]
+		if p.Descending {
+			result.Rows = result.Rows[i:]
+		} else {
+			result.Rows = result.Rows[:i]
+		}
+	}
+
+	// TODO: Does the limit get processed after reduce?
+	if p.Limit > 0 && uint64(len(result.Rows)) > p.Limit {
+		if p.Descending {
+			result.Rows = result.Rows[len(result.Rows)-int(p.Limit):]
+		} else {
+			result.Rows = result.Rows[:p.Limit]
+		}
+	}
+
+	if p.Descending {
+		reverseViewRows(result.Rows)
 	}
 
 	if p.IncludeDocs { // TODO.
@@ -290,6 +311,8 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 
 func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
+	// TODO: Support group/group_level.
+
 	if reduceFunction == "" {
 		return result, nil
 	}
@@ -331,4 +354,12 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 
 	result.Rows = []*cbgb.ViewRow{&cbgb.ViewRow{Value: gres}}
 	return result, nil
+}
+
+func reverseViewRows(r cbgb.ViewRows) {
+	num := len(r)
+	mid := num / 2
+	for i := 0; i < mid; i++ {
+		r[i], r[num-i-1] = r[num-i-1], r[i]
+	}
 }

@@ -360,6 +360,24 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=3&endkey=1", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	if dd.TotalRows != 0 {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			0, dd.TotalRows, dd, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0"+
 			"?startkey=1&endkey=3&inclusive_end=false", nil)
 	mr.ServeHTTP(rr, r)
@@ -402,6 +420,63 @@ func TestCouchViewBasic(t *testing.T) {
 	}
 	k = []string{"d"}
 	a = []int{2}
+	if dd.TotalRows != len(k) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(k), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+		if a[i] != int(row.Key.(float64)) {
+			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?descending=true", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	k = []string{"c", "b", "d", "a"}
+	a = []int{4, 3, 2, 1}
+	if dd.TotalRows != len(k) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(k), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+		if a[i] != int(row.Key.(float64)) {
+			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"startkey=3&descending=true", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	k = []string{"b", "d", "a"}
+	a = []int{3, 2, 1}
 	if dd.TotalRows != len(k) {
 		t.Errorf("expected %v rows, got: %v, %v, %v",
 			len(k), dd.TotalRows, dd, rr.Body.String())
@@ -510,5 +585,64 @@ func TestCouchViewReduceBasic(t *testing.T) {
 	if exp != int(dd.Rows[0].Value.(float64)) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
+	}
+}
+
+func TestReverseViewRows(t *testing.T) {
+	var r cbgb.ViewRows
+	r = []*cbgb.ViewRow{}
+	reverseViewRows(r)
+	if len(r) != 0 {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+
+	r = []*cbgb.ViewRow{
+		&cbgb.ViewRow{Id: "a"},
+	}
+	reverseViewRows(r)
+	if len(r) != 1 {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+	if r[0].Id != "a" {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+
+	r = []*cbgb.ViewRow{
+		&cbgb.ViewRow{Id: "a"},
+		&cbgb.ViewRow{Id: "b"},
+	}
+	reverseViewRows(r)
+	if len(r) != 2 {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+	if r[0].Id != "b" || r[1].Id != "a" {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+
+	r = []*cbgb.ViewRow{
+		&cbgb.ViewRow{Id: "a"},
+		&cbgb.ViewRow{Id: "b"},
+		&cbgb.ViewRow{Id: "c"},
+	}
+	reverseViewRows(r)
+	if len(r) != 3 {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+	if r[0].Id != "c" || r[1].Id != "b" || r[2].Id != "a" {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+
+	r = []*cbgb.ViewRow{
+		&cbgb.ViewRow{Id: "a"},
+		&cbgb.ViewRow{Id: "b"},
+		&cbgb.ViewRow{Id: "c"},
+		&cbgb.ViewRow{Id: "d"},
+	}
+	reverseViewRows(r)
+	if len(r) != 4 {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+	if r[0].Id != "d" || r[1].Id != "c" || r[2].Id != "b" || r[3].Id != "a" {
+		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
 	}
 }
