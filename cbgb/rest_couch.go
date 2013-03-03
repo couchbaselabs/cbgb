@@ -248,6 +248,9 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 
 func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams) (*cbgb.ViewResult, error) {
+	// TODO: Handle p.Skip.
+	// TODO: Handle p.UpdateSeq.
+
 	if p.Descending {
 		return result, fmt.Errorf("descending is not supported yet, sorry") // TODO.
 	}
@@ -264,6 +267,7 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		result.Rows = result.Rows[i:]
 	}
 
+	// TODO: Does the limit get processed after reduce?
 	if p.Limit > 0 && uint64(len(result.Rows)) > p.Limit {
 		result.Rows = result.Rows[:p.Limit]
 	}
@@ -275,7 +279,7 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		result.Rows = result.Rows[:i]
 	}
 
-	if p.IncludeDocs {
+	if p.IncludeDocs { // TODO.
 		return result, fmt.Errorf("includeDocs is not supported yet, sorry") // TODO.
 	}
 
