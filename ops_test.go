@@ -875,6 +875,8 @@ func TestChangesSinceTransmitError(t *testing.T) {
 }
 
 func TestVBMeta(t *testing.T) {
+	allow_vbSetVBMeta = true
+
 	empty := []byte{}
 
 	tests := []struct {

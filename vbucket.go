@@ -652,8 +652,15 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 	return res
 }
 
+// TODO: Don't allow clients to change vb state/meta for initial cbgb
+// version, until (perhaps) one day when we have auth checking.
+var allow_vbSetVBMeta bool = false
+
 func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
+	if !allow_vbSetVBMeta {
+		return
+	}
 	if req.Body == nil {
 		return
 	}
@@ -684,6 +691,10 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 					return
 				}
 
+				// TODO: Unlike couchbase, we flush before returning
+				// to client; which might not be what some management
+				// use cases want (ability to switch vbstate even if
+				// dirty queues are huge).
 				if _, err := v.bs.flush_unlocked(); err != nil {
 					res = &gomemcached.MCResponse{
 						Status: gomemcached.TMPFAIL,
