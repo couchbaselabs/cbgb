@@ -43,6 +43,8 @@ func (i *item) Equal(j *item) bool {
 		bytes.Equal(i.data, j.data)
 }
 
+const itemHdrLen = 4 + 4 + 8 + 2 + 4
+
 // Serialize everything but the key.
 func (i *item) toValueBytes() []byte {
 	if len(i.key) > MAX_ITEM_KEY_LENGTH {
@@ -51,36 +53,29 @@ func (i *item) toValueBytes() []byte {
 	if len(i.data) > MAX_ITEM_DATA_LENGTH {
 		return nil
 	}
-	buf := &bytes.Buffer{}
-	if err := binary.Write(buf, binary.BigEndian, i.exp); err != nil {
-		return nil
-	}
-	if err := binary.Write(buf, binary.BigEndian, i.flag); err != nil {
-		return nil
-	}
-	if err := binary.Write(buf, binary.BigEndian, i.cas); err != nil {
-		return nil
-	}
-	if err := binary.Write(buf, binary.BigEndian, uint16(len(i.key))); err != nil {
-		return nil
-	}
-	if err := binary.Write(buf, binary.BigEndian, uint32(len(i.data))); err != nil {
-		return nil
-	}
-	if _, err := buf.Write(i.key); err != nil {
-		return nil
-	}
-	if _, err := buf.Write(i.data); err != nil {
-		return nil
-	}
-	return buf.Bytes()
+
+	rv := make([]byte, itemHdrLen+len(i.key)+len(i.data))
+	off := 0
+	binary.BigEndian.PutUint32(rv[off:], i.exp)
+	off += 4
+	binary.BigEndian.PutUint32(rv[off:], i.flag)
+	off += 4
+	binary.BigEndian.PutUint64(rv[off:], i.cas)
+	off += 8
+	binary.BigEndian.PutUint16(rv[off:], uint16(len(i.key)))
+	off += 2
+	binary.BigEndian.PutUint32(rv[off:], uint32(len(i.data)))
+	off += 4
+	n := copy(rv[off:], i.key)
+	off += n
+	copy(rv[off:], i.data)
+	return rv
 }
 
 func (i *item) fromValueBytes(b []byte) (err error) {
-	hdrlen := 4 + 4 + 8 + 2 + 4
-	if hdrlen > len(b) {
+	if itemHdrLen > len(b) {
 		return fmt.Errorf("item.fromValueBytes(): arr too short: %v, minimum: %v",
-			len(b), hdrlen)
+			len(b), itemHdrLen)
 	}
 	buf := bytes.NewBuffer(b)
 	if err = binary.Read(buf, binary.BigEndian, &i.exp); err != nil {
@@ -100,17 +95,17 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 	if err = binary.Read(buf, binary.BigEndian, &datalen); err != nil {
 		return err
 	}
-	if len(b) < hdrlen+int(keylen)+int(datalen) {
+	if len(b) < itemHdrLen+int(keylen)+int(datalen) {
 		return fmt.Errorf("item.fromValueBytes(): arr too short: %v, wanted: %v",
-			len(b), hdrlen+int(keylen)+int(datalen))
+			len(b), itemHdrLen+int(keylen)+int(datalen))
 	}
 	if keylen > 0 {
-		i.key = b[hdrlen : hdrlen+int(keylen)]
+		i.key = b[itemHdrLen : itemHdrLen+int(keylen)]
 	} else {
 		i.key = []byte{}
 	}
 	if datalen > 0 {
-		i.data = b[hdrlen+int(keylen) : hdrlen+int(keylen)+int(datalen)]
+		i.data = b[itemHdrLen+int(keylen) : itemHdrLen+int(keylen)+int(datalen)]
 	} else {
 		i.data = []byte{}
 	}
