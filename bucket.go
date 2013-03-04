@@ -28,8 +28,8 @@ const (
 
 var broadcastMux = broadcast.NewMuxObserver(0, 0)
 
-var everySecond = newPeriodically(time.Second, 10)
-var everyFiveMinutes = newPeriodically(time.Minute*5, 10)
+var statAggPeriodic = newPeriodically(time.Second, 10)
+var statAggPassivator = newPeriodically(time.Minute*5, 10)
 
 type Bucket interface {
 	Available() bool
@@ -563,7 +563,7 @@ func (b *livebucket) mkQuiesceStats() func(time.Time) bool {
 	return func(t time.Time) bool {
 		keepGoing := b.shouldContinueDoingStats(t)
 		if !keepGoing {
-			everySecond.Unregister(b.availablech)
+			statAggPeriodic.Unregister(b.availablech)
 		}
 		return keepGoing
 	}
@@ -574,16 +574,16 @@ func (b *livebucket) StartStats(d time.Duration) {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
 
-	everySecond.Register(b.availablech, b.mkSampleStats())
-	everyFiveMinutes.Register(b.availablech, b.mkQuiesceStats())
+	statAggPeriodic.Register(b.availablech, b.mkSampleStats())
+	statAggPassivator.Register(b.availablech, b.mkQuiesceStats())
 }
 
 func (b *livebucket) StopStats() {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
 
-	everySecond.Unregister(b.availablech)
-	everyFiveMinutes.Unregister(b.availablech)
+	statAggPeriodic.Unregister(b.availablech)
+	statAggPassivator.Unregister(b.availablech)
 }
 
 func (b *livebucket) StatAge() time.Duration {
