@@ -7,6 +7,19 @@ import (
 	"time"
 )
 
+func makeTestBucket(t *testing.T) Bucket {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	b, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+			SleepInterval: 10 * time.Second,
+		})
+	if err != nil {
+		t.Fatalf("Error creating test bucket: %v", err)
+	}
+	return b
+}
+
 func TestBucketRegistry(t *testing.T) {
 	_, err := NewBuckets("./this-is-not-a-directory",
 		&BucketSettings{
@@ -501,5 +514,23 @@ func TestSetVBState(t *testing.T) {
 	err = b.SetVBState(0, VBActive)
 	if err == nil {
 		t.Errorf("expected SetVBState to fail on a missing vbucket")
+	}
+}
+
+func TestShouldContinueDoingStats(t *testing.T) {
+	b := makeTestBucket(t)
+	defer b.Close()
+	lb := b.(*livebucket)
+
+	// Stat request to make it appear that we're interested in
+	// stats.
+	b.GetStats()
+	if !lb.shouldContinueDoingStats(time.Now()) {
+		t.Fatalf("Should keep doing stats, but won't.")
+	}
+
+	// No stats request, we can stop now.
+	if lb.shouldContinueDoingStats(time.Now()) {
+		t.Fatalf("Should not keep doing stats, but would.")
 	}
 }
