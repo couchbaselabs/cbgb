@@ -200,7 +200,7 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 		cas:  newMeta.MetaCas,
 		data: j,
 	}
-	if err = v.ps.set(i, nil, 0); err != nil {
+	if err = v.ps.set(i, nil); err != nil {
 		return err
 	}
 	if err = v.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
@@ -344,12 +344,7 @@ func vbMutate(v *vbucket, w io.Writer,
 			return
 		}
 
-		items := atomic.LoadInt64(&v.stats.Items)
-		if itemOld == nil {
-			items += 1
-		}
-
-		err = v.ps.set(itemNew, itemOld, items)
+		err = v.ps.set(itemNew, itemOld)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -565,8 +560,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		err = v.ps.del(req.Key, cas, prevMeta,
-			atomic.LoadInt64(&v.stats.Items)-1)
+		err = v.ps.del(req.Key, cas, prevMeta)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
