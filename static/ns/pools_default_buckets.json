@@ -6,8 +6,8 @@
         "saslPassword": "",
         "proxyPort": 0,
         "replicaIndex": true,
-        "uri": "/pools/default/buckets/default?bucket_uuid=c2c9121b23d7267bac8e693c3991ba4c",
-        "streamingUri": "/pools/default/bucketsStreaming/default?bucket_uuid=c2c9121b23d7267bac8e693c3991ba4c",
+        "uri": "/pools/default/buckets/default",
+        "streamingUri": "/pools/default/bucketsStreaming/default",
         "localRandomKeyUri": "/pools/default/buckets/default/localRandomKey",
         "controllers": {
             "flush":"/pools/default/buckets/default/controller/doFlush",
@@ -17,38 +17,15 @@
         },
         "nodes": [
             {
-                "couchApiBase": "http://127.0.0.1:8092/default",
-                "systemStats": {
-                    "cpu_utilization_rate": 98.0,
-                    "swap_total": 10701078528,
-                    "swap_used":0
-                },
-                "interestingStats": {
-                    "couch_docs_actual_disk_size": 13694844219,
-                    "couch_docs_data_size": 12934877958,
-                    "couch_views_actual_disk_size": 132850442,
-                    "couch_views_data_size": 29115,
-                    "curr_items": 2665616,
-                    "curr_items_tot": 5328831,
-                    "mem_used": 12447009472,
-                    "vb_replica_curr_items": 2663215
-                },
-                "uptime": "821",
-                "memoryTotal": 33657663488,
-                "memoryFree": 4455481344,
-                "mcdMemoryReserved": 25678,
-                "mcdMemoryAllocated": 25678,
-                "replication": 1.0,
                 "clusterMembership": "active",
-                "status": "healthy",
+                "couchApiBase": "http://127.0.0.1:8092/default",
                 "hostname": "127.0.0.1:8091",
-                "clusterCompatibility": 131072,
-                "version": "2.0.1-153-rel-enterprise",
-                "os": "x86_64-unknown-linux-gnu",
                 "ports": {
                     "proxy": 11211,
                     "direct": 11210
-                }
+                },
+                "status": "healthy",
+                "version": "0.0.0-cbgb"
             }
         ],
         "stats": {
