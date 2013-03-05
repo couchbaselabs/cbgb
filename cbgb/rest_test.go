@@ -19,6 +19,7 @@ import (
 // Don't do any normal logging while running tests.
 func init() {
 	log.SetOutput(ioutil.Discard)
+	*staticPath = "../static"
 }
 
 func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
