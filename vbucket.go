@@ -246,7 +246,11 @@ func (v *vbucket) load() (err error) {
 
 			atomic.StorePointer(&v.meta, unsafe.Pointer(meta))
 
-			// TODO: Need to update v.stats.Items.
+			numItems, _, err := v.ps.getTotals()
+			if err == nil {
+				atomic.StoreInt64(&v.stats.Items, int64(numItems))
+			}
+
 			// TODO: What if we're loading something out of allowed range?
 		})
 	})

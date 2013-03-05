@@ -84,6 +84,11 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 	return nil, fmt.Errorf("max getItem retries for key: %v", key)
 }
 
+func (p *partitionstore) getTotals() (numItems uint64, numBytes uint64, err error) {
+	keys, _ := p.colls()
+	return keys.GetTotals()
+}
+
 func (p *partitionstore) visitItems(start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
 	keys, changes := p.colls()
