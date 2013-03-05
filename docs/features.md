@@ -33,11 +33,11 @@ Readers have their own isolated views of the dataset.  Concurrent
 readers and writers to not block each other, even if they have long
 operations (such as a slow range scan).
 
-## Bucket hibernation
+## File descriptor limits
 
-This software supports a configurable amount of time before it closes
-the file descriptors that are held by an unaccessed bucket.  This
-helps support high multi-tenancy.
+This software has an internal file service API which limits the number
+of open file descriptors that will be used.  This helps support high
+multi-tenancy.
 
 ## Time interval compaction
 
@@ -58,10 +58,11 @@ accesses.
 
 ## Multiple vbuckets per file
 
-The data of a bucket is split across mutliple files (4 files is the
-current default).  The 1024 vbuckets or partitions of a bucket are
-then modulus'ed into those files.  That is, each file has 256
-vbuckets; so, 2 buckets would mean 8 files, etc.
+The data of a bucket is split across mutliple files (see
+STORES_PER_BUCKET for the current default number of files per bucket).
+The 1024 vbuckets or partitions of a bucket are then modulus'ed into
+those files.  That is, each file has 256 vbuckets; so, 2 buckets would
+mean 8 files, etc.
 
 ## Copy on write, immutable tree instead of separate persistence queue
 
@@ -150,7 +151,7 @@ supported.  These can be used as input to the pprof tool.
 
 ## Relatively small codebase
 
-2012/02/19 - ~3.7K lines of go code, not including unit test code or
+2012/03/05 - ~4K lines of go code, not including unit test code or
 library dependencies.
 
 ## Add/Replace commands
@@ -158,3 +159,8 @@ library dependencies.
 ## Append/Prepend commands
 
 ## Incr/Decr commands
+
+## Integrated javascript evaluation
+
+Map/reduce functions, etc. likely by using Otto.
+

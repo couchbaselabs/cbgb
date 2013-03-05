@@ -51,10 +51,6 @@ Capturing performance histograms needs implementation.
 The following features and ideas, in no particular order, are on the
 radar for exploration.
 
-## Integrated javascript evaluation
-
-Map/reduce functions, etc. likely by using Otto.
-
 ## Declarative indexes
 
 JSONPointer as an optional alternative to javascript map functions.
