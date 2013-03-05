@@ -7,7 +7,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/dustin/gomemcached"
 	mcclient "github.com/dustin/gomemcached/client"
@@ -141,7 +140,6 @@ func TestNewBucketAggregateStats(t *testing.T) {
 	b0, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 
 	s := AggregateStats(b0, "")

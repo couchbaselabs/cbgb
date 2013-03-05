@@ -97,7 +97,6 @@ func TestBasicOps(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -167,7 +166,6 @@ func TestMutationBroadcast(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -258,7 +256,6 @@ func TestCASDelete(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -303,7 +300,6 @@ func TestCASSet(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -351,7 +347,6 @@ func TestVersionCommand(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -377,7 +372,6 @@ func TestVersionNOOP(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -399,7 +393,6 @@ func TestQuit(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -421,7 +414,6 @@ func TestTapSetup(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
@@ -460,7 +452,6 @@ func TestTapChanges(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -553,7 +544,6 @@ func TestStats(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -581,7 +571,6 @@ func TestInvalidCommand(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
@@ -604,7 +593,6 @@ func BenchmarkInvalidCommand(b *testing.B) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(0)
@@ -629,7 +617,6 @@ func TestParallelMutations(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
@@ -689,7 +676,6 @@ func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
@@ -720,7 +706,6 @@ func BenchmarkDispatch(b *testing.B) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	testBucket.CreateVBucket(3)
@@ -752,7 +737,6 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -853,7 +837,6 @@ func TestChangesSinceTransmitError(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1044,7 +1027,6 @@ func TestVBMeta(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1086,7 +1068,6 @@ func TestMinMaxRange(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1177,7 +1158,6 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1266,7 +1246,6 @@ func TestSlowClient(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1361,7 +1340,6 @@ func TestStoreFrontBack(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1519,7 +1497,6 @@ func TestMutationOps(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}
@@ -1656,7 +1633,6 @@ func TestArithOps(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}

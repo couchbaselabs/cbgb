@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -78,7 +77,6 @@ func TestSaslRejectedAuth(t *testing.T) {
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer buckets.CloseAll()
 	if err != nil {
@@ -138,7 +136,6 @@ func TestSaslAuth(t *testing.T) {
 	buckets, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer buckets.CloseAll()
 	if err != nil {
@@ -147,13 +144,11 @@ func TestSaslAuth(t *testing.T) {
 	nopwd, err := buckets.New("nopwd",
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	haspwd, err := buckets.New("haspwd",
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 			PasswordHash:  "a nice password",
-			SleepInterval: 10 * time.Second,
 		})
 	rh := reqHandler{currentBucket: nil, buckets: buckets}
 	res := rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
@@ -219,7 +214,6 @@ func TestBucketGetSetItem(t *testing.T) {
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: 1024,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")

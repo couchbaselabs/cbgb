@@ -10,7 +10,6 @@ import (
 	"os"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/dustin/gomemcached"
@@ -27,7 +26,6 @@ func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
 	var err error
 	bucketSettings = &cbgb.BucketSettings{
 		NumPartitions: numPartitions,
-		SleepInterval: 10 * time.Second,
 	}
 	buckets, err = cbgb.NewBuckets(d, bucketSettings)
 	if err != nil {

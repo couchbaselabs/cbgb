@@ -7,7 +7,6 @@ import (
 	"os"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -87,7 +86,6 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -111,7 +109,6 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -132,7 +129,6 @@ func TestSaveLoadBasic(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -157,7 +153,6 @@ func TestSaveLoadBasic(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -178,7 +173,6 @@ func TestSaveLoadMutations(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -205,7 +199,6 @@ func TestSaveLoadMutations(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -300,7 +293,6 @@ func TestSaveLoadMutations(t *testing.T) {
 	b2, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -367,7 +359,6 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -404,7 +395,6 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 		b1, err := NewBucket(testBucketDir,
 			&BucketSettings{
 				NumPartitions: MAX_VBUCKETS,
-				SleepInterval: 10 * time.Second,
 			})
 		if err != nil {
 			t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -463,7 +453,6 @@ func TestFlushCloseInterval(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket re-open to work, err: %v", err)
@@ -475,91 +464,6 @@ func TestFlushCloseInterval(t *testing.T) {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
-}
-
-func TestSleepInterval(t *testing.T) {
-	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
-
-	b0, err := NewBucket(testBucketDir,
-		&BucketSettings{
-			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Millisecond,
-		})
-	if err != nil {
-		t.Errorf("expected NewBucket to work, got: %v", err)
-	}
-
-	r0 := &reqHandler{currentBucket: b0}
-	b0.CreateVBucket(2)
-	if b0.SetVBState(2, VBActive) != nil {
-		t.Errorf("expected SetVBState to work")
-	}
-
-	testLoadInts(t, r0, 2, 5)
-	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "initial data load")
-
-	err = b0.Flush()
-	if err != nil {
-		t.Errorf("expected Flush to work, got: %v", err)
-	}
-
-	time.Sleep(10 * time.Millisecond)
-
-	testLoadInts(t, r0, 2, 1)
-	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "data")
-
-	b0.Close()
-
-	testWithFlushInterval := func(flushInterval time.Duration) {
-		b1, err := NewBucket(testBucketDir,
-			&BucketSettings{
-				NumPartitions: MAX_VBUCKETS,
-				SleepInterval: time.Millisecond,
-			})
-		if err != nil {
-			t.Errorf("expected NewBucket re-open to work, err: %v", err)
-		}
-		r1 := &reqHandler{currentBucket: b1}
-
-		err = b1.Load()
-		if err != nil {
-			t.Errorf("expected Load to work, err: %v", err)
-		}
-
-		vb1 := b1.GetVBucket(2)
-
-		bss1before := vb1.bs.Stats()
-		if bss1before == nil {
-			t.Errorf("expected bucket store to have before Stats()")
-		}
-
-		time.Sleep(10 * time.Millisecond)
-
-		testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
-
-		bss1 := vb1.bs.Stats()
-		if bss1 == nil {
-			t.Errorf("expected bucket store to have Stats()")
-		}
-		if bss1.Sleeps != 1+bss1before.Sleeps {
-			t.Errorf("expected bss1 to have %v Sleeps, got %v",
-				1+bss1before.Sleeps, bss1.Sleeps)
-		}
-		if bss1.Wakes != 1+bss1before.Wakes {
-			t.Errorf("expected bss1 to have %v Wakes, got %v",
-				1+bss1before.Wakes, bss1.Wakes)
-		}
-		if bss1.WakeErrors != bss1before.WakeErrors {
-			t.Errorf("expected bss1 to have %v WakeErrors, got %v",
-				bss1before.Wakes, bss1.Wakes)
-		}
-
-		b1.Close()
-	}
-
-	testWithFlushInterval(1 * time.Millisecond)
-	testWithFlushInterval(20 * time.Millisecond)
 }
 
 func TestLatestStoreFiles(t *testing.T) {
@@ -653,7 +557,6 @@ func TestFlushError(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -695,7 +598,6 @@ func TestStatError(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -732,7 +634,6 @@ func TestReadAtError(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)

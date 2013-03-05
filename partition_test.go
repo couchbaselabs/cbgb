@@ -4,7 +4,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/steveyen/gkvlite"
 )
@@ -15,7 +14,6 @@ func TestPartitionStoreEmptyVisit(t *testing.T) {
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")

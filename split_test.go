@@ -5,7 +5,6 @@ import (
 	"io/ioutil"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -19,7 +18,6 @@ func TestSplitRange(t *testing.T) {
 	testBucket, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer testBucket.Close()
 	rh := reqHandler{currentBucket: testBucket}

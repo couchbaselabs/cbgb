@@ -12,7 +12,6 @@ func makeTestBucket(t *testing.T) Bucket {
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Error creating test bucket: %v", err)
@@ -24,7 +23,6 @@ func TestBucketRegistry(t *testing.T) {
 	_, err := NewBuckets("./this-is-not-a-directory",
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err == nil {
 		t.Fatalf("Expected NewBuckets to fail")
@@ -34,7 +32,6 @@ func TestBucketRegistry(t *testing.T) {
 	bs, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer bs.CloseAll()
 
@@ -101,7 +98,6 @@ func TestBucketNotifications(t *testing.T) {
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
@@ -159,7 +155,6 @@ func TestNewBucket(t *testing.T) {
 	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
@@ -190,7 +185,6 @@ func TestCreateDestroyVBucket(t *testing.T) {
 	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
@@ -268,7 +262,6 @@ func TestBucketClose(t *testing.T) {
 	nb, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	if err != nil {
 		t.Fatalf("Expected NewBucket() to work")
@@ -306,7 +299,6 @@ func TestBucketsLoadNames(t *testing.T) {
 	b, err := NewBuckets(d,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	if err != nil {
@@ -353,7 +345,6 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	bs, _ := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer bs.CloseAll()
 
@@ -437,7 +428,6 @@ func TestMissingBucketsDir(t *testing.T) {
 	b, err := NewBuckets(d,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	names, err := b.LoadNames()
@@ -464,7 +454,6 @@ func TestBucketsLoad(t *testing.T) {
 	b, err := NewBuckets(d,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	if err != nil {
@@ -482,7 +471,6 @@ func TestBucketsLoad(t *testing.T) {
 	b2, err := NewBuckets(d,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer b2.CloseAll()
 	if err != nil {
@@ -509,7 +497,6 @@ func TestSetVBState(t *testing.T) {
 	b, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	err = b.SetVBState(0, VBActive)
 	if err == nil {

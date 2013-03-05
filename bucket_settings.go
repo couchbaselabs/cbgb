@@ -5,17 +5,14 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
-	"time"
 )
 
 type BucketSettings struct {
 	// TODO: Bucket quotas.
-	NumPartitions    int           `json:"numPartitions"`
-	PasswordHashFunc string        `json:"passwordHashFunc"`
-	PasswordHash     string        `json:"passwordHash"`
-	PasswordSalt     string        `json:"passwordSalt"`
-	SleepInterval    time.Duration `json:"sleepInterval"`
-	PurgeTimeout     time.Duration `json:"purgeTimeout"`
+	NumPartitions    int    `json:"numPartitions"`
+	PasswordHashFunc string `json:"passwordHashFunc"`
+	PasswordHash     string `json:"passwordHash"`
+	PasswordSalt     string `json:"passwordSalt"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
@@ -24,8 +21,6 @@ func (bs *BucketSettings) Copy() *BucketSettings {
 		PasswordHashFunc: bs.PasswordHashFunc,
 		PasswordHash:     bs.PasswordHash,
 		PasswordSalt:     bs.PasswordSalt,
-		SleepInterval:    bs.SleepInterval,
-		PurgeTimeout:     bs.PurgeTimeout,
 	}
 }
 

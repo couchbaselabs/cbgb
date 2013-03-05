@@ -95,7 +95,7 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 // TODO: Need clearer names around New vs Create vs Open vs Destroy,
 // especially now that there's persistence.
 func (b *Buckets) New(name string,
-	prioritySettings *BucketSettings) (rv Bucket, err error) {
+	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -110,16 +110,12 @@ func (b *Buckets) New(name string,
 	}
 
 	settings := &BucketSettings{}
-	if prioritySettings != nil {
-		settings = prioritySettings.Copy()
+	if defaultSettings != nil {
+		settings = defaultSettings.Copy()
 	}
 	_, err = settings.load(bdir)
 	if err != nil {
 		return nil, err
-	}
-	if prioritySettings != nil {
-		settings.SleepInterval = prioritySettings.SleepInterval
-		settings.PurgeTimeout = prioritySettings.PurgeTimeout
 	}
 	log.Printf("allocating bucket: %v, settings: %+v", name, settings)
 

@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -24,12 +25,11 @@ var flushRunner = newPeriodically(10*time.Second, 5)
 const compact_every = 10000
 
 type bucketstore struct {
-	bsf          unsafe.Pointer // *bucketstorefile
-	endch        chan bool
-	dirtiness    int64
-	purgeTimeout time.Duration // Time to keep old, unused file after compaction.
-	partitions   map[uint16]*partitionstore
-	stats        *BucketStoreStats
+	bsf        unsafe.Pointer // *bucketstorefile
+	endch      chan bool
+	dirtiness  int64
+	partitions map[uint16]*partitionstore
+	stats      *BucketStoreStats
 
 	diskLock sync.Mutex
 }
@@ -41,8 +41,6 @@ type BucketStoreStats struct {
 	Reads         uint64 `json:"reads"`
 	Writes        uint64 `json:"writes"`
 	Stats         uint64 `json:"stats"`
-	Sleeps        uint64 `json:"sleeps"`
-	Wakes         uint64 `json:"wakes"`
 	Compacts      uint64 `json:"compacts"`
 	LastCompactAt uint64 `json:"lastCompactAt"`
 
@@ -50,7 +48,6 @@ type BucketStoreStats struct {
 	ReadErrors    uint64 `json:"readErrors"`
 	WriteErrors   uint64 `json:"writeErrors"`
 	StatErrors    uint64 `json:"statErrors"`
-	WakeErrors    uint64 `json:"wakeErrors"`
 	CompactErrors uint64 `json:"compactErrors"`
 
 	ReadBytes  uint64 `json:"readBytes"`
@@ -63,31 +60,18 @@ func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) 
 		return nil, err
 	}
 
-	bsf := &bucketstorefile{
-		path:          path,
-		file:          file,
-		endch:         make(chan bool),
-		ch:            make(chan *funreq),
-		sleepInterval: settings.SleepInterval,
-		sleepPurge:    time.Duration(0),
-		insomnia:      false,
-		stats:         &BucketStoreStats{},
-	}
-	go bsf.service()
-
+	bsf := NewBucketStoreFile(path, file, &BucketStoreStats{})
 	store, err := gkvlite.NewStore(bsf)
 	if err != nil {
-		bsf.Close()
 		return nil, err
 	}
 	bsf.store = store
 
 	res := &bucketstore{
-		bsf:          unsafe.Pointer(bsf),
-		endch:        make(chan bool),
-		purgeTimeout: settings.PurgeTimeout,
-		partitions:   make(map[uint16]*partitionstore),
-		stats:        bsf.stats,
+		bsf:        unsafe.Pointer(bsf),
+		endch:      make(chan bool),
+		partitions: make(map[uint16]*partitionstore),
+		stats:      bsf.stats,
 	}
 
 	return res, nil
@@ -102,7 +86,6 @@ func (s *bucketstore) Close() {
 	case <-s.endch:
 	default:
 		close(s.endch)
-		s.BSF().Close()
 	}
 }
 
@@ -201,129 +184,40 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 // additional/separate bucketstorefile allows us to track multiple
 // bucketstorefile's, such as during compaction.
 type bucketstorefile struct {
-	path          string
-	file          FileLike
-	store         *gkvlite.Store
-	endch         chan bool
-	ch            chan *funreq
-	sleepInterval time.Duration // Time until we sleep, closing file until next request.
-	sleepPurge    time.Duration // When >0, purge file after sleeping + this duration.
-	insomnia      bool          // When true, no sleeping.
-	stats         *BucketStoreStats
+	path  string
+	file  FileLike
+	store *gkvlite.Store
+	lock  sync.Mutex
+	purge bool // When true, purge file when GC finalized.
+	stats *BucketStoreStats
 }
 
-func (bsf *bucketstorefile) service() {
-	defer func() {
-		if bsf.file != nil {
-			bsf.file.Close()
-		}
-	}()
+func NewBucketStoreFile(path string, file FileLike,
+	stats *BucketStoreStats) *bucketstorefile {
+	res := &bucketstorefile{
+		path:  path,
+		file:  file,
+		stats: stats,
+	}
+	runtime.SetFinalizer(res, finalizeBucketStoreFile)
+	return res
+}
 
-	for {
-		select {
-		case <-bsf.endch:
-			return
-		case r, ok := <-bsf.ch:
-			if !ok {
-				bsf.end()
-				return
-			}
-			r.fun()
-			close(r.res)
-		case <-time.After(bsf.sleepInterval):
-			// TODO: Check for dirtiness before we sleep?
-			if !bsf.insomnia && bsf.Sleep() != nil {
-				bsf.end()
-				return
-			}
-		}
+func finalizeBucketStoreFile(bsf *bucketstorefile) {
+	if bsf.purge {
+		bsf.purge = false
+		os.Remove(bsf.path)
 	}
 }
 
 func (bsf *bucketstorefile) apply(fun func()) {
-	req := &funreq{fun: fun, res: make(chan bool)}
-	bsf.ch <- req
-	<-req.res
-}
-
-func (bsf *bucketstorefile) Close() {
-	bsf.apply(func() {
-		bsf.end()
-	})
-}
-
-func (bsf *bucketstorefile) end() {
-	if !bsf.isEnded() {
-		close(bsf.endch)
-	}
-}
-
-func (bsf *bucketstorefile) isEnded() bool {
-	select {
-	case <-bsf.endch:
-		return true
-	default:
-	}
-	return false
-}
-
-func (bsf *bucketstorefile) Sleep() error {
-	// TODO: Flush before we sleep?
-	atomic.AddUint64(&bsf.stats.Sleeps, 1)
-
-	bsf.file.Close()
-	bsf.file = nil
-
-	var r *funreq
-	var ok bool
-
-	if bsf.sleepPurge > time.Duration(0) {
-		select {
-		case <-bsf.endch:
-			os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
-			return fmt.Errorf("ended while sleeping to purge: %v", bsf.path)
-		case r, ok = <-bsf.ch:
-			if !ok {
-				bsf.end()
-				os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
-				return fmt.Errorf("closed while sleeping to purge: %v", bsf.path)
-			}
-			// Reach here if we need to wake up from sleeping.
-		case <-time.After(bsf.sleepPurge):
-			bsf.end()
-			os.Remove(bsf.path) // TODO: Double check we're not the latest ver.
-			return fmt.Errorf("purged after sleeping: %v", bsf.path)
-		}
-	} else {
-		select {
-		case <-bsf.endch:
-			return fmt.Errorf("ended while sleeping: %v", bsf.path)
-		case r, ok = <-bsf.ch:
-			if !ok {
-				bsf.end()
-				return fmt.Errorf("closed while sleeping: %v", bsf.path)
-			}
-		}
-	}
-
-	atomic.AddUint64(&bsf.stats.Wakes, 1)
-
-	file, err := fileService.OpenFile(bsf.path, os.O_RDWR|os.O_CREATE)
-	if err != nil {
-		// TODO: Log this siesta-wakeup / re-open error.
-		atomic.AddUint64(&bsf.stats.WakeErrors, 1)
-		bsf.end()
-		return err
-	}
-	bsf.file = file
-
-	r.fun()
-	close(r.res)
-	return nil
+	bsf.lock.Lock()
+	defer bsf.lock.Unlock()
+	fun()
 }
 
 // The following bucketstore methods implement the gkvlite.StoreFile
-// interface.
+// interface: ReadAt(), WriteAt(), Stat().
 
 func (bsf *bucketstorefile) ReadAt(p []byte, off int64) (n int, err error) {
 	bsf.apply(func() {
@@ -339,7 +233,7 @@ func (bsf *bucketstorefile) ReadAt(p []byte, off int64) (n int, err error) {
 
 func (bsf *bucketstorefile) WriteAt(p []byte, off int64) (n int, err error) {
 	bsf.apply(func() {
-		if bsf.sleepPurge > time.Duration(0) {
+		if bsf.purge {
 			err = fmt.Errorf("WriteAt to purgable bucketstorefile: %v",
 				bsf.path)
 			return
@@ -378,14 +272,11 @@ func (bss *BucketStoreStats) Op(in *BucketStoreStats, op func(uint64, uint64) ui
 	bss.Reads = op(bss.Reads, atomic.LoadUint64(&in.Reads))
 	bss.Writes = op(bss.Writes, atomic.LoadUint64(&in.Writes))
 	bss.Stats = op(bss.Stats, atomic.LoadUint64(&in.Stats))
-	bss.Sleeps = op(bss.Sleeps, atomic.LoadUint64(&in.Sleeps))
-	bss.Wakes = op(bss.Wakes, atomic.LoadUint64(&in.Wakes))
 	bss.Compacts = op(bss.Compacts, atomic.LoadUint64(&in.Compacts))
 	bss.FlushErrors = op(bss.FlushErrors, atomic.LoadUint64(&in.FlushErrors))
 	bss.ReadErrors = op(bss.ReadErrors, atomic.LoadUint64(&in.ReadErrors))
 	bss.WriteErrors = op(bss.WriteErrors, atomic.LoadUint64(&in.WriteErrors))
 	bss.StatErrors = op(bss.StatErrors, atomic.LoadUint64(&in.StatErrors))
-	bss.WakeErrors = op(bss.WakeErrors, atomic.LoadUint64(&in.WakeErrors))
 	bss.CompactErrors = op(bss.CompactErrors, atomic.LoadUint64(&in.CompactErrors))
 	bss.ReadBytes = op(bss.ReadBytes, atomic.LoadUint64(&in.ReadBytes))
 	bss.WriteBytes = op(bss.WriteBytes, atomic.LoadUint64(&in.WriteBytes))
@@ -403,14 +294,11 @@ func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
 		bss.Reads == atomic.LoadUint64(&in.Reads) &&
 		bss.Writes == atomic.LoadUint64(&in.Writes) &&
 		bss.Stats == atomic.LoadUint64(&in.Stats) &&
-		bss.Sleeps == atomic.LoadUint64(&in.Sleeps) &&
-		bss.Wakes == atomic.LoadUint64(&in.Wakes) &&
 		bss.Compacts == atomic.LoadUint64(&in.Compacts) &&
 		bss.FlushErrors == atomic.LoadUint64(&in.FlushErrors) &&
 		bss.ReadErrors == atomic.LoadUint64(&in.ReadErrors) &&
 		bss.WriteErrors == atomic.LoadUint64(&in.WriteErrors) &&
 		bss.StatErrors == atomic.LoadUint64(&in.StatErrors) &&
-		bss.WakeErrors == atomic.LoadUint64(&in.WakeErrors) &&
 		bss.CompactErrors == atomic.LoadUint64(&in.CompactErrors) &&
 		bss.ReadBytes == atomic.LoadUint64(&in.ReadBytes) &&
 		bss.WriteBytes == atomic.LoadUint64(&in.WriteBytes)

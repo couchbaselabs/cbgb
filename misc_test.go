@@ -7,7 +7,6 @@ import (
 	"net"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -19,7 +18,6 @@ func TestMutationLogger(t *testing.T) {
 	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	b.CreateVBucket(0)
 
@@ -52,7 +50,6 @@ func TestMutationInvalid(t *testing.T) {
 	b, _ := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	b.CreateVBucket(0)
 
@@ -91,7 +88,6 @@ func TestListener(t *testing.T) {
 	b, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	if err != nil {
@@ -122,7 +118,6 @@ func TestListenerFail(t *testing.T) {
 	b, err := NewBuckets(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			SleepInterval: 10 * time.Second,
 		})
 	defer b.CloseAll()
 	if err != nil {

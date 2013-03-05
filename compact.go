@@ -18,11 +18,6 @@ func (s *bucketstore) Compact() error {
 	defer s.diskLock.Unlock()
 
 	bsf := s.BSF()
-
-	// Turn off concurrent sleeping.
-	bsf.insomnia = true
-	defer func() { bsf.insomnia = false }()
-
 	compactPath := bsf.path + ".compact"
 	if err := s.compactGo(bsf, compactPath); err != nil {
 		atomic.AddUint64(&s.stats.CompactErrors, 1)
@@ -100,19 +95,9 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 		return err
 	}
 
-	nextBSF := &bucketstorefile{
-		path:          nextPath,
-		file:          nextFile,
-		endch:         make(chan bool),
-		ch:            make(chan *funreq),
-		sleepInterval: bsf.sleepInterval,
-		stats:         bsf.stats,
-	}
-	go nextBSF.service()
-
+	nextBSF := NewBucketStoreFile(nextPath, nextFile, bsf.stats)
 	nextStore, err := gkvlite.NewStore(nextBSF)
 	if err != nil {
-		nextBSF.Close()
 		// TODO: Rollback the previous *.orig rename.
 		return err
 	}
@@ -120,10 +105,8 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 
 	atomic.StorePointer(&s.bsf, unsafe.Pointer(nextBSF))
 
-	// Shut down old bsf by setting its sleepPurge.
 	bsf.apply(func() {
-		bsf.sleepInterval = s.purgeTimeout
-		bsf.sleepPurge = s.purgeTimeout
+		bsf.purge = true // Mark the old file as purgable.
 	})
 
 	return nil
