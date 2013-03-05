@@ -1,0 +1,128 @@
+{
+    "alerts": [],
+    "alertsSilenceURL": "/controller/resetAlerts?token=0&uuid=f2ca8c8d8e37bc90087f1ee885d6e51e",
+    "autoCompactionSettings": {
+        "databaseFragmentationThreshold": {
+            "percentage": 30,
+            "size": "undefined"
+        },
+        "parallelDBAndViewCompaction": false,
+        "viewFragmentationThreshold": {
+            "percentage": 30,
+            "size": "undefined"
+        }
+    },
+    "balanced": true,
+    "buckets": {
+        "uri": "/pools/default/buckets?v=63655470&uuid=f2ca8c8d8e37bc90087f1ee885d6e51e"
+    },
+    "controllers": {
+        "addNode": {
+            "uri": "/controller/addNode?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e"
+        },
+        "ejectNode": {
+            "uri": "/controller/ejectNode?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e"
+        },
+        "failOver": {
+            "uri": "/controller/failOver?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e"
+        },
+        "reAddNode": {
+            "uri": "/controller/reAddNode?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e"
+        },
+        "rebalance": {
+            "uri": "/controller/rebalance?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e"
+        },
+        "replication": {
+            "createURI": "/controller/createReplication?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e",
+            "infosURI": "/couchBase/_replicator/_design/_replicator_info/_view/infos?group_level=1",
+            "replicatorDBURI": "/couchBase/_replicator",
+            "validateURI": "/controller/createReplication?just_validate=1"
+        },
+        "setAutoCompaction": {
+            "uri": "/controller/setAutoCompaction?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e",
+            "validateURI": "/controller/setAutoCompaction?just_validate=1"
+        },
+        "setFastWarmup": {
+            "uri": "/controller/setFastWarmup?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e",
+            "validateURI": "/controller/setFastWarmup?just_validate=1"
+        }
+    },
+    "counters": {
+        "rebalance_start": 1,
+        "rebalance_success": 1
+    },
+    "failoverWarnings": [],
+    "fastWarmupSettings": {
+        "fastWarmupEnabled": true,
+        "minItemsThreshold": 10,
+        "minMemoryThreshold": 10
+    },
+    "maxBucketCount": 10,
+    "name": "default",
+    "nodeStatusesUri": "/nodeStatuses",
+    "nodes": [
+        {
+            "clusterCompatibility": 131072,
+            "clusterMembership": "active",
+            "couchApiBase": "http://127.0.0.1:8092/",
+            "hostname": "127.0.0.1:8091",
+            "interestingStats": {
+                "couch_docs_actual_disk_size": 16791708779,
+                "couch_docs_data_size": 13183209506,
+                "couch_views_actual_disk_size": 2403609586,
+                "couch_views_data_size": 958008657,
+                "curr_items": 2730654,
+                "curr_items_tot": 5458453,
+                "mem_used": 12653907288,
+                "vb_replica_curr_items": 2727799
+            },
+            "mcdMemoryAllocated": 25678,
+            "mcdMemoryReserved": 25678,
+            "memoryFree": 812519424,
+            "memoryTotal": 33657663488,
+            "os": "x86_64-unknown-linux-gnu",
+            "ports": {
+                "direct": 11210,
+                "proxy": 11211
+            },
+            "status": "healthy",
+            "systemStats": {
+                "cpu_utilization_rate": 73.125,
+                "swap_total": 10701078528,
+                "swap_used": 159744
+            },
+            "uptime": "11766",
+            "version": "2.0.1-153-rel-enterprise"
+        }
+    ],
+    "rebalanceProgressUri": "/pools/default/rebalanceProgress",
+    "rebalanceStatus": "none",
+    "remoteClusters": {
+        "uri": "/pools/default/remoteClusters?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e",
+        "validateURI": "/pools/default/remoteClusters?just_validate=1"
+    },
+    "stats": {
+        "uri": "/pools/default/stats"
+    },
+    "stopRebalanceIsSafe": true,
+    "stopRebalanceUri": "/controller/stopRebalance?uuid=f2ca8c8d8e37bc90087f1ee885d6e51e",
+    "storageTotals": {
+        "hdd": {
+            "free": 2192723664570,
+            "quotaTotal": 2268334645248,
+            "total": 2268334645248,
+            "used": 75610980678,
+            "usedByData": 56645813499
+        },
+        "ram": {
+            "quotaTotal": 47185920000,
+            "quotaUsed": 47185920000,
+            "total": 100972990464,
+            "used": 98778349568,
+            "usedByData": 38355453248
+        }
+    },
+    "tasks": {
+        "uri": "/pools/default/tasks?v=109571482"
+    }
+}

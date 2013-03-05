@@ -58,6 +58,7 @@ func testSetupDefaultBucket(t *testing.T, numPartitions int,
 func testSetupMux(dir string) *mux.Router {
 	mr := mux.NewRouter()
 	restAPI(mr, dir)
+	restNSAPI(mr)
 	restCouchAPI(mr)
 	return mr
 }
@@ -666,5 +667,19 @@ func TestReverseViewRows(t *testing.T) {
 	}
 	if r[0].Id != "d" || r[1].Id != "c" || r[2].Id != "b" || r[3].Id != "a" {
 		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
+	}
+}
+
+func TestRestAPIPoolsDefault(t *testing.T) {
+	d, _ := testSetupBuckets(t, 1)
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://127.0.0.1/pools/default", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to work, got: %#v, %v",
+			rr, rr.Body.String())
 	}
 }

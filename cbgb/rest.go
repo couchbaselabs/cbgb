@@ -20,6 +20,7 @@ import (
 func restMain(rest string, staticPath string) {
 	r := mux.NewRouter()
 	restAPI(r, staticPath)
+	restNSAPI(r)
 	restCouchAPI(r)
 	r.Handle("/",
 		http.RedirectHandler("/_static/app.html", 302))

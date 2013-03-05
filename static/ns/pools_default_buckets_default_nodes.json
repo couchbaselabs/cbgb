@@ -1,0 +1,10 @@
+{
+    "servers": [
+        {
+            "hostname": "127.0.0.1:8091",
+            "uri": "/pools/default/buckets/default/nodes/127.0.0.1%3A8091",
+            "stats": {
+                "uri": "/pools/default/buckets/default/nodes/127.0.0.1%3A8091/stats"}
+        }
+    ]
+}

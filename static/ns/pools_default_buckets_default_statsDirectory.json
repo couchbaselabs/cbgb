@@ -1,0 +1,786 @@
+{
+    "blocks": [
+        {
+            "blockName": "Server Resources", 
+            "extraCSSClasses": "server_resources", 
+            "serverResources": true, 
+            "stats": [
+                {
+                    "desc": "Amount of swap space in use on this server (B=bytes, M=megabytes, G=gigabytes)", 
+                    "name": "swap_used", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/swap_used", 
+                    "title": "swap usage"
+                }, 
+                {
+                    "desc": "Amount of RAM available on this server (B=bytes, M=megabytes, G=gigabytes)", 
+                    "name": "mem_actual_free", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/mem_actual_free", 
+                    "title": "free RAM"
+                }, 
+                {
+                    "desc": "Percentage of CPU in use across all available cores on this server", 
+                    "maxY": 100, 
+                    "name": "cpu_utilization_rate", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/cpu_utilization_rate", 
+                    "title": "CPU utilization %"
+                }, 
+                {
+                    "desc": "Number of connections to this server including connections from external drivers, proxies, TAP requests and internal statistic gathering (measured from curr_connections)", 
+                    "name": "curr_connections", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/curr_connections", 
+                    "title": "connections"
+                }
+            ]
+        }, 
+        {
+            "blockName": "Summary", 
+            "stats": [
+                {
+                    "default": true, 
+                    "desc": "Total amount of operations per second to this bucket (measured from cmd_get + cmd_set + incr_misses + incr_hits + decr_misses + decr_hits + delete_misses + delete_hits)", 
+                    "name": "ops", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ops", 
+                    "title": "ops per second"
+                }, 
+                {
+                    "desc": "Percentage of reads per second to this bucket from disk as opposed to RAM (measured from ep_bg_fetches / gets * 100)", 
+                    "maxY": 100, 
+                    "name": "ep_cache_miss_rate", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_cache_miss_rate", 
+                    "title": "cache miss ratio"
+                }, 
+                {
+                    "desc": "Number of reads (get operations) per second from this bucket (measured from cmd_get)", 
+                    "name": "cmd_get", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/cmd_get", 
+                    "title": "gets per sec."
+                }, 
+                {
+                    "desc": "Number of writes (set operations) per second to this bucket (measured from cmd_set)", 
+                    "name": "cmd_set", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/cmd_set", 
+                    "title": "sets per sec."
+                }, 
+                {
+                    "desc": "Number of delete operations per second for this bucket (measured from delete_hits)", 
+                    "name": "delete_hits", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/delete_hits", 
+                    "title": "deletes per sec."
+                }, 
+                {
+                    "desc": "Number of operations with a CAS id per second for this bucket (measured from cas_hits)", 
+                    "name": "cas_hits", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/cas_hits", 
+                    "title": "CAS ops per sec."
+                }, 
+                {
+                    "desc": "Percentage of active items cached in RAM in this bucket (measured from vb_active_resident_items_ratio)", 
+                    "maxY": 100, 
+                    "name": "vb_active_resident_items_ratio", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_resident_items_ratio", 
+                    "title": "active docs resident %"
+                }, 
+                {
+                    "desc": "Number of unique items in this bucket - only active items, not replica (measured from curr_items)", 
+                    "name": "curr_items", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/curr_items", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of back-offs sent per second to drivers due to \"out of memory\" situations from this bucket (measured from ep_tmp_oom_errors)", 
+                    "name": "ep_tmp_oom_errors", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tmp_oom_errors", 
+                    "title": "temp OOM per sec."
+                }, 
+                {
+                    "desc": "Low water mark for auto-evictions (measured from ep_mem_low_wat)", 
+                    "name": "ep_mem_low_wat", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_mem_low_wat", 
+                    "title": "low water mark"
+                }, 
+                {
+                    "desc": "High water mark for auto-evictions (measured from ep_mem_high_wat)", 
+                    "name": "ep_mem_high_wat", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_mem_high_wat", 
+                    "title": "high water mark"
+                }, 
+                {
+                    "desc": "Memory used as measured from mem_used", 
+                    "name": "mem_used", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/mem_used", 
+                    "title": "memory used"
+                }, 
+                {
+                    "desc": "Number of new items created on disk per second for this bucket (measured from vb_active_ops_create + vb_replica_ops_create + vb_pending_ops_create)", 
+                    "name": "ep_ops_create", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_ops_create", 
+                    "title": "disk creates per sec."
+                }, 
+                {
+                    "desc": "Number of items updated on disk per second for this bucket (measured from vb_active_ops_update + vb_replica_ops_update + vb_pending_ops_update)", 
+                    "name": "ep_ops_update", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_ops_update", 
+                    "title": "disk updates per sec."
+                }, 
+                {
+                    "desc": "Number of reads per second from disk for this bucket (measured from ep_bg_fetched)", 
+                    "name": "ep_bg_fetched", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_bg_fetched", 
+                    "title": "disk reads per sec."
+                }, 
+                {
+                    "desc": "Number of items waiting to be written to disk in this bucket (measured from ep_queue_size+ep_flusher_todo)", 
+                    "name": "disk_write_queue", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/disk_write_queue", 
+                    "title": "disk write queue"
+                }, 
+                {
+                    "desc": "The size of active data in this bucket", 
+                    "name": "couch_docs_data_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_docs_data_size", 
+                    "title": "docs data size"
+                }, 
+                {
+                    "desc": "The size of all data files for this bucket, including the data itself, meta data and temporary files.", 
+                    "name": "couch_docs_actual_disk_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_docs_actual_disk_size", 
+                    "title": "docs total disk size"
+                }, 
+                {
+                    "desc": "How much fragmented data there is to be compacted compared to real data for the data files in this bucket", 
+                    "name": "couch_docs_fragmentation", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_docs_fragmentation", 
+                    "title": "docs fragmentation %"
+                }, 
+                {
+                    "desc": "The total size on disk of all data and view files for this bucket.)", 
+                    "name": "couch_total_disk_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_total_disk_size", 
+                    "title": "total disk size"
+                }, 
+                {
+                    "desc": "The size of active data on for all the indexes in this bucket", 
+                    "name": "couch_views_data_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_views_data_size", 
+                    "title": "views data size"
+                }, 
+                {
+                    "desc": "The size of all active items in all the indexes for this bucket on disk", 
+                    "name": "couch_views_actual_disk_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_views_actual_disk_size", 
+                    "title": "views total disk size"
+                }, 
+                {
+                    "desc": "How much fragmented data there is to be compacted compared to real data for the view index files in this bucket", 
+                    "name": "couch_views_fragmentation", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_views_fragmentation", 
+                    "title": "views fragmentation %"
+                }, 
+                {
+                    "desc": "All the view reads for all design documents including scatter gather.", 
+                    "name": "couch_views_ops", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/couch_views_ops", 
+                    "title": "view reads per sec."
+                }, 
+                {
+                    "desc": "Average disk update time in microseconds as from disk_update histogram of timings", 
+                    "hidden": true, 
+                    "name": "avg_disk_update_time", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/avg_disk_update_time", 
+                    "title": "disk update time"
+                }, 
+                {
+                    "desc": "Average disk commit time in seconds as from disk_update histogram of timings", 
+                    "hidden": true, 
+                    "name": "avg_disk_commit_time", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/avg_disk_commit_time", 
+                    "title": "disk commit time"
+                }, 
+                {
+                    "desc": "Alrighty", 
+                    "hidden": true, 
+                    "name": "avg_bg_wait_time", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/avg_bg_wait_time", 
+                    "title": "bg wait time"
+                }, 
+                {
+                    "desc": "Cross datacenter replication operations per second for this bucket.", 
+                    "name": "xdc_ops", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/xdc_ops", 
+                    "title": "XDCR dest ops per sec."
+                }, 
+                {
+                    "desc": "Number of items waiting to be replicated to other clusters", 
+                    "name": "replication_changes_left", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/replication_changes_left", 
+                    "title": "XDCR docs to replicate"
+                }
+            ]
+        }, 
+        {
+            "blockName": "vBucket Resources", 
+            "columns": [
+                "Active", 
+                "Replica", 
+                "Pending", 
+                "Total"
+            ], 
+            "extraCSSClasses": "withtotal closed", 
+            "stats": [
+                {
+                    "desc": "Number of vBuckets in the \"active\" state for this bucket (measured from vb_active_num)", 
+                    "name": "vb_active_num", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_num", 
+                    "title": "vBuckets"
+                }, 
+                {
+                    "desc": "Number of vBuckets in the \"replica\" state for this bucket (measured from vb_replica_num)", 
+                    "name": "vb_replica_num", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_num", 
+                    "title": "vBuckets"
+                }, 
+                {
+                    "desc": "Number of vBuckets in the \"pending\" state for this bucket and should be transient during rebalancing (measured from vb_pending_num)", 
+                    "name": "vb_pending_num", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_num", 
+                    "title": "vBuckets"
+                }, 
+                {
+                    "desc": "Total number of vBuckets for this bucket (measured from ep_vb_total)", 
+                    "name": "ep_vb_total", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_vb_total", 
+                    "title": "vBuckets"
+                }, 
+                {
+                    "desc": "Number of items in \"active\" vBuckets in this bucket (measured from curr_items)", 
+                    "name": "curr_items", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/curr_items", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of items in \"replica\" vBuckets in this bucket (measured from vb_replica_curr_items)", 
+                    "name": "vb_replica_curr_items", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_curr_items", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of items in \"pending\" vBuckets in this bucket and should be transient during rebalancing (measured from vb_pending_curr_items)", 
+                    "name": "vb_pending_curr_items", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_curr_items", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Total number of items in this bucket (measured from curr_items_tot)", 
+                    "name": "curr_items_tot", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/curr_items_tot", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Percentage of active items cached in RAM in this bucket (measured from vb_active_resident_items_ratio)", 
+                    "maxY": 100, 
+                    "name": "vb_active_resident_items_ratio", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_resident_items_ratio", 
+                    "title": "resident %"
+                }, 
+                {
+                    "desc": "Percentage of replica items cached in RAM in this bucket (measured from vb_replica_resident_items_ratio)", 
+                    "maxY": 100, 
+                    "name": "vb_replica_resident_items_ratio", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_resident_items_ratio", 
+                    "title": "resident %"
+                }, 
+                {
+                    "desc": "Percentage of replica items cached in RAM in this bucket (measured from vb_replica_resident_items_ratio)", 
+                    "maxY": 100, 
+                    "name": "vb_pending_resident_items_ratio", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_resident_items_ratio", 
+                    "title": "resident %"
+                }, 
+                {
+                    "desc": "Percentage of all items cached in RAM in this bucket (measured from ep_resident_items_rate)", 
+                    "maxY": 100, 
+                    "name": "ep_resident_items_rate", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_resident_items_rate", 
+                    "title": "resident %"
+                }, 
+                {
+                    "desc": "New items per second being inserted into \"active\" vBuckets in this bucket (measured from vb_active_ops_create)", 
+                    "name": "vb_active_ops_create", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_ops_create", 
+                    "title": "new items per sec."
+                }, 
+                {
+                    "desc": "New items per second being inserted into \"replica\" vBuckets in this bucket (measured from vb_replica_ops_create", 
+                    "name": "vb_replica_ops_create", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_ops_create", 
+                    "title": "new items per sec."
+                }, 
+                {
+                    "desc": "New items per second being instead into \"pending\" vBuckets in this bucket and should be transient during rebalancing (measured from vb_pending_ops_create)", 
+                    "name": "vb_pending_ops_create", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_ops_create", 
+                    "title": "new items per sec."
+                }, 
+                {
+                    "desc": "Total number of new items being inserted into this bucket (measured from ep_ops_create)", 
+                    "name": "ep_ops_create", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_ops_create", 
+                    "title": "new items per sec."
+                }, 
+                {
+                    "desc": "Number of items per second being ejected to disk from \"active\" vBuckets in this bucket (measured from vb_active_eject)", 
+                    "name": "vb_active_eject", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_eject", 
+                    "title": "ejections per sec."
+                }, 
+                {
+                    "desc": "Number of items per second being ejected to disk from \"replica\" vBuckets in this bucket (measured from vb_replica_eject)", 
+                    "name": "vb_replica_eject", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_eject", 
+                    "title": "ejections per sec."
+                }, 
+                {
+                    "desc": "Number of items per second being ejected to disk from \"pending\" vBuckets in this bucket and should be transient during rebalancing (measured from vb_pending_eject)", 
+                    "name": "vb_pending_eject", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_eject", 
+                    "title": "ejections per sec."
+                }, 
+                {
+                    "desc": "Total number of items per second being ejected to disk in this bucket (measured from ep_num_value_ejects)", 
+                    "name": "ep_num_value_ejects", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_num_value_ejects", 
+                    "title": "ejections per sec."
+                }, 
+                {
+                    "desc": "Amount of active user data cached in RAM in this bucket (measured from vb_active_itm_memory)", 
+                    "name": "vb_active_itm_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_itm_memory", 
+                    "title": "user data in RAM"
+                }, 
+                {
+                    "desc": "Amount of replica user data cached in RAM in this bucket (measured from vb_replica_itm_memory)", 
+                    "name": "vb_replica_itm_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_itm_memory", 
+                    "title": "user data in RAM"
+                }, 
+                {
+                    "desc": "Amount of pending user data cached in RAM in this bucket and should be transient during rebalancing (measured from vb_pending_itm_memory)", 
+                    "name": "vb_pending_itm_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_itm_memory", 
+                    "title": "user data in RAM"
+                }, 
+                {
+                    "desc": "Total amount of user data cached in RAM in this bucket (measured from ep_kv_size)", 
+                    "name": "ep_kv_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_kv_size", 
+                    "title": "user data in RAM"
+                }, 
+                {
+                    "desc": "Amount of active item metadata consuming RAM in this bucket (measured from vb_active_meta_data_memory)", 
+                    "name": "vb_active_meta_data_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_meta_data_memory", 
+                    "title": "metadata in RAM"
+                }, 
+                {
+                    "desc": "Amount of replica item metadata consuming in RAM in this bucket (measured from vb_replica_meta_data_memory)", 
+                    "name": "vb_replica_meta_data_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_meta_data_memory", 
+                    "title": "metadata in RAM"
+                }, 
+                {
+                    "desc": "Amount of pending item metadata consuming RAM in this bucket and should be transient during rebalancing (measured from vb_pending_meta_data_memory)", 
+                    "name": "vb_pending_meta_data_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_meta_data_memory", 
+                    "title": "metadata in RAM"
+                }, 
+                {
+                    "desc": "Total amount of item  metadata consuming RAM in this bucket (measured from ep_meta_data_memory)", 
+                    "name": "ep_meta_data_memory", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_meta_data_memory", 
+                    "title": "metadata in RAM"
+                }
+            ]
+        }, 
+        {
+            "blockName": "Disk Queues", 
+            "columns": [
+                "Active", 
+                "Replica", 
+                "Pending", 
+                "Total"
+            ], 
+            "extraCSSClasses": "withtotal closed", 
+            "stats": [
+                {
+                    "desc": "Number of active items waiting to be written to disk in this bucket (measured from vb_active_queue_size)", 
+                    "name": "vb_active_queue_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_queue_size", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of replica items waiting to be written to disk in this bucket (measured from vb_replica_queue_size)", 
+                    "name": "vb_replica_queue_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_queue_size", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of pending items waiting to be written to disk in this bucket and should be transient during rebalancing  (measured from vb_pending_queue_size)", 
+                    "name": "vb_pending_queue_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_queue_size", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Total number of items waiting to be written to disk in this bucket (measured from ep_diskqueue_items)", 
+                    "name": "ep_diskqueue_items", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_diskqueue_items", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of active items per second being put on the active item disk queue in this bucket (measured from vb_active_queue_fill)", 
+                    "name": "vb_active_queue_fill", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_queue_fill", 
+                    "title": "fill rate"
+                }, 
+                {
+                    "desc": "Number of replica items per second being put on the replica item disk queue in this bucket (measured from vb_replica_queue_fill)", 
+                    "name": "vb_replica_queue_fill", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_queue_fill", 
+                    "title": "fill rate"
+                }, 
+                {
+                    "desc": "Number of pending items per second being put on the pending item disk queue in this bucket and should be transient during rebalancing (measured from vb_pending_queue_fill)", 
+                    "name": "vb_pending_queue_fill", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_queue_fill", 
+                    "title": "fill rate"
+                }, 
+                {
+                    "desc": "Total number of items per second being put on the disk queue in this bucket (measured from ep_diskqueue_fill)", 
+                    "name": "ep_diskqueue_fill", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_diskqueue_fill", 
+                    "title": "fill rate"
+                }, 
+                {
+                    "desc": "Number of active items per second being written to disk in this bucket (measured from vb_active_queue_drain)", 
+                    "name": "vb_active_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_active_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Number of replica items per second being written to disk in this bucket (measured from vb_replica_queue_drain)", 
+                    "name": "vb_replica_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_replica_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Number of pending items per second being written to disk in this bucket and should be transient during rebalancing (measured from vb_pending_queue_drain)", 
+                    "name": "vb_pending_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_pending_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Total number of items per second being written to disk in this bucket (measured from ep_diskqueue_drain)", 
+                    "name": "ep_diskqueue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_diskqueue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Average age in seconds of active items in the active item queue for this bucket (measured from vb_avg_active_queue_age)", 
+                    "name": "vb_avg_active_queue_age", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_avg_active_queue_age", 
+                    "title": "average age"
+                }, 
+                {
+                    "desc": "Average age in seconds of replica items in the replica item queue for this bucket (measured from vb_avg_replica_queue_age)", 
+                    "name": "vb_avg_replica_queue_age", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_avg_replica_queue_age", 
+                    "title": "average age"
+                }, 
+                {
+                    "desc": "Average age in seconds of pending items in the pending item queue for this bucket and should be transient during rebalancing (measured from vb_avg_pending_queue_age)", 
+                    "name": "vb_avg_pending_queue_age", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_avg_pending_queue_age", 
+                    "title": "average age"
+                }, 
+                {
+                    "desc": "Average age in seconds of all items in the disk write queue for this bucket (measured from vb_avg_total_queue_age)", 
+                    "name": "vb_avg_total_queue_age", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/vb_avg_total_queue_age", 
+                    "title": "average age"
+                }
+            ]
+        }, 
+        {
+            "blockName": "Tap Queues", 
+            "columns": [
+                "Replication", 
+                "Rebalance", 
+                "Clients", 
+                "Total"
+            ], 
+            "extraCSSClasses": "withtotal closed", 
+            "stats": [
+                {
+                    "desc": "Number of internal replication TAP queues in this bucket (measured from ep_tap_replica_count)", 
+                    "name": "ep_tap_replica_count", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_replica_count", 
+                    "title": "TAP senders"
+                }, 
+                {
+                    "desc": "Number of internal rebalancing TAP queues in this bucket (measured from ep_tap_rebalance_count)", 
+                    "name": "ep_tap_rebalance_count", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_rebalance_count", 
+                    "title": "TAP senders"
+                }, 
+                {
+                    "desc": "Number of internal \"user\" TAP queues in this bucket (measured from ep_tap_user_count)", 
+                    "name": "ep_tap_user_count", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_user_count", 
+                    "title": "TAP senders"
+                }, 
+                {
+                    "desc": "Total number of internal TAP queues in this bucket (measured from ep_tap_total_count)", 
+                    "name": "ep_tap_total_count", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_total_count", 
+                    "title": "TAP senders"
+                }, 
+                {
+                    "desc": "Number of items in the replication TAP queues in this bucket (measured from ep_tap_replica_qlen)", 
+                    "name": "ep_tap_replica_qlen", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_replica_qlen", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of items in the rebalance TAP queues in this bucket (measured from ep_tap_rebalance_qlen)", 
+                    "name": "ep_tap_rebalance_qlen", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_rebalance_qlen", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of items in \"user\" TAP queues in this bucket (measured from ep_tap_user_qlen)", 
+                    "name": "ep_tap_user_qlen", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_user_qlen", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Total number of items in TAP queues in this bucket (measured from ep_tap_total_qlen)", 
+                    "name": "ep_tap_total_qlen", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_total_qlen", 
+                    "title": "items"
+                }, 
+                {
+                    "desc": "Number of items per second being sent over replication TAP connections to this bucket, i.e. removed from queue (measured from ep_tap_replica_queue_drain)", 
+                    "name": "ep_tap_replica_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_replica_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Number of items per second being sent over rebalancing TAP connections to this bucket, i.e. removed from queue (measured from ep_tap_rebalance_queue_drain)", 
+                    "name": "ep_tap_rebalance_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_rebalance_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Number of items per second being sent over \"user\" TAP connections to this bucket, i.e. removed from queue (measured from ep_tap_user_queue_drain)", 
+                    "name": "ep_tap_user_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_user_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Total number of items per second being sent over TAP connections to this bucket (measured from ep_tap_total_queue_drain)", 
+                    "name": "ep_tap_total_queue_drain", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_total_queue_drain", 
+                    "title": "drain rate"
+                }, 
+                {
+                    "desc": "Number of back-offs received per second while sending data over replication TAP connections to this bucket (measured from ep_tap_replica_queue_backoff)", 
+                    "name": "ep_tap_replica_queue_backoff", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_replica_queue_backoff", 
+                    "title": "back-off rate"
+                }, 
+                {
+                    "desc": "Number of back-offs received per second while sending data over rebalancing TAP connections to this bucket (measured from ep_tap_rebalance_queue_backoff)", 
+                    "name": "ep_tap_rebalance_queue_backoff", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_rebalance_queue_backoff", 
+                    "title": "back-off rate"
+                }, 
+                {
+                    "desc": "Number of back-offs received per second while sending data over \"user\" TAP connections to this bucket (measured from ep_tap_user_queue_backoff)", 
+                    "name": "ep_tap_user_queue_backoff", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_user_queue_backoff", 
+                    "title": "back-off rate"
+                }, 
+                {
+                    "desc": "Total number of back-offs received per second while sending data over TAP connections to this bucket (measured from ep_tap_total_queue_backoff)", 
+                    "name": "ep_tap_total_queue_backoff", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_total_queue_backoff", 
+                    "title": "back-off rate"
+                }, 
+                {
+                    "desc": "Number of items in the backfill queues of replication TAP connections for this bucket (measured from ep_tap_replica_queue_backfillremaining)", 
+                    "name": "ep_tap_replica_queue_backfillremaining", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_replica_queue_backfillremaining", 
+                    "title": "backfill remaining"
+                }, 
+                {
+                    "desc": "Number of items in the backfill queues of rebalancing TAP connections to this bucket (measured from ep_tap_rebalance_queue_backfillreamining)", 
+                    "name": "ep_tap_rebalance_queue_backfillremaining", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_rebalance_queue_backfillremaining", 
+                    "title": "backfill remaining"
+                }, 
+                {
+                    "desc": "Number of items in the backfill queues of \"user\" TAP connections to this bucket (measured from ep_tap_user_queue_backfillremaining)", 
+                    "name": "ep_tap_user_queue_backfillremaining", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_user_queue_backfillremaining", 
+                    "title": "backfill remaining"
+                }, 
+                {
+                    "desc": "Total number of items in the backfill queues of TAP connections to this bucket (measured from ep_tap_total_queue_backfillremaining)", 
+                    "name": "ep_tap_total_queue_backfillremaining", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_total_queue_backfillremaining", 
+                    "title": "backfill remaining"
+                }, 
+                {
+                    "desc": "Number of items still on disk to be loaded for replication TAP connections to this bucket (measured from ep_tap_replica_queue_itemondisk)", 
+                    "name": "ep_tap_replica_queue_itemondisk", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_replica_queue_itemondisk", 
+                    "title": "remaining on disk"
+                }, 
+                {
+                    "desc": "Number of items still on disk to be loaded for rebalancing TAP connections to this bucket (measured from ep_tap_rebalance_queue_itemondisk)", 
+                    "name": "ep_tap_rebalance_queue_itemondisk", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_rebalance_queue_itemondisk", 
+                    "title": "remaining on disk"
+                }, 
+                {
+                    "desc": "Number of items still on disk to be loaded for \"client\" TAP connections to this bucket (measured from ep_tap_user_queue_itemondisk)", 
+                    "name": "ep_tap_user_queue_itemondisk", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_user_queue_itemondisk", 
+                    "title": "remaining on disk"
+                }, 
+                {
+                    "desc": "Total number of items still on disk to be loaded for TAP connections to this bucket (measured from ep_tap_total_queue_itemonsidk)", 
+                    "name": "ep_tap_total_queue_itemondisk", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_tap_total_queue_itemondisk", 
+                    "title": "remaining on disk"
+                }
+            ]
+        }, 
+        {
+            "blockName": "View Stats: _design/A", 
+            "columns": [
+                "Data", 
+                "Disk", 
+                "Read Ops"
+            ], 
+            "extraCSSClasses": "closed", 
+            "stats": [
+                {
+                    "desc": "How many bytes stored", 
+                    "name": "views/1e27efe6cbb60a433d5d46c275f17b89/data_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2F1e27efe6cbb60a433d5d46c275f17b89%2Fdata_size", 
+                    "title": "data size"
+                }, 
+                {
+                    "desc": "How much storage used", 
+                    "name": "views/1e27efe6cbb60a433d5d46c275f17b89/disk_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2F1e27efe6cbb60a433d5d46c275f17b89%2Fdisk_size", 
+                    "title": "disk size"
+                }, 
+                {
+                    "desc": "Traffic to the views in this design doc", 
+                    "name": "views/1e27efe6cbb60a433d5d46c275f17b89/accesses", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2F1e27efe6cbb60a433d5d46c275f17b89%2Faccesses", 
+                    "title": "view reads per sec."
+                }
+            ]
+        }, 
+        {
+            "blockName": "View Stats: _design/B", 
+            "columns": [
+                "Data", 
+                "Disk", 
+                "Read Ops"
+            ], 
+            "extraCSSClasses": "closed", 
+            "stats": [
+                {
+                    "desc": "How many bytes stored", 
+                    "name": "views/19e931641cb6dcd4af6a3f07fd941fd9/data_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2F19e931641cb6dcd4af6a3f07fd941fd9%2Fdata_size", 
+                    "title": "data size"
+                }, 
+                {
+                    "desc": "How much storage used", 
+                    "name": "views/19e931641cb6dcd4af6a3f07fd941fd9/disk_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2F19e931641cb6dcd4af6a3f07fd941fd9%2Fdisk_size", 
+                    "title": "disk size"
+                }, 
+                {
+                    "desc": "Traffic to the views in this design doc", 
+                    "name": "views/19e931641cb6dcd4af6a3f07fd941fd9/accesses", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2F19e931641cb6dcd4af6a3f07fd941fd9%2Faccesses", 
+                    "title": "view reads per sec."
+                }
+            ]
+        }, 
+        {
+            "blockName": "View Stats: _design/C", 
+            "columns": [
+                "Data", 
+                "Disk", 
+                "Read Ops"
+            ], 
+            "extraCSSClasses": "closed", 
+            "stats": [
+                {
+                    "desc": "How many bytes stored", 
+                    "name": "views/dc5e8c3b39b36230e7be2781b6a483b1/data_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2Fdc5e8c3b39b36230e7be2781b6a483b1%2Fdata_size", 
+                    "title": "data size"
+                }, 
+                {
+                    "desc": "How much storage used", 
+                    "name": "views/dc5e8c3b39b36230e7be2781b6a483b1/disk_size", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2Fdc5e8c3b39b36230e7be2781b6a483b1%2Fdisk_size", 
+                    "title": "disk size"
+                }, 
+                {
+                    "desc": "Traffic to the views in this design doc", 
+                    "name": "views/dc5e8c3b39b36230e7be2781b6a483b1/accesses", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/views%2Fdc5e8c3b39b36230e7be2781b6a483b1%2Faccesses", 
+                    "title": "view reads per sec."
+                }
+            ]
+        }, 
+        {
+            "blockName": "Incoming XDCR Operations", 
+            "extraCSSClasses": "closed", 
+            "stats": [
+                {
+                    "desc": "Number of get operations per second for this bucket as the target for XDCR", 
+                    "name": "ep_num_ops_get_meta", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_num_ops_get_meta", 
+                    "title": "gets per sec."
+                }, 
+                {
+                    "desc": "Number of set operations per second for this bucket as the target for XDCR", 
+                    "name": "ep_num_ops_set_meta", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_num_ops_set_meta", 
+                    "title": "sets per sec."
+                }, 
+                {
+                    "desc": "Number of delete operations per second for this bucket as the target for XDCR", 
+                    "name": "ep_num_ops_del_meta", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/ep_num_ops_del_meta", 
+                    "title": "deletes per sec."
+                }, 
+                {
+                    "desc": "Total XDCR operations per second for this bucket.", 
+                    "name": "xdc_ops", 
+                    "specificStatsURL": "/pools/default/buckets/default/stats/xdc_ops", 
+                    "title": "total ops per sec."
+                }
+            ]
+        }
+    ]
+}
