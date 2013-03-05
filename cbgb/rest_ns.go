@@ -9,19 +9,18 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var nsTemplates *template.Template
+
 func restNSAPI(r *mux.Router) {
+	dir := filepath.Join(*staticPath, "ns", "pools_default*.json")
+	nsTemplates = template.Must(template.ParseGlob(dir))
+
 	r.HandleFunc("/pools/default",
 		nsGetPoolsDefault).Methods("GET")
 }
 
 func nsGetPoolsDefault(w http.ResponseWriter, r *http.Request) {
-	dir := filepath.Join(*staticPath, "ns", "pools_default*.json")
-	t, err := template.ParseGlob(dir)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("template.ParseFiles err: %v, dir: %v", err, dir), 500)
-		return
-	}
-	if err = t.ExecuteTemplate(w, "pools_default.json", nil); err != nil {
+	if err := nsTemplates.ExecuteTemplate(w, "pools_default.json", nil); err != nil {
 		http.Error(w, fmt.Sprintf("ExecuteTemplate err: %v", err), 500)
 		return
 	}
