@@ -599,10 +599,10 @@ func TestMemoryOnlyBucket(t *testing.T) {
 
 	b1.Load()
 	vb1 := b1.GetVBucket(2)
-	vbs1 := vb1.GetVBState()
 	if vb1 == nil {
 		t.Errorf("expected vbucket 2 to be there after re-load")
 	}
+	vbs1 := vb1.GetVBState()
 	if vbs1 != VBActive {
 		t.Errorf("expected vbucket 2 to be active, got: %v", vbs1)
 	}
