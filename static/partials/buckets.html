@@ -40,6 +40,13 @@
                 name="bucketQuotaBytes"
                 ng-model="bucketQuotaBytes"/>
         </label>
+        <label>
+          <input type="checkbox"
+                name="bucketMemoryOnly"
+                ng-model="bucketMemoryOnly">
+            Memory only</input>
+        </label>
+        <br/>
         <button type="submit" class="btn" ng-click="bucketCreate()">
           Create Bucket
         </button>
