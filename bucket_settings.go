@@ -25,6 +25,14 @@ func (bs *BucketSettings) Copy() *BucketSettings {
 	}
 }
 
+// Returns a safe subset (no passwords) useful for JSON-ification.
+func (bs *BucketSettings) SafeView() map[string]interface{} {
+	return map[string]interface{}{
+		"numPartitions": bs.NumPartitions,
+		"quotaBytes":    bs.QuotaBytes,
+	}
+}
+
 func (bs *BucketSettings) load(bucketDir string) (exists bool, err error) {
 	b, err := ioutil.ReadFile(path.Join(bucketDir, "settings.json"))
 	if err != nil {

@@ -17,6 +17,10 @@
         <a href="#/buckets/{{bucketName}}/stats"><i class="icon-align-left"></i> stats</a>
       </li>
       <li>
+        <i class="icon-tasks"></i> settings:
+        <pre>{{bucket.settings | json}}</pre>
+      </li>
+      <li>
         <i class="icon-tasks"></i> partitions:
         <ul>
           <li>

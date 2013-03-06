@@ -521,3 +521,14 @@ func TestShouldContinueDoingStats(t *testing.T) {
 		t.Fatalf("Should not keep doing stats, but would.")
 	}
 }
+
+func TestBucketSettingsSafeView(t *testing.T) {
+	bs := &BucketSettings{
+		NumPartitions: 123,
+		QuotaBytes:    321,
+	}
+	sv := bs.SafeView()
+	if sv["numPartitions"].(int) != 123 || sv["quotaBytes"].(int) != 321 {
+		t.Errorf("safe view didn't match expected: %v, got: %v", bs, sv)
+	}
+}
