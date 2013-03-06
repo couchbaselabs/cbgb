@@ -38,20 +38,27 @@ const (
 
 var ignore = errors.New("not-an-error/sentinel")
 
+var expirerPeriod = newPeriodically(time.Minute*5, 2)
+
 func VBucketIdForKey(key []byte, numVBuckets int) uint16 {
 	return uint16((crc32.ChecksumIEEE(key) >> uint32(16)) & uint32(numVBuckets-1))
 }
 
 type vbucket struct {
-	parent   Bucket
-	vbid     uint16
-	meta     unsafe.Pointer // *VBMeta
-	bs       *bucketstore
-	ps       *partitionstore
-	alock    sync.Mutex // To access top-level vbucket fields & stats.
-	mlock    sync.Mutex // To mutate the keys/changes collections.
-	stats    Stats
-	observer broadcast.Broadcaster
+	parent    Bucket
+	vbid      uint16
+	meta      unsafe.Pointer // *VBMeta
+	bs        *bucketstore
+	ps        *partitionstore
+	alock     sync.Mutex // To access top-level vbucket fields & stats.
+	mlock     sync.Mutex // To mutate the keys/changes collections.
+	stats     Stats
+	available chan bool
+	observer  broadcast.Broadcaster
+}
+
+func (v vbucket) String() string {
+	return fmt.Sprintf("{vbucket %v}", v.vbid)
 }
 
 type dispatchFun func(v *vbucket, w io.Writer,
@@ -97,15 +104,22 @@ var dispatchTable = [256]dispatchFun{
 
 func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
 	rv = &vbucket{
-		parent:   parent,
-		vbid:     vbid,
-		meta:     unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
-		bs:       bs,
-		ps:       bs.getPartitionStore(vbid),
-		observer: broadcastMux.Sub(),
+		parent:    parent,
+		vbid:      vbid,
+		meta:      unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
+		bs:        bs,
+		ps:        bs.getPartitionStore(vbid),
+		observer:  broadcastMux.Sub(),
+		available: make(chan bool),
 	}
 
 	return rv, nil
+}
+
+func (v *vbucket) mkVBucketSweeper() func(time.Time) bool {
+	return func(time.Time) bool {
+		return v.expScan()
+	}
 }
 
 func (v *vbucket) Meta() *VBMeta {
@@ -116,6 +130,7 @@ func (v *vbucket) Close() error {
 	if v == nil {
 		return nil
 	}
+	close(v.available)
 	return v.observer.Close()
 }
 
@@ -500,7 +515,10 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	}
 
 	if itemNew.exp != 0 {
-		atomic.AddUint64(&v.stats.Expirable, 1)
+		expirable := atomic.AddUint64(&v.stats.Expirable, 1)
+		if expirable == 1 {
+			expirerPeriod.Register(v.available, v.mkVBucketSweeper())
+		}
 	}
 
 	return nil, itemNew, aval, nil
@@ -798,4 +816,27 @@ func (v *vbucket) Visit(start []byte, visitor func(key []byte, data []byte) bool
 	return v.ps.visitItems(start, true, func(i *item) bool {
 		return visitor(i.key, i.data)
 	})
+}
+
+func (v *vbucket) expScan() bool {
+	now := time.Now()
+	// expired := atomic.LoadUint64(&v.stats.Expirable)
+	var cleaned uint64
+	err := v.ps.visitItems(casBytes(0), false, func(i *item) bool {
+		if i.isExpired(now) {
+			v.Mutate(func() {
+				err := v.ps.del(i.key, i.cas, nil)
+				if err != nil {
+					log.Printf("Error deleting expired obj: %v", err)
+				}
+				cleaned++
+			})
+		}
+		return true
+	})
+	// XXX:  And this is why you don't use uint64
+	remaining := atomic.AddUint64(&v.stats.Expirable, uint64(0-cleaned))
+	log.Printf("Scan complete, cleaned up %v items with %v, %v remaining",
+		cleaned, err, remaining)
+	return remaining > 0
 }
