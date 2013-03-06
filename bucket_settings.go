@@ -13,6 +13,7 @@ type BucketSettings struct {
 	PasswordHash     string `json:"passwordHash"`
 	PasswordSalt     string `json:"passwordSalt"`
 	QuotaBytes       int    `json:"quotaBytes"`
+	MemoryOnly       bool   `json:"memoryOnly"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
@@ -22,6 +23,7 @@ func (bs *BucketSettings) Copy() *BucketSettings {
 		PasswordHash:     bs.PasswordHash,
 		PasswordSalt:     bs.PasswordSalt,
 		QuotaBytes:       bs.QuotaBytes,
+		MemoryOnly:       bs.MemoryOnly,
 	}
 }
 
@@ -30,6 +32,7 @@ func (bs *BucketSettings) SafeView() map[string]interface{} {
 	return map[string]interface{}{
 		"numPartitions": bs.NumPartitions,
 		"quotaBytes":    bs.QuotaBytes,
+		"memoryOnly":    bs.MemoryOnly,
 	}
 }
 

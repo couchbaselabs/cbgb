@@ -524,11 +524,26 @@ func TestShouldContinueDoingStats(t *testing.T) {
 
 func TestBucketSettingsSafeView(t *testing.T) {
 	bs := &BucketSettings{
-		NumPartitions: 123,
-		QuotaBytes:    321,
+		NumPartitions:    123,
+		PasswordHashFunc: "hashfunc",
+		PasswordHash:     "hashbash",
+		PasswordSalt:     "salty",
+		QuotaBytes:       321,
+		MemoryOnly:       true,
 	}
 	sv := bs.SafeView()
-	if sv["numPartitions"].(int) != 123 || sv["quotaBytes"].(int) != 321 {
+	if sv["numPartitions"].(int) != 123 ||
+		sv["quotaBytes"].(int) != 321 ||
+		sv["memoryOnly"].(bool) != true {
 		t.Errorf("safe view didn't match expected: %v, got: %v", bs, sv)
+	}
+	if _, ok := sv["passwordHashFunc"]; ok {
+		t.Errorf("safe view should not expose password hashfunc, got: %v", sv)
+	}
+	if _, ok := sv["passwordHash"]; ok {
+		t.Errorf("safe view should not expose password hash, got: %v", sv)
+	}
+	if _, ok := sv["passwordSalt"]; ok {
+		t.Errorf("safe view should not expose password salt, got: %v", sv)
 	}
 }
