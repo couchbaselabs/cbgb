@@ -16,13 +16,13 @@ var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
 var staticPath = flag.String("static-path",
-	"static",
-	"path to static content")
+	"static", "path to static content")
 var defaultBucketName = flag.String("default-bucket-name",
-	cbgb.DEFAULT_BUCKET_NAME,
-	"name of the default bucket")
+	cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket")
 var defaultPartitions = flag.Int("default-partitions",
 	1, "default number of partitions for new buckets")
+var defaultQuotaBytes = flag.Int("default-quota-bytes",
+	1024*1024, "default quota (or max key+value bytes) allowed per bucket")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
@@ -41,6 +41,7 @@ func main() {
 
 	bucketSettings = &cbgb.BucketSettings{
 		NumPartitions: *defaultPartitions,
+		QuotaBytes:    *defaultQuotaBytes,
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
 	if err != nil {

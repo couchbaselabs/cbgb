@@ -8,11 +8,11 @@ import (
 )
 
 type BucketSettings struct {
-	// TODO: Bucket quotas.
 	NumPartitions    int    `json:"numPartitions"`
 	PasswordHashFunc string `json:"passwordHashFunc"`
 	PasswordHash     string `json:"passwordHash"`
 	PasswordSalt     string `json:"passwordSalt"`
+	QuotaBytes       int    `json:"quotaBytes"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
@@ -21,6 +21,7 @@ func (bs *BucketSettings) Copy() *BucketSettings {
 		PasswordHashFunc: bs.PasswordHashFunc,
 		PasswordHash:     bs.PasswordHash,
 		PasswordSalt:     bs.PasswordSalt,
+		QuotaBytes:       bs.QuotaBytes,
 	}
 }
 
