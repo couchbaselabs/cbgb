@@ -499,8 +499,8 @@ func (b *livebucket) Auth(passwordClearText []byte) bool {
 		return false
 	}
 	// TODO: Have real password hash functions and salt.
-	if len(b.settings.PasswordHashFunc) <= 0 &&
-		len(b.settings.PasswordSalt) <= 0 &&
+	if b.settings.PasswordHashFunc == "" &&
+		b.settings.PasswordSalt == "" &&
 		bytes.Equal([]byte(b.settings.PasswordHash), passwordClearText) {
 		return true
 	}
