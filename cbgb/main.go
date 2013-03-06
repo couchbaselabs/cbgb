@@ -54,7 +54,8 @@ func main() {
 		log.Printf("Could not load buckets: %v, data directory: %v", err, *data)
 	}
 
-	if buckets.Get(*defaultBucketName) == nil {
+	if buckets.Get(*defaultBucketName) == nil &&
+		*defaultBucketName != "" {
 		_, err := createBucket(*defaultBucketName, bucketSettings)
 		if err != nil {
 			log.Fatalf("Error creating default bucket: %s, err: %v",
