@@ -45,6 +45,7 @@ type Stats struct {
 
 	IncomingValueBytes uint64 `json:"incomingValueBytes"`
 	OutgoingValueBytes uint64 `json:"outgoingValueBytes"`
+	KeyValueBytes      int64  `json:"keyValueBytes"`
 
 	StoreErrors      uint64 `json:"storeErrors"`
 	NotMyRangeErrors uint64 `json:"notMyRangeErrors"`
@@ -79,6 +80,7 @@ func (s *Stats) Op(in *Stats, op func(uint64, uint64) uint64) {
 	s.Unknowns = op(s.Unknowns, atomic.LoadUint64(&in.Unknowns))
 	s.IncomingValueBytes = op(s.IncomingValueBytes, atomic.LoadUint64(&in.IncomingValueBytes))
 	s.OutgoingValueBytes = op(s.OutgoingValueBytes, atomic.LoadUint64(&in.OutgoingValueBytes))
+	s.KeyValueBytes = int64(op(uint64(s.KeyValueBytes), uint64(atomic.LoadInt64(&in.KeyValueBytes))))
 	s.StoreErrors = op(s.StoreErrors, atomic.LoadUint64(&in.StoreErrors))
 	s.NotMyRangeErrors = op(s.NotMyRangeErrors, atomic.LoadUint64(&in.NotMyRangeErrors))
 }
@@ -111,6 +113,7 @@ func (s *Stats) Equal(in *Stats) bool {
 		s.Unknowns == atomic.LoadUint64(&in.Unknowns) &&
 		s.IncomingValueBytes == atomic.LoadUint64(&in.IncomingValueBytes) &&
 		s.OutgoingValueBytes == atomic.LoadUint64(&in.OutgoingValueBytes) &&
+		s.KeyValueBytes == atomic.LoadInt64(&in.KeyValueBytes) &&
 		s.StoreErrors == atomic.LoadUint64(&in.StoreErrors) &&
 		s.NotMyRangeErrors == atomic.LoadUint64(&in.NotMyRangeErrors)
 }
@@ -136,6 +139,7 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"unknowns", strconv.FormatUint(s.Unknowns, 10)}
 	ch <- statItem{"incoming_value_bytes", strconv.FormatUint(s.IncomingValueBytes, 10)}
 	ch <- statItem{"outgoing_value_bytes", strconv.FormatUint(s.OutgoingValueBytes, 10)}
+	ch <- statItem{"key_value_bytes", strconv.FormatInt(s.KeyValueBytes, 10)}
 	ch <- statItem{"store_errors", strconv.FormatUint(s.StoreErrors, 10)}
 	ch <- statItem{"not_my_range_errors", strconv.FormatUint(s.NotMyRangeErrors, 10)}
 }
