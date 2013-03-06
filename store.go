@@ -16,7 +16,7 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
-// TODO: Make this configurable.  Note totally obvious since the
+// TODO: Make this configurable.  Not totally obvious since the
 // actual server is a different package.
 var fileService = NewFileService(32)
 
@@ -192,7 +192,6 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 	k := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS))
 	c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
 
-	// TODO: Handle cleanup of partitions when bucket/vbucket closes.
 	res = s.partitions[vbid]
 	if res == nil {
 		res = &partitionstore{parent: s}
