@@ -35,6 +35,11 @@
                 name="bucketPassword"
                 ng-model="bucketPassword"/>
         </label>
+        <label>Bucket quota (bytes)</label>
+          <input type="text"
+                name="bucketQuotaBytes"
+                ng-model="bucketQuotaBytes"/>
+        </label>
         <button type="submit" class="btn" ng-click="bucketCreate()">
           Create Bucket
         </button>

@@ -103,8 +103,20 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 
 	bSettings := bucketSettings.Copy()
 	bucketPassword := r.FormValue("bucketPassword")
-	if len(bucketPassword) > 0 {
+	if bucketPassword != "" {
 		bSettings.PasswordHash = bucketPassword
+	}
+	bucketQuotaBytes := r.FormValue("bucketQuotaBytes")
+	if bucketQuotaBytes != "" {
+		qb, err := strconv.Atoi(bucketQuotaBytes)
+		if err != nil || qb < 0 {
+			http.Error(w, fmt.Sprintf("bad bucket quota bytes: %v, err: %v", qb, err), 400)
+			return
+		}
+		bSettings.QuotaBytes = qb
+	} else {
+		http.Error(w, "missing bucket quota bytes", 400)
+		return
 	}
 
 	_, err = createBucket(bucketName, bSettings)
