@@ -14,14 +14,16 @@ import (
 )
 
 func (s *bucketstore) Compact() error {
-	s.diskLock.Lock()
-	defer s.diskLock.Unlock()
+	if !s.memoryOnly {
+		s.diskLock.Lock()
+		defer s.diskLock.Unlock()
 
-	bsf := s.BSF()
-	compactPath := bsf.path + ".compact"
-	if err := s.compactGo(bsf, compactPath); err != nil {
-		atomic.AddUint64(&s.stats.CompactErrors, 1)
-		return err
+		bsf := s.BSF()
+		compactPath := bsf.path + ".compact"
+		if err := s.compactGo(bsf, compactPath); err != nil {
+			atomic.AddUint64(&s.stats.CompactErrors, 1)
+			return err
+		}
 	}
 
 	atomic.AddUint64(&s.stats.Compacts, 1)

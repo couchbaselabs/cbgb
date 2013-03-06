@@ -26,6 +26,7 @@ const compact_every = 10000
 
 type bucketstore struct {
 	bsf        unsafe.Pointer // *bucketstorefile
+	memoryOnly bool
 	endch      chan bool
 	dirtiness  int64
 	partitions map[uint16]*partitionstore
@@ -61,7 +62,11 @@ func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) 
 	}
 
 	bsf := NewBucketStoreFile(path, file, &BucketStoreStats{})
-	store, err := gkvlite.NewStore(bsf)
+	bsfActual := bsf
+	if settings.MemoryOnly {
+		bsfActual = nil
+	}
+	store, err := gkvlite.NewStore(bsfActual)
 	if err != nil {
 		return nil, err
 	}
@@ -69,6 +74,7 @@ func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) 
 
 	res := &bucketstore{
 		bsf:        unsafe.Pointer(bsf),
+		memoryOnly: settings.MemoryOnly,
 		endch:      make(chan bool),
 		partitions: make(map[uint16]*partitionstore),
 		stats:      bsf.stats,
@@ -105,9 +111,11 @@ func (s *bucketstore) Flush() (int64, error) {
 
 func (s *bucketstore) flush_unlocked() (int64, error) {
 	d := atomic.LoadInt64(&s.dirtiness)
-	if err := s.BSF().store.Flush(); err != nil {
-		atomic.AddUint64(&s.stats.FlushErrors, 1)
-		return atomic.LoadInt64(&s.dirtiness), err
+	if !s.memoryOnly {
+		if err := s.BSF().store.Flush(); err != nil {
+			atomic.AddUint64(&s.stats.FlushErrors, 1)
+			return atomic.LoadInt64(&s.dirtiness), err
+		}
 	}
 	atomic.AddUint64(&s.stats.Flushes, 1)
 	return atomic.AddInt64(&s.dirtiness, -d), nil
