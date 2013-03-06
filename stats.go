@@ -38,6 +38,7 @@ type Stats struct {
 	Deletes     uint64 `json:"deletes"`
 	Creates     uint64 `json:"creates"`
 	Updates     uint64 `json:"updates"`
+	Expirable   uint64 `json:"expirable"`
 	RGets       uint64 `json:"rGets"`
 	RGetResults uint64 `json:"rGetResults"`
 	Unknowns    uint64 `json:"unknowns"`

@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/dustin/go-broadcast"
@@ -323,11 +324,18 @@ func vbMutate(v *vbucket, w io.Writer,
 	var itemOld, itemNew *item
 	var aval uint64
 	var err error
+	now := time.Now()
 
 	v.Mutate(func() {
 		if cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND ||
 			cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
 			itemOld, err = v.ps.get(req.Key)
+			if itemOld != nil {
+				if itemOld.isExpired(now) {
+					v.ps.del(req.Key, 0, nil)
+					itemOld = nil
+				}
+			}
 		} else {
 			itemOld, err = v.ps.getMeta(req.Key)
 		}
@@ -409,6 +417,20 @@ func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	return nil, nil
 }
 
+func computeExp(exp uint32, tsrc func() time.Time) uint32 {
+	var rv uint32
+	switch {
+	case exp == 0, exp > 30*86400:
+		// Absolute time in seconds since epoch
+		rv = exp
+	default:
+		// Relative time from now.
+		now := tsrc()
+		rv = uint32(now.Add(time.Duration(exp) * time.Second).Unix())
+	}
+	return rv
+}
+
 func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	cmd gomemcached.CommandCode, itemCas uint64, itemOld *item) (*gomemcached.MCResponse,
 	*item, uint64, error) {
@@ -436,7 +458,7 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	itemNew := &item{
 		key:  req.Key,
 		flag: flag,
-		exp:  exp, // TODO: Handle expirations.
+		exp:  computeExp(exp, time.Now),
 		cas:  itemCas,
 	}
 
@@ -477,6 +499,10 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 		}
 	}
 
+	if itemNew.exp != 0 {
+		atomic.AddUint64(&v.stats.Expirable, 1)
+	}
+
 	return nil, itemNew, aval, nil
 }
 
@@ -502,7 +528,16 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		atomic.AddUint64(&v.stats.OutgoingValueBytes, uint64(len(i.data)))
 	}
 
-	if i == nil {
+	now := time.Now()
+	if i != nil && i.isExpired(now) {
+		// XXX: I'd like to delete this, but I fear it may not
+		// be safe.
+		/*
+		 v.ps.del(req.Key, 0, nil)
+		*/
+		i = nil
+	}
+	if i == nil || i.isExpired(now) {
 		if req.Opcode.IsQuiet() {
 			return nil
 		}

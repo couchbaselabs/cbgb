@@ -3,6 +3,7 @@ package cbgb
 import (
 	"bytes"
 	"testing"
+	"time"
 )
 
 func TestItemCloneEqual(t *testing.T) {
@@ -165,5 +166,28 @@ func TestCASLess(t *testing.T) {
 	}
 	if CASLess(&item{cas: 1}, &item{cas: 1}) != 0 {
 		t.Errorf("expected CASLess to work")
+	}
+}
+
+func TestItemExpiration(t *testing.T) {
+	current, err := time.Parse(time.RFC3339, "2013-03-05T18:01:00Z")
+	if err != nil {
+		t.Fatalf("Couldn't parse absolute time: %v", err)
+	}
+
+	tests := map[uint32]bool{
+		0:      false,
+		828525: true,
+		uint32(current.Unix()) - 1: true,
+		uint32(current.Unix()) + 1: false,
+		uint32(current.Unix()):     true,
+	}
+
+	for in, out := range tests {
+		i := item{exp: in}
+		got := i.isExpired(current)
+		if got != out {
+			t.Errorf("Expected %v for %v, got %v", out, in, got)
+		}
 	}
 }

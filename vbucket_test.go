@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"testing"
+	"time"
 )
 
 func TestVBucketHash(t *testing.T) {
@@ -70,5 +71,26 @@ func TestItemsStatPersists(t *testing.T) {
 	vb1 := b1.GetVBucket(2)
 	if 5 != vb1.stats.Items {
 		t.Errorf("expected to have 5 items after loading, got: %v", vb1.stats.Items)
+	}
+}
+
+func TestExpirationComputin(t *testing.T) {
+	current, err := time.Parse(time.RFC3339, "2013-03-05T18:01:00Z")
+	if err != nil {
+		t.Fatalf("Couldn't parse absolute time: %v", err)
+	}
+
+	tests := map[uint32]uint32{
+		0:         0,
+		838424824: 838424824,
+		300:       1362506760,
+	}
+
+	for in, out := range tests {
+		got := computeExp(in, func() time.Time { return current })
+
+		if got != out {
+			t.Errorf("Expected %v for %v, got %v", out, in, got)
+		}
 	}
 }

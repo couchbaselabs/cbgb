@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"time"
 )
 
 type item struct {
@@ -41,6 +42,13 @@ func (i *item) Equal(j *item) bool {
 		i.flag == j.flag &&
 		i.cas == j.cas &&
 		bytes.Equal(i.data, j.data)
+}
+
+func (i item) isExpired(t time.Time) bool {
+	if i.exp == 0 {
+		return false
+	}
+	return !time.Unix(int64(i.exp), 0).After(t)
 }
 
 const itemHdrLen = 4 + 4 + 8 + 2 + 4
