@@ -14,6 +14,10 @@ type item struct {
 	data      []byte
 }
 
+func (i item) String() string {
+	return fmt.Sprintf("{item key=%s}", i.key)
+}
+
 func (i *item) clone() *item {
 	return &item{
 		key:  i.key,
