@@ -25,12 +25,12 @@ var flushRunner = newPeriodically(10*time.Second, 5)
 const compact_every = 10000
 
 type bucketstore struct {
-	bsf        unsafe.Pointer // *bucketstorefile
-	memoryOnly bool
-	endch      chan bool
-	dirtiness  int64
-	partitions map[uint16]*partitionstore
-	stats      *BucketStoreStats
+	bsf           unsafe.Pointer // *bucketstorefile
+	bsfMemoryOnly *bucketstorefile
+	endch         chan bool
+	dirtiness     int64
+	partitions    map[uint16]*partitionstore
+	stats         *BucketStoreStats
 
 	diskLock sync.Mutex
 }
@@ -62,28 +62,41 @@ func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) 
 	}
 
 	bsf := NewBucketStoreFile(path, file, &BucketStoreStats{})
-	bsfActual := bsf
-	if settings.MemoryOnly {
-		bsfActual = nil
-	}
-	store, err := gkvlite.NewStore(bsfActual)
+	store, err := gkvlite.NewStore(bsf)
 	if err != nil {
 		return nil, err
 	}
 	bsf.store = store
 
-	res := &bucketstore{
-		bsf:        unsafe.Pointer(bsf),
-		memoryOnly: settings.MemoryOnly,
-		endch:      make(chan bool),
-		partitions: make(map[uint16]*partitionstore),
-		stats:      bsf.stats,
+	var bsfMemoryOnly *bucketstorefile
+	if settings.MemoryOnly {
+		bsfMemoryOnly = NewBucketStoreFile(path, file, bsf.stats)
+		bsfMemoryOnly.store, err = gkvlite.NewStore(nil)
+		if err != nil {
+			return nil, err
+		}
 	}
 
-	return res, nil
+	return &bucketstore{
+		bsf:           unsafe.Pointer(bsf),
+		bsfMemoryOnly: bsfMemoryOnly,
+		endch:         make(chan bool),
+		partitions:    make(map[uint16]*partitionstore),
+		stats:         bsf.stats,
+	}, nil
 }
 
 func (s *bucketstore) BSF() *bucketstorefile {
+	return (*bucketstorefile)(atomic.LoadPointer(&s.bsf))
+}
+
+// Returns a bucketstorefile for data only, where the caller doesn't
+// need to access metadata.  In a memory-only setting, the returned
+// bucketstorefile would not be backed by a real file.
+func (s *bucketstore) BSFData() *bucketstorefile {
+	if s.bsfMemoryOnly != nil {
+		return s.bsfMemoryOnly
+	}
 	return (*bucketstorefile)(atomic.LoadPointer(&s.bsf))
 }
 
@@ -111,11 +124,9 @@ func (s *bucketstore) Flush() (int64, error) {
 
 func (s *bucketstore) flush_unlocked() (int64, error) {
 	d := atomic.LoadInt64(&s.dirtiness)
-	if !s.memoryOnly {
-		if err := s.BSF().store.Flush(); err != nil {
-			atomic.AddUint64(&s.stats.FlushErrors, 1)
-			return atomic.LoadInt64(&s.dirtiness), err
-		}
+	if err := s.BSF().store.Flush(); err != nil {
+		atomic.AddUint64(&s.stats.FlushErrors, 1)
+		return atomic.LoadInt64(&s.dirtiness), err
 	}
 	atomic.AddUint64(&s.stats.Flushes, 1)
 	return atomic.AddInt64(&s.dirtiness, -d), nil
@@ -139,14 +150,16 @@ func (s *bucketstore) mkFlushFun() func(time.Time) bool {
 	}
 }
 
-func (s *bucketstore) dirty() {
-	newval := atomic.AddInt64(&s.dirtiness, 1)
-	if newval == 1 {
-		flushRunner.Register(s.endch, s.mkFlushFun())
+func (s *bucketstore) dirty(force bool) {
+	if force || s.bsfMemoryOnly == nil {
+		newval := atomic.AddInt64(&s.dirtiness, 1)
+		if newval == 1 {
+			flushRunner.Register(s.endch, s.mkFlushFun())
+		}
 	}
 }
 
-func (s *bucketstore) coll(collName string) *gkvlite.Collection {
+func (s *bucketstore) collMeta(collName string) *gkvlite.Collection {
 	c := s.BSF().store.GetCollection(collName)
 	if c == nil {
 		c = s.BSF().store.SetCollection(collName, nil)
@@ -154,12 +167,16 @@ func (s *bucketstore) coll(collName string) *gkvlite.Collection {
 	return c
 }
 
-func (s *bucketstore) collNames() []string {
-	return s.BSF().store.GetCollectionNames()
+func (s *bucketstore) coll(collName string) *gkvlite.Collection {
+	c := s.BSFData().store.GetCollection(collName)
+	if c == nil {
+		c = s.BSFData().store.SetCollection(collName, nil)
+	}
+	return c
 }
 
-func (s *bucketstore) collExists(collName string) bool {
-	return s.BSF().store.GetCollection(collName) != nil
+func (s *bucketstore) collNames() []string {
+	return s.BSF().store.GetCollectionNames()
 }
 
 func (s *bucketstore) apply(f func()) {
@@ -171,10 +188,10 @@ func (s *bucketstore) apply(f func()) {
 func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 	s.diskLock.Lock()
 	defer s.diskLock.Unlock()
+
 	k := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS))
 	c := s.coll(fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES))
 
-	// TODO: Handle numItems and lastCas initialization.
 	// TODO: Handle cleanup of partitions when bucket/vbucket closes.
 	res = s.partitions[vbid]
 	if res == nil {

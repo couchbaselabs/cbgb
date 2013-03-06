@@ -162,7 +162,8 @@ func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
 			return
 		}
 
-		// An nil/empty key means this is a metadata change.
+		dirtyForce := false
+
 		if newItem.key != nil && len(newItem.key) > 0 {
 			// TODO: What if we flush between the keys update and changes
 			// update?  That could result in an inconsistent db file?
@@ -173,12 +174,16 @@ func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
 			if err = keys.SetItem(kItem); err != nil {
 				return
 			}
+		} else {
+			dirtyForce = true // An nil/empty key means this is a metadata change.
 		}
+
 		if oldMeta != nil {
 			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
 			changes.Delete(casBytes(oldMeta.cas))
 		}
-		p.parent.dirty()
+
+		p.parent.dirty(dirtyForce)
 	})
 	return err
 }
@@ -191,7 +196,8 @@ func (p *partitionstore) del(key []byte, cas uint64, oldMeta *item) (err error) 
 		if err = changes.Set(cBytes, vBytes); err != nil {
 			return
 		}
-		// An nil/empty key means this is a metadata change.
+
+		dirtyForce := false
 		if key != nil && len(key) > 0 {
 			// TODO: What if we flush between the keys update and changes
 			// update?  That could result in an inconsistent db file?
@@ -200,12 +206,16 @@ func (p *partitionstore) del(key []byte, cas uint64, oldMeta *item) (err error) 
 			if _, err = keys.Delete(key); err != nil {
 				return
 			}
+		} else {
+			dirtyForce = true // An nil/empty key means this is a metadata change.
 		}
+
 		if oldMeta != nil {
 			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
 			changes.Delete(casBytes(oldMeta.cas))
 		}
-		p.parent.dirty()
+
+		p.parent.dirty(dirtyForce)
 	})
 	return err
 }

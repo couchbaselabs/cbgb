@@ -205,7 +205,7 @@ func (v *vbucket) rangeCopyTo(dst *vbucket,
 		atomic.StorePointer(&dst.meta, unsafe.Pointer(dstMeta))
 
 		if hadKeys || hadChanges {
-			dst.bs.dirty()
+			dst.bs.dirty(true)
 		}
 	})
 

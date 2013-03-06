@@ -219,7 +219,7 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 	if err = v.ps.set(i, nil); err != nil {
 		return err
 	}
-	if err = v.bs.coll(COLL_VBMETA).Set(k, j); err != nil {
+	if err = v.bs.collMeta(COLL_VBMETA).Set(k, j); err != nil {
 		return err
 	}
 	atomic.StorePointer(&v.meta, unsafe.Pointer(newMeta))
@@ -231,7 +231,7 @@ func (v *vbucket) load() (err error) {
 		v.Mutate(func() {
 			meta := v.Meta().Copy()
 
-			x, err := v.bs.coll(COLL_VBMETA).GetItem(
+			x, err := v.bs.collMeta(COLL_VBMETA).GetItem(
 				[]byte(fmt.Sprintf("%v", v.vbid)), true)
 			if err != nil {
 				return

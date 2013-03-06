@@ -16,6 +16,7 @@ import (
 	"unsafe"
 
 	"github.com/dustin/go-broadcast"
+	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -393,44 +394,49 @@ func (b *livebucket) Compact() error {
 // is distinct from a previously deleted bucket X?
 func (b *livebucket) Load() (err error) {
 	for _, bs := range b.bucketstores {
-		for _, collName := range bs.collNames() {
-			if !strings.HasSuffix(collName, COLL_SUFFIX_CHANGES) {
-				continue
-			}
-			vbidStr := collName[0 : len(collName)-len(COLL_SUFFIX_CHANGES)]
-			if !bs.collExists(vbidStr+COLL_SUFFIX_CHANGES) ||
-				!bs.collExists(vbidStr+COLL_SUFFIX_KEYS) {
-				continue
-			}
-			vbid, err := strconv.Atoi(vbidStr)
-			if err != nil {
-				return err
-			}
-			if vbid > 0x0000ffff {
-				return fmt.Errorf("load failed with vbid too big: %v", vbid)
-			}
-			vb, err := newVBucket(b, uint16(vbid), bs)
-			if err != nil {
-				return err
-			}
-			if err = vb.load(); err != nil {
-				return err
-			}
-			if vbid < b.settings.NumPartitions {
-				if !b.casVBucket(uint16(vbid), vb, nil) {
-					return fmt.Errorf("loading vbucket: %v, but it already exists",
-						vbid)
+		// TODO: Need to poke observers with changed vbstate?
+		var errVisit error
+		err = bs.collMeta(COLL_VBMETA).VisitItemsAscend(nil, true,
+			func(i *gkvlite.Item) bool {
+				vbidStr := i.Key
+				vbid, errVisit := strconv.Atoi(string(vbidStr))
+				if errVisit != nil {
+					return false
 				}
-			} else if uint16(vbid) == VBID_DDOC {
-				if b.vbucketDDoc != nil {
-					b.vbucketDDoc.Close()
+				if vbid > 0x0000ffff {
+					errVisit = fmt.Errorf("load failed with vbid too big: %v", vbid)
+					return false
 				}
-				b.vbucketDDoc = vb
-			} else {
-				return fmt.Errorf("vbid out of range during load: %v versus %v",
-					vbid, b.settings.NumPartitions)
-			}
-			// TODO: Need to poke observers with changed vbstate?
+				vb, errVisit := newVBucket(b, uint16(vbid), bs)
+				if errVisit != nil {
+					return false
+				}
+				if errVisit = vb.load(); errVisit != nil {
+					return false
+				}
+				if vbid < b.settings.NumPartitions {
+					if !b.casVBucket(uint16(vbid), vb, nil) {
+						errVisit = fmt.Errorf("loading vbucket: %v, but it already exists",
+							vbid)
+						return false
+					}
+				} else if uint16(vbid) == VBID_DDOC {
+					if b.vbucketDDoc != nil {
+						b.vbucketDDoc.Close()
+					}
+					b.vbucketDDoc = vb
+				} else {
+					errVisit = fmt.Errorf("vbid out of range during load: %v versus %v",
+						vbid, b.settings.NumPartitions)
+					return false
+				}
+				return true
+			})
+		if err != nil {
+			return err
+		}
+		if errVisit != nil {
+			return errVisit
 		}
 	}
 	return nil
