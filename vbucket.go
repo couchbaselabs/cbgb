@@ -342,25 +342,25 @@ func vbMutate(v *vbucket, w io.Writer,
 	now := time.Now()
 
 	v.Mutate(func() {
+		itemOld, err = v.ps.get(req.Key)
+		if err != nil {
+			res = &gomemcached.MCResponse{
+				Status: gomemcached.TMPFAIL,
+				Body:   []byte(fmt.Sprintf("Store get itemOld error %v", err)),
+			}
+			return
+		}
+
 		if cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND ||
 			cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
-			itemOld, err = v.ps.get(req.Key)
 			if itemOld != nil {
 				if itemOld.isExpired(now) {
 					v.ps.del(req.Key, 0, nil)
 					itemOld = nil
 				}
 			}
-		} else {
-			itemOld, err = v.ps.getMeta(req.Key)
 		}
-		if err != nil {
-			res = &gomemcached.MCResponse{
-				Status: gomemcached.TMPFAIL,
-				Body:   []byte(fmt.Sprintf("Store getMeta error %v", err)),
-			}
-			return
-		}
+
 		res, err = vbMutateValidate(v, w, req, cmd, itemOld)
 		if err != nil {
 			return
@@ -394,8 +394,12 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 	} else {
 		if itemOld != nil {
+			atomic.AddInt64(&v.stats.KeyValueBytes,
+				itemNew.KeyDataNumBytes()-itemOld.KeyDataNumBytes())
 			atomic.AddUint64(&v.stats.Updates, 1)
 		} else {
+			atomic.AddInt64(&v.stats.KeyValueBytes,
+				itemNew.KeyDataNumBytes())
 			atomic.AddUint64(&v.stats.Creates, 1)
 			atomic.AddInt64(&v.stats.Items, 1)
 		}
@@ -589,19 +593,19 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		cas = atomic.AddUint64(&v.Meta().LastCas, 1)
 	})
 
-	var prevMeta *item
+	var prevItem *item
 	var err error
 
 	v.Mutate(func() {
-		prevMeta, err = v.ps.getMeta(req.Key)
+		prevItem, err = v.ps.get(req.Key)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
-				Body:   []byte(fmt.Sprintf("Store getMeta error %v", err)),
+				Body:   []byte(fmt.Sprintf("Store get prevItem error %v", err)),
 			}
 			return
 		}
-		if req.Cas != 0 && (prevMeta == nil || prevMeta.cas != req.Cas) {
+		if req.Cas != 0 && (prevItem == nil || prevItem.cas != req.Cas) {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
 				Body:   []byte("CAS mismatch"),
@@ -609,7 +613,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		if prevMeta == nil {
+		if prevItem == nil {
 			if req.Opcode.IsQuiet() {
 				return
 			}
@@ -617,7 +621,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 
-		err = v.ps.del(req.Key, cas, prevMeta)
+		err = v.ps.del(req.Key, cas, prevItem)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -632,11 +636,12 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 	if err != nil {
 		atomic.AddUint64(&v.stats.StoreErrors, 1)
-	} else if prevMeta != nil {
+	} else if prevItem != nil {
 		atomic.AddInt64(&v.stats.Items, -1)
+		atomic.AddInt64(&v.stats.KeyValueBytes, -prevItem.KeyDataNumBytes())
 	}
 
-	if err == nil && prevMeta != nil {
+	if err == nil && prevItem != nil {
 		v.observer.Submit(mutation{v.vbid, req.Key, cas, true})
 	}
 

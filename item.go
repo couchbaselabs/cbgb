@@ -124,6 +124,10 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 	return nil
 }
 
+func (i *item) KeyDataNumBytes() int64 {
+	return int64(len(i.key) + len(i.data))
+}
+
 func KeyLess(p, q interface{}) int {
 	return bytes.Compare(p.(*item).key, q.(*item).key)
 }

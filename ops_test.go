@@ -90,6 +90,7 @@ func TestBasicOps(t *testing.T) {
 		Unknowns:           1,
 		IncomingValueBytes: 6,
 		OutgoingValueBytes: 9,
+		KeyValueBytes:      4,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -1626,6 +1627,7 @@ func TestArithOps(t *testing.T) {
 		Unknowns:           0,
 		IncomingValueBytes: 0,
 		OutgoingValueBytes: 12,
+		KeyValueBytes:      4,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
