@@ -353,26 +353,13 @@ func vbMutate(v *vbucket, w io.Writer,
 	now := time.Now()
 
 	v.Mutate(func() {
-		itemOld, err = v.ps.get(req.Key)
+		itemOld, err = v.getUnexpired(req.Key, now)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
 				Body:   []byte(fmt.Sprintf("Store get itemOld error %v", err)),
 			}
 			return
-		}
-
-		if cmd == gomemcached.APPEND || cmd == gomemcached.PREPEND ||
-			cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
-			if itemOld != nil {
-				if itemOld.isExpired(now) {
-					err = v.ps.del(req.Key, 0, itemOld)
-					if err != nil {
-						return
-					}
-					itemOld = nil
-				}
-			}
 		}
 
 		res, err = vbMutateValidate(v, w, req, cmd, itemOld)
@@ -388,10 +375,10 @@ func vbMutate(v *vbucket, w io.Writer,
 		quotaBytes := v.parent.GetBucketSettings().QuotaBytes
 		if quotaBytes > 0 {
 			nb := atomic.LoadInt64(v.bucketItemBytes)
+			nb = nb + itemNew.NumBytes()
 			if itemOld != nil {
 				nb = nb - itemOld.NumBytes()
 			}
-			nb = nb + itemNew.NumBytes()
 			if nb >= quotaBytes {
 				res = &gomemcached.MCResponse{
 					Status: gomemcached.E2BIG,
@@ -485,6 +472,35 @@ func computeExp(exp uint32, tsrc func() time.Time) uint32 {
 	return rv
 }
 
+func (v *vbucket) getUnexpired(key []byte, now time.Time) (*item, error) {
+	i, err := v.ps.get(key)
+	if err != nil || i == nil {
+		return nil, err
+	}
+	if i.isExpired(now) {
+		go v.expire(key, now)
+		return nil, nil
+	}
+	return i, nil
+}
+
+func (v *vbucket) expire(key []byte, now time.Time) {
+	var expireCas uint64
+	v.Apply(func() {
+		// TODO: We have the apply to avoid races, but is there a better way?
+		expireCas = atomic.AddUint64(&v.Meta().LastCas, 1)
+	})
+	v.Mutate(func() {
+		i, err := v.ps.get(key)
+		if err != nil || i == nil {
+			return // TODO: Should count errors here.
+		}
+		if i.isExpired(now) {
+			v.ps.del(key, expireCas, i)
+		}
+	})
+}
+
 func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	cmd gomemcached.CommandCode, itemCas uint64, itemOld *item) (*gomemcached.MCResponse,
 	*item, uint64, error) {
@@ -571,30 +587,15 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 		return res
 	}
 
-	i, err := v.ps.get(req.Key)
+	i, err := v.getUnexpired(req.Key, time.Now())
 	if err != nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.TMPFAIL,
 			Body:   []byte(fmt.Sprintf("Store get error %v", err)),
 		}
 	}
-
 	if i == nil {
 		atomic.AddUint64(&v.stats.GetMisses, 1)
-	} else {
-		atomic.AddUint64(&v.stats.OutgoingValueBytes, uint64(len(i.data)))
-	}
-
-	now := time.Now()
-	if i != nil && i.isExpired(now) {
-		// XXX: I'd like to delete this, but I fear it may not
-		// be safe.
-		/*
-		 v.ps.del(req.Key, 0, nil)
-		*/
-		i = nil
-	}
-	if i == nil || i.isExpired(now) {
 		if req.Opcode.IsQuiet() {
 			return nil
 		}
@@ -611,6 +612,9 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	if wantsKey {
 		res.Key = req.Key
 	}
+
+	atomic.AddUint64(&v.stats.OutgoingValueBytes, uint64(len(i.data)))
+
 	return res
 }
 
@@ -630,9 +634,10 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 	var prevItem *item
 	var err error
+	now := time.Now()
 
 	v.Mutate(func() {
-		prevItem, err = v.ps.get(req.Key)
+		prevItem, err = v.getUnexpired(req.Key, now)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -647,7 +652,6 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			}
 			return
 		}
-
 		if prevItem == nil {
 			if req.Opcode.IsQuiet() {
 				return
