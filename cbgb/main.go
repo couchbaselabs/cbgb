@@ -23,8 +23,11 @@ var defaultNumPartitions = flag.Int("default-num-partitions",
 	1, "default number of partitions for new buckets")
 var defaultQuotaBytes = flag.Int64("default-quota-bytes",
 	1000000, "default quota (max key+value bytes allowed) for new buckets")
-var defaultMemoryOnly = flag.Bool("default-memory-only",
-	false, "default memory only mode for new buckets")
+var defaultMemoryOnly = flag.Int("default-memory-only",
+	0, "default memory only level for new buckets"+
+		" (0 = everything persisted"+
+		"; 1 = item ops are not persisted"+
+		"; 2 = nothing persisted)")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings

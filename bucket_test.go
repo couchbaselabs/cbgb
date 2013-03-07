@@ -532,12 +532,12 @@ func TestBucketSettingsSafeView(t *testing.T) {
 		PasswordHash:     "hashbash",
 		PasswordSalt:     "salty",
 		QuotaBytes:       321,
-		MemoryOnly:       true,
+		MemoryOnly:       1,
 	}
 	sv := bs.SafeView()
 	if sv["numPartitions"].(int) != 123 ||
 		sv["quotaBytes"].(int64) != 321 ||
-		sv["memoryOnly"].(bool) != true {
+		sv["memoryOnly"].(int) != 1 {
 		t.Errorf("safe view didn't match expected: %v, got: %v", bs, sv)
 	}
 	if _, ok := sv["passwordHashFunc"]; ok {
@@ -558,7 +558,7 @@ func TestMemoryOnlyBucket(t *testing.T) {
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			MemoryOnly:    true,
+			MemoryOnly:    1,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -593,7 +593,7 @@ func TestMemoryOnlyBucket(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			MemoryOnly:    true,
+			MemoryOnly:    1,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)

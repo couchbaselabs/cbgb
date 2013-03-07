@@ -69,7 +69,7 @@ func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) 
 	bsf.store = store
 
 	var bsfMemoryOnly *bucketstorefile
-	if settings.MemoryOnly {
+	if settings.MemoryOnly > 0 {
 		bsfMemoryOnly = NewBucketStoreFile(path, file, bsf.stats)
 		bsfMemoryOnly.store, err = gkvlite.NewStore(nil)
 		if err != nil {

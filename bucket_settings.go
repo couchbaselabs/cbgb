@@ -13,7 +13,7 @@ type BucketSettings struct {
 	PasswordHash     string `json:"passwordHash"`
 	PasswordSalt     string `json:"passwordSalt"`
 	QuotaBytes       int64  `json:"quotaBytes"`
-	MemoryOnly       bool   `json:"memoryOnly"`
+	MemoryOnly       int    `json:"memoryOnly"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {

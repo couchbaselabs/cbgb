@@ -60,7 +60,7 @@ function BucketsCtrl($scope, $http) {
   $scope.bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
   $scope.bucketPassword = "";
   $scope.bucketQuotaBytes = 1000000;
-  $scope.bucketMemoryOnly = false;
+  $scope.bucketMemoryOnly = 0;
 
   $scope.bucketCreate = function() {
     var bucketName = $scope.bucketName;

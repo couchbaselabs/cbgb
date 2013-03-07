@@ -125,7 +125,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing bucket memory only flag", 400)
 		return
 	}
-	mo, err := strconv.ParseBool(bucketMemoryOnly)
+	mo, err := strconv.Atoi(bucketMemoryOnly)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("bad bucket memory only flag: %v, err: %v",
 			bucketMemoryOnly, err), 400)

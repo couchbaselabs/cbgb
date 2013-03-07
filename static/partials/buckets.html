@@ -23,30 +23,31 @@
     <div class="span4">
       <form name="bucketCreateForm">
         <legend>Create new bucket</legend>
-        <label>Bucket name</label>
+        <label>Bucket name
           <input type="text"
                 name="bucketName"
                 required
                 placeholder="your-bucket-name"
                 ng-model="bucketName"/>
         </label>
-        <label>Bucket password</label>
+        <label>Bucket password
           <input type="text"
                 name="bucketPassword"
                 ng-model="bucketPassword"/>
         </label>
-        <label>Bucket quota (bytes)</label>
+        <label>Bucket quota (bytes)
           <input type="text"
                 name="bucketQuotaBytes"
                 ng-model="bucketQuotaBytes"/>
         </label>
-        <label>
-          <input type="checkbox"
-                name="bucketMemoryOnly"
-                ng-model="bucketMemoryOnly">
-            Memory only</input>
+        <label>Bucket persistence
+          <select name="bucketMemoryOnly"
+                 ng-model="bucketMemoryOnly">
+            <option value="0">persist everything</option>
+            <option value="1">do not persist item operations</option>
+            <option value="2">persist nothing</option>
+          </select>
         </label>
-        <br/>
         <button type="submit" class="btn" ng-click="bucketCreate()">
           Create Bucket
         </button>
