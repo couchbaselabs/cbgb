@@ -34,11 +34,13 @@ var bucketSettings *cbgb.BucketSettings
 
 func main() {
 	flag.Parse()
+	args := flag.Args()
 
 	log.Printf("cbgb")
 	flag.VisitAll(func(f *flag.Flag) {
 		log.Printf("  %v=%v", f.Name, f.Value)
 	})
+	log.Printf("  %v", args)
 
 	go cbgb.MutationLogger(mutationLogCh)
 
@@ -69,13 +71,22 @@ func main() {
 		}
 	}
 
-	log.Printf("listening data on: %v", *addr)
-	if _, err := cbgb.StartServer(*addr, buckets, *defaultBucketName); err != nil {
+	if len(args) <= 0 || args[0] == "server" {
+		mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
+	}
+
+	log.Fatalf("Unknown command: %v", args[0])
+}
+
+func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
+	addr string, rest string, staticPath string) {
+	log.Printf("listening data on: %v", addr)
+	if _, err := cbgb.StartServer(addr, buckets, defaultBucketName); err != nil {
 		log.Fatalf("Error starting server: %s", err)
 	}
 
-	if *rest != ":DISABLED" {
-		restMain(*rest, *staticPath)
+	if rest != ":DISABLED" {
+		restMain(rest, staticPath)
 	}
 
 	// Let goroutines do their work.
