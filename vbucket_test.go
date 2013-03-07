@@ -23,9 +23,7 @@ func TestVBKeyRangeEqual(t *testing.T) {
 
 func TestItemBytesPersists(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	if false {
-		defer os.RemoveAll(testBucketDir)
-	}
+	defer os.RemoveAll(testBucketDir)
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
