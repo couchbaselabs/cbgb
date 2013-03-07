@@ -64,6 +64,5 @@ For deadlock prevention, acquire left-ward/higher locks before
 right-ward/lower locks.
 
     bucketstore.apply
-      vbucket.apply
-        vbucket.mutate
-          partitionstore.apply
+      vbucket.Apply
+        partitionstore.mutate

@@ -50,8 +50,7 @@ type vbucket struct {
 	meta      unsafe.Pointer // *VBMeta
 	bs        *bucketstore
 	ps        *partitionstore
-	alock     sync.Mutex // To access top-level vbucket fields & stats.
-	mlock     sync.Mutex // To mutate the keys/changes collections.
+	lock      sync.Mutex
 	stats     Stats
 	available chan bool
 	observer  broadcast.Broadcaster
@@ -160,14 +159,8 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 }
 
 func (v *vbucket) Apply(fun func()) {
-	v.alock.Lock()
-	defer v.alock.Unlock()
-	fun()
-}
-
-func (v *vbucket) Mutate(fun func()) {
-	v.mlock.Lock()
-	defer v.mlock.Unlock()
+	v.lock.Lock()
+	defer v.lock.Unlock()
 	fun()
 }
 
@@ -183,23 +176,21 @@ func (v *vbucket) SetVBState(newState VBState,
 	// deadlock when the compactor wants to swap collections.
 	v.bs.apply(func() {
 		v.Apply(func() {
-			v.Mutate(func() {
-				prevMeta := v.Meta()
-				prevState = parseVBState(prevMeta.State)
-				casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
+			prevMeta := v.Meta()
+			prevState = parseVBState(prevMeta.State)
+			casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
 
-				newMeta := prevMeta.Copy()
-				newMeta.State = newState.String()
-				newMeta.MetaCas = casMeta
+			newMeta := prevMeta.Copy()
+			newMeta.State = newState.String()
+			newMeta.MetaCas = casMeta
 
-				err = v.setVBMeta(newMeta)
-				if err != nil {
-					return
-				}
-				if cb != nil {
-					cb(prevState)
-				}
-			})
+			err = v.setVBMeta(newMeta)
+			if err != nil {
+				return
+			}
+			if cb != nil {
+				cb(prevState)
+			}
 		})
 	})
 	return prevState, err
@@ -237,49 +228,47 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 
 func (v *vbucket) load() (err error) {
 	v.Apply(func() {
-		v.Mutate(func() {
-			meta := v.Meta().Copy()
+		meta := v.Meta().Copy()
 
-			x, err := v.bs.collMeta(COLL_VBMETA).GetItem(
-				[]byte(fmt.Sprintf("%v", v.vbid)), true)
+		x, err := v.bs.collMeta(COLL_VBMETA).GetItem(
+			[]byte(fmt.Sprintf("%v", v.vbid)), true)
+		if err != nil {
+			return
+		}
+		if x == nil || x.Val == nil {
+			err = errors.New("missing COLL_VBMETA")
+			return
+		}
+		if err = json.Unmarshal(x.Val, meta); err != nil {
+			return
+		}
+
+		_, changes := v.ps.colls()
+		i, err := changes.MaxItem(true)
+		if err != nil {
+			return
+		}
+		if i != nil {
+			var lastCas uint64
+			lastCas, err = casBytesParse(i.Key)
 			if err != nil {
 				return
 			}
-			if x == nil || x.Val == nil {
-				err = errors.New("missing COLL_VBMETA")
-				return
+			if meta.LastCas < lastCas {
+				meta.LastCas = lastCas
 			}
-			if err = json.Unmarshal(x.Val, meta); err != nil {
-				return
-			}
+		}
 
-			_, changes := v.ps.colls()
-			i, err := changes.MaxItem(true)
-			if err != nil {
-				return
-			}
-			if i != nil {
-				var lastCas uint64
-				lastCas, err = casBytesParse(i.Key)
-				if err != nil {
-					return
-				}
-				if meta.LastCas < lastCas {
-					meta.LastCas = lastCas
-				}
-			}
+		atomic.StorePointer(&v.meta, unsafe.Pointer(meta))
 
-			atomic.StorePointer(&v.meta, unsafe.Pointer(meta))
+		numItems, numItemBytes, err := v.ps.getTotals()
+		if err == nil {
+			atomic.StoreInt64(&v.stats.Items, int64(numItems))
+			atomic.StoreInt64(&v.stats.ItemBytes, int64(numItemBytes))
+			atomic.AddInt64(v.bucketItemBytes, int64(numItemBytes))
+		}
 
-			numItems, numItemBytes, err := v.ps.getTotals()
-			if err == nil {
-				atomic.StoreInt64(&v.stats.Items, int64(numItems))
-				atomic.StoreInt64(&v.stats.ItemBytes, int64(numItemBytes))
-				atomic.AddInt64(v.bucketItemBytes, int64(numItemBytes))
-			}
-
-			// TODO: What if we're loading something out of allowed range?
-		})
+		// TODO: What if we're loading something out of allowed range?
 	})
 
 	return err
@@ -341,18 +330,13 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 	}
 
-	var itemCas uint64
-	v.Apply(func() {
-		// TODO: We have the apply to avoid races, but is there a better way?
-		itemCas = atomic.AddUint64(&v.Meta().LastCas, 1)
-	})
-
 	var itemOld, itemNew *item
+	var itemCas uint64
 	var aval uint64
 	var err error
 	now := time.Now()
 
-	v.Mutate(func() {
+	v.Apply(func() {
 		itemOld, err = v.getUnexpired(req.Key, now)
 		if err != nil {
 			res = &gomemcached.MCResponse{
@@ -366,6 +350,8 @@ func vbMutate(v *vbucket, w io.Writer,
 		if err != nil {
 			return
 		}
+
+		itemCas = atomic.AddUint64(&v.Meta().LastCas, 1)
 
 		res, itemNew, aval, err = vbMutateItemNew(v, w, req, cmd, itemCas, itemOld)
 		if err != nil {
@@ -484,21 +470,19 @@ func (v *vbucket) getUnexpired(key []byte, now time.Time) (*item, error) {
 	return i, nil
 }
 
-func (v *vbucket) expire(key []byte, now time.Time) {
-	var expireCas uint64
+func (v *vbucket) expire(key []byte, now time.Time) (err error) {
 	v.Apply(func() {
-		// TODO: We have the apply to avoid races, but is there a better way?
-		expireCas = atomic.AddUint64(&v.Meta().LastCas, 1)
-	})
-	v.Mutate(func() {
-		i, err := v.ps.get(key)
+		var i *item
+		i, err = v.ps.get(key)
 		if err != nil || i == nil {
-			return // TODO: Should count errors here.
+			return
 		}
 		if i.isExpired(now) {
-			v.ps.del(key, expireCas, i)
+			expireCas := atomic.AddUint64(&v.Meta().LastCas, 1)
+			err = v.ps.del(key, expireCas, i)
 		}
 	})
+	return err
 }
 
 func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
@@ -626,17 +610,12 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		return res
 	}
 
-	var cas uint64
-	v.Apply(func() {
-		// TODO: We have the apply to avoid races, but is there a better way?
-		cas = atomic.AddUint64(&v.Meta().LastCas, 1)
-	})
-
 	var prevItem *item
+	var cas uint64
 	var err error
 	now := time.Now()
 
-	v.Mutate(func() {
+	v.Apply(func() {
 		prevItem, err = v.getUnexpired(req.Key, now)
 		if err != nil {
 			res = &gomemcached.MCResponse{
@@ -659,6 +638,8 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			res = &gomemcached.MCResponse{Status: gomemcached.KEY_ENOENT}
 			return
 		}
+
+		cas = atomic.AddUint64(&v.Meta().LastCas, 1)
 
 		err = v.ps.del(req.Key, cas, prevItem)
 		if err != nil {
@@ -774,35 +755,33 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 	// deadlock when the compactor wants to swap collections.
 	v.bs.apply(func() {
 		v.Apply(func() {
-			v.Mutate(func() {
-				prevMeta := v.Meta()
-				casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
+			prevMeta := v.Meta()
+			casMeta := atomic.AddUint64(&prevMeta.LastCas, 1)
 
-				newMeta = prevMeta.Copy().update(newMeta)
-				newMeta.MetaCas = casMeta
+			newMeta = prevMeta.Copy().update(newMeta)
+			newMeta.MetaCas = casMeta
 
-				if err := v.setVBMeta(newMeta); err != nil {
-					res = &gomemcached.MCResponse{
-						Status: gomemcached.TMPFAIL,
-						Body:   []byte(fmt.Sprintf("setVBMeta error %v", err)),
-					}
-					return
+			if err := v.setVBMeta(newMeta); err != nil {
+				res = &gomemcached.MCResponse{
+					Status: gomemcached.TMPFAIL,
+					Body:   []byte(fmt.Sprintf("setVBMeta error %v", err)),
 				}
+				return
+			}
 
-				// TODO: Unlike couchbase, we flush before returning
-				// to client; which might not be what some management
-				// use cases want (ability to switch vbstate even if
-				// dirty queues are huge).
-				if _, err := v.bs.flush_unlocked(); err != nil {
-					res = &gomemcached.MCResponse{
-						Status: gomemcached.TMPFAIL,
-						Body:   []byte(fmt.Sprintf("setVBMeta flush error %v", err)),
-					}
-					return
+			// TODO: Unlike couchbase, we flush before returning
+			// to client; which might not be what some management
+			// use cases want (ability to switch vbstate even if
+			// dirty queues are huge).
+			if _, err := v.bs.flush_unlocked(); err != nil {
+				res = &gomemcached.MCResponse{
+					Status: gomemcached.TMPFAIL,
+					Body:   []byte(fmt.Sprintf("setVBMeta flush error %v", err)),
 				}
+				return
+			}
 
-				res = &gomemcached.MCResponse{}
-			})
+			res = &gomemcached.MCResponse{}
 		})
 	})
 	return res
@@ -871,13 +850,11 @@ func (v *vbucket) expScan() bool {
 	var cleaned uint64
 	err := v.ps.visitItems(casBytes(0), false, func(i *item) bool {
 		if i.isExpired(now) {
-			v.Mutate(func() {
-				err := v.ps.del(i.key, i.cas, nil)
-				if err != nil {
-					log.Printf("Error deleting expired obj: %v", err)
-				}
-				cleaned++
-			})
+			err := v.expire(i.key, now)
+			if err != nil {
+				return false
+			}
+			cleaned++
 		}
 		return true
 	})
