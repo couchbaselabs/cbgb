@@ -12,6 +12,7 @@ import (
 )
 
 type partitionstore struct {
+	vbid    uint16
 	parent  *bucketstore
 	lock    sync.Mutex     // Properties below here are covered by this lock.
 	keys    unsafe.Pointer // *gkvlite.Collection
@@ -85,8 +86,24 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 }
 
 func (p *partitionstore) getTotals() (numItems uint64, numBytes uint64, err error) {
-	keys, _ := p.colls()
-	return keys.GetTotals()
+	keys, changes := p.colls()
+	numItems, _, err = keys.GetTotals()
+	if err != nil {
+		return 0, 0, err
+	}
+	_, numChangesBytes, err := changes.GetTotals()
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// 8 is length of CAS bytes, where CAS is the key to the changes collection.
+	numItemHeaderBytes := (numItems * itemHdrLen) + (numItems * 8)
+	numBytes = 0
+	if numChangesBytes > numItemHeaderBytes {
+		numBytes = numChangesBytes - numItemHeaderBytes
+	}
+
+	return numItems, numBytes, nil
 }
 
 func (p *partitionstore) visitItems(start []byte, withValue bool,

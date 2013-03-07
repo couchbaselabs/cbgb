@@ -194,7 +194,7 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 
 	res = s.partitions[vbid]
 	if res == nil {
-		res = &partitionstore{parent: s}
+		res = &partitionstore{vbid: vbid, parent: s}
 		s.partitions[vbid] = res
 	}
 	res.keys = unsafe.Pointer(k)

@@ -223,6 +223,10 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 		return err
 	}
 	atomic.StorePointer(&v.meta, unsafe.Pointer(newMeta))
+
+	atomic.AddInt64(&v.stats.KeyValueBytes,
+		itemHdrLen+8+i.KeyDataNumBytes()) // 8 is number of CAS bytes.
+
 	return nil
 }
 
@@ -262,9 +266,10 @@ func (v *vbucket) load() (err error) {
 
 			atomic.StorePointer(&v.meta, unsafe.Pointer(meta))
 
-			numItems, _, err := v.ps.getTotals()
+			numItems, numBytes, err := v.ps.getTotals()
 			if err == nil {
 				atomic.StoreInt64(&v.stats.Items, int64(numItems))
+				atomic.StoreInt64(&v.stats.KeyValueBytes, int64(numBytes))
 			}
 
 			// TODO: What if we're loading something out of allowed range?

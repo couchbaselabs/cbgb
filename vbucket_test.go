@@ -21,7 +21,7 @@ func TestVBKeyRangeEqual(t *testing.T) {
 	}
 }
 
-func TestItemsStatPersists(t *testing.T) {
+func TestItemsKeyValueBytesStatPersists(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
@@ -69,9 +69,16 @@ func TestItemsStatPersists(t *testing.T) {
 
 	b1.Load()
 	vb1 := b1.GetVBucket(2)
-	if 5 != vb1.stats.Items {
-		t.Errorf("expected to have 5 items after loading, got: %v", vb1.stats.Items)
+	if vb0.stats.Items != vb1.stats.Items {
+		t.Errorf("expected to have %v items by stats after re-loading, got: %v",
+			vb0.stats.Items, vb1.stats.Items)
 	}
+	if vb0.stats.KeyValueBytes != vb1.stats.KeyValueBytes {
+		t.Errorf("expected to have %v or more KeyValueBytes after re-loading, got: %v",
+			vb0.stats.KeyValueBytes, vb1.stats.KeyValueBytes)
+	}
+	r1 := &reqHandler{currentBucket: b1}
+	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "data re-load")
 }
 
 func TestExpirationComputin(t *testing.T) {
