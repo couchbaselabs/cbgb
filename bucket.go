@@ -58,6 +58,8 @@ type Bucket interface {
 	GetDDocVBucket() *vbucket
 	GetDDoc(ddocId string) ([]byte, error)
 	SetDDoc(ddocId string, body []byte) error
+
+	GetItemBytes() int64
 }
 
 // Interface for things that interact with stats.
@@ -248,6 +250,8 @@ type livebucket struct {
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
 
+	bucketItemBytes int64
+
 	stats    BucketStats
 	statLock sync.Mutex
 }
@@ -294,7 +298,8 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		res.bucketstores[i] = bs
 	}
 
-	vbucketDDoc, err := newVBucket(res, VBID_DDOC, res.bucketstores[0])
+	vbucketDDoc, err := newVBucket(res, VBID_DDOC, res.bucketstores[0],
+		&res.bucketItemBytes)
 	if err != nil {
 		res.Close()
 		return nil, err
@@ -393,6 +398,7 @@ func (b *livebucket) Compact() error {
 // TODO: Need to track some bucket "uuid", so that a recreated bucket X'
 // is distinct from a previously deleted bucket X?
 func (b *livebucket) Load() (err error) {
+	b.bucketItemBytes = 0
 	for _, bs := range b.bucketstores {
 		// TODO: Need to poke observers with changed vbstate?
 		var errVisit error
@@ -407,7 +413,8 @@ func (b *livebucket) Load() (err error) {
 					errVisit = fmt.Errorf("load failed with vbid too big: %v", vbid)
 					return false
 				}
-				vb, errVisit := newVBucket(b, uint16(vbid), bs)
+				vb, errVisit := newVBucket(b, uint16(vbid), bs,
+					&b.bucketItemBytes)
 				if errVisit != nil {
 					return false
 				}
@@ -464,7 +471,7 @@ func (b *livebucket) CreateVBucket(vbid uint16) (*vbucket, error) {
 	if bs == nil {
 		return nil, errors.New("cannot create vbucket as bucketstore missing")
 	}
-	vb, err := newVBucket(b, vbid, bs)
+	vb, err := newVBucket(b, vbid, bs, &b.bucketItemBytes)
 	if err != nil {
 		return nil, err
 	}
@@ -595,6 +602,10 @@ func (b *livebucket) StatAge() time.Duration {
 	b.stats.requests++
 
 	return time.Since(b.stats.LatestUpdate)
+}
+
+func (b *livebucket) GetItemBytes() int64 {
+	return atomic.LoadInt64(&b.bucketItemBytes)
 }
 
 type vbucketChange struct {

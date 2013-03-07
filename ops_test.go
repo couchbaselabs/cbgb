@@ -90,7 +90,7 @@ func TestBasicOps(t *testing.T) {
 		Unknowns:           1,
 		IncomingValueBytes: 6,
 		OutgoingValueBytes: 9,
-		KeyValueBytes:      99,
+		ItemBytes:          129,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -1491,7 +1491,7 @@ func TestMutationOps(t *testing.T) {
 		Unknowns:           0,
 		IncomingValueBytes: 68,
 		OutgoingValueBytes: 139,
-		KeyValueBytes:      95,
+		ItemBytes:          95,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -1628,7 +1628,7 @@ func TestArithOps(t *testing.T) {
 		Unknowns:           0,
 		IncomingValueBytes: 0,
 		OutgoingValueBytes: 12,
-		KeyValueBytes:      99,
+		ItemBytes:          129,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")

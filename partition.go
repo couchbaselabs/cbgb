@@ -85,7 +85,7 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 	return nil, fmt.Errorf("max getItem retries for key: %v", key)
 }
 
-func (p *partitionstore) getTotals() (numItems uint64, numBytes uint64, err error) {
+func (p *partitionstore) getTotals() (numItems uint64, numItemBytes uint64, err error) {
 	keys, changes := p.colls()
 	numItems, _, err = keys.GetTotals()
 	if err != nil {
@@ -95,15 +95,7 @@ func (p *partitionstore) getTotals() (numItems uint64, numBytes uint64, err erro
 	if err != nil {
 		return 0, 0, err
 	}
-
-	// 8 is length of CAS bytes, where CAS is the key to the changes collection.
-	numItemHeaderBytes := (numItems * itemHdrLen) + (numItems * 8)
-	numBytes = 0
-	if numChangesBytes > numItemHeaderBytes {
-		numBytes = numChangesBytes - numItemHeaderBytes
-	}
-
-	return numItems, numBytes, nil
+	return numItems, numChangesBytes, nil
 }
 
 func (p *partitionstore) visitItems(start []byte, withValue bool,

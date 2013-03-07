@@ -124,8 +124,11 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 	return nil
 }
 
-func (i *item) KeyDataNumBytes() int64 {
-	return int64(len(i.key) + len(i.data))
+// Returns the number of bytes needed to persist the item into
+// the changes collection (not counting any gkvlite tree nodes).
+func (i *item) NumBytes() int64 {
+	// 8 == sizeof CAS, which is the key used in the changes collection.
+	return int64(len(i.key)+len(i.data)) + itemHdrLen + 8
 }
 
 func KeyLess(p, q interface{}) int {

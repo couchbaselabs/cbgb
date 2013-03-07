@@ -192,8 +192,9 @@ func TestItemExpiration(t *testing.T) {
 	}
 }
 
-func TestItemKeyValueNumBytes(t *testing.T) {
-	if (&item{key: []byte("hi"), data: []byte("bye")}).KeyDataNumBytes() != 5 {
+func TestItemNumBytes(t *testing.T) {
+	i := &item{key: []byte("hi"), data: []byte("bye")}
+	if i.NumBytes() != 5+8+itemHdrLen {
 		t.Errorf("item.KeyDataNumBytes didn't match")
 	}
 }

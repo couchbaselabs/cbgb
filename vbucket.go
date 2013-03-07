@@ -55,6 +55,8 @@ type vbucket struct {
 	stats     Stats
 	available chan bool
 	observer  broadcast.Broadcaster
+
+	bucketItemBytes *int64
 }
 
 func (v vbucket) String() string {
@@ -102,15 +104,17 @@ var dispatchTable = [256]dispatchFun{
 	SPLIT_RANGE: vbSplitRange,
 }
 
-func newVBucket(parent Bucket, vbid uint16, bs *bucketstore) (rv *vbucket, err error) {
+func newVBucket(parent Bucket, vbid uint16, bs *bucketstore,
+	bucketItemBytes *int64) (rv *vbucket, err error) {
 	rv = &vbucket{
-		parent:    parent,
-		vbid:      vbid,
-		meta:      unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
-		bs:        bs,
-		ps:        bs.getPartitionStore(vbid),
-		observer:  broadcastMux.Sub(),
-		available: make(chan bool),
+		parent:          parent,
+		vbid:            vbid,
+		meta:            unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
+		bs:              bs,
+		ps:              bs.getPartitionStore(vbid),
+		observer:        broadcastMux.Sub(),
+		available:       make(chan bool),
+		bucketItemBytes: bucketItemBytes,
 	}
 
 	return rv, nil
@@ -224,8 +228,9 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 	}
 	atomic.StorePointer(&v.meta, unsafe.Pointer(newMeta))
 
-	atomic.AddInt64(&v.stats.KeyValueBytes,
-		itemHdrLen+8+i.KeyDataNumBytes()) // 8 is number of CAS bytes.
+	nb := i.NumBytes()
+	atomic.AddInt64(&v.stats.ItemBytes, nb)
+	atomic.AddInt64(v.bucketItemBytes, nb)
 
 	return nil
 }
@@ -266,10 +271,11 @@ func (v *vbucket) load() (err error) {
 
 			atomic.StorePointer(&v.meta, unsafe.Pointer(meta))
 
-			numItems, numBytes, err := v.ps.getTotals()
+			numItems, numItemBytes, err := v.ps.getTotals()
 			if err == nil {
 				atomic.StoreInt64(&v.stats.Items, int64(numItems))
-				atomic.StoreInt64(&v.stats.KeyValueBytes, int64(numBytes))
+				atomic.StoreInt64(&v.stats.ItemBytes, int64(numItemBytes))
+				atomic.AddInt64(v.bucketItemBytes, int64(numItemBytes))
 			}
 
 			// TODO: What if we're loading something out of allowed range?
@@ -399,12 +405,16 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 	} else {
 		if itemOld != nil {
-			atomic.AddInt64(&v.stats.KeyValueBytes,
-				itemNew.KeyDataNumBytes()-itemOld.KeyDataNumBytes())
+			nb := itemNew.NumBytes() - itemOld.NumBytes()
+			atomic.AddInt64(&v.stats.ItemBytes, nb)
+			atomic.AddInt64(v.bucketItemBytes, nb)
+
 			atomic.AddUint64(&v.stats.Updates, 1)
 		} else {
-			atomic.AddInt64(&v.stats.KeyValueBytes,
-				itemNew.KeyDataNumBytes())
+			nb := itemNew.NumBytes()
+			atomic.AddInt64(&v.stats.ItemBytes, nb)
+			atomic.AddInt64(v.bucketItemBytes, nb)
+
 			atomic.AddUint64(&v.stats.Creates, 1)
 			atomic.AddInt64(&v.stats.Items, 1)
 		}
@@ -643,7 +653,10 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		atomic.AddUint64(&v.stats.StoreErrors, 1)
 	} else if prevItem != nil {
 		atomic.AddInt64(&v.stats.Items, -1)
-		atomic.AddInt64(&v.stats.KeyValueBytes, -prevItem.KeyDataNumBytes())
+
+		nb := -prevItem.NumBytes()
+		atomic.AddInt64(&v.stats.ItemBytes, nb)
+		atomic.AddInt64(v.bucketItemBytes, nb)
 	}
 
 	if err == nil && prevItem != nil {
