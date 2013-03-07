@@ -162,10 +162,10 @@ func (p *partitionstore) visit(coll *gkvlite.Collection,
 // single-threaded with respect to the mutating collection.
 
 func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
-	p.mutate(func(keys, changes *gkvlite.Collection) {
-		vBytes := newItem.toValueBytes()
-		cBytes := casBytes(newItem.cas)
+	vBytes := newItem.toValueBytes()
+	cBytes := casBytes(newItem.cas)
 
+	p.mutate(func(keys, changes *gkvlite.Collection) {
 		cItem := &gkvlite.Item{Key: cBytes, Val: vBytes, Priority: int32(rand.Int())}
 		if err = changes.SetItem(cItem); err != nil {
 			return
@@ -198,10 +198,11 @@ func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
 }
 
 func (p *partitionstore) del(key []byte, cas uint64, oldMeta *item) (err error) {
-	p.mutate(func(keys, changes *gkvlite.Collection) {
-		cBytes := casBytes(cas)
-		vBytes := (&item{key: key, cas: cas}).markAsDeletion().toValueBytes()
+	cBytes := casBytes(cas)
+	vItem := &item{key: key, cas: cas}
+	vBytes := vItem.markAsDeletion().toValueBytes()
 
+	p.mutate(func(keys, changes *gkvlite.Collection) {
 		if err = changes.Set(cBytes, vBytes); err != nil {
 			return
 		}
