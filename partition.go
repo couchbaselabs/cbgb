@@ -161,9 +161,15 @@ func (p *partitionstore) visit(coll *gkvlite.Collection,
 // All the following mutation methods need to be called while
 // single-threaded with respect to the mutating collection.
 
-func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
+func (p *partitionstore) set(newItem *item, oldItem *item) (
+	deltaItemBytes int64, err error) {
 	vBytes := newItem.toValueBytes()
 	cBytes := casBytes(newItem.cas)
+
+	deltaItemBytes = newItem.NumBytes()
+	if oldItem != nil {
+		deltaItemBytes -= oldItem.NumBytes()
+	}
 
 	p.mutate(func(keys, changes *gkvlite.Collection) {
 		cItem := &gkvlite.Item{Key: cBytes, Val: vBytes, Priority: int32(rand.Int())}
@@ -178,8 +184,12 @@ func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
 			// update?  That could result in an inconsistent db file?
 			// Solution idea #1 is to have load-time fixup, that
 			// incorporates changes into the key-index.
-			kItem := &gkvlite.Item{Key: newItem.key, Val: cBytes, Priority: int32(rand.Int())}
-			kItem.Transient = unsafe.Pointer(cItem)
+			kItem := &gkvlite.Item{
+				Key:       newItem.key,
+				Val:       cBytes,
+				Priority:  int32(rand.Int()),
+				Transient: unsafe.Pointer(cItem),
+			}
 			if err = keys.SetItem(kItem); err != nil {
 				return
 			}
@@ -187,20 +197,26 @@ func (p *partitionstore) set(newItem *item, oldMeta *item) (err error) {
 			dirtyForce = true // An nil/empty key means this is a metadata change.
 		}
 
-		if oldMeta != nil {
+		if oldItem != nil {
 			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
-			changes.Delete(casBytes(oldMeta.cas))
+			changes.Delete(casBytes(oldItem.cas))
 		}
 
 		p.parent.dirty(dirtyForce)
 	})
-	return err
+	return deltaItemBytes, err
 }
 
-func (p *partitionstore) del(key []byte, cas uint64, oldMeta *item) (err error) {
+func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
+	deltaItemBytes int64, err error) {
 	cBytes := casBytes(cas)
-	vItem := &item{key: key, cas: cas}
-	vBytes := vItem.markAsDeletion().toValueBytes()
+	dItem := &item{key: key, cas: cas}
+	vBytes := dItem.markAsDeletion().toValueBytes()
+
+	deltaItemBytes = dItem.NumBytes()
+	if oldItem != nil {
+		deltaItemBytes -= oldItem.NumBytes()
+	}
 
 	p.mutate(func(keys, changes *gkvlite.Collection) {
 		if err = changes.Set(cBytes, vBytes); err != nil {
@@ -220,14 +236,14 @@ func (p *partitionstore) del(key []byte, cas uint64, oldMeta *item) (err error) 
 			dirtyForce = true // An nil/empty key means this is a metadata change.
 		}
 
-		if oldMeta != nil {
+		if oldItem != nil {
 			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
-			changes.Delete(casBytes(oldMeta.cas))
+			changes.Delete(casBytes(oldItem.cas))
 		}
 
 		p.parent.dirty(dirtyForce)
 	})
-	return err
+	return deltaItemBytes, err
 }
 
 // ------------------------------------------------------------

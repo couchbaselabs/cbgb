@@ -211,7 +211,9 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 		cas:  newMeta.MetaCas,
 		data: j,
 	}
-	if err = v.ps.set(i, nil); err != nil {
+
+	deltaItemBytes, err := v.ps.set(i, nil)
+	if err != nil {
 		return err
 	}
 	if err = v.bs.collMeta(COLL_VBMETA).Set(k, j); err != nil {
@@ -219,9 +221,8 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 	}
 	atomic.StorePointer(&v.meta, unsafe.Pointer(newMeta))
 
-	nb := i.NumBytes()
-	atomic.AddInt64(&v.stats.ItemBytes, nb)
-	atomic.AddInt64(v.bucketItemBytes, nb)
+	atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
+	atomic.AddInt64(v.bucketItemBytes, deltaItemBytes)
 
 	return nil
 }
@@ -330,6 +331,7 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 	}
 
+	var deltaItemBytes int64
 	var itemOld, itemNew *item
 	var itemCas uint64
 	var aval uint64
@@ -375,7 +377,7 @@ func vbMutate(v *vbucket, w io.Writer,
 			}
 		}
 
-		err = v.ps.set(itemNew, itemOld)
+		deltaItemBytes, err = v.ps.set(itemNew, itemOld)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -398,20 +400,14 @@ func vbMutate(v *vbucket, w io.Writer,
 		}
 	} else {
 		if itemOld != nil {
-			nb := itemNew.NumBytes() - itemOld.NumBytes()
-			atomic.AddInt64(&v.stats.ItemBytes, nb)
-			atomic.AddInt64(v.bucketItemBytes, nb)
-
 			atomic.AddUint64(&v.stats.Updates, 1)
 		} else {
-			nb := itemNew.NumBytes()
-			atomic.AddInt64(&v.stats.ItemBytes, nb)
-			atomic.AddInt64(v.bucketItemBytes, nb)
-
 			atomic.AddUint64(&v.stats.Creates, 1)
 			atomic.AddInt64(&v.stats.Items, 1)
 		}
 		atomic.AddUint64(&v.stats.IncomingValueBytes, uint64(len(req.Body)))
+		atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
+		atomic.AddInt64(v.bucketItemBytes, deltaItemBytes)
 	}
 
 	if err == nil {
@@ -442,47 +438,6 @@ func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 		}, ignore
 	}
 	return nil, nil
-}
-
-func computeExp(exp uint32, tsrc func() time.Time) uint32 {
-	var rv uint32
-	switch {
-	case exp == 0, exp > 30*86400:
-		// Absolute time in seconds since epoch
-		rv = exp
-	default:
-		// Relative time from now.
-		now := tsrc()
-		rv = uint32(now.Add(time.Duration(exp) * time.Second).Unix())
-	}
-	return rv
-}
-
-func (v *vbucket) getUnexpired(key []byte, now time.Time) (*item, error) {
-	i, err := v.ps.get(key)
-	if err != nil || i == nil {
-		return nil, err
-	}
-	if i.isExpired(now) {
-		go v.expire(key, now)
-		return nil, nil
-	}
-	return i, nil
-}
-
-func (v *vbucket) expire(key []byte, now time.Time) (err error) {
-	v.Apply(func() {
-		var i *item
-		i, err = v.ps.get(key)
-		if err != nil || i == nil {
-			return
-		}
-		if i.isExpired(now) {
-			expireCas := atomic.AddUint64(&v.Meta().LastCas, 1)
-			err = v.ps.del(key, expireCas, i)
-		}
-	})
-	return err
 }
 
 func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
@@ -610,6 +565,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		return res
 	}
 
+	var deltaItemBytes int64
 	var prevItem *item
 	var cas uint64
 	var err error
@@ -641,7 +597,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 		cas = atomic.AddUint64(&v.Meta().LastCas, 1)
 
-		err = v.ps.del(req.Key, cas, prevItem)
+		deltaItemBytes, err = v.ps.del(req.Key, cas, prevItem)
 		if err != nil {
 			res = &gomemcached.MCResponse{
 				Status: gomemcached.TMPFAIL,
@@ -658,10 +614,8 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 		atomic.AddUint64(&v.stats.StoreErrors, 1)
 	} else if prevItem != nil {
 		atomic.AddInt64(&v.stats.Items, -1)
-
-		nb := -prevItem.NumBytes()
-		atomic.AddInt64(&v.stats.ItemBytes, nb)
-		atomic.AddInt64(v.bucketItemBytes, nb)
+		atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
+		atomic.AddInt64(v.bucketItemBytes, deltaItemBytes)
 	}
 
 	if err == nil && prevItem != nil {
@@ -863,4 +817,53 @@ func (v *vbucket) expScan() bool {
 	log.Printf("Scan complete, cleaned up %v items with %v, %v remaining",
 		cleaned, err, remaining)
 	return remaining > 0
+}
+
+func computeExp(exp uint32, tsrc func() time.Time) uint32 {
+	var rv uint32
+	switch {
+	case exp == 0, exp > 30*86400:
+		// Absolute time in seconds since epoch
+		rv = exp
+	default:
+		// Relative time from now.
+		now := tsrc()
+		rv = uint32(now.Add(time.Duration(exp) * time.Second).Unix())
+	}
+	return rv
+}
+
+func (v *vbucket) getUnexpired(key []byte, now time.Time) (*item, error) {
+	i, err := v.ps.get(key)
+	if err != nil || i == nil {
+		return nil, err
+	}
+	if i.isExpired(now) {
+		go v.expire(key, now)
+		return nil, nil
+	}
+	return i, nil
+}
+
+// Invoked when the caller believes the item has expired.  We double
+// check here in case some concurrent race has mutated the item.
+func (v *vbucket) expire(key []byte, now time.Time) (err error) {
+	var deltaItemBytes int64
+
+	v.Apply(func() {
+		var i *item
+		i, err = v.ps.get(key)
+		if err != nil || i == nil {
+			return
+		}
+		if i.isExpired(now) {
+			expireCas := atomic.AddUint64(&v.Meta().LastCas, 1)
+			deltaItemBytes, err = v.ps.del(key, expireCas, i)
+		}
+	})
+
+	atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
+	atomic.AddInt64(v.bucketItemBytes, deltaItemBytes)
+
+	return err
 }
