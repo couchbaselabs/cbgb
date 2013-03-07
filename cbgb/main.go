@@ -21,7 +21,7 @@ var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket; use \"\" for no default bucket")
 var defaultNumPartitions = flag.Int("default-num-partitions",
 	1, "default number of partitions for new buckets")
-var defaultQuotaBytes = flag.Int("default-quota-bytes",
+var defaultQuotaBytes = flag.Int64("default-quota-bytes",
 	1000000, "default quota (max key+value bytes allowed) for new buckets")
 var defaultMemoryOnly = flag.Bool("default-memory-only",
 	false, "default memory only mode for new buckets")

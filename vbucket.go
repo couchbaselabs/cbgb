@@ -328,7 +328,7 @@ func vbMutate(v *vbucket, w io.Writer,
 
 	if len(req.Body) > MAX_ITEM_DATA_LENGTH {
 		return &gomemcached.MCResponse{
-			Status: gomemcached.EINVAL,
+			Status: gomemcached.E2BIG,
 			Body: []byte(fmt.Sprintf("data too big: %v, key: %v",
 				len(req.Body), req.Key)),
 		}
@@ -380,6 +380,23 @@ func vbMutate(v *vbucket, w io.Writer,
 		res, itemNew, aval, err = vbMutateItemNew(v, w, req, cmd, itemCas, itemOld)
 		if err != nil {
 			return
+		}
+
+		quotaBytes := v.parent.GetBucketSettings().QuotaBytes
+		if quotaBytes > 0 {
+			nb := atomic.LoadInt64(v.bucketItemBytes)
+			if itemOld != nil {
+				nb = nb - itemOld.NumBytes()
+			}
+			nb = nb + itemNew.NumBytes()
+			if nb >= quotaBytes {
+				res = &gomemcached.MCResponse{
+					Status: gomemcached.E2BIG,
+					Body: []byte(fmt.Sprintf("quota reached: %v, key: %v",
+						quotaBytes, req.Key)),
+				}
+				return
+			}
 		}
 
 		err = v.ps.set(itemNew, itemOld)

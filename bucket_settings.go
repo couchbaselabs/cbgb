@@ -12,7 +12,7 @@ type BucketSettings struct {
 	PasswordHashFunc string `json:"passwordHashFunc"`
 	PasswordHash     string `json:"passwordHash"`
 	PasswordSalt     string `json:"passwordSalt"`
-	QuotaBytes       int    `json:"quotaBytes"`
+	QuotaBytes       int64  `json:"quotaBytes"`
 	MemoryOnly       bool   `json:"memoryOnly"`
 }
 

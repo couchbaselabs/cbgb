@@ -533,7 +533,7 @@ func TestBucketSettingsSafeView(t *testing.T) {
 	}
 	sv := bs.SafeView()
 	if sv["numPartitions"].(int) != 123 ||
-		sv["quotaBytes"].(int) != 321 ||
+		sv["quotaBytes"].(int64) != 321 ||
 		sv["memoryOnly"].(bool) != true {
 		t.Errorf("safe view didn't match expected: %v, got: %v", bs, sv)
 	}

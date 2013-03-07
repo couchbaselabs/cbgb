@@ -112,7 +112,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing bucket quota bytes param", 400)
 		return
 	}
-	qb, err := strconv.Atoi(bucketQuotaBytes)
+	qb, err := strconv.ParseInt(bucketQuotaBytes, 10, 64)
 	if err != nil || qb < 0 {
 		http.Error(w, fmt.Sprintf("bad bucket quota bytes: %v, err: %v",
 			qb, err), 400)
