@@ -366,7 +366,10 @@ func vbMutate(v *vbucket, w io.Writer,
 			cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
 			if itemOld != nil {
 				if itemOld.isExpired(now) {
-					v.ps.del(req.Key, 0, nil)
+					err = v.ps.del(req.Key, 0, itemOld)
+					if err != nil {
+						return
+					}
 					itemOld = nil
 				}
 			}
