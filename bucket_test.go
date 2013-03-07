@@ -508,6 +508,7 @@ func TestSetVBState(t *testing.T) {
 
 func TestShouldContinueDoingStats(t *testing.T) {
 	b := makeTestBucket(t)
+	defer os.RemoveAll(b.(*livebucket).dir)
 	defer b.Close()
 	lb := b.(*livebucket)
 
