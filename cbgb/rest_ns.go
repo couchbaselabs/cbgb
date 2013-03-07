@@ -1,39 +1,55 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
-	"path/filepath"
-	"strings"
-	"text/template"
 
+	"github.com/couchbaselabs/go-couchbase"
 	"github.com/gorilla/mux"
 )
 
-var nsTemplates *template.Template
+var toplevelPool = couchbase.Pools{
+	ImplementationVersion: "1.0-cbgb",
+	IsAdmin:               false,
+	UUID:                  "abc",
+	Pools: []couchbase.RestPool{
+		{
+			Name:         "default",
+			StreamingURI: "/poolsStreaming/default",
+			URI:          "/pools/default",
+		},
+	}}
 
-func restNSAPI(r *mux.Router) {
-	dir := filepath.Join(*staticPath, "ns", "pools_default*.json")
-	files, err := filepath.Glob(dir)
-	if err != nil {
-		panic(fmt.Sprintf("glob ns dir: %v, err: %v", dir, err))
-	}
-	for _, file := range files {
-		if strings.HasPrefix(file, *staticPath) {
-			p := file[len(*staticPath)+len("/ns"):]
-			p = strings.Replace(p, "_", "/", -1)
-			p = strings.Replace(p, ".json", "", -1)
-			r.HandleFunc(p, restNSHandler).Methods("GET")
-		}
-	}
-
-	nsTemplates = template.Must(template.ParseGlob(dir))
+func notImplemented(w http.ResponseWriter, r *http.Request) {
+	log.Printf("Request for %v:%v", r.Method, r.URL.Path)
+	http.Error(w, "Not implemented", 501)
 }
 
-func restNSHandler(w http.ResponseWriter, r *http.Request) {
-	templateName := strings.Replace(r.URL.Path[1:], "/", "_", -1) + ".json"
-	if err := nsTemplates.ExecuteTemplate(w, templateName, nil); err != nil {
-		http.Error(w, fmt.Sprintf("ExecuteTemplate err: %v", err), 500)
-		return
+func restNSPools(w http.ResponseWriter, r *http.Request) {
+	jsonEncode(w, &toplevelPool)
+}
+
+func restNSAPI(r *mux.Router) {
+
+	ns_server_paths := []string{
+		"/pools/default/buckets/{bucketname}/statsDirectory",
+		"/pools/default/buckets/{bucketname}/stats",
+		"/pools/default/buckets/{bucketname}/nodes",
+		"/pools/default/buckets/{bucketname}/nodes/{node}/stats",
+		"/pools/default/buckets/{bucketname}/ddocs",
+		"/pools/default/buckets/{bucketname}/localRandomKey",
+		"/pools/default/bucketsStreaming/{bucketname}",
+		"/pools/default/buckets/{bucketname}",
+		"/pools/default/stats",
+		"/pools/default/buckets",
+		"/pools/default",
+		"/poolsStreaming",
 	}
+
+	// Init the 501s from above
+	for _, p := range ns_server_paths {
+		r.HandleFunc(p, notImplemented).Methods("GET")
+	}
+
+	r.HandleFunc("/pools", restNSPools)
 }

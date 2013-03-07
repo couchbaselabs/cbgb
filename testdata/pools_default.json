@@ -1,0 +1,195 @@
+{
+    "alerts": [],
+    "alertsSilenceURL": "/controller/resetAlerts?token=5&uuid=8820305b03a5d328c54bafde4c3f469e",
+    "autoCompactionSettings": {
+        "databaseFragmentationThreshold": {
+            "percentage": 30,
+            "size": "undefined"
+        },
+        "parallelDBAndViewCompaction": false,
+        "viewFragmentationThreshold": {
+            "percentage": 30,
+            "size": "undefined"
+        }
+    },
+    "balanced": true,
+    "buckets": {
+        "uri": "/pools/default/buckets?v=102952887&uuid=8820305b03a5d328c54bafde4c3f469e"
+    },
+    "controllers": {
+        "addNode": {
+            "uri": "/controller/addNode?uuid=8820305b03a5d328c54bafde4c3f469e"
+        },
+        "ejectNode": {
+            "uri": "/controller/ejectNode?uuid=8820305b03a5d328c54bafde4c3f469e"
+        },
+        "failOver": {
+            "uri": "/controller/failOver?uuid=8820305b03a5d328c54bafde4c3f469e"
+        },
+        "reAddNode": {
+            "uri": "/controller/reAddNode?uuid=8820305b03a5d328c54bafde4c3f469e"
+        },
+        "rebalance": {
+            "uri": "/controller/rebalance?uuid=8820305b03a5d328c54bafde4c3f469e"
+        },
+        "replication": {
+            "createURI": "/controller/createReplication?uuid=8820305b03a5d328c54bafde4c3f469e",
+            "infosURI": "/couchBase/_replicator/_design/_replicator_info/_view/infos?group_level=1",
+            "replicatorDBURI": "/couchBase/_replicator",
+            "validateURI": "/controller/createReplication?just_validate=1"
+        },
+        "setAutoCompaction": {
+            "uri": "/controller/setAutoCompaction?uuid=8820305b03a5d328c54bafde4c3f469e",
+            "validateURI": "/controller/setAutoCompaction?just_validate=1"
+        },
+        "setFastWarmup": {
+            "uri": "/controller/setFastWarmup?uuid=8820305b03a5d328c54bafde4c3f469e",
+            "validateURI": "/controller/setFastWarmup?just_validate=1"
+        }
+    },
+    "counters": {
+        "rebalance_start": 1,
+        "rebalance_success": 1
+    },
+    "failoverWarnings": [],
+    "fastWarmupSettings": {
+        "fastWarmupEnabled": true,
+        "minItemsThreshold": 10,
+        "minMemoryThreshold": 10
+    },
+    "maxBucketCount": 10,
+    "name": "default",
+    "nodeStatusesUri": "/nodeStatuses",
+    "nodes": [
+        {
+            "clusterCompatibility": 131072,
+            "clusterMembership": "active",
+            "couchApiBase": "http://10.1.3.251:8092/",
+            "hostname": "10.1.3.251:8091",
+            "interestingStats": {
+                "couch_docs_actual_disk_size": 3318136567,
+                "couch_docs_data_size": 3278767441,
+                "couch_views_actual_disk_size": 119646951,
+                "couch_views_data_size": 113774627,
+                "curr_items": 1727494,
+                "curr_items_tot": 3454608,
+                "mem_used": 1727710064,
+                "vb_replica_curr_items": 1727114
+            },
+            "mcdMemoryAllocated": 4915,
+            "mcdMemoryReserved": 4915,
+            "memoryFree": 90288128,
+            "memoryTotal": 6442450944,
+            "os": "x86_64-unknown-linux-gnu",
+            "ports": {
+                "direct": 11210,
+                "proxy": 11211
+            },
+            "status": "healthy",
+            "systemStats": {
+                "cpu_utilization_rate": 6.451612903225806,
+                "swap_total": 0,
+                "swap_used": 0
+            },
+            "uptime": "5275759",
+            "version": "2.0.0-1976-rel-enterprise"
+        },
+        {
+            "clusterCompatibility": 131072,
+            "clusterMembership": "active",
+            "couchApiBase": "http://10.1.4.6:8092/",
+            "hostname": "10.1.4.6:8091",
+            "interestingStats": {
+                "couch_docs_actual_disk_size": 3304780023,
+                "couch_docs_data_size": 3275452936,
+                "couch_views_actual_disk_size": 120679052,
+                "couch_views_data_size": 113752798,
+                "curr_items": 1726423,
+                "curr_items_tot": 3452715,
+                "mem_used": 1819735936,
+                "vb_replica_curr_items": 1726292
+            },
+            "mcdMemoryAllocated": 4915,
+            "mcdMemoryReserved": 4915,
+            "memoryFree": 138764288,
+            "memoryTotal": 6442450944,
+            "os": "x86_64-unknown-linux-gnu",
+            "ports": {
+                "direct": 11210,
+                "proxy": 11211
+            },
+            "status": "healthy",
+            "systemStats": {
+                "cpu_utilization_rate": 6.650246305418719,
+                "swap_total": 0,
+                "swap_used": 0
+            },
+            "uptime": "5275758",
+            "version": "2.0.0-1976-rel-enterprise"
+        },
+        {
+            "clusterCompatibility": 131072,
+            "clusterMembership": "active",
+            "couchApiBase": "http://10.1.3.248:8092/",
+            "hostname": "10.1.3.248:8091",
+            "interestingStats": {
+                "couch_docs_actual_disk_size": 3330941304,
+                "couch_docs_data_size": 3291240061,
+                "couch_views_actual_disk_size": 119851747,
+                "couch_views_data_size": 113988028,
+                "curr_items": 1731431,
+                "curr_items_tot": 3463373,
+                "mem_used": 2258016800,
+                "vb_replica_curr_items": 1731942
+            },
+            "mcdMemoryAllocated": 4915,
+            "mcdMemoryReserved": 4915,
+            "memoryFree": 326107136,
+            "memoryTotal": 6442450944,
+            "os": "x86_64-unknown-linux-gnu",
+            "ports": {
+                "direct": 11210,
+                "proxy": 11211
+            },
+            "status": "healthy",
+            "systemStats": {
+                "cpu_utilization_rate": 2.7777777777777777,
+                "swap_total": 0,
+                "swap_used": 0
+            },
+            "thisNode": true,
+            "uptime": "5275769",
+            "version": "2.0.0-1976-rel-enterprise"
+        }
+    ],
+    "rebalanceProgressUri": "/pools/default/rebalanceProgress",
+    "rebalanceStatus": "none",
+    "remoteClusters": {
+        "uri": "/pools/default/remoteClusters?uuid=8820305b03a5d328c54bafde4c3f469e",
+        "validateURI": "/pools/default/remoteClusters?just_validate=1"
+    },
+    "stats": {
+        "uri": "/pools/default/stats"
+    },
+    "stopRebalanceIsSafe": true,
+    "stopRebalanceUri": "/controller/stopRebalance?uuid=8820305b03a5d328c54bafde4c3f469e",
+    "storageTotals": {
+        "hdd": {
+            "free": 230818661499,
+            "quotaTotal": 253646880768,
+            "total": 253646880768,
+            "used": 22828219269,
+            "usedByData": 10314035644
+        },
+        "ram": {
+            "quotaTotal": 15728640000,
+            "quotaUsed": 13715374080,
+            "total": 19327352832,
+            "used": 18772193280,
+            "usedByData": 5805462800
+        }
+    },
+    "tasks": {
+        "uri": "/pools/default/tasks?v=128086370"
+    }
+}

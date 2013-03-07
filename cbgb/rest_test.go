@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/couchbaselabs/cbgb"
+	"github.com/dustin/go-jsonpointer"
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
 )
@@ -717,16 +718,96 @@ func TestReverseViewRows(t *testing.T) {
 	}
 }
 
+func jsonFindParse(t *testing.T, b []byte, path string) (interface{}, error) {
+	d, err := jsonpointer.Find(b, path)
+	if err != nil {
+		return nil, err
+	}
+	var rv interface{}
+	err = json.Unmarshal(d, &rv)
+	return rv, err
+}
+
+func validateSubset(t *testing.T, exname string, got, exemplar []byte) {
+	ptrs, err := jsonpointer.ListPointers(got)
+	if err != nil {
+		t.Fatalf("Error listing pointers: %v", err)
+	}
+
+	for _, p := range ptrs {
+		dg, err := jsonFindParse(t, got, p)
+		if err != nil {
+			t.Fatalf("Error loading %v from %s: %v",
+				p, got, err)
+		}
+
+		eg, err := jsonFindParse(t, exemplar, p)
+		if err != nil {
+			t.Errorf("Error loading %q from exemplar %v: %v\n%s",
+				p, exname, err, exemplar)
+			continue
+		}
+		dt := fmt.Sprintf("%T", dg)
+		et := fmt.Sprintf("%T", eg)
+		if dt != et {
+			t.Errorf("Type mismatch at %v of %v (%v != %v)",
+				p, exname, dt, et)
+		}
+	}
+}
+
+func validateJson(t *testing.T, jsonbody, path string) {
+	f, err := os.Open("../testdata/" + path + ".json")
+	if err != nil {
+		t.Fatalf("Error opening exemplar: %v", err)
+	}
+	defer f.Close()
+	exemplar, err := ioutil.ReadAll(f)
+	if err != nil {
+		t.Fatalf("Error loading exemplar %v: %v", path, err)
+	}
+
+	validateSubset(t, path, []byte(jsonbody), exemplar)
+}
+
 func TestRestAPIPoolsDefault(t *testing.T) {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 
-	rr := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "http://127.0.0.1/pools/default", nil)
-	mr.ServeHTTP(rr, r)
-	if rr.Code != 200 {
-		t.Errorf("expected req to work, got: %#v, %v",
-			rr, rr.Body.String())
+	ns_server_paths := map[string]string{
+		"/pools/default/buckets/{bucketname}/statsDirectory":     "",
+		"/pools/default/buckets/{bucketname}/stats":              "",
+		"/pools/default/buckets/{bucketname}/nodes":              "",
+		"/pools/default/buckets/{bucketname}/nodes/{node}/stats": "",
+		"/pools/default/buckets/{bucketname}/ddocs":              "",
+		"/pools/default/buckets/{bucketname}/localRandomKey":     "",
+		"/pools/default/bucketsStreaming/{bucketname}":           "",
+		"/pools/default/buckets/{bucketname}":                    "",
+		"/pools/default/stats":                                   "",
+		"/pools/default/buckets":                                 "",
+		"/pools/default":                                         "",
+		"/poolsStreaming":                                        "",
+		"/pools":                                                 "pools",
+	}
+
+	for pattern, fn := range ns_server_paths {
+		rr := httptest.NewRecorder()
+
+		// Set vars
+		p := strings.Replace(pattern, "{bucketname}", "default", 1)
+		p = strings.Replace(p, "{node}", "localhost", 1)
+
+		r, _ := http.NewRequest("GET", "http://127.0.0.1"+p, nil)
+		mr.ServeHTTP(rr, r)
+		switch {
+		case rr.Code == 501 && fn == "":
+			t.Logf("%v is not yet implemented", p)
+		case rr.Code == 200:
+			validateJson(t, rr.Body.String(), fn)
+		default:
+			t.Errorf("expected %v to work, got: %#v, %v",
+				p, rr, rr.Body.String())
+		}
 	}
 }
