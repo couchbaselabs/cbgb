@@ -55,21 +55,30 @@ type BucketStoreStats struct {
 	WriteBytes uint64 `json:"writeBytes"`
 }
 
-func newBucketStore(path string, settings BucketSettings) (*bucketstore, error) {
-	file, err := fileService.OpenFile(path, os.O_RDWR|os.O_CREATE)
-	if err != nil {
-		return nil, err
+func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err error) {
+	var file FileLike
+	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		file, err = fileService.OpenFile(path, os.O_RDWR|os.O_CREATE)
+		if err != nil {
+			fmt.Printf("!!!! %v\n", err)
+			return nil, err
+		}
 	}
 
 	bsf := NewBucketStoreFile(path, file, &BucketStoreStats{})
-	store, err := gkvlite.NewStore(bsf)
+	bsfForGKVLite := bsf
+	if settings.MemoryOnly >= MemoryOnly_LEVEL_PERSIST_NOTHING {
+		bsfForGKVLite = nil
+	}
+
+	store, err := gkvlite.NewStore(bsfForGKVLite)
 	if err != nil {
 		return nil, err
 	}
 	bsf.store = store
 
 	var bsfMemoryOnly *bucketstorefile
-	if settings.MemoryOnly > 0 {
+	if settings.MemoryOnly > MemoryOnly_LEVEL_PERSIST_EVERYTHING {
 		bsfMemoryOnly = NewBucketStoreFile(path, file, bsf.stats)
 		bsfMemoryOnly.store, err = gkvlite.NewStore(nil)
 		if err != nil {
@@ -124,10 +133,13 @@ func (s *bucketstore) Flush() (int64, error) {
 
 func (s *bucketstore) flush_unlocked() (int64, error) {
 	d := atomic.LoadInt64(&s.dirtiness)
-	if err := s.BSF().store.Flush(); err != nil {
-		atomic.AddUint64(&s.stats.FlushErrors, 1)
-		return atomic.LoadInt64(&s.dirtiness), err
-	}
+	bsf := s.BSF()
+	if bsf.file != nil {
+		if err := bsf.store.Flush(); err != nil {
+			atomic.AddUint64(&s.stats.FlushErrors, 1)
+			return atomic.LoadInt64(&s.dirtiness), err
+		}
+	} // else, we're in memory-only mode.
 	atomic.AddUint64(&s.stats.Flushes, 1)
 	return atomic.AddInt64(&s.dirtiness, -d), nil
 }

@@ -18,6 +18,10 @@ func (s *bucketstore) Compact() error {
 	defer s.diskLock.Unlock()
 
 	bsf := s.BSF()
+	if bsf.file == nil { // We're in memory-only mode.
+		return nil
+	}
+
 	compactPath := bsf.path + ".compact"
 	if err := s.compactGo(bsf, compactPath); err != nil {
 		atomic.AddUint64(&s.stats.CompactErrors, 1)

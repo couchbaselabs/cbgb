@@ -106,16 +106,20 @@ func (b *Buckets) New(name string,
 		return nil, errors.New(fmt.Sprintf("bucket already exists: %v", name))
 	}
 
-	// TODO: Need name checking & encoding for safety/security.
-	bdir := b.Path(name) // If an accessible bdir directory exists already, it's ok.
-	if err = os.Mkdir(bdir, 0777); err != nil && !isDir(bdir) {
-		return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
-	}
-
 	settings := &BucketSettings{}
 	if defaultSettings != nil {
 		settings = defaultSettings.Copy()
 	}
+
+	// TODO: Need name checking & encoding for safety/security.
+	bdir := b.Path(name) // If an accessible bdir directory exists already, it's ok.
+
+	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		if err = os.Mkdir(bdir, 0777); err != nil && !isDir(bdir) {
+			return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
+		}
+	}
+
 	_, err = settings.load(bdir)
 	if err != nil {
 		return nil, err
@@ -256,14 +260,25 @@ type livebucket struct {
 	statLock sync.Mutex
 }
 
-func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
-	fileNames, err := latestStoreFileNames(dirForBucket, STORES_PER_BUCKET)
-	if err != nil {
-		return nil, err
+func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {
+	var fileNames []string
+
+	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		fileNames, err = latestStoreFileNames(dirForBucket, STORES_PER_BUCKET)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		fileNames = make([]string, STORES_PER_BUCKET)
+		for i := 0; i < STORES_PER_BUCKET; i++ {
+			fileNames[i] = makeStoreFileName(i, 0)
+		}
 	}
 
-	if err = settings.save(dirForBucket); err != nil {
-		return nil, err
+	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		if err = settings.save(dirForBucket); err != nil {
+			return nil, err
+		}
 	}
 
 	aggStats := NewAggStats(func() Aggregatable {
@@ -273,9 +288,8 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (Bucket, error) {
 		return &BucketStoreStats{Time: int64(time.Now().Unix())}
 	})
 
-	availablech := make(chan bool)
 	res := &livebucket{
-		availablech:  availablech,
+		availablech:  make(chan bool),
 		dir:          dirForBucket,
 		settings:     settings,
 		bucketstores: make(map[int]*bucketstore),

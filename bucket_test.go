@@ -551,14 +551,14 @@ func TestBucketSettingsSafeView(t *testing.T) {
 	}
 }
 
-func TestMemoryOnlyBucket(t *testing.T) {
+func TestMemoryOnlyLevel1Bucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
 	b0, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			MemoryOnly:    1,
+			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -593,7 +593,7 @@ func TestMemoryOnlyBucket(t *testing.T) {
 	b1, err := NewBucket(testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
-			MemoryOnly:    1,
+			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,
 		})
 	if err != nil {
 		t.Errorf("expected NewBucket to work, got: %v", err)
@@ -614,6 +614,86 @@ func TestMemoryOnlyBucket(t *testing.T) {
 	}
 	r1 := &reqHandler{currentBucket: b1}
 	testExpectInts(t, r1, 2, []int{}, "data re-load")
+}
+
+func TestMemoryOnlyBucketSettingsReload(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	buckets0, err := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
+	defer buckets0.CloseAll()
+
+	b0, err := buckets0.New("foo",
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,
+		})
+	b0.Flush()
+	b0.Close()
+
+	buckets1, err := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
+	defer buckets1.CloseAll()
+
+	err = buckets1.Load()
+	if err != nil {
+		t.Errorf("expected buckets reload to work, got: %v", err)
+	}
+
+	b1 := buckets1.Get("foo")
+	if b1 == nil {
+		t.Errorf("expected metadata-persisted bucket to survive restart")
+	}
+	if b1.GetBucketSettings().MemoryOnly != MemoryOnly_LEVEL_PERSIST_METADATA {
+		t.Errorf("expected foo bucket to have same mem-only setting, got: %#v", b1)
+	}
+	if b1.GetBucketSettings().NumPartitions != MAX_VBUCKETS {
+		t.Errorf("expected foo bucket to have same partitions setting, got: %#v", b1)
+	}
+}
+
+func TestPersistNothing(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	buckets0, err := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
+	defer buckets0.CloseAll()
+
+	b0, err := buckets0.New("foo",
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_NOTHING,
+		})
+	b0.Flush()
+	b0.Close()
+
+	buckets1, err := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
+	defer buckets1.CloseAll()
+
+	err = buckets1.Load()
+	if err != nil {
+		t.Errorf("expected buckets reload to work, got: %v", err)
+	}
+
+	b1 := buckets1.Get("foo")
+	if b1 != nil {
+		t.Errorf("expected persist-nothing bucket disappear at restart")
+	}
 }
 
 func TestBucketQuotaBytes(t *testing.T) {

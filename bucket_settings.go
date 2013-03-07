@@ -7,6 +7,17 @@ import (
 	"path"
 )
 
+const (
+	MemoryOnly_LEVEL_PERSIST_EVERYTHING = 0
+
+	// A bucket created at this level survives a server restart, but
+	// will restart with zero items.  Item ops are not persisted.
+	MemoryOnly_LEVEL_PERSIST_METADATA = 1
+
+	// Don't use any files, and bucket disappears at server restart.
+	MemoryOnly_LEVEL_PERSIST_NOTHING = 2
+)
+
 type BucketSettings struct {
 	NumPartitions    int    `json:"numPartitions"`
 	PasswordHashFunc string `json:"passwordHashFunc"`
