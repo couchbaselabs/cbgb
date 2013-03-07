@@ -5,6 +5,8 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/dustin/gomemcached"
 )
 
 func makeTestBucket(t *testing.T) Bucket {
@@ -611,4 +613,85 @@ func TestMemoryOnlyBucket(t *testing.T) {
 	}
 	r1 := &reqHandler{currentBucket: b1}
 	testExpectInts(t, r1, 2, []int{}, "data re-load")
+}
+
+func TestBucketQuotaBytes(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	quota := int64(1000)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+			QuotaBytes:    quota,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	b0_numBytes0 := b0.GetItemBytes()
+	if b0_numBytes0 >= quota {
+		t.Errorf("reached quota earlier than expected")
+	}
+
+	r0 := &reqHandler{currentBucket: b0}
+	vb0, _ := b0.CreateVBucket(2)
+
+	b0_numBytes1 := b0.GetItemBytes()
+	if b0_numBytes1 >= quota {
+		t.Errorf("reached quota earlier than expected")
+	}
+
+	b0.SetVBState(2, VBActive)
+
+	b0_numBytes2 := b0.GetItemBytes()
+	if b0_numBytes2 >= quota {
+		t.Errorf("reached quota earlier than expected")
+	}
+
+	testLoadInts(t, r0, 2, 1)
+	testExpectInts(t, r0, 2, []int{0}, "initial data load")
+
+	if 1 != vb0.stats.Items {
+		t.Errorf("expected to have 5 items")
+	}
+	b0_numBytes3 := b0.GetItemBytes()
+	if b0_numBytes3 >= quota {
+		t.Errorf("reached quota earlier than expected")
+	}
+
+	err = b0.Flush()
+	if err != nil {
+		t.Errorf("expected Flush to work, got: %v", err)
+	}
+
+	if 1 != vb0.stats.Items {
+		t.Errorf("expected to have 5 items still after flushing")
+	}
+	b0_numBytes4 := b0.GetItemBytes()
+	if b0_numBytes4 >= quota {
+		t.Errorf("reached quota earlier than expected")
+	}
+
+	res := r0.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+		Opcode:  gomemcached.SET,
+		VBucket: 2,
+		Key:     []byte("toobig"),
+		Body:    make([]byte, 2000),
+	})
+	if res.Status != gomemcached.E2BIG {
+		t.Errorf("expected to have reached quota, got: %v", res)
+	}
+
+	res = r0.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+		Opcode:  gomemcached.SET,
+		VBucket: 2,
+		Key:     []byte("shouldfit"),
+		Body:    make([]byte, 100),
+	})
+	if res.Status != gomemcached.SUCCESS {
+		t.Errorf("expected to have not reached quota, got: %v", res)
+	}
 }
