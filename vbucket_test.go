@@ -36,13 +36,27 @@ func TestItemBytesPersists(t *testing.T) {
 	}
 	defer b0.Close()
 
+	b0_numBytes0 := b0.GetItemBytes()
+	if b0_numBytes0 <= 0 {
+		t.Errorf("initial item bytes should be non-zero")
+	}
+
 	r0 := &reqHandler{currentBucket: b0}
 	vb0, _ := b0.CreateVBucket(2)
+
+	b0_numBytes1 := b0.GetItemBytes()
+	if b0_numBytes1 != b0_numBytes0 {
+		t.Errorf("vbucket creation should not affect item bytes")
+	}
 
 	b0.SetVBState(2, VBActive)
 
 	if 0 != vb0.stats.Items {
 		t.Errorf("expected to have 0 items initially")
+	}
+	b0_numBytes2 := b0.GetItemBytes()
+	if b0_numBytes2 <= b0_numBytes1 {
+		t.Errorf("vbucket state metadata change should increase item bytes")
 	}
 
 	testLoadInts(t, r0, 2, 5)
@@ -50,6 +64,10 @@ func TestItemBytesPersists(t *testing.T) {
 
 	if 5 != vb0.stats.Items {
 		t.Errorf("expected to have 5 items")
+	}
+	b0_numBytes3 := b0.GetItemBytes()
+	if b0_numBytes3 <= b0_numBytes2 {
+		t.Errorf("data changes should increase item bytes")
 	}
 
 	err = b0.Flush()
@@ -59,6 +77,10 @@ func TestItemBytesPersists(t *testing.T) {
 
 	if 5 != vb0.stats.Items {
 		t.Errorf("expected to have 5 items still after flushing")
+	}
+	b0_numBytes4 := b0.GetItemBytes()
+	if b0_numBytes4 != b0_numBytes3 {
+		t.Errorf("flush should not change item bytes")
 	}
 
 	b1, err := NewBucket(testBucketDir,
