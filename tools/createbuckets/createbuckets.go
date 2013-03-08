@@ -3,11 +3,14 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
 	"sync"
+
+	"github.com/daaku/go.flagbytes"
 )
 
 var todo = flag.Int("buckets", 200, "How many buckets to create.")
@@ -16,6 +19,7 @@ var base = flag.String("baseurl", "http://127.0.0.1:8077/",
 var concurrency = flag.Int("workers", 8,
 	"How many concurrent workers creating buckets.")
 var verbose = flag.Bool("v", false, "log bucket creation")
+var quota = flagbytes.Bytes("quota", "100MB", "quota for each bucket")
 
 var wg sync.WaitGroup
 
@@ -43,8 +47,12 @@ func worker(ustr string, ch <-chan int) {
 
 	defer wg.Done()
 	for i := range ch {
+		vals := url.Values{}
+		vals.Set("bucketName", fmt.Sprintf("b%06d", i))
+		vals.Set("bucketQuotaBytes", fmt.Sprintf("%d", *quota))
+		vals.Set("bucketMemoryOnly", "2")
 		req, err := http.NewRequest("POST", ustr,
-			strings.NewReader(fmt.Sprintf("bucketName=b%06d", i)))
+			strings.NewReader(vals.Encode()))
 		maybefatal("creating request", err)
 		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
@@ -54,7 +62,9 @@ func worker(ustr string, ch <-chan int) {
 		}
 		defer resp.Body.Close()
 		if resp.StatusCode != 303 {
-			log.Fatalf("HTTP error creating bucket: %v", resp.Status)
+			bodyText, _ := ioutil.ReadAll(resp.Body)
+			log.Fatalf("HTTP error creating bucket: %v\n%s",
+				resp.Status, bodyText)
 		}
 		if *verbose {
 			log.Printf("Created bucket b%06d", i)
