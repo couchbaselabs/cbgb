@@ -48,9 +48,9 @@ func worker(ustr string, ch <-chan int) {
 	defer wg.Done()
 	for i := range ch {
 		vals := url.Values{}
-		vals.Set("bucketName", fmt.Sprintf("b%06d", i))
-		vals.Set("bucketQuotaBytes", fmt.Sprintf("%d", *quota))
-		vals.Set("bucketMemoryOnly", "2")
+		vals.Set("name", fmt.Sprintf("b%06d", i))
+		vals.Set("quota", fmt.Sprintf("%d", *quota))
+		vals.Set("memoryOnly", "2")
 		req, err := http.NewRequest("POST", ustr,
 			strings.NewReader(vals.Encode()))
 		maybefatal("creating request", err)

@@ -89,7 +89,7 @@ func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucke
 }
 
 func restPostBucket(w http.ResponseWriter, r *http.Request) {
-	bucketName := r.FormValue("bucketName")
+	bucketName := r.FormValue("name")
 	if len(bucketName) < 1 {
 		http.Error(w, "bucket name is too short or is missing", 400)
 		return
@@ -102,14 +102,14 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 	}
 
 	bSettings := bucketSettings.Copy()
-	bucketPassword := r.FormValue("bucketPassword")
+	bucketPassword := r.FormValue("password")
 	if bucketPassword != "" {
 		bSettings.PasswordHash = bucketPassword
 	}
 
-	bucketQuotaBytes := r.FormValue("bucketQuotaBytes")
+	bucketQuotaBytes := r.FormValue("quota")
 	if bucketQuotaBytes == "" {
-		http.Error(w, "missing bucket quota bytes param", 400)
+		http.Error(w, "missing bucket quota param", 400)
 		return
 	}
 	qb, err := strconv.ParseInt(bucketQuotaBytes, 10, 64)
@@ -120,7 +120,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 	}
 	bSettings.QuotaBytes = qb
 
-	bucketMemoryOnly := r.FormValue("bucketMemoryOnly")
+	bucketMemoryOnly := r.FormValue("memoryOnly")
 	if bucketMemoryOnly == "" {
 		http.Error(w, "missing bucket memory only flag", 400)
 		return
