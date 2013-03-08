@@ -52,8 +52,7 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func restNSBucket(w http.ResponseWriter, r *http.Request) {
-	bucketName := mux.Vars(r)["bucketname"]
+func getNSBucket(bucketName string) (couchbase.Bucket, error) {
 	rv := couchbase.Bucket{
 		AuthType:     "sasl",
 		Capabilities: []string{"couchapi"},
@@ -68,8 +67,31 @@ func restNSBucket(w http.ResponseWriter, r *http.Request) {
 	rv.VBucketServerMap.NumReplicas = 1
 	rv.VBucketServerMap.ServerList = []string{"127.0.0.1:11211"} // XXX: me
 	rv.VBucketServerMap.VBucketMap = [][]int{{0}}
+	return rv, nil
+}
 
-	jsonEncode(w, &rv)
+func restNSBucket(w http.ResponseWriter, r *http.Request) {
+	b, err := getNSBucket(mux.Vars(r)["bucketname"])
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
+	}
+	jsonEncode(w, &b)
+}
+
+func restNSBucketList(w http.ResponseWriter, r *http.Request) {
+	buckets := []couchbase.Bucket{}
+
+	bucketNames := []string{"default"}
+	for _, bn := range bucketNames {
+		b, err := getNSBucket(bn)
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+		buckets = append(buckets, b)
+	}
+	jsonEncode(w, &buckets)
 }
 
 func restNSAPI(r *mux.Router) {
@@ -83,7 +105,6 @@ func restNSAPI(r *mux.Router) {
 		"/pools/default/buckets/{bucketname}/localRandomKey",
 		"/pools/default/bucketsStreaming/{bucketname}",
 		"/pools/default/stats",
-		"/pools/default/buckets",
 		"/poolsStreaming",
 	}
 
@@ -95,4 +116,5 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/pools", restNSPools)
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
+	r.HandleFunc("/pools/default/buckets", restNSBucketList)
 }

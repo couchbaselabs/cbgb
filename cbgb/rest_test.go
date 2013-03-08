@@ -1019,7 +1019,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/bucketsStreaming/{bucketname}":           "",
 		"/pools/default/buckets/{bucketname}":                    "pools_default_buckets_cbfs",
 		"/pools/default/stats":                                   "",
-		"/pools/default/buckets":                                 "",
+		"/pools/default/buckets":                                 "pools_default_buckets",
 		"/pools/default":                                         "pools_default",
 		"/poolsStreaming":                                        "",
 		"/pools":                                                 "pools",
