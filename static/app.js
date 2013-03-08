@@ -227,7 +227,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
         if (!$scope.drawChart) {
           lastChartId++;
           $scope.drawChart =
-            makeChart(lastChartId,
+            makeChart("bucketCharts", lastChartId,
                       $scope.currStatName,
                       data.levels[$scope.currLevel].numSamples,
                       10, 400);
@@ -244,7 +244,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   go();
 }
 
-function makeChart(chartId, statName, dataLength, barW, barH) {
+function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
   var duration = 400;
   var xMargin = 0.5;
   var yMargin = 0.5;
@@ -296,7 +296,7 @@ function makeChart(chartId, statName, dataLength, barW, barH) {
       .rangeRound([2, barH]);
 
     if (!document.getElementById("chart" + chartId)) {
-      d3.select("#charts")
+      d3.select("#" + containerId)
         .append("svg:svg")
         .attr("id", "chart" + chartId)
         .attr("class", "chart")
