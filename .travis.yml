@@ -3,7 +3,7 @@ language: go
 script:
   - go get github.com/dustin/go-jsonpointer
   - go test -v ./...
-  - go vet ./..
+  - go vet ./...
 
 notifications:
   email:
