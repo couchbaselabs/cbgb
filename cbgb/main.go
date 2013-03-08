@@ -53,20 +53,20 @@ func main() {
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
 	if err != nil {
-		log.Fatalf("Could not make buckets: %v, data directory: %v", err, *data)
+		log.Fatalf("error: could not make buckets: %v, data directory: %v", err, *data)
 	}
 
 	log.Printf("loading buckets from: %v", *data)
 	err = buckets.Load()
 	if err != nil {
-		log.Printf("Could not load buckets: %v, data directory: %v", err, *data)
+		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
 
 	if buckets.Get(*defaultBucketName) == nil &&
 		*defaultBucketName != "" {
 		_, err := createBucket(*defaultBucketName, bucketSettings)
 		if err != nil {
-			log.Fatalf("Error creating default bucket: %s, err: %v",
+			log.Fatalf("error: could not create default bucket: %s, err: %v",
 				*defaultBucketName, err)
 		}
 	}
@@ -75,14 +75,14 @@ func main() {
 		mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
 	}
 
-	log.Fatalf("Unknown command: %v", args[0])
+	log.Fatalf("error: unknown command: %v", args[0])
 }
 
 func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 	addr string, rest string, staticPath string) {
 	log.Printf("listening data on: %v", addr)
 	if _, err := cbgb.StartServer(addr, buckets, defaultBucketName); err != nil {
-		log.Fatalf("Error starting server: %s", err)
+		log.Fatalf("error: could not start server: %s", err)
 	}
 
 	if rest != ":DISABLED" {
