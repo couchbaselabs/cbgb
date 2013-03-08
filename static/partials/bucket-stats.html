@@ -31,7 +31,12 @@
         <ul class="nav nav-tabs nav-stacked">
           <li ng-repeat="statName in statNames"
              ng-class="{active: statName[0] == currStatKind && statName[1] == currStatName}">
-            <a ng-click="changeStat(statName[0], statName[1])">{{statName[1]}}</a>
+            <a ng-click="changeStat(statName[0], statName[1])">
+              {{statName[1]}}
+              <span class="statTotal">
+                {{stats.totals[statName[0]][statName[1]]}}
+              </span>
+            </a>
           </li>
         </ul>
       </div>
@@ -54,6 +59,7 @@
 
     <div class="row" style="padding-left: 10px;">
       <div class="span12">
+        <i class="icon-align-left"></i> raw stats for bucket: {{bucketName}}
         <pre>{{stats | json}}</pre>
       </div>
     </div>
