@@ -971,7 +971,7 @@ func validateSubset(t *testing.T, exname string, got, exemplar []byte) {
 	for _, p := range ptrs {
 		dg, err := jsonFindParse(t, got, p)
 		if err != nil {
-			t.Fatalf("Error loading %v from %s: %v",
+			t.Fatalf("Error loading %q from %s: %v",
 				p, got, err)
 		}
 
@@ -1017,7 +1017,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/buckets/{bucketname}/ddocs":              "",
 		"/pools/default/buckets/{bucketname}/localRandomKey":     "",
 		"/pools/default/bucketsStreaming/{bucketname}":           "",
-		"/pools/default/buckets/{bucketname}":                    "",
+		"/pools/default/buckets/{bucketname}":                    "pools_default_buckets_cbfs",
 		"/pools/default/stats":                                   "",
 		"/pools/default/buckets":                                 "",
 		"/pools/default":                                         "pools_default",

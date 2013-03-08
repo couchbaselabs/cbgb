@@ -29,8 +29,8 @@ func restNSPools(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &toplevelPool)
 }
 
-func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
-	nodeList := []couchbase.Node{
+func getNSNodeList() []couchbase.Node {
+	return []couchbase.Node{
 		couchbase.Node{
 			ClusterCompatibility: 131072,
 			ClusterMembership:    "active",
@@ -41,12 +41,35 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 			Version:              "1.0.0-cbgb",
 		},
 	}
+}
+
+func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
 		"buckets": map[string]interface{}{"uri": "/pools/default/buckets"},
 		"name":    "default",
-		"nodes":   nodeList,
+		"nodes":   getNSNodeList(),
 		"stats":   map[string]interface{}{"uri": "/pools/default/stats"},
 	})
+}
+
+func restNSBucket(w http.ResponseWriter, r *http.Request) {
+	bucketName := mux.Vars(r)["bucketname"]
+	rv := couchbase.Bucket{
+		AuthType:     "sasl",
+		Capabilities: []string{"couchapi"},
+		Type:         "membase",
+		Name:         bucketName,
+		NodeLocator:  "vbucket",
+		Nodes:        getNSNodeList(),
+		Replicas:     1,
+		URI:          "/pools/default/buckets/" + bucketName,
+	}
+	rv.VBucketServerMap.HashAlgorithm = "CRC"
+	rv.VBucketServerMap.NumReplicas = 1
+	rv.VBucketServerMap.ServerList = []string{"127.0.0.1:11211"} // XXX: me
+	rv.VBucketServerMap.VBucketMap = [][]int{{0}}
+
+	jsonEncode(w, &rv)
 }
 
 func restNSAPI(r *mux.Router) {
@@ -59,7 +82,6 @@ func restNSAPI(r *mux.Router) {
 		"/pools/default/buckets/{bucketname}/ddocs",
 		"/pools/default/buckets/{bucketname}/localRandomKey",
 		"/pools/default/bucketsStreaming/{bucketname}",
-		"/pools/default/buckets/{bucketname}",
 		"/pools/default/stats",
 		"/pools/default/buckets",
 		"/poolsStreaming",
@@ -72,4 +94,5 @@ func restNSAPI(r *mux.Router) {
 
 	r.HandleFunc("/pools", restNSPools)
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
+	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
 }
