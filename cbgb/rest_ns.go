@@ -29,6 +29,26 @@ func restNSPools(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &toplevelPool)
 }
 
+func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
+	nodeList := []couchbase.Node{
+		couchbase.Node{
+			ClusterCompatibility: 131072,
+			ClusterMembership:    "active",
+			CouchAPIBase:         "http://localhost:8077/", // XXX: FIXTERMINATE
+			Hostname:             "127.0.0.1:8091",         // XXX: FIXTERMINATE
+			Ports:                map[string]int{"direct": 11211},
+			Status:               "healthy",
+			Version:              "1.0.0-cbgb",
+		},
+	}
+	jsonEncode(w, map[string]interface{}{
+		"buckets": map[string]interface{}{"uri": "/pools/default/buckets"},
+		"name":    "default",
+		"nodes":   nodeList,
+		"stats":   map[string]interface{}{"uri": "/pools/default/stats"},
+	})
+}
+
 func restNSAPI(r *mux.Router) {
 
 	ns_server_paths := []string{
@@ -42,7 +62,6 @@ func restNSAPI(r *mux.Router) {
 		"/pools/default/buckets/{bucketname}",
 		"/pools/default/stats",
 		"/pools/default/buckets",
-		"/pools/default",
 		"/poolsStreaming",
 	}
 
@@ -52,4 +71,5 @@ func restNSAPI(r *mux.Router) {
 	}
 
 	r.HandleFunc("/pools", restNSPools)
+	r.HandleFunc("/pools/default", restNSPoolsDefault)
 }

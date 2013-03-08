@@ -786,7 +786,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/buckets/{bucketname}":                    "",
 		"/pools/default/stats":                                   "",
 		"/pools/default/buckets":                                 "",
-		"/pools/default":                                         "",
+		"/pools/default":                                         "pools_default",
 		"/poolsStreaming":                                        "",
 		"/pools":                                                 "pools",
 	}
