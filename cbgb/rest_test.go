@@ -1007,6 +1007,13 @@ func validateJson(t *testing.T, jsonbody, path string) {
 func TestRestAPIPoolsDefault(t *testing.T) {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
+
+	b, err := buckets.New("test", nil)
+	if err != nil {
+		t.Fatalf("Error initializing test bucket: %v", err)
+	}
+	defer b.Close()
+
 	mr := testSetupMux(d)
 
 	ns_server_paths := map[string]string{
@@ -1029,7 +1036,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		rr := httptest.NewRecorder()
 
 		// Set vars
-		p := strings.Replace(pattern, "{bucketname}", "default", 1)
+		p := strings.Replace(pattern, "{bucketname}", "test", 1)
 		p = strings.Replace(p, "{node}", "localhost", 1)
 
 		r, _ := http.NewRequest("GET", "http://127.0.0.1"+p, nil)

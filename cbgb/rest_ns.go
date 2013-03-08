@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 
@@ -52,8 +53,12 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func getNSBucket(bucketName string) (couchbase.Bucket, error) {
-	rv := couchbase.Bucket{
+func getNSBucket(bucketName string) (*couchbase.Bucket, error) {
+	b := buckets.Get(bucketName)
+	if b == nil {
+		return nil, fmt.Errorf("No such bucket: %v", bucketName)
+	}
+	rv := &couchbase.Bucket{
 		AuthType:     "sasl",
 		Capabilities: []string{"couchapi"},
 		Type:         "membase",
@@ -80,18 +85,17 @@ func restNSBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func restNSBucketList(w http.ResponseWriter, r *http.Request) {
-	buckets := []couchbase.Bucket{}
+	rv := []*couchbase.Bucket{}
 
-	bucketNames := []string{"default"}
-	for _, bn := range bucketNames {
+	for _, bn := range buckets.GetNames() {
 		b, err := getNSBucket(bn)
 		if err != nil {
 			http.Error(w, err.Error(), 404)
 			return
 		}
-		buckets = append(buckets, b)
+		rv = append(rv, b)
 	}
-	jsonEncode(w, &buckets)
+	jsonEncode(w, &rv)
 }
 
 func restNSAPI(r *mux.Router) {
