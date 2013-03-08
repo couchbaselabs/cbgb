@@ -317,7 +317,13 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 
 func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
-	// TODO: Support group/group_level.
+	groupLevel := 0
+	if p.Group {
+		groupLevel = 0x7fffffff
+	}
+	if p.GroupLevel > 0 {
+		groupLevel = int(p.GroupLevel)
+	}
 
 	o := otto.New()
 	fnv, err := OttoNewFunction(o, reduceFunction)
@@ -325,33 +331,56 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		return result, err
 	}
 
-	keys := make([]interface{}, len(result.Rows))
-	values := make([]interface{}, len(result.Rows))
-	for i, row := range result.Rows {
-		keys[i] = row.Key
-		values[i] = row.Value
+	initialCapacity := 200
+
+	results := make([]*cbgb.ViewRow, 0, initialCapacity)
+	groupKeys := make([]interface{}, 0, initialCapacity)
+	groupValues := make([]interface{}, 0, initialCapacity)
+
+	i := 0
+	j := 0
+
+	for i < len(result.Rows) {
+		groupKeys = groupKeys[:0]
+		groupValues = groupValues[:0]
+
+		startRow := result.Rows[i]
+		groupKey := arrayPrefix(startRow.Key, groupLevel)
+
+		for j = i; j < len(result.Rows); j++ {
+			row := result.Rows[j]
+			rowKey := arrayPrefix(row.Key, groupLevel)
+			if walrus.CollateJSON(groupKey, rowKey) < 0 {
+				break
+			}
+			groupKeys = append(groupKeys, row.Key)
+			groupValues = append(groupValues, row.Value)
+		}
+		i = j
+
+		okeys, err := OttoFromGoArray(o, groupKeys)
+		if err != nil {
+			return result, err
+		}
+		ovalues, err := OttoFromGoArray(o, groupValues)
+		if err != nil {
+			return result, err
+		}
+
+		ores, err := fnv.Call(fnv, okeys, ovalues, otto.FalseValue())
+		if err != nil {
+			return result, fmt.Errorf("call reduce err: %v, reduceFunction: %v, %v, %v",
+				err, reduceFunction, okeys, ovalues)
+		}
+		gres, err := OttoToGo(ores)
+		if err != nil {
+			return result, fmt.Errorf("converting reduce result err: %v", err)
+		}
+
+		results = append(results, &cbgb.ViewRow{Key: groupKey, Value: gres})
 	}
 
-	okeys, err := OttoFromGoArray(o, keys)
-	if err != nil {
-		return result, err
-	}
-	ovalues, err := OttoFromGoArray(o, values)
-	if err != nil {
-		return result, err
-	}
-
-	ores, err := fnv.Call(fnv, okeys, ovalues, otto.FalseValue())
-	if err != nil {
-		return result, fmt.Errorf("call reduce err: %v, reduceFunction: %v, %v, %v",
-			err, reduceFunction, okeys, ovalues)
-	}
-	gres, err := OttoToGo(ores)
-	if err != nil {
-		return result, fmt.Errorf("converting reduce result err: %v", err)
-	}
-
-	result.Rows = []*cbgb.ViewRow{&cbgb.ViewRow{Value: gres}}
+	result.Rows = results
 	return result, nil
 }
 
