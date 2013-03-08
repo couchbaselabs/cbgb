@@ -167,6 +167,7 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 	}
 	jsonEncode(w, map[string]interface{}{
 		"name":       bucketName,
+		"itemBytes":  bucket.GetItemBytes(),
 		"settings":   settings.SafeView(),
 		"partitions": partitions,
 	})
