@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"time"
 
 	"github.com/dustin/gomemcached"
 	"github.com/dustin/gomemcached/server"
@@ -14,6 +15,8 @@ import (
 const (
 	VERSION = "0.0.0"
 )
+
+var serverStart = time.Now()
 
 type reqHandler struct {
 	buckets       *Buckets
