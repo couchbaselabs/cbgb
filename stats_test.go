@@ -174,7 +174,7 @@ func TestBasicAggStats(t *testing.T) {
 	}
 
 	for i := 0; i < 59; i++ {
-		a.addSample(&Stats{Ops: uint64(i)})
+		a.AddSample(&Stats{Ops: uint64(i)})
 	}
 	if a.Counts[0] != uint64(59) {
 		t.Errorf("Expected 59 level-0 samples, got %v",
@@ -207,7 +207,7 @@ func TestBasicAggStats(t *testing.T) {
 			s.Ops)
 	}
 
-	a.addSample(&Stats{Ops: uint64(60)})
+	a.AddSample(&Stats{Ops: uint64(60)})
 	if a.Counts[0] != uint64(60) {
 		t.Errorf("Expected 60 level-0 samples, got %v",
 			a.Counts[0])
@@ -250,7 +250,7 @@ func TestMultiDayAggStats(t *testing.T) {
 	n := 60 * 60 * 24 * 10 // 10 days worth
 
 	for i := 0; i < n; i++ {
-		a.addSample(s)
+		a.AddSample(s)
 	}
 
 	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
@@ -285,7 +285,7 @@ func TestAggStatsSampleJSON(t *testing.T) {
 
 	s := &Stats{Ops: uint64(10)}
 	for i := 0; i < 5; i++ {
-		a.addSample(s)
+		a.AddSample(s)
 	}
 
 	j0, err := json.Marshal(a.Levels[0])

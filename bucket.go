@@ -552,7 +552,7 @@ func (b *livebucket) sampleStats(t time.Time) {
 	diffStats.Add(currStats)
 	diffStats.Sub(b.stats.Current)
 	diffStats.Time = t.Unix()
-	b.stats.Agg.addSample(diffStats)
+	b.stats.Agg.AddSample(diffStats)
 	b.stats.Current = currStats
 
 	currBucketStoreStats := AggregateBucketStoreStats(b, "")
@@ -560,7 +560,7 @@ func (b *livebucket) sampleStats(t time.Time) {
 	diffBucketStoreStats.Add(currBucketStoreStats)
 	diffBucketStoreStats.Sub(b.stats.BucketStore)
 	diffBucketStoreStats.Time = t.Unix()
-	b.stats.AggBucketStore.addSample(diffBucketStoreStats)
+	b.stats.AggBucketStore.AddSample(diffBucketStoreStats)
 	b.stats.BucketStore = currBucketStoreStats
 	b.stats.LatestUpdate = t
 }
