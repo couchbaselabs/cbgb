@@ -2,10 +2,13 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"log"
+	"os"
 	"time"
 
 	"github.com/couchbaselabs/cbgb"
+	"github.com/daaku/go.flagbytes"
 )
 
 var mutationLogCh = make(chan interface{}, 1024)
@@ -18,19 +21,28 @@ var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
 var staticPath = flag.String("static-path",
 	"static", "path to static content")
 var defaultBucketName = flag.String("default-bucket-name",
-	cbgb.DEFAULT_BUCKET_NAME, "name of the default bucket; use \"\" for no default bucket")
-var defaultNumPartitions = flag.Int("default-num-partitions",
+	cbgb.DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
+var numPartitions = flag.Int("num-partitions",
 	1, "default number of partitions for new buckets")
-var defaultQuotaBytes = flag.Int64("default-quota-bytes",
-	1000000, "default quota (max key+value bytes allowed) for new buckets")
-var defaultMemoryOnly = flag.Int("default-memory-only",
-	0, "default memory only level for new buckets"+
-		" (0 = everything persisted"+
-		"; 1 = item ops are not persisted"+
-		"; 2 = nothing persisted)")
+var quota = flagbytes.Bytes("default-quota", "100MB", "quota for default bucket")
+var defaultMemoryOnly = flag.Int("default-mem-only",
+	0, "memory only level for default bucket")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
+
+		flag.PrintDefaults()
+		fmt.Fprintf(os.Stderr, "\nMemory Levels:\n")
+		fmt.Fprintf(os.Stderr, " - 0: Fully Resident\n")
+		fmt.Fprintf(os.Stderr, " - 1: Ops not persisted, only partition states\n")
+		fmt.Fprintf(os.Stderr, " - 2: Fully non-resident\n")
+		os.Exit(1)
+	}
+}
 
 func main() {
 	flag.Parse()
@@ -47,8 +59,8 @@ func main() {
 	var err error
 
 	bucketSettings = &cbgb.BucketSettings{
-		NumPartitions: *defaultNumPartitions,
-		QuotaBytes:    *defaultQuotaBytes,
+		NumPartitions: *numPartitions,
+		QuotaBytes:    int64(*quota),
 		MemoryOnly:    *defaultMemoryOnly,
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
