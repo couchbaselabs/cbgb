@@ -164,3 +164,8 @@ library dependencies.
 
 Map/reduce functions, etc. likely by using Otto.
 
+## Expiration
+
+## Bucket quotas
+
+Simple storage quota per bucket is supported.

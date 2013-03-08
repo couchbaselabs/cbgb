@@ -20,10 +20,6 @@ Currently, the project is only a TAP source, not a TAP receiver.
 More memcached commands need implementation, including
 gat, touch, observe.
 
-## Expiration
-
-Expiration needs implementation.
-
 ## Eviction policy
 
 Probably random eviction, to start.
@@ -37,10 +33,6 @@ Compability with Couchbase REST API needs implementation.
 Flushing and compacting are currently triggered only by time interval,
 not by changes to item counts or fragmentation metrics due to
 mutations.
-
-## Resource quotas
-
-High/low watermarks and such need implementation.
 
 ## Histograms
 
