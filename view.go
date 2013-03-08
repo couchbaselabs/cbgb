@@ -38,6 +38,7 @@ type ViewRow struct {
 	Id    string      `json:"id,omitempty"`
 	Key   interface{} `json:"key,omitempty"`
 	Value interface{} `json:"value,omitempty"`
+	Doc   interface{} `json:"doc,omitempty"`
 }
 
 func (rows ViewRows) Len() int {

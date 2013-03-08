@@ -202,10 +202,20 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("processViewResult error: %v", err), 400)
 		return
 	}
-	vr, err = reduceViewResult(bucket, vr, p, view.Reduce)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("reduceViewResult error: %v", err), 400)
-		return
+	if view.Reduce == "" || p.Reduce == false {
+		if p.IncludeDocs {
+			vr, err = docifyViewResult(bucket, vr)
+			if err != nil {
+				http.Error(w, fmt.Sprintf("docifyViewResults error: %v", err), 500)
+				return
+			}
+		}
+	} else {
+		vr, err = reduceViewResult(bucket, vr, p, view.Reduce)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("reduceViewResult error: %v", err), 400)
+			return
+		}
 	}
 	vr.TotalRows = len(vr.Rows)
 
@@ -302,23 +312,12 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		reverseViewRows(result.Rows)
 	}
 
-	if p.IncludeDocs { // TODO.
-		return result, fmt.Errorf("includeDocs is not supported yet, sorry") // TODO.
-	}
-
 	return result, nil
 }
 
 func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
 	// TODO: Support group/group_level.
-
-	if reduceFunction == "" {
-		return result, nil
-	}
-	if p.Reduce == false {
-		return result, nil
-	}
 
 	o := otto.New()
 	fnv, err := OttoNewFunction(o, reduceFunction)
@@ -362,4 +361,24 @@ func reverseViewRows(r cbgb.ViewRows) {
 	for i := 0; i < mid; i++ {
 		r[i], r[num-i-1] = r[num-i-1], r[i]
 	}
+}
+
+func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
+	*cbgb.ViewResult, error) {
+	for _, row := range result.Rows {
+		if row.Id != "" {
+			res := cbgb.GetItem(bucket, []byte(row.Id), cbgb.VBActive)
+			if res.Status == gomemcached.SUCCESS {
+				var parsedDoc interface{}
+				err := json.Unmarshal(res.Body, &parsedDoc)
+				if err == nil {
+					row.Doc = parsedDoc
+				} else {
+					// TODO: Is this the right encoding for non-json?
+					row.Doc = cbgb.Bytes(res.Body)
+				}
+			} // TODO: Handle else-case when no doc.
+		}
+	}
+	return result, nil
 }

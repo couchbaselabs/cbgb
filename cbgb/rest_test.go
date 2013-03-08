@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -272,6 +273,9 @@ func TestCouchViewBasic(t *testing.T) {
 		if a[i] != int(row.Key.(float64)) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
+		if row.Doc != nil {
+			t.Errorf("expected no doc since it's not include_docs, got: %#v", row)
+		}
 	}
 
 	rr = httptest.NewRecorder()
@@ -487,6 +491,48 @@ func TestCouchViewBasic(t *testing.T) {
 		}
 		if a[i] != int(row.Key.(float64)) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"include_docs=true", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	k = []string{"a", "d", "b", "c"}
+	a = []int{1, 2, 3, 4}
+	if dd.TotalRows != len(k) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(k), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+		if a[i] != int(row.Key.(float64)) {
+			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
+		if row.Doc == nil {
+			t.Errorf("expected include_doc to give a doc, got: %#v", row)
+		}
+		docExp := fmt.Sprintf(`{"amount":%d}`, a[i])
+		docAct, err := json.Marshal(row.Doc)
+		if err != nil {
+			t.Errorf("expected json.Marshal on doc to work, got: %#v, err: %v",
+				row, err)
+		}
+		if docExp != string(docAct) {
+			t.Errorf("expected include_doc to give doc %v, got: %v",
+				docExp, string(docAct))
 		}
 	}
 }
