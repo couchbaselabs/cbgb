@@ -88,6 +88,18 @@ func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucke
 	return bucketName, bucket
 }
 
+func getIntValue(r *http.Request, name string, def int64) int64 {
+	valstr := r.FormValue(name)
+	if valstr == "" {
+		return def
+	}
+	val, err := strconv.ParseInt(valstr, 10, 64)
+	if err != nil {
+		return def
+	}
+	return val
+}
+
 func restPostBucket(w http.ResponseWriter, r *http.Request) {
 	bucketName := r.FormValue("name")
 	if len(bucketName) < 1 {
@@ -107,31 +119,10 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 		bSettings.PasswordHash = bucketPassword
 	}
 
-	bucketQuotaBytes := r.FormValue("quota")
-	if bucketQuotaBytes == "" {
-		http.Error(w, "missing bucket quota param", 400)
-		return
-	}
-	qb, err := strconv.ParseInt(bucketQuotaBytes, 10, 64)
-	if err != nil || qb < 0 {
-		http.Error(w, fmt.Sprintf("bad bucket quota bytes: %v, err: %v",
-			qb, err), 400)
-		return
-	}
-	bSettings.QuotaBytes = qb
+	bSettings.QuotaBytes = getIntValue(r, "quota", bucketSettings.QuotaBytes)
 
-	bucketMemoryOnly := r.FormValue("memoryOnly")
-	if bucketMemoryOnly == "" {
-		http.Error(w, "missing bucket memory only flag", 400)
-		return
-	}
-	mo, err := strconv.Atoi(bucketMemoryOnly)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("bad bucket memory only flag: %v, err: %v",
-			bucketMemoryOnly, err), 400)
-		return
-	}
-	bSettings.MemoryOnly = mo
+	bSettings.MemoryOnly = int(getIntValue(r, "memoryOnly",
+		int64(bucketSettings.MemoryOnly)))
 
 	_, err = createBucket(bucketName, bSettings)
 	if err != nil {
