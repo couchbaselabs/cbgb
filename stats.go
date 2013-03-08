@@ -10,8 +10,6 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
-const MAX_STAT_SECONDS = 30
-
 var serverStart = time.Now()
 
 type statItem struct {
