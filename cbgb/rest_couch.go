@@ -197,12 +197,15 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	}
 	sort.Sort(vr.Rows)
 
+	// TODO: Handle p.Keys.
+
 	vr, err = processViewResult(bucket, vr, p)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("processViewResult error: %v", err), 400)
 		return
 	}
 	if view.Reduce == "" || p.Reduce == false {
+		// TODO: Handle p.UpdateSeq.
 		if p.IncludeDocs {
 			vr, err = docifyViewResult(bucket, vr)
 			if err != nil {
@@ -216,6 +219,20 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("reduceViewResult error: %v", err), 400)
 			return
 		}
+	}
+	skip := int(p.Skip)
+	if skip > 0 {
+		if skip > len(vr.Rows) {
+			skip = len(vr.Rows)
+		}
+		vr.Rows = vr.Rows[skip:]
+	}
+	limit := int(p.Limit)
+	if limit > 0 {
+		if limit > len(vr.Rows) {
+			limit = len(vr.Rows)
+		}
+		vr.Rows = vr.Rows[:limit]
 	}
 	vr.TotalRows = len(vr.Rows)
 
@@ -257,9 +274,6 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 
 func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams) (*cbgb.ViewResult, error) {
-	// TODO: Handle p.Skip.
-	// TODO: Handle p.UpdateSeq.
-
 	if p.Key != nil {
 		p.StartKey = p.Key
 		p.EndKey = p.Key
@@ -276,15 +290,6 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		}
 	}
 
-	// TODO: Does the limit get processed after reduce?
-	if p.Limit > 0 && uint64(len(result.Rows)) > p.Limit {
-		if p.Descending {
-			result.Rows = result.Rows[len(result.Rows)-int(p.Limit):]
-		} else {
-			result.Rows = result.Rows[:p.Limit]
-		}
-	}
-
 	if p.EndKey != nil {
 		i := sort.Search(len(result.Rows), func(i int) bool {
 			if p.InclusiveEnd {
@@ -296,15 +301,6 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 			result.Rows = result.Rows[i:]
 		} else {
 			result.Rows = result.Rows[:i]
-		}
-	}
-
-	// TODO: Does the limit get processed after reduce?
-	if p.Limit > 0 && uint64(len(result.Rows)) > p.Limit {
-		if p.Descending {
-			result.Rows = result.Rows[len(result.Rows)-int(p.Limit):]
-		} else {
-			result.Rows = result.Rows[:p.Limit]
 		}
 	}
 

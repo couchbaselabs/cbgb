@@ -620,7 +620,8 @@ func TestCouchViewReduceBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?reduce=true&startkey=2&endkey=3", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"reduce=true&startkey=2&endkey=3", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -639,6 +640,25 @@ func TestCouchViewReduceBasic(t *testing.T) {
 	if exp != int(dd.Rows[0].Value.(float64)) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"reduce=true&startkey=2&endkey=3&skip=100", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	if dd.TotalRows != 0 {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			0, dd.TotalRows, dd, rr.Body.String())
 	}
 
 	rr = httptest.NewRecorder()
@@ -715,7 +735,8 @@ func TestCouchViewGroupLevel(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?reduce=false", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"reduce=false&limit=1000", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -791,6 +812,38 @@ func TestCouchViewGroupLevel(t *testing.T) {
 	}
 	g = []string{"[0,1]", "[1,2]", "[1,3]", "[2,4]"}
 	v = []int{1, 1, 1, 1}
+	if dd.TotalRows != len(g) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(g), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		j, _ := json.Marshal(row.Key)
+		if g[i] != string(j) {
+			t.Errorf("expected row %#v to match key %#v, i %v, j %v",
+				row, a[i], i, j)
+		}
+		if v[i] != int(row.Value.(float64)) {
+			t.Errorf("expected row %#v to match val %#v, i %v",
+				row, v[i], i)
+		}
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?"+
+			"group_level=2&skip=1&limit=2", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	g = []string{"[1,2]", "[1,3]"}
+	v = []int{1, 1}
 	if dd.TotalRows != len(g) {
 		t.Errorf("expected %v rows, got: %v, %v, %v",
 			len(g), dd.TotalRows, dd, rr.Body.String())
