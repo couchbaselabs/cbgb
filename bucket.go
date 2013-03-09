@@ -111,6 +111,8 @@ func (b *Buckets) New(name string,
 		settings = defaultSettings.Copy()
 	}
 
+	settings.UUID = createNewUUID()
+
 	// TODO: Need name checking & encoding for safety/security.
 	bdir := b.Path(name) // If an accessible bdir directory exists already, it's ok.
 
@@ -409,8 +411,6 @@ func (b *livebucket) Compact() error {
 	return nil
 }
 
-// TODO: Need to track some bucket "uuid", so that a recreated bucket X'
-// is distinct from a previously deleted bucket X?
 func (b *livebucket) Load() (err error) {
 	b.bucketItemBytes = 0
 	for _, bs := range b.bucketstores {

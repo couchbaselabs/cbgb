@@ -25,6 +25,7 @@ type BucketSettings struct {
 	PasswordSalt     string `json:"passwordSalt"`
 	QuotaBytes       int64  `json:"quotaBytes"`
 	MemoryOnly       int    `json:"memoryOnly"`
+	UUID             string `json:"uuid"`
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
@@ -44,6 +45,7 @@ func (bs *BucketSettings) SafeView() map[string]interface{} {
 		"numPartitions": bs.NumPartitions,
 		"quotaBytes":    bs.QuotaBytes,
 		"memoryOnly":    bs.MemoryOnly,
+		"uuid":          bs.UUID,
 	}
 }
 

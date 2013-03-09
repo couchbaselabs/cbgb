@@ -2,7 +2,9 @@ package cbgb
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
+	"math/rand"
 	"net/url"
 	"os"
 )
@@ -86,4 +88,12 @@ func isDir(path string) bool {
 		return false
 	}
 	return true // TODO: check for writability.
+}
+
+// TODO: replace with proper UUID implementation
+func createNewUUID() string {
+	val := rand.Int63()
+	uuid := fmt.Sprintf("%X", val)
+	return uuid
+
 }
