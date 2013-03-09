@@ -26,7 +26,14 @@ import (
 )
 
 func restCouchAPI(r *mux.Router) *mux.Router {
+
+	r.Handle("/{db}",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD")
+
 	dbr := r.PathPrefix("/{db}/").Subrouter()
+
+	dbr.Handle("/",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD")
 
 	dbr.Handle("/_design/{docId}/_view/{viewId}",
 		http.HandlerFunc(couchDbGetView)).Methods("GET")
@@ -93,6 +100,19 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 
 func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "unimplemented", 501)
+}
+
+func couchDbGetDb(w http.ResponseWriter, r *http.Request) {
+	_, bucketName, bucket := checkDb(w, r)
+	if bucket == nil {
+		return
+	}
+	if r.Method == "HEAD" {
+		return
+	}
+	jsonEncode(w, map[string]interface{}{
+		"db_name": bucketName,
+	})
 }
 
 func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
