@@ -22,8 +22,7 @@ func restMain(rest string, staticPath string) {
 	restAPI(r, staticPath)
 	restNSAPI(r)
 	restCouchAPI(r)
-	r.Handle("/",
-		http.RedirectHandler("/_static/app.html", 302))
+	r.Handle("/", http.RedirectHandler("/_static/app.html", 302))
 	log.Printf("listening rest on: %v", rest)
 	log.Fatal(http.ListenAndServe(rest, r))
 }
@@ -56,8 +55,7 @@ func restAPI(r *mux.Router, staticPath string) {
 	r.HandleFunc("/_api/settings",
 		restGetSettings).Methods("GET")
 	r.PathPrefix("/_static/").Handler(
-		http.StripPrefix("/_static/",
-			http.FileServer(http.Dir(staticPath))))
+		http.StripPrefix("/_static/", http.FileServer(http.Dir(staticPath))))
 }
 
 func restGetSettings(w http.ResponseWriter, r *http.Request) {
