@@ -85,10 +85,10 @@ function BucketsCtrl($scope, $http) {
     $http({
         method: 'POST',
         url: '/_api/buckets',
-        data: 'bucketName=' + encodeURIComponent(bucketName) +
-          '&bucketPassword=' + encodeURIComponent($scope.bucketPassword) +
-          '&bucketQuotaBytes=' + encodeURIComponent($scope.bucketQuotaBytes) +
-          '&bucketMemoryOnly=' + encodeURIComponent($scope.bucketMemoryOnly),
+        data: 'name=' + encodeURIComponent(bucketName) +
+          '&password=' + encodeURIComponent($scope.bucketPassword) +
+          '&quota=' + encodeURIComponent($scope.bucketQuotaBytes) +
+          '&memoryOnly=' + encodeURIComponent($scope.bucketMemoryOnly),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}
       }).
       success(function(data) {
