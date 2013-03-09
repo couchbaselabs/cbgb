@@ -123,6 +123,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("view param parsing err: %v", err), 400)
 		return
 	}
+
 	vars, _, bucket, ddocId := checkDocId(w, r)
 	if bucket == nil || ddocId == "" {
 		return
@@ -163,7 +164,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var emits []*cbgb.ViewRow
+	emits := []*cbgb.ViewRow{}
 	var emitErr error
 
 	o.Set("emit", func(call otto.FunctionCall) otto.Value {
@@ -174,14 +175,14 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 			emitErr = fmt.Errorf("emit() invoked with no parameters")
 			return otto.UndefinedValue()
 		}
-		key, err = OttoToGo(call.ArgumentList[0])
+		key, err = call.ArgumentList[0].Export()
 		if err != nil {
 			emitErr = err
 			return otto.UndefinedValue()
 		}
 
 		if len(call.ArgumentList) >= 2 {
-			value, err = OttoToGo(call.ArgumentList[1])
+			value, err = call.ArgumentList[1].Export()
 			if err != nil {
 				emitErr = err
 				return otto.UndefinedValue()
@@ -209,7 +210,6 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					return false
 				}
 
-				emits = make([]*cbgb.ViewRow, 0)
 				_, errVisit = fnv.Call(fnv, odoc)
 				if errVisit != nil {
 					return false
@@ -221,6 +221,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 				}
 
 				vr.Rows = append(vr.Rows, emits...)
+				emits = emits[:0]
 				return true
 			})
 			if err != nil {
@@ -420,7 +421,7 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 			return result, fmt.Errorf("call reduce err: %v, reduceFunction: %v, %v, %v",
 				err, reduceFunction, okeys, ovalues)
 		}
-		gres, err := OttoToGo(ores)
+		gres, err := ores.Export()
 		if err != nil {
 			return result, fmt.Errorf("converting reduce result err: %v", err)
 		}

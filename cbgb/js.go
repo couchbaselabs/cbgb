@@ -21,27 +21,6 @@ import (
 
 // Originally from github.com/couchbaselabs/walrus, but capitalized.
 // TODO: Push this back to walrus.
-// Converts an Otto value to a Go value. Handles all JSON-compatible types.
-func OttoToGo(value otto.Value) (interface{}, error) {
-	if value.IsBoolean() {
-		return value.ToBoolean()
-	} else if value.IsNull() || value.IsUndefined() {
-		return nil, nil
-	} else if value.IsNumber() {
-		return value.ToFloat()
-	} else if value.IsString() {
-		return value.ToString()
-	} else {
-		switch value.Class() {
-		case "Array":
-			return OttoToGoArray(value.Object())
-		}
-	}
-	return nil, fmt.Errorf("Unsupported Otto value: %v", value)
-}
-
-// Originally from github.com/couchbaselabs/walrus, but capitalized.
-// TODO: Push this back to walrus.
 func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
 	lengthVal, err := array.Get("length")
 	if err != nil {
@@ -58,7 +37,7 @@ func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
 		if err != nil {
 			return nil, err
 		}
-		result[i], err = OttoToGo(item)
+		result[i], err = item.Export()
 		if err != nil {
 			return nil, err
 		}
