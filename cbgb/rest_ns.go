@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
+	"strings"
 
 	"github.com/couchbaselabs/go-couchbase"
 	"github.com/gorilla/mux"
@@ -30,13 +32,13 @@ func restNSPools(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &toplevelPool)
 }
 
-func getNSNodeList() []couchbase.Node {
+func getNSNodeList(host string) []couchbase.Node {
 	return []couchbase.Node{
 		couchbase.Node{
 			ClusterCompatibility: 131072,
 			ClusterMembership:    "active",
-			CouchAPIBase:         "http://localhost:8077/", // XXX: FIXTERMINATE
-			Hostname:             "127.0.0.1:8091",         // XXX: FIXTERMINATE
+			CouchAPIBase:         "http://" + host + "/",
+			Hostname:             host,
 			Ports:                map[string]int{"direct": 11211},
 			Status:               "healthy",
 			Version:              "1.0.0-cbgb",
@@ -48,12 +50,23 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
 		"buckets": map[string]interface{}{"uri": "/pools/default/buckets"},
 		"name":    "default",
-		"nodes":   getNSNodeList(),
+		"nodes":   getNSNodeList(r.Host),
 		"stats":   map[string]interface{}{"uri": "/pools/default/stats"},
 	})
 }
 
-func getNSBucket(bucketName string) (*couchbase.Bucket, error) {
+func getBindAddress(host string) string {
+	if strings.Index(*addr, ":") > 0 {
+		return *addr
+	}
+	n, _, err := net.SplitHostPort(host)
+	if err != nil {
+		return *addr
+	}
+	return n + *addr
+}
+
+func getNSBucket(host, bucketName string) (*couchbase.Bucket, error) {
 	b := buckets.Get(bucketName)
 	if b == nil {
 		return nil, fmt.Errorf("No such bucket: %v", bucketName)
@@ -64,19 +77,19 @@ func getNSBucket(bucketName string) (*couchbase.Bucket, error) {
 		Type:         "membase",
 		Name:         bucketName,
 		NodeLocator:  "vbucket",
-		Nodes:        getNSNodeList(),
+		Nodes:        getNSNodeList(host),
 		Replicas:     1,
 		URI:          "/pools/default/buckets/" + bucketName,
 	}
 	rv.VBucketServerMap.HashAlgorithm = "CRC"
 	rv.VBucketServerMap.NumReplicas = 1
-	rv.VBucketServerMap.ServerList = []string{"127.0.0.1:11211"} // XXX: me
+	rv.VBucketServerMap.ServerList = []string{getBindAddress(host)}
 	rv.VBucketServerMap.VBucketMap = [][]int{{0}}
 	return rv, nil
 }
 
 func restNSBucket(w http.ResponseWriter, r *http.Request) {
-	b, err := getNSBucket(mux.Vars(r)["bucketname"])
+	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"])
 	if err != nil {
 		http.Error(w, err.Error(), 404)
 		return
@@ -88,7 +101,7 @@ func restNSBucketList(w http.ResponseWriter, r *http.Request) {
 	rv := []*couchbase.Bucket{}
 
 	for _, bn := range buckets.GetNames() {
-		b, err := getNSBucket(bn)
+		b, err := getNSBucket(r.Host, bn)
 		if err != nil {
 			http.Error(w, err.Error(), 404)
 			return
