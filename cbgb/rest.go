@@ -297,5 +297,9 @@ func jsonEncode(w io.Writer, i interface{}) error {
 		headered.Header().Set("Cache-Control", "no-cache")
 		headered.Header().Set("Content-type", "application/json")
 	}
-	return json.NewEncoder(w).Encode(i)
+	err := json.NewEncoder(w).Encode(i)
+	if err != nil {
+		http.Error(w.(http.ResponseWriter), err.Error(), 500)
+	}
+	return err
 }
