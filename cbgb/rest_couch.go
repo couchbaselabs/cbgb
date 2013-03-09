@@ -17,6 +17,8 @@ import (
 	"io/ioutil"
 	"net/http"
 	"sort"
+	"strconv"
+	"strings"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/walrus"
@@ -24,6 +26,14 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/robertkrimen/otto"
 )
+
+func referencesVBucket(r *http.Request, rm *mux.RouteMatch) bool {
+	return strings.Contains(r.RequestURI, "%2f")
+}
+
+func doesNotReferenceVBucket(r *http.Request, rm *mux.RouteMatch) bool {
+	return !strings.Contains(r.RequestURI, "%2f")
+}
 
 func restCouchAPI(r *mux.Router) *mux.Router {
 	r.Handle("/{db}",
@@ -45,11 +55,14 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 		http.HandlerFunc(couchDbDelDesignDoc)).Methods("DELETE")
 
 	dbr.Handle("/{docId}",
-		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD")
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").MatcherFunc(doesNotReferenceVBucket)
 	dbr.Handle("/{docId}",
-		http.HandlerFunc(couchDbPutDoc)).Methods("PUT")
+		http.HandlerFunc(couchDbPutDoc)).Methods("PUT").MatcherFunc(doesNotReferenceVBucket)
 	dbr.Handle("/{docId}",
-		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE")
+		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE").MatcherFunc(doesNotReferenceVBucket)
+
+	dbr.Handle("/{vbucket}",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket)
 
 	return dbr
 }
@@ -311,6 +324,25 @@ func checkDb(w http.ResponseWriter, r *http.Request) (
 	if bucket == nil {
 		http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
 		return vars, bucketName, nil
+	}
+
+	vbucketString, ok := vars["vbucket"]
+	if ok {
+		// if the request contains a vbucket specification
+		// ensure that it refers to a valid vbucket
+		// we don't return it because none of our functionality will use it
+		bucketName = bucketName + "%2f" + vbucketString
+		vbucketIdFull, err := strconv.ParseUint(vbucketString, 10, 16)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
+			return vars, bucketName, nil
+		}
+		vbucketId := uint16(vbucketIdFull)
+		vbucket := bucket.GetVBucket(vbucketId)
+		if vbucket == nil {
+			http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
+			return vars, bucketName, nil
+		}
 	}
 	return vars, bucketName, bucket
 }

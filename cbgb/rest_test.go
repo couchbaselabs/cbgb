@@ -108,6 +108,76 @@ func TestCouchDocGet(t *testing.T) {
 	}
 }
 
+func TestCouchDbGet(t *testing.T) {
+
+	d, _, bucket := testSetupDefaultBucket(t, 1024, uint16(528))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://127.0.0.1/dbnotexist", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected req to 404, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%2f203456", nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%2f203456"
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected req to 404, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%2f528", nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%2f528"
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	// now create a document, make sure that docuemnt
+	// access is not confused with vbucket access
+
+	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"), cbgb.VBActive)
+	if res == nil || res.Status != gomemcached.SUCCESS {
+		t.Errorf("expected SetItem to work, got: %v", res)
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default/hello", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%2fhello", nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%2fhello"
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected req to 404, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+}
+
 func TestCouchPutDDoc(t *testing.T) {
 	testCouchPutDDoc(t, 1)
 	testCouchPutDDoc(t, cbgb.MAX_VBUCKETS)
