@@ -437,10 +437,17 @@ func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
 				var parsedDoc interface{}
 				err := json.Unmarshal(res.Body, &parsedDoc)
 				if err == nil {
-					row.Doc = parsedDoc
+					row.Doc = &cbgb.ViewDocValue{
+						Meta: map[string]interface{}{
+							"id":  row.Id,
+							"rev": "0",
+						},
+						Json: parsedDoc,
+					}
 				} else {
 					// TODO: Is this the right encoding for non-json?
-					row.Doc = cbgb.Bytes(res.Body)
+					// no
+					// row.Doc = cbgb.Bytes(res.Body)
 				}
 			} // TODO: Handle else-case when no doc.
 		}

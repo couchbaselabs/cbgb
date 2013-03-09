@@ -16,6 +16,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 
 	"github.com/couchbaselabs/walrus"
 )
@@ -34,11 +35,16 @@ type ViewResult struct {
 
 type ViewRows []*ViewRow
 
+type ViewDocValue struct {
+	Meta map[string]interface{} `json:"meta"`
+	Json interface{}            `json:"json"`
+}
+
 type ViewRow struct {
-	Id    string      `json:"id,omitempty"`
-	Key   interface{} `json:"key,omitempty"`
-	Value interface{} `json:"value,omitempty"`
-	Doc   interface{} `json:"doc,omitempty"`
+	Id    string        `json:"id,omitempty"`
+	Key   interface{}   `json:"key,omitempty"`
+	Value interface{}   `json:"value,omitempty"`
+	Doc   *ViewDocValue `json:"doc,omitempty"`
 }
 
 func (rows ViewRows) Len() int {

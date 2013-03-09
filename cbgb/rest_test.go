@@ -532,15 +532,8 @@ func TestCouchViewBasic(t *testing.T) {
 		if row.Doc == nil {
 			t.Errorf("expected include_doc to give a doc, got: %#v", row)
 		}
-		docExp := fmt.Sprintf(`{"amount":%d}`, a[i])
-		docAct, err := json.Marshal(row.Doc)
-		if err != nil {
-			t.Errorf("expected json.Marshal on doc to work, got: %#v, err: %v",
-				row, err)
-		}
-		if docExp != string(docAct) {
-			t.Errorf("expected include_doc to give doc %v, got: %v",
-				docExp, string(docAct))
+		if int(row.Doc.Json.(map[string]interface{})["amount"].(float64)) != (i + 1) {
+			t.Errorf("Expected %v at %v, got %v", i+1, i, row.Doc.Json)
 		}
 	}
 }
