@@ -360,6 +360,21 @@ if (rereduce) { return sum(values); } else { return values.length; }
 	"_sum": `function(keys, values, rereduce) { return sum(values);}`,
 }
 
+func javascriptSum(call otto.FunctionCall) otto.Value {
+	rv := float64(0)
+	for _, a := range call.ArgumentList {
+		f, err := a.ToFloat()
+		if err == nil {
+			rv += f
+		}
+	}
+	r, err := otto.ToValue(rv)
+	if err != nil {
+		panic(err)
+	}
+	return r
+}
+
 func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
 	groupLevel := 0
@@ -375,6 +390,10 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	}
 
 	o := otto.New()
+	err := o.Set("sum", javascriptSum)
+	if err != nil {
+		return result, err
+	}
 	fnv, err := OttoNewFunction(o, reduceFunction)
 	if err != nil {
 		return result, err
