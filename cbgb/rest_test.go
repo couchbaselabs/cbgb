@@ -176,6 +176,50 @@ func TestCouchDbGet(t *testing.T) {
 			rr, rr.Body.String())
 	}
 
+	// now test including the bucket UUID
+	bucketUUID := bucket.GetBucketSettings().UUID
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%3bwronguuid", nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%3bwronguuid"
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected req to 404, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%3b"+bucketUUID, nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%3b" + bucketUUID
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	// test vbucket AND bucket UUID
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%2f528%3bwronguuid", nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%2f528%3bwronguuid"
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected req to 404, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET", "http://127.0.0.1/default%2f528%3b"+bucketUUID, nil)
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%2f528%3b" + bucketUUID
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
 }
 
 func TestCouchPutDDoc(t *testing.T) {

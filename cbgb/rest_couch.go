@@ -35,7 +35,13 @@ func doesNotReferenceVBucket(r *http.Request, rm *mux.RouteMatch) bool {
 	return !strings.Contains(r.RequestURI, "%2f")
 }
 
+func includesBucketUUID(r *http.Request, rm *mux.RouteMatch) bool {
+	return strings.Contains(r.RequestURI, "%3b")
+}
+
 func restCouchAPI(r *mux.Router) *mux.Router {
+	r.Handle("/{db};{bucketUUID}",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(includesBucketUUID)
 	r.Handle("/{db}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD")
 
@@ -61,6 +67,8 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 	dbr.Handle("/{docId}",
 		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE").MatcherFunc(doesNotReferenceVBucket)
 
+	dbr.Handle("/{vbucket};{bucketUUID}",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket).MatcherFunc(includesBucketUUID)
 	dbr.Handle("/{vbucket}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket)
 
@@ -324,6 +332,16 @@ func checkDb(w http.ResponseWriter, r *http.Request) (
 	if bucket == nil {
 		http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
 		return vars, bucketName, nil
+	}
+
+	bucketUUID, ok := vars["bucketUUID"]
+	if ok {
+		// if it contains a bucket UUID, it MUST match
+		actualBucketUUID := bucket.GetBucketSettings().UUID
+		if bucketUUID != actualBucketUUID {
+			http.Error(w, fmt.Sprintf("uuids_dont_match"), 404)
+			return vars, bucketName, nil
+		}
 	}
 
 	vbucketString, ok := vars["vbucket"]
