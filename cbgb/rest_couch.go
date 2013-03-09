@@ -26,7 +26,6 @@ import (
 )
 
 func restCouchAPI(r *mux.Router) *mux.Router {
-
 	r.Handle("/{db}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD")
 
