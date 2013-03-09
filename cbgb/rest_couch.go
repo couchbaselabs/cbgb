@@ -88,7 +88,7 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
 		return
 	}
-	w.Write([]byte(http.StatusText(200)))
+	w.WriteHeader(201)
 }
 
 func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
