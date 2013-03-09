@@ -66,10 +66,14 @@ func getBindAddress(host string) string {
 	return n + *addr
 }
 
-func getNSBucket(host, bucketName string) (*couchbase.Bucket, error) {
+func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 	b := buckets.Get(bucketName)
 	if b == nil {
 		return nil, fmt.Errorf("No such bucket: %v", bucketName)
+	}
+	bucketUUID := b.GetBucketSettings().UUID
+	if uuid != "" && uuid != bucketUUID {
+		return nil, fmt.Errorf("Bucket uuid does not match the requested.")
 	}
 	rv := &couchbase.Bucket{
 		AuthType:     "sasl",
@@ -79,7 +83,8 @@ func getNSBucket(host, bucketName string) (*couchbase.Bucket, error) {
 		NodeLocator:  "vbucket",
 		Nodes:        getNSNodeList(host),
 		Replicas:     1,
-		URI:          "/pools/default/buckets/" + bucketName,
+		URI:          "/pools/default/buckets/" + bucketName + "?bucket_uuid=" + bucketUUID,
+		UUID:         bucketUUID,
 	}
 	rv.VBucketServerMap.HashAlgorithm = "CRC"
 	rv.VBucketServerMap.NumReplicas = 1
@@ -89,7 +94,7 @@ func getNSBucket(host, bucketName string) (*couchbase.Bucket, error) {
 }
 
 func restNSBucket(w http.ResponseWriter, r *http.Request) {
-	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"])
+	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"], r.FormValue("bucket_uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), 404)
 		return
@@ -101,7 +106,7 @@ func restNSBucketList(w http.ResponseWriter, r *http.Request) {
 	rv := []*couchbase.Bucket{}
 
 	for _, bn := range buckets.GetNames() {
-		b, err := getNSBucket(r.Host, bn)
+		b, err := getNSBucket(r.Host, bn, "")
 		if err != nil {
 			http.Error(w, err.Error(), 404)
 			return
