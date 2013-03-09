@@ -197,25 +197,15 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	st := bucket.GetStats()
-	if time.Since(st.LatestUpdate) > time.Second*30 {
+	st := bucket.SnapshotStats()
+	if time.Since(st.LatestUpdateTime()) > time.Second*30 {
 		bucket.StartStats(time.Second)
 		// Go ahead and let this delay slightly to catch up
 		// the stats.
 		time.Sleep(time.Millisecond * 2100)
-		st = bucket.GetStats()
+		st = bucket.SnapshotStats()
 	}
-	jsonEncode(w, map[string]interface{}{
-		"totals": map[string]interface{}{
-			"bucketStats":      st.Current,
-			"bucketStoreStats": st.BucketStore,
-		},
-		"diffs": map[string]interface{}{
-			"bucketStats":      st.Agg,
-			"bucketStoreStats": st.AggBucketStore,
-		},
-		"levels": cbgb.AggStatsLevels,
-	})
+	jsonEncode(w, st.ToMap())
 }
 
 // To start a cpu profiling...

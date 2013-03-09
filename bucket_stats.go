@@ -4,7 +4,7 @@ import (
 	"time"
 )
 
-type BucketStats struct {
+type BucketStatsSnapshot struct {
 	Current        *Stats
 	BucketStore    *BucketStoreStats
 	Agg            *AggStats
@@ -14,8 +14,26 @@ type BucketStats struct {
 	requests int
 }
 
-func (b BucketStats) Copy() BucketStats {
-	return BucketStats{
+func (bss *BucketStatsSnapshot) LatestUpdateTime() time.Time {
+	return bss.LatestUpdate
+}
+
+func (bss *BucketStatsSnapshot) ToMap() map[string]interface{} {
+	return map[string]interface{}{
+		"totals": map[string]interface{}{
+			"bucketStats":      bss.Current,
+			"bucketStoreStats": bss.BucketStore,
+		},
+		"diffs": map[string]interface{}{
+			"bucketStats":      bss.Agg,
+			"bucketStoreStats": bss.AggBucketStore,
+		},
+		"levels": AggStatsLevels,
+	}
+}
+
+func (b *BucketStatsSnapshot) Copy() *BucketStatsSnapshot {
+	return &BucketStatsSnapshot{
 		&(*b.Current),
 		&(*b.BucketStore),
 		&(*b.Agg),

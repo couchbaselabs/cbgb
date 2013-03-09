@@ -353,7 +353,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	b, _ := bs.New("mybucket", bs.settings)
 	b.(*livebucket).sampleStats(time.Now()) // Should be zeroes.
 
-	s := b.GetStats()
+	s := b.SnapshotStats().(*BucketStatsSnapshot)
 	if s.Current == nil {
 		t.Errorf("Expected stats.current to be non-nil")
 	}
@@ -382,7 +382,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 
 	b.(*livebucket).sampleStats(time.Now()) // Should still be zeroes.
 
-	s = b.GetStats()
+	s = b.SnapshotStats().(*BucketStatsSnapshot)
 	if s.Current == nil {
 		t.Errorf("Expected current stats to be non-nil")
 	}
@@ -514,7 +514,7 @@ func TestShouldContinueDoingStats(t *testing.T) {
 
 	// Stat request to make it appear that we're interested in
 	// stats.
-	b.GetStats()
+	b.SnapshotStats()
 	if !lb.shouldContinueDoingStats(time.Now()) {
 		t.Fatalf("Should keep doing stats, but won't.")
 	}

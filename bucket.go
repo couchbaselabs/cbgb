@@ -228,7 +228,7 @@ type livebucket struct {
 
 	bucketItemBytes int64
 
-	stats    BucketStats
+	stats    BucketStatsSnapshot
 	statLock sync.Mutex
 }
 
@@ -266,7 +266,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 		settings:     settings,
 		bucketstores: make(map[int]*bucketstore),
 		observer:     broadcastMux.Sub(),
-		stats: BucketStats{
+		stats: BucketStatsSnapshot{
 			Current:        &Stats{},
 			BucketStore:    &BucketStoreStats{},
 			Agg:            aggStats,
@@ -504,7 +504,7 @@ func (b *livebucket) Auth(passwordClearText []byte) bool {
 	return false
 }
 
-func (b *livebucket) GetStats() BucketStats {
+func (b *livebucket) SnapshotStats() StatsSnapshot {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
 

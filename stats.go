@@ -12,11 +12,16 @@ import (
 
 // Interface for things that interact with stats.
 type Statish interface {
-	GetStats() BucketStats
+	SnapshotStats() StatsSnapshot
 
 	StartStats(d time.Duration)
 	StopStats()
 	StatAge() time.Duration
+}
+
+type StatsSnapshot interface {
+	LatestUpdateTime() time.Time
+	ToMap() map[string]interface{}
 }
 
 type statItem struct {
