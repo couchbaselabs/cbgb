@@ -9,7 +9,6 @@ import (
 
 func newReducer() *otto.Otto {
 	o := otto.New()
-	must(o.Set("sum", javascriptSum))
 	must(o.Set("_sum", javascriptReduceSum))
 	must(o.Set("_count", javascriptReduceCount))
 	must(o.Set("_stats", javascriptReduceStats))
@@ -26,28 +25,6 @@ func zeroate(i interface{}) float64 {
 		return 0
 	}
 	return f
-}
-
-func javascriptSum(call otto.FunctionCall) otto.Value {
-	rv := float64(0)
-	for _, a := range call.ArgumentList {
-		v, err := a.Export()
-		if err != nil {
-			continue
-		}
-
-		switch n := v.(type) {
-		case float64:
-			rv += zeroate(n)
-		case []interface{}:
-			for _, nv := range n {
-				rv += zeroate(nv)
-			}
-		default:
-			return ottoMust(otto.ToValue(fmt.Sprintf("Unhandled: %v/%T", v, v)))
-		}
-	}
-	return ottoMust(otto.ToValue(rv))
 }
 
 func ottoMust(v otto.Value, err error) otto.Value {

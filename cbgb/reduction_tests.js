@@ -1,10 +1,3 @@
-// Helper function I wrote and can probably kill now.
-
-assert("basic sum", sum(1, 2, 3), 6);
-assert("empty sum", sum(), 0);
-assert("NaN sum", sum(1, NaN, 1), 2);
-assert("array sum", sum([1, 2, 3]), 6);
-
 //
 // _sum
 //
