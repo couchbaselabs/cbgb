@@ -10,6 +10,15 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+// Interface for things that interact with stats.
+type Statish interface {
+	GetStats() BucketStats
+
+	StartStats(d time.Duration)
+	StopStats()
+	StatAge() time.Duration
+}
+
 type statItem struct {
 	key, val string
 }
