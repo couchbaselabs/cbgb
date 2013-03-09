@@ -67,27 +67,36 @@ func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
 }
 
 func OttoFromGoArray(o *otto.Otto, arr []interface{}) (otto.Value, error) {
-	jarr, err := json.Marshal(arr)
-	if err != nil {
-		return otto.UndefinedValue(),
-			fmt.Errorf("could not jsonify arr, err: %v", err)
-	}
-	oarr, err := o.Object("({v:" + string(jarr) + "})")
+	ovarr, err := OttoFromGo(o, arr)
 	if err != nil {
 		return otto.UndefinedValue(),
 			fmt.Errorf("could not convert arr, err: %v", err)
 	}
-	ovarr, err := oarr.Get("v")
-	if err != nil {
-		return otto.UndefinedValue(),
-			fmt.Errorf("could not convert oarr, err: %v", err)
-	}
 	if ovarr.Class() != "Array" {
 		return otto.UndefinedValue(),
-			fmt.Errorf("expected ovarr to be array, got: %#v, %v, jarr: %v",
-				ovarr, ovarr.Class(), string(jarr))
+			fmt.Errorf("expected ovarr to be array, got: %#v, class: %v, arr: %v",
+				ovarr, ovarr.Class(), arr)
 	}
 	return ovarr, nil
+}
+
+func OttoFromGo(o *otto.Otto, v interface{}) (otto.Value, error) {
+	jv, err := json.Marshal(v)
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not jsonify v, err: %v", err)
+	}
+	obj, err := o.Object("({v:" + string(jv) + "})")
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not convert jv, err: %v", err)
+	}
+	objv, err := obj.Get("v")
+	if err != nil {
+		return otto.UndefinedValue(),
+			fmt.Errorf("could not convert obj, err: %v", err)
+	}
+	return objv, nil
 }
 
 func OttoNewFunction(o *otto.Otto, f string) (otto.Value, error) {

@@ -155,12 +155,42 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "view map function missing", 400)
 		return
 	}
-	mf, err := walrus.NewJSMapFunction(view.Map)
+
+	o := otto.New()
+	fnv, err := OttoNewFunction(o, view.Map)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
 		return
 	}
-	defer mf.Stop()
+
+	var emits []*cbgb.ViewRow
+	var emitErr error
+
+	o.Set("emit", func(call otto.FunctionCall) otto.Value {
+		var key, value interface{}
+		var err error
+
+		if len(call.ArgumentList) <= 0 {
+			emitErr = fmt.Errorf("emit() invoked with no parameters")
+			return otto.UndefinedValue()
+		}
+		key, err = OttoToGo(call.ArgumentList[0])
+		if err != nil {
+			emitErr = err
+			return otto.UndefinedValue()
+		}
+
+		if len(call.ArgumentList) >= 2 {
+			value, err = OttoToGo(call.ArgumentList[1])
+			if err != nil {
+				emitErr = err
+				return otto.UndefinedValue()
+			}
+		}
+
+		emits = append(emits, &cbgb.ViewRow{Key: key, Value: value})
+		return otto.UndefinedValue()
+	})
 
 	vr := &cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
 	for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
@@ -168,19 +198,29 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		if vb != nil {
 			var errVisit error
 			err = vb.Visit(nil, func(key []byte, data []byte) bool {
-				docId := string(key)
-				var emits []walrus.ViewRow
-				emits, errVisit = mf.CallFunction(string(data), docId)
+				var doc interface{}
+				errVisit = json.Unmarshal(data, &doc)
 				if errVisit != nil {
 					return false
 				}
-				for _, emit := range emits {
-					vr.Rows = append(vr.Rows, &cbgb.ViewRow{
-						Id:    docId,
-						Key:   emit.Key,
-						Value: emit.Value,
-					})
+
+				odoc, errVisit := OttoFromGo(o, doc)
+				if errVisit != nil {
+					return false
 				}
+
+				emits = make([]*cbgb.ViewRow, 0)
+				_, errVisit = fnv.Call(fnv, odoc)
+				if errVisit != nil {
+					return false
+				}
+
+				docId := string(key)
+				for _, emit := range emits {
+					emit.Id = docId
+				}
+
+				vr.Rows = append(vr.Rows, emits...)
 				return true
 			})
 			if err != nil {
