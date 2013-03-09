@@ -57,9 +57,9 @@ func (rows ViewRows) Less(i, j int) bool {
 type ViewParams struct {
 	Key           interface{} `json:"key"`
 	Keys          string      `json:"keys"` // TODO: should be []interface{}.
-	StartKey      interface{} `json:"startkey"`
+	StartKey      interface{} `json:"startkey" alias:"start_key"`
 	StartKeyDocId string      `json:"startkey_docid"`
-	EndKey        interface{} `json:"endkey"`
+	EndKey        interface{} `json:"endkey" alias:"end_key"`
 	EndKeyDocId   string      `json:"endkey_docid"`
 	Stale         string      `json:"stale"`
 	Descending    bool        `json:"descending"`
@@ -80,12 +80,17 @@ func NewViewParams() *ViewParams {
 	}
 }
 
-func paramFieldName(sf reflect.StructField) string {
+func paramFieldNames(sf reflect.StructField) []string {
 	fieldName := sf.Tag.Get("json")
 	if fieldName == "" {
 		fieldName = sf.Name
 	}
-	return fieldName
+	rv := []string{fieldName}
+	alias := sf.Tag.Get("alias")
+	if alias != "" {
+		rv = append(rv, strings.Split(alias, ",")...)
+	}
+	return rv
 }
 
 func ParseViewParams(params Form) (p *ViewParams, err error) {
@@ -98,8 +103,13 @@ func ParseViewParams(params Form) (p *ViewParams, err error) {
 
 	for i := 0; i < val.NumField(); i++ {
 		sf := val.Type().Field(i)
-		paramName := paramFieldName(sf)
-		paramVal := params.FormValue(paramName)
+		var paramVal string
+		for _, n := range paramFieldNames(sf) {
+			paramVal = params.FormValue(n)
+			if paramVal != "" {
+				break
+			}
+		}
 
 		switch {
 		case paramVal == "":

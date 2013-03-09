@@ -60,7 +60,7 @@ func TestParseViewParams(t *testing.T) {
 			"keys":           "1,2,3",
 			"startkey":       `"AA"`,
 			"startkey_docid": "AADD",
-			"endkey":         `"ZZ"`,
+			"end_key":        `"ZZ"`,
 			"endkey_docid":   "ZZDD",
 			"stale":          "ok",
 			"descending":     "true",
