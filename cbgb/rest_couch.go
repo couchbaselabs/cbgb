@@ -351,6 +351,14 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	return result, nil
 }
 
+var internalReductions = map[string]string{
+	"_count": `function(keys, values, rereduce) {
+if (rereduce) { return sum(values); } else { return values.length; }
+}
+`,
+	"_sum": `function(keys, values, rereduce) { return sum(values);}`,
+}
+
 func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
 	groupLevel := 0
@@ -359,6 +367,10 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	}
 	if p.GroupLevel > 0 {
 		groupLevel = int(p.GroupLevel)
+	}
+
+	if rf, ok := internalReductions[reduceFunction]; ok {
+		reduceFunction = rf
 	}
 
 	o := otto.New()
