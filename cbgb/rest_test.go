@@ -222,6 +222,41 @@ func TestCouchDbGet(t *testing.T) {
 
 }
 
+func TestCouchDbRevsDiff(t *testing.T) {
+	d, _, _ := testSetupDefaultBucket(t, 1024, uint16(528))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	revsDiffRequest := map[string]interface{}{
+		"doca": "1-0000dac6571554820000000000000000",
+	}
+
+	revsDiffRequestJSON, err := json.Marshal(revsDiffRequest)
+	if err != nil {
+		t.Errorf("Error marshaling JSON: %v", err)
+	}
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("POST", "http://127.0.0.1/default%2f528/_revs_diff", bytes.NewReader(revsDiffRequestJSON))
+	// manually set the RequestURI (not populated in test env)
+	r.RequestURI = "/default%2f528/_revs_diff"
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	actualRevsDiffResponse := map[string]interface{}{}
+	err = json.Unmarshal(rr.Body.Bytes(), &actualRevsDiffResponse)
+	missingMap, ok := actualRevsDiffResponse["doca"]
+	if !ok {
+		t.Errorf("expected response to contain doca, got: %#v", actualRevsDiffResponse)
+	} else {
+		if missingMap.(map[string]interface{})["missing"] != "1-0000dac6571554820000000000000000" {
+			t.Errorf("expected missing revision to be 1-0000dac6571554820000000000000000, got: %v", missingMap.(map[string]interface{})["missing"])
+		}
+	}
+}
+
 func TestCouchPutDDoc(t *testing.T) {
 	testCouchPutDDoc(t, 1)
 	testCouchPutDDoc(t, cbgb.MAX_VBUCKETS)

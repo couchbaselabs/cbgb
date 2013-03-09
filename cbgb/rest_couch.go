@@ -71,6 +71,10 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket).MatcherFunc(includesBucketUUID)
 	dbr.Handle("/{vbucket}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket)
+	dbr.Handle("/{vbucket};{bucketUUID}/_revs_diff",
+		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").MatcherFunc(referencesVBucket).MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/_revs_diff",
+		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").MatcherFunc(referencesVBucket)
 
 	return dbr
 }
@@ -133,6 +137,24 @@ func couchDbGetDb(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
 		"db_name": bucketName,
 	})
+}
+
+// TODO this implementation does no conflict resolution
+// only suitable for one way replications
+func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
+	revsDiffRequest := map[string]interface{}{}
+	d := json.NewDecoder(r.Body)
+	err := d.Decode(&revsDiffRequest)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to parse _revs_diff body as JSON: %v", err), 500)
+		return
+	}
+
+	revsDiffResponse := map[string]interface{}{}
+	for key, val := range revsDiffRequest {
+		revsDiffResponse[key] = map[string]interface{}{"missing": val}
+	}
+	jsonEncode(w, revsDiffResponse)
 }
 
 func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
