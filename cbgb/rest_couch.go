@@ -15,7 +15,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"sort"
 
@@ -353,31 +352,6 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	return result, nil
 }
 
-var internalReductions = map[string]string{
-	"_count": `function(keys, values, rereduce) {
-if (rereduce) { return sum(values); } else { return values.length; }
-}
-`,
-	"_sum": `function(keys, values, rereduce) { return sum(values);}`,
-}
-
-func javascriptSum(call otto.FunctionCall) otto.Value {
-	rv := float64(0)
-	for _, a := range call.ArgumentList {
-		f, err := a.ToFloat()
-		if err == nil &&
-			!(math.IsNaN(f) || math.IsInf(f, 1) || math.IsInf(f, -1)) {
-
-			rv += f
-		}
-	}
-	r, err := otto.ToValue(rv)
-	if err != nil {
-		panic(err)
-	}
-	return r
-}
-
 func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
 	groupLevel := 0
@@ -388,15 +362,7 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		groupLevel = int(p.GroupLevel)
 	}
 
-	if rf, ok := internalReductions[reduceFunction]; ok {
-		reduceFunction = rf
-	}
-
-	o := otto.New()
-	err := o.Set("sum", javascriptSum)
-	if err != nil {
-		return result, err
-	}
+	o := newReducer()
 	fnv, err := OttoNewFunction(o, reduceFunction)
 	if err != nil {
 		return result, err
