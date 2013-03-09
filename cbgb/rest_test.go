@@ -161,8 +161,8 @@ func testCouchPutDDoc(t *testing.T, numPartitions int) {
 		"http://127.0.0.1/default/_design/d0",
 		bytes.NewBuffer([]byte(d0)))
 	mr.ServeHTTP(rr, r)
-	if rr.Code != 200 {
-		t.Errorf("expected req to 200, got: %#v, %v",
+	if rr.Code != 201 {
+		t.Errorf("expected req to 201, got: %#v, %v",
 			rr, rr.Body.String())
 	}
 }
