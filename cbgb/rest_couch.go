@@ -15,6 +15,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"sort"
 
@@ -364,7 +365,9 @@ func javascriptSum(call otto.FunctionCall) otto.Value {
 	rv := float64(0)
 	for _, a := range call.ArgumentList {
 		f, err := a.ToFloat()
-		if err == nil {
+		if err == nil &&
+			!(math.IsNaN(f) || math.IsInf(f, 1) || math.IsInf(f, -1)) {
+
 			rv += f
 		}
 	}
