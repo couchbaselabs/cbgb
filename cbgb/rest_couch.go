@@ -261,6 +261,8 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		if vb != nil {
 			var errVisit error
 			err = vb.Visit(nil, func(key []byte, data []byte) bool {
+				docId := string(key)
+
 				var doc interface{}
 				errVisit = json.Unmarshal(data, &doc)
 				if errVisit != nil {
@@ -272,12 +274,19 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					return false
 				}
 
-				_, errVisit = fnv.Call(fnv, odoc)
+				meta := map[string]interface{}{
+					"id": docId,
+				}
+				ometa, err := OttoFromGo(o, meta)
+				if err != nil {
+					return false
+				}
+
+				_, errVisit = fnv.Call(fnv, odoc, ometa)
 				if errVisit != nil {
 					return false
 				}
 
-				docId := string(key)
 				for _, emit := range emits {
 					emit.Id = docId
 				}
