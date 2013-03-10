@@ -96,5 +96,4 @@ func createNewUUID() string {
 	val2 := rand.Int63()
 	uuid := fmt.Sprintf("%x%x", val1, val2)
 	return uuid
-
 }
