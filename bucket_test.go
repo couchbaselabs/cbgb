@@ -366,7 +366,10 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if bss == nil {
 		t.Errorf("Expected stats.bucketStore to be non-nil")
 	}
-	bssInitial := &BucketStoreStats{Stats: STORES_PER_BUCKET}
+	bssInitial := &BucketStoreStats{
+		Stats:      STORES_PER_BUCKET,
+		NodeAllocs: 2,
+	}
 	if !bss.Equal(bssInitial) {
 		t.Errorf("Expected GetLastBucketStoreStats() to be %#v, got: %#v",
 			bssInitial, bss)
@@ -394,9 +397,13 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if bss == nil {
 		t.Errorf("Expected bucket store stats to be non-nil")
 	}
-	if !bss.Equal(bssInitial) {
+	bssNext := &BucketStoreStats{
+		Stats:      STORES_PER_BUCKET,
+		NodeAllocs: 19,
+	}
+	if !bss.Equal(bssNext) {
 		t.Errorf("Expected bucket store stats to be %#v, got: %#v",
-			bssInitial, bss)
+			bssNext, bss)
 	}
 
 	as := s.Agg

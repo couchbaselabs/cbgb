@@ -53,6 +53,9 @@ type BucketStoreStats struct {
 
 	ReadBytes  int64 `json:"readBytes"`
 	WriteBytes int64 `json:"writeBytes"`
+
+	FileSize   int64 `json:"fileSize"`
+	NodeAllocs int64 `json:"nodeAllocs"`
 }
 
 func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err error) {
@@ -120,6 +123,15 @@ func (s *bucketstore) Close() {
 func (s *bucketstore) Stats() *BucketStoreStats {
 	bss := &BucketStoreStats{}
 	bss.Add(s.stats)
+
+	m := map[string]uint64{}
+	s.BSF().store.Stats(m)
+	if v, ok := m["fileSize"]; ok {
+		bss.FileSize += int64(v)
+	}
+	if v, ok := m["nodeAllocs"]; ok {
+		bss.NodeAllocs += int64(v)
+	}
 	return bss
 }
 
@@ -316,6 +328,8 @@ func (bss *BucketStoreStats) Op(in *BucketStoreStats, op func(int64, int64) int6
 	bss.CompactErrors = op(bss.CompactErrors, atomic.LoadInt64(&in.CompactErrors))
 	bss.ReadBytes = op(bss.ReadBytes, atomic.LoadInt64(&in.ReadBytes))
 	bss.WriteBytes = op(bss.WriteBytes, atomic.LoadInt64(&in.WriteBytes))
+	bss.FileSize = op(bss.FileSize, atomic.LoadInt64(&in.FileSize))
+	bss.NodeAllocs = op(bss.NodeAllocs, atomic.LoadInt64(&in.NodeAllocs))
 }
 
 func (bss *BucketStoreStats) Aggregate(in Aggregatable) {
@@ -337,7 +351,9 @@ func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
 		bss.StatErrors == atomic.LoadInt64(&in.StatErrors) &&
 		bss.CompactErrors == atomic.LoadInt64(&in.CompactErrors) &&
 		bss.ReadBytes == atomic.LoadInt64(&in.ReadBytes) &&
-		bss.WriteBytes == atomic.LoadInt64(&in.WriteBytes)
+		bss.WriteBytes == atomic.LoadInt64(&in.WriteBytes) &&
+		bss.FileSize == atomic.LoadInt64(&in.FileSize) &&
+		bss.NodeAllocs == atomic.LoadInt64(&in.NodeAllocs)
 }
 
 // Find the highest version-numbered store files in a bucket directory.
