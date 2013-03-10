@@ -302,7 +302,7 @@ class EngineTestAppDriver(Driver):
             files = self.writer.files
 
     def testName(self, seq):
-        return ''.join(a.name for a in seq)
+        return ' -> '.join(a.name for a in seq)
 
     def shouldRunSequence(self, seq):
         # Skip any sequence that leads to known failures
