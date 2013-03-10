@@ -193,6 +193,9 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 			if cmd == gomemcached.INCREMENT {
 				aval += amount
 			} else {
+				if amount > aval {
+					amount = aval
+				}
 				aval -= amount
 			}
 		} else {

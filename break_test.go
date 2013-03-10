@@ -73,7 +73,6 @@ func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
 //   deleteUsingCAS
 //   append
 //   prepend
-//   decr
 //   appendUsingCAS
 //   prependUsingCAS
 //   incrWithDefault
@@ -105,6 +104,9 @@ var opMap = map[string]op{
 	},
 	"incr": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.INCREMENT)
+	},
+	"decr": func(v *vbucket, memo interface{}) (interface{}, error) {
+		return nil, shortTestDispatch(v, gomemcached.DECREMENT)
 	},
 	"get": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.GET)
