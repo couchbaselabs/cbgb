@@ -37,6 +37,26 @@ type testDef map[string][]testItem
 
 type op func(b *vbucket, memo interface{}) (interface{}, error)
 
+func dispatchCounter(v *vbucket, initial uint64,
+	cmd gomemcached.CommandCode) error {
+
+	req := &gomemcached.MCRequest{
+		Opcode: cmd,
+		Key:    []byte(testKey),
+		Extras: make([]byte, 20),
+		Body:   []byte{'0'},
+	}
+	binary.BigEndian.PutUint64(req.Extras, 1)
+	binary.BigEndian.PutUint64(req.Extras[8:], initial)
+	res := v.Dispatch(ioutil.Discard, req)
+	var err error
+	if res.Status != 0 {
+		err = res
+	}
+	return err
+
+}
+
 func dispatchTestCommand(v *vbucket, cas uint64,
 	cmd gomemcached.CommandCode) (*gomemcached.MCResponse, error) {
 
@@ -50,10 +70,6 @@ func dispatchTestCommand(v *vbucket, cas uint64,
 	case gomemcached.ADD, gomemcached.SET:
 		req.Extras = make([]byte, 8)
 		binary.BigEndian.PutUint64(req.Extras, uint64(0)<<32|uint64(expTime))
-	case gomemcached.INCREMENT, gomemcached.DECREMENT:
-		req.Extras = make([]byte, 20)
-		binary.BigEndian.PutUint64(req.Extras, 1)
-		binary.BigEndian.PutUint64(req.Extras[8:], ^uint64(0))
 	}
 	res := v.Dispatch(ioutil.Discard, req)
 	var err error
@@ -75,8 +91,6 @@ func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
 //   prepend
 //   appendUsingCAS
 //   prependUsingCAS
-//   incrWithDefault
-//   decrWithDefault
 var opMap = map[string]op{
 	"add": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.ADD)
@@ -103,10 +117,16 @@ var opMap = map[string]op{
 		return 0, err
 	},
 	"incr": func(v *vbucket, memo interface{}) (interface{}, error) {
-		return nil, shortTestDispatch(v, gomemcached.INCREMENT)
+		return nil, dispatchCounter(v, ^uint64(0), gomemcached.INCREMENT)
+	},
+	"incrWithDefault": func(v *vbucket, memo interface{}) (interface{}, error) {
+		return nil, dispatchCounter(v, 0, gomemcached.INCREMENT)
 	},
 	"decr": func(v *vbucket, memo interface{}) (interface{}, error) {
-		return nil, shortTestDispatch(v, gomemcached.DECREMENT)
+		return nil, dispatchCounter(v, ^uint64(0), gomemcached.DECREMENT)
+	},
+	"decrWithDefault": func(v *vbucket, memo interface{}) (interface{}, error) {
+		return nil, dispatchCounter(v, 0, gomemcached.DECREMENT)
 	},
 	"get": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.GET)
