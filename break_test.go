@@ -50,6 +50,10 @@ func dispatchTestCommand(v *vbucket, cas uint64,
 	case gomemcached.ADD, gomemcached.SET:
 		req.Extras = make([]byte, 8)
 		binary.BigEndian.PutUint64(req.Extras, uint64(0)<<32|uint64(expTime))
+	case gomemcached.INCREMENT, gomemcached.DECREMENT:
+		req.Extras = make([]byte, 20)
+		binary.BigEndian.PutUint64(req.Extras, 1)
+		binary.BigEndian.PutUint64(req.Extras[8:], ^uint64(0))
 	}
 	res := v.Dispatch(ioutil.Discard, req)
 	var err error
@@ -69,10 +73,9 @@ func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
 //   deleteUsingCAS
 //   append
 //   prepend
+//   decr
 //   appendUsingCAS
 //   prependUsingCAS
-//   incr
-//   decr
 //   incrWithDefault
 //   decrWithDefault
 var opMap = map[string]op{
@@ -99,6 +102,9 @@ var opMap = map[string]op{
 			return nil, err
 		}
 		return 0, err
+	},
+	"incr": func(v *vbucket, memo interface{}) (interface{}, error) {
+		return nil, shortTestDispatch(v, gomemcached.INCREMENT)
 	},
 	"get": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.GET)

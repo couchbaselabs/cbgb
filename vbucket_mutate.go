@@ -196,6 +196,11 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 				aval -= amount
 			}
 		} else {
+			if initial == (^uint64(0)) {
+				return &gomemcached.MCResponse{
+					Status: gomemcached.KEY_ENOENT,
+				}, nil, 0, ignore
+			}
 			aval = initial
 		}
 		itemNew.data = []byte(strconv.FormatUint(aval, 10))
