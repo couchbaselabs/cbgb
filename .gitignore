@@ -1,9 +1,11 @@
 #*
 *.pprof
+*.pyc
 *.test
 *~
 .#*
+/generated_suite_test.json
+/tools/createbuckets/createbuckets
 _*
 cbgb/cbgb
 tmp
-/tools/createbuckets/createbuckets

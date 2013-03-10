@@ -2,6 +2,7 @@ language: go
 
 script:
   - go get github.com/dustin/go-jsonpointer
+  - ./gen_ops_tests.py
   - go test -v ./...
   - go vet ./...
 

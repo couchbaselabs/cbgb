@@ -117,7 +117,6 @@ func (b *Buckets) New(name string,
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("allocating bucket: %v, settings: %+v", name, settings)
 
 	if rv, err = NewBucket(bdir, settings); err != nil {
 		return nil, err
