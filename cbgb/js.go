@@ -96,17 +96,20 @@ func OttoNewFunction(o *otto.Otto, f string) (otto.Value, error) {
 	return fnv, nil
 }
 
-func arrayPrefix(arrayMaybe interface{}, prefixLen int) []interface{} {
+func arrayPrefix(arrayMaybe interface{}, prefixLen int) interface{} {
 	if prefixLen <= 0 {
 		return nil
 	}
-	switch arrayMaybe.(type) {
+	switch x := arrayMaybe.(type) {
 	case []interface{}:
-		array := arrayMaybe.([]interface{})
-		if prefixLen > len(array) {
-			prefixLen = len(array)
+		if prefixLen > len(x) {
+			prefixLen = len(x)
 		}
-		return array[0:prefixLen]
+		return x[0:prefixLen]
+	case string:
+		if prefixLen == 1 {
+			return x
+		}
 	default:
 	}
 	return nil
