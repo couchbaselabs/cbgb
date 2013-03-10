@@ -80,7 +80,7 @@ func TestBasicOps(t *testing.T) {
 
 	expStats := Stats{
 		Items:              1,
-		Ops:                uint64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
+		Ops:                int64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
 		Gets:               6,
 		GetMisses:          3,
 		Mutations:          2,
@@ -1139,7 +1139,7 @@ func TestMinMaxRange(t *testing.T) {
 		}
 	}
 
-	if vb.stats.NotMyRangeErrors != uint64(7) {
+	if vb.stats.NotMyRangeErrors != 7 {
 		t.Errorf("Expected stats NotMyRangeErrors %v, got %v",
 			uint64(7), vb.stats.NotMyRangeErrors)
 	}
@@ -1225,19 +1225,19 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 			1, vb.stats.RGets)
 	}
 
-	if vb.stats.RGetResults != uint64(len(results)) {
+	if vb.stats.RGetResults != int64(len(results)) {
 		t.Errorf("Expected stats results %v, got %v",
-			uint64(len(results)), vb.stats.RGetResults)
+			len(results), vb.stats.RGetResults)
 	}
 
-	if vb.stats.IncomingValueBytes != uint64(numItems) {
+	if vb.stats.IncomingValueBytes != int64(numItems) {
 		t.Errorf("Expected stats results incoming bytes %v, got %v",
 			uint64(numItems), vb.stats.IncomingValueBytes)
 	}
 
-	if vb.stats.OutgoingValueBytes != uint64(len(results)) {
+	if vb.stats.OutgoingValueBytes != int64(len(results)) {
 		t.Errorf("Expected stats results outgoing bytes %v, got %v",
-			uint64(len(results)), vb.stats.OutgoingValueBytes)
+			len(results), vb.stats.OutgoingValueBytes)
 	}
 }
 
@@ -1476,7 +1476,7 @@ func TestMutationOps(t *testing.T) {
 
 	expStats := Stats{
 		Items:              0,
-		Ops:                uint64(len(tests)),
+		Ops:                int64(len(tests)),
 		Gets:               9,
 		GetMisses:          1,
 		Mutations:          11,
@@ -1611,7 +1611,7 @@ func TestArithOps(t *testing.T) {
 
 	expStats := Stats{
 		Items:              1,
-		Ops:                uint64(len(tests)),
+		Ops:                int64(len(tests)),
 		Gets:               4,
 		GetMisses:          0,
 		Mutations:          6,

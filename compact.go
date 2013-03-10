@@ -24,11 +24,11 @@ func (s *bucketstore) Compact() error {
 
 	compactPath := bsf.path + ".compact"
 	if err := s.compactGo(bsf, compactPath); err != nil {
-		atomic.AddUint64(&s.stats.CompactErrors, 1)
+		atomic.AddInt64(&s.stats.CompactErrors, 1)
 		return err
 	}
 
-	atomic.AddUint64(&s.stats.Compacts, 1)
+	atomic.AddInt64(&s.stats.Compacts, 1)
 	return nil
 }
 

@@ -14,7 +14,7 @@ import (
 
 func vbMutate(v *vbucket, w io.Writer,
 	req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	atomic.AddUint64(&v.stats.Mutations, 1)
+	atomic.AddInt64(&v.stats.Mutations, 1)
 
 	cmd := updateMutationStats(req.Opcode, &v.stats)
 
@@ -103,16 +103,16 @@ func vbMutate(v *vbucket, w io.Writer,
 
 	if err != nil {
 		if err != ignore {
-			atomic.AddUint64(&v.stats.StoreErrors, 1)
+			atomic.AddInt64(&v.stats.StoreErrors, 1)
 		}
 	} else {
 		if itemOld != nil {
-			atomic.AddUint64(&v.stats.Updates, 1)
+			atomic.AddInt64(&v.stats.Updates, 1)
 		} else {
-			atomic.AddUint64(&v.stats.Creates, 1)
+			atomic.AddInt64(&v.stats.Creates, 1)
 			atomic.AddInt64(&v.stats.Items, 1)
 		}
-		atomic.AddUint64(&v.stats.IncomingValueBytes, uint64(len(req.Body)))
+		atomic.AddInt64(&v.stats.IncomingValueBytes, int64(len(req.Body)))
 		atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
 		atomic.AddInt64(v.bucketItemBytes, deltaItemBytes)
 	}
@@ -224,7 +224,7 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	}
 
 	if itemNew.exp != 0 {
-		expirable := atomic.AddUint64(&v.stats.Expirable, 1)
+		expirable := atomic.AddInt64(&v.stats.Expirable, 1)
 		if expirable == 1 {
 			expirerPeriod.Register(v.available, v.mkVBucketSweeper())
 		}
@@ -234,7 +234,7 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 }
 
 func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	atomic.AddUint64(&v.stats.Deletes, 1)
+	atomic.AddInt64(&v.stats.Deletes, 1)
 
 	res = v.checkRange(req)
 	if res != nil {
@@ -287,7 +287,7 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	})
 
 	if err != nil {
-		atomic.AddUint64(&v.stats.StoreErrors, 1)
+		atomic.AddInt64(&v.stats.StoreErrors, 1)
 	} else if prevItem != nil {
 		atomic.AddInt64(&v.stats.Items, -1)
 		atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
@@ -310,7 +310,7 @@ func (v *vbucket) mkVBucketSweeper() func(time.Time) bool {
 func (v *vbucket) expScan() bool {
 	now := time.Now()
 	// expired := atomic.LoadUint64(&v.stats.Expirable)
-	var cleaned uint64
+	var cleaned int64
 	err := v.ps.visitItems(casBytes(0), false, func(i *item) bool {
 		if i.isExpired(now) {
 			err := v.expire(i.key, now)
@@ -321,8 +321,8 @@ func (v *vbucket) expScan() bool {
 		}
 		return true
 	})
-	// XXX:  And this is why you don't use uint64
-	remaining := atomic.AddUint64(&v.stats.Expirable, uint64(0-cleaned))
+
+	remaining := atomic.AddInt64(&v.stats.Expirable, -cleaned)
 	log.Printf("Scan complete, cleaned up %v items with %v, %v remaining",
 		cleaned, err, remaining)
 	return remaining > 0

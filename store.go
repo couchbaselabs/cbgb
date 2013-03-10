@@ -38,21 +38,21 @@ type bucketstore struct {
 type BucketStoreStats struct {
 	Time int64 `json:"time"`
 
-	Flushes       uint64 `json:"flushes"`
-	Reads         uint64 `json:"reads"`
-	Writes        uint64 `json:"writes"`
-	Stats         uint64 `json:"stats"`
-	Compacts      uint64 `json:"compacts"`
-	LastCompactAt uint64 `json:"lastCompactAt"`
+	Flushes       int64 `json:"flushes"`
+	Reads         int64 `json:"reads"`
+	Writes        int64 `json:"writes"`
+	Stats         int64 `json:"stats"`
+	Compacts      int64 `json:"compacts"`
+	LastCompactAt int64 `json:"lastCompactAt"`
 
-	FlushErrors   uint64 `json:"flushErrors"`
-	ReadErrors    uint64 `json:"readErrors"`
-	WriteErrors   uint64 `json:"writeErrors"`
-	StatErrors    uint64 `json:"statErrors"`
-	CompactErrors uint64 `json:"compactErrors"`
+	FlushErrors   int64 `json:"flushErrors"`
+	ReadErrors    int64 `json:"readErrors"`
+	WriteErrors   int64 `json:"writeErrors"`
+	StatErrors    int64 `json:"statErrors"`
+	CompactErrors int64 `json:"compactErrors"`
 
-	ReadBytes  uint64 `json:"readBytes"`
-	WriteBytes uint64 `json:"writeBytes"`
+	ReadBytes  int64 `json:"readBytes"`
+	WriteBytes int64 `json:"writeBytes"`
 }
 
 func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err error) {
@@ -136,11 +136,11 @@ func (s *bucketstore) flush_unlocked() (int64, error) {
 	bsf := s.BSF()
 	if bsf.file != nil {
 		if err := bsf.store.Flush(); err != nil {
-			atomic.AddUint64(&s.stats.FlushErrors, 1)
+			atomic.AddInt64(&s.stats.FlushErrors, 1)
 			return atomic.LoadInt64(&s.dirtiness), err
 		}
 	} // else, we're in memory-only mode.
-	atomic.AddUint64(&s.stats.Flushes, 1)
+	atomic.AddInt64(&s.stats.Flushes, 1)
 	return atomic.AddInt64(&s.dirtiness, -d), nil
 }
 
@@ -257,12 +257,12 @@ func (bsf *bucketstorefile) apply(fun func()) {
 
 func (bsf *bucketstorefile) ReadAt(p []byte, off int64) (n int, err error) {
 	bsf.apply(func() {
-		atomic.AddUint64(&bsf.stats.Reads, 1)
+		atomic.AddInt64(&bsf.stats.Reads, 1)
 		n, err = bsf.file.ReadAt(p, off)
 		if err != nil {
-			atomic.AddUint64(&bsf.stats.ReadErrors, 1)
+			atomic.AddInt64(&bsf.stats.ReadErrors, 1)
 		}
-		atomic.AddUint64(&bsf.stats.ReadBytes, uint64(n))
+		atomic.AddInt64(&bsf.stats.ReadBytes, int64(n))
 	})
 	return n, err
 }
@@ -274,48 +274,48 @@ func (bsf *bucketstorefile) WriteAt(p []byte, off int64) (n int, err error) {
 				bsf.path)
 			return
 		}
-		atomic.AddUint64(&bsf.stats.Writes, 1)
+		atomic.AddInt64(&bsf.stats.Writes, 1)
 		n, err = bsf.file.WriteAt(p, off)
 		if err != nil {
-			atomic.AddUint64(&bsf.stats.WriteErrors, 1)
+			atomic.AddInt64(&bsf.stats.WriteErrors, 1)
 		}
-		atomic.AddUint64(&bsf.stats.WriteBytes, uint64(n))
+		atomic.AddInt64(&bsf.stats.WriteBytes, int64(n))
 	})
 	return n, err
 }
 
 func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 	bsf.apply(func() {
-		atomic.AddUint64(&bsf.stats.Stats, 1)
+		atomic.AddInt64(&bsf.stats.Stats, 1)
 		fi, err = bsf.file.Stat()
 		if err != nil {
-			atomic.AddUint64(&bsf.stats.StatErrors, 1)
+			atomic.AddInt64(&bsf.stats.StatErrors, 1)
 		}
 	})
 	return fi, err
 }
 
 func (bss *BucketStoreStats) Add(in *BucketStoreStats) {
-	bss.Op(in, addUint64)
+	bss.Op(in, addInt64)
 }
 
 func (bss *BucketStoreStats) Sub(in *BucketStoreStats) {
-	bss.Op(in, subUint64)
+	bss.Op(in, subInt64)
 }
 
-func (bss *BucketStoreStats) Op(in *BucketStoreStats, op func(uint64, uint64) uint64) {
-	bss.Flushes = op(bss.Flushes, atomic.LoadUint64(&in.Flushes))
-	bss.Reads = op(bss.Reads, atomic.LoadUint64(&in.Reads))
-	bss.Writes = op(bss.Writes, atomic.LoadUint64(&in.Writes))
-	bss.Stats = op(bss.Stats, atomic.LoadUint64(&in.Stats))
-	bss.Compacts = op(bss.Compacts, atomic.LoadUint64(&in.Compacts))
-	bss.FlushErrors = op(bss.FlushErrors, atomic.LoadUint64(&in.FlushErrors))
-	bss.ReadErrors = op(bss.ReadErrors, atomic.LoadUint64(&in.ReadErrors))
-	bss.WriteErrors = op(bss.WriteErrors, atomic.LoadUint64(&in.WriteErrors))
-	bss.StatErrors = op(bss.StatErrors, atomic.LoadUint64(&in.StatErrors))
-	bss.CompactErrors = op(bss.CompactErrors, atomic.LoadUint64(&in.CompactErrors))
-	bss.ReadBytes = op(bss.ReadBytes, atomic.LoadUint64(&in.ReadBytes))
-	bss.WriteBytes = op(bss.WriteBytes, atomic.LoadUint64(&in.WriteBytes))
+func (bss *BucketStoreStats) Op(in *BucketStoreStats, op func(int64, int64) int64) {
+	bss.Flushes = op(bss.Flushes, atomic.LoadInt64(&in.Flushes))
+	bss.Reads = op(bss.Reads, atomic.LoadInt64(&in.Reads))
+	bss.Writes = op(bss.Writes, atomic.LoadInt64(&in.Writes))
+	bss.Stats = op(bss.Stats, atomic.LoadInt64(&in.Stats))
+	bss.Compacts = op(bss.Compacts, atomic.LoadInt64(&in.Compacts))
+	bss.FlushErrors = op(bss.FlushErrors, atomic.LoadInt64(&in.FlushErrors))
+	bss.ReadErrors = op(bss.ReadErrors, atomic.LoadInt64(&in.ReadErrors))
+	bss.WriteErrors = op(bss.WriteErrors, atomic.LoadInt64(&in.WriteErrors))
+	bss.StatErrors = op(bss.StatErrors, atomic.LoadInt64(&in.StatErrors))
+	bss.CompactErrors = op(bss.CompactErrors, atomic.LoadInt64(&in.CompactErrors))
+	bss.ReadBytes = op(bss.ReadBytes, atomic.LoadInt64(&in.ReadBytes))
+	bss.WriteBytes = op(bss.WriteBytes, atomic.LoadInt64(&in.WriteBytes))
 }
 
 func (bss *BucketStoreStats) Aggregate(in Aggregatable) {
@@ -326,18 +326,18 @@ func (bss *BucketStoreStats) Aggregate(in Aggregatable) {
 }
 
 func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
-	return bss.Flushes == atomic.LoadUint64(&in.Flushes) &&
-		bss.Reads == atomic.LoadUint64(&in.Reads) &&
-		bss.Writes == atomic.LoadUint64(&in.Writes) &&
-		bss.Stats == atomic.LoadUint64(&in.Stats) &&
-		bss.Compacts == atomic.LoadUint64(&in.Compacts) &&
-		bss.FlushErrors == atomic.LoadUint64(&in.FlushErrors) &&
-		bss.ReadErrors == atomic.LoadUint64(&in.ReadErrors) &&
-		bss.WriteErrors == atomic.LoadUint64(&in.WriteErrors) &&
-		bss.StatErrors == atomic.LoadUint64(&in.StatErrors) &&
-		bss.CompactErrors == atomic.LoadUint64(&in.CompactErrors) &&
-		bss.ReadBytes == atomic.LoadUint64(&in.ReadBytes) &&
-		bss.WriteBytes == atomic.LoadUint64(&in.WriteBytes)
+	return bss.Flushes == atomic.LoadInt64(&in.Flushes) &&
+		bss.Reads == atomic.LoadInt64(&in.Reads) &&
+		bss.Writes == atomic.LoadInt64(&in.Writes) &&
+		bss.Stats == atomic.LoadInt64(&in.Stats) &&
+		bss.Compacts == atomic.LoadInt64(&in.Compacts) &&
+		bss.FlushErrors == atomic.LoadInt64(&in.FlushErrors) &&
+		bss.ReadErrors == atomic.LoadInt64(&in.ReadErrors) &&
+		bss.WriteErrors == atomic.LoadInt64(&in.WriteErrors) &&
+		bss.StatErrors == atomic.LoadInt64(&in.StatErrors) &&
+		bss.CompactErrors == atomic.LoadInt64(&in.CompactErrors) &&
+		bss.ReadBytes == atomic.LoadInt64(&in.ReadBytes) &&
+		bss.WriteBytes == atomic.LoadInt64(&in.WriteBytes)
 }
 
 // Find the highest version-numbered store files in a bucket directory.

@@ -174,17 +174,17 @@ func TestBasicAggStats(t *testing.T) {
 	}
 
 	for i := 0; i < 59; i++ {
-		a.AddSample(&Stats{Ops: uint64(i)})
+		a.AddSample(&Stats{Ops: int64(i)})
 	}
-	if a.Counts[0] != uint64(59) {
+	if a.Counts[0] != 59 {
 		t.Errorf("Expected 59 level-0 samples, got %v",
 			a.Counts[0])
 	}
-	if a.Counts[1] != uint64(0) {
+	if a.Counts[1] != 0 {
 		t.Errorf("Expected 0 level-1 samples, got %v",
 			a.Counts[1])
 	}
-	if a.Counts[2] != uint64(0) {
+	if a.Counts[2] != 0 {
 		t.Errorf("Expected 0 level-2 samples, got %v",
 			a.Counts[2])
 	}
@@ -192,47 +192,47 @@ func TestBasicAggStats(t *testing.T) {
 	var s *Stats
 
 	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
-	if s.Ops != uint64(1711) {
+	if s.Ops != 1711 {
 		t.Errorf("Expected level[0] s.ops 1711, got %v",
 			s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
-	if s.Ops != uint64(0) {
+	if s.Ops != 0 {
 		t.Errorf("Expected level[1] s.ops 0, got %v",
 			s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
-	if s.Ops != uint64(0) {
+	if s.Ops != 0 {
 		t.Errorf("Expected level[2] s.ops 0, got %v",
 			s.Ops)
 	}
 
-	a.AddSample(&Stats{Ops: uint64(60)})
-	if a.Counts[0] != uint64(60) {
+	a.AddSample(&Stats{Ops: 60})
+	if a.Counts[0] != 60 {
 		t.Errorf("Expected 60 level-0 samples, got %v",
 			a.Counts[0])
 	}
-	if a.Counts[1] != uint64(1) {
+	if a.Counts[1] != 1 {
 		t.Errorf("Expected 1 level-1 samples, got %v",
 			a.Counts[1])
 	}
-	if a.Counts[2] != uint64(0) {
+	if a.Counts[2] != 0 {
 		t.Errorf("Expected 0 level-2 samples, got %v",
 			a.Counts[2])
 	}
 
 	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
-	if s.Ops != uint64(1771) {
+	if s.Ops != 1771 {
 		t.Errorf("Expected level[0] s.ops 1771, got %v",
 			s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
-	if s.Ops != uint64(1771) {
+	if s.Ops != 1771 {
 		t.Errorf("Expected level[1] s.ops 1771, got %v",
 			s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
-	if s.Ops != uint64(0) {
+	if s.Ops != 0 {
 		t.Errorf("Expected level[2] s.ops 0, got %v",
 			s.Ops)
 	}
@@ -246,7 +246,7 @@ func TestMultiDayAggStats(t *testing.T) {
 		t.Errorf("Expected NewAggStats() to work")
 	}
 
-	s := &Stats{Ops: uint64(10)}
+	s := &Stats{Ops: 10}
 	n := 60 * 60 * 24 * 10 // 10 days worth
 
 	for i := 0; i < n; i++ {
@@ -254,22 +254,22 @@ func TestMultiDayAggStats(t *testing.T) {
 	}
 
 	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
-	if s.Ops != uint64(60*10) {
+	if s.Ops != 60*10 {
 		t.Errorf("Expected level[0] s.ops %v, got %v",
 			60*10, s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
-	if s.Ops != uint64(60*60*10) {
+	if s.Ops != 60*60*10 {
 		t.Errorf("Expected level[1] s.ops %v, got %v",
 			60*60*10, s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
-	if s.Ops != uint64(24*60*60*10) {
+	if s.Ops != 24*60*60*10 {
 		t.Errorf("Expected level[2] s.ops %v, got %v",
 			24*60*60*10, s.Ops)
 	}
 	s = AggregateSamples(&Stats{}, a.Levels[3]).(*Stats)
-	if s.Ops != uint64(24*60*60*10) {
+	if s.Ops != 24*60*60*10 {
 		t.Errorf("Expected level[3] s.ops %v, got %v",
 			24*60*60*10, s.Ops)
 	}
@@ -283,7 +283,7 @@ func TestAggStatsSampleJSON(t *testing.T) {
 		t.Errorf("Expected NewAggStats() to work")
 	}
 
-	s := &Stats{Ops: uint64(10)}
+	s := &Stats{Ops: 10}
 	for i := 0; i < 5; i++ {
 		a.AddSample(s)
 	}
@@ -305,28 +305,28 @@ func TestAggStatsSampleJSON(t *testing.T) {
 
 func TestStatsSub(t *testing.T) {
 	s1 := &Stats{
-		Items:       int64(1),
-		Ops:         uint64(1),
-		Gets:        uint64(1),
-		GetMisses:   uint64(1),
-		Mutations:   uint64(1),
-		Sets:        uint64(1),
-		Adds:        uint64(1),
-		Replaces:    uint64(1),
-		Appends:     uint64(1),
-		Prepends:    uint64(1),
-		Deletes:     uint64(1),
-		Creates:     uint64(1),
-		Updates:     uint64(1),
-		RGets:       uint64(1),
-		RGetResults: uint64(1),
-		Unknowns:    uint64(1),
+		Items:       1,
+		Ops:         1,
+		Gets:        1,
+		GetMisses:   1,
+		Mutations:   1,
+		Sets:        1,
+		Adds:        1,
+		Replaces:    1,
+		Appends:     1,
+		Prepends:    1,
+		Deletes:     1,
+		Creates:     1,
+		Updates:     1,
+		RGets:       1,
+		RGetResults: 1,
+		Unknowns:    1,
 
-		IncomingValueBytes: uint64(1),
-		OutgoingValueBytes: uint64(1),
+		IncomingValueBytes: 1,
+		OutgoingValueBytes: 1,
 
-		StoreErrors:      uint64(1),
-		NotMyRangeErrors: uint64(1),
+		StoreErrors:      1,
+		NotMyRangeErrors: 1,
 	}
 
 	s2 := &Stats{}

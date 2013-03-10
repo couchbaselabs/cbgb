@@ -9,11 +9,11 @@ import (
 	"os"
 )
 
-func addUint64(x, y uint64) uint64 {
+func addInt64(x, y int64) int64 {
 	return x + y
 }
 
-func subUint64(x, y uint64) uint64 {
+func subInt64(x, y int64) int64 {
 	return x - y
 }
 
