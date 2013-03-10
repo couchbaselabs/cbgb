@@ -106,11 +106,10 @@ func arrayPrefix(arrayMaybe interface{}, prefixLen int) interface{} {
 			prefixLen = len(x)
 		}
 		return x[0:prefixLen]
-	case string:
-		if prefixLen == 1 {
-			return x
-		}
 	default:
+	}
+	if prefixLen == 1 {
+		return arrayMaybe
 	}
 	return nil
 }
