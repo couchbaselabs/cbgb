@@ -214,6 +214,11 @@ func testRunner(t *testing.T, buckets *Buckets,
 }
 
 func TestAllTheThings(t *testing.T) {
+
+	if testing.Short() {
+		return
+	}
+
 	os.RemoveAll(tmpdirName)
 	os.Mkdir(tmpdirName, 0777)
 	defer os.RemoveAll(tmpdirName)
