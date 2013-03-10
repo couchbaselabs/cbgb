@@ -44,6 +44,7 @@ func dispatchTestCommand(v *vbucket, cas uint64,
 		Opcode: cmd,
 		Key:    []byte(testKey),
 		Cas:    cas,
+		Body:   []byte{'0'},
 	}
 	switch cmd {
 	case gomemcached.ADD, gomemcached.SET:
@@ -133,6 +134,19 @@ func runTest(t *testing.T, buckets *Buckets, name string, items []testItem) {
 			t.Errorf("Unexpected error state in %v on op %v: %+v: %v",
 				name, n, i, err)
 			return
+		}
+		res := vb.get([]byte(testKey))
+		switch {
+		case i.Val == nil && res.Status == 0:
+			t.Errorf("Expected missing value after op %i in %v, got %s",
+				n, name, res.Body)
+			return
+		case i.Val != nil && res.Status == 0:
+			if *i.Val != string(res.Body) {
+				t.Errorf("Expected body=%v after op %i in %v, got %s",
+					n, name, res.Body)
+				return
+			}
 		}
 	}
 
