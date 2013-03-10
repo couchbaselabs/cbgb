@@ -149,13 +149,13 @@ func runTest(t *testing.T, buckets *Buckets, name string, items []testItem) {
 		res := vb.get([]byte(testKey))
 		switch {
 		case i.Val == nil && res.Status == 0:
-			t.Errorf("Expected missing value after op %i in %v, got %s",
+			t.Errorf("Expected missing value after op %v in %v, got %s",
 				n, name, res.Body)
 			return
 		case i.Val != nil && res.Status == 0:
 			if *i.Val != string(res.Body) {
-				t.Errorf("Expected body=%v after op %i in %v, got %s",
-					n, name, res.Body)
+				t.Errorf("Expected body=%v after op %v in %v, got %s",
+					*i.Val, n, name, res.Body)
 				return
 			}
 		}
