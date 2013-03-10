@@ -86,7 +86,6 @@ func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
 
 // Not handled:
 //   delay - inject sleep past expiration date of items
-//   deleteUsingCAS
 //   append
 //   prepend
 //   appendUsingCAS
@@ -133,6 +132,17 @@ var opMap = map[string]op{
 	},
 	"del": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.DELETE)
+	},
+	"deleteUsingCAS": func(v *vbucket, memo interface{}) (interface{}, error) {
+		casid, ok := memo.(uint64)
+		if !ok {
+			return nil, fmt.Errorf("Memo doesn't contain a CAS: %+v", memo)
+		}
+		_, err := dispatchTestCommand(v, casid, gomemcached.DELETE)
+		if err != nil {
+			return nil, err
+		}
+		return 0, err
 	},
 	"assert": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, nil
