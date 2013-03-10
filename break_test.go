@@ -64,6 +64,17 @@ func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
 	return err
 }
 
+// Not handled:
+//   delay - inject sleep past expiration date of items
+//   deleteUsingCAS
+//   append
+//   prepend
+//   appendUsingCAS
+//   prependUsingCAS
+//   incr
+//   decr
+//   incrWithDefault
+//   decrWithDefault
 var opMap = map[string]op{
 	"add": func(v *vbucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.ADD)
