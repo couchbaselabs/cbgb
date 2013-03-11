@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"sort"
 	"time"
 
 	"github.com/couchbaselabs/cbgb"
@@ -144,6 +145,7 @@ func mainBucketList(buckets *cbgb.Buckets, args []string) {
 		fmt.Fprintf(os.Stderr, "buckets.LoadNames() err: %v\n", err)
 		os.Exit(1)
 	}
+	sort.Strings(bucketNames)
 	for _, bucketName := range bucketNames {
 		fmt.Printf("%v\n", bucketName)
 	}
