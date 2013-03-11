@@ -118,7 +118,6 @@ func restNSBucketList(w http.ResponseWriter, r *http.Request) {
 }
 
 func restNSAPI(r *mux.Router) {
-
 	ns_server_paths := []string{
 		"/pools/default/buckets/{bucketname}/statsDirectory",
 		"/pools/default/buckets/{bucketname}/stats",

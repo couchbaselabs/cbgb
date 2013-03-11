@@ -109,7 +109,6 @@ func TestCouchDocGet(t *testing.T) {
 }
 
 func TestCouchDbGet(t *testing.T) {
-
 	d, _, bucket := testSetupDefaultBucket(t, 1024, uint16(528))
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
