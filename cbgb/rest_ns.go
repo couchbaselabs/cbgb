@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/go-couchbase"
 	"github.com/gorilla/mux"
 )
 
 var toplevelPool = couchbase.Pools{
-	ImplementationVersion: "1.0-cbgb",
+	ImplementationVersion: cbgb.VERSION + "-cbgb",
 	IsAdmin:               false,
 	UUID:                  "abc",
 	Pools: []couchbase.RestPool{
@@ -41,7 +42,7 @@ func getNSNodeList(host string) []couchbase.Node {
 			Hostname:             host,
 			Ports:                map[string]int{"direct": 11211},
 			Status:               "healthy",
-			Version:              "1.0.0-cbgb",
+			Version:              cbgb.VERSION + "-cbgb",
 		},
 	}
 }
