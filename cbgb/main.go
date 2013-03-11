@@ -6,7 +6,6 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"sort"
 	"time"
 
 	"github.com/couchbaselabs/cbgb"
@@ -17,7 +16,7 @@ var mutationLogCh = make(chan interface{}, 1024)
 
 var startTime = time.Now()
 
-var verbosity = flag.Int("verbosity", -1, "amount of logging")
+var verbose = flag.Bool("v", true, "amount of logging")
 var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
@@ -38,27 +37,14 @@ var bucketSettings *cbgb.BucketSettings
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr,
-			"usage: %s <flags> [command [command-specific-params...]]:\n",
+			"usage: %s <flags>\n",
 			os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nflags:\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nverbosity levels:\n")
-		fmt.Fprintf(os.Stderr, "  1: verbose logging\n")
-		fmt.Fprintf(os.Stderr, "  0: nothing logged\n")
-		fmt.Fprintf(os.Stderr, " -1: server command logs; other commands don't log\n")
 		fmt.Fprintf(os.Stderr, "\npersistence levels:\n")
 		fmt.Fprintf(os.Stderr, "  2: metadata persisted and ops persisted\n")
 		fmt.Fprintf(os.Stderr, "  1: metadata persisted and ops not persisted\n")
 		fmt.Fprintf(os.Stderr, "  0: nothing persisted\n")
-		fmt.Fprintf(os.Stderr, "\ncommands:\n")
-		cmds := []string{"server (default command)"}
-		for cmd, _ := range mainCmds {
-			cmds = append(cmds, cmd)
-		}
-		sort.Strings(cmds)
-		for _, cmd := range cmds {
-			fmt.Fprintf(os.Stderr, "  %v\n", cmd)
-		}
 		os.Exit(1)
 	}
 }
@@ -67,11 +53,8 @@ func main() {
 	flag.Parse()
 	args := flag.Args()
 
-	if len(args) > 0 || *verbosity == 0 {
+	if !*verbose {
 		log.SetOutput(ioutil.Discard)
-	}
-	if *verbosity > 0 || (*verbosity == -1 && (len(args) < 1 || args[0] == "server")) {
-		log.SetOutput(os.Stderr)
 	}
 
 	log.Printf("cbgb - %v", cbgb.VERSION)
@@ -100,23 +83,7 @@ func main() {
 		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
 
-	if len(args) <= 0 || args[0] == "server" {
-		mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
-		return
-	}
-	if mainCmd, ok := mainCmds[args[0]]; ok {
-		mainCmd(buckets, args)
-		return
-	}
-
-	fmt.Fprintf(os.Stderr, "error: unknown command: %v\n", args[0])
-	os.Exit(1)
-}
-
-var mainCmds = map[string]func(*cbgb.Buckets, []string){
-	"bucket-path": mainBucketPath,
-	"bucket-list": mainBucketList,
-	"version":     mainVersion,
+	mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
 }
 
 func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
@@ -142,34 +109,6 @@ func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 
 	// Let goroutines do their work.
 	select {}
-}
-
-func mainBucketPath(buckets *cbgb.Buckets, args []string) {
-	if len(args) != 2 {
-		fmt.Fprintf(os.Stderr, "error: need bucket name for %v\n", args[0])
-		os.Exit(1)
-	}
-	fmt.Printf("%v\n", buckets.Path(args[1]))
-}
-
-func mainBucketList(buckets *cbgb.Buckets, args []string) {
-	if len(args) != 1 {
-		fmt.Fprintf(os.Stderr, "error: extra params for %v\n", args[0])
-		os.Exit(1)
-	}
-	bucketNames, err := buckets.LoadNames()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "buckets.LoadNames() err: %v\n", err)
-		os.Exit(1)
-	}
-	sort.Strings(bucketNames)
-	for _, bucketName := range bucketNames {
-		fmt.Printf("%v\n", bucketName)
-	}
-}
-
-func mainVersion(buckets *cbgb.Buckets, args []string) {
-	fmt.Printf("%v\n", cbgb.VERSION)
 }
 
 func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
