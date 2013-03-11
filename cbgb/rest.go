@@ -39,6 +39,8 @@ func restAPI(r *mux.Router, staticPath string) {
 		restPostBucketFlushDirty).Methods("POST")
 	r.HandleFunc("/_api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
+	r.HandleFunc("/_api/bucketsRescan",
+		restPostBucketsRescan).Methods("POST")
 	r.HandleFunc("/_api/profile/cpu",
 		restProfileCPU).Methods("POST")
 	r.HandleFunc("/_api/profile/memory",
@@ -68,6 +70,16 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, buckets.GetNames())
+}
+
+func restPostBucketsRescan(w http.ResponseWriter, r *http.Request) {
+	err := buckets.Load(true)
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("rescanning/reloading buckets directory err: %v", err), 500)
+		return
+	}
+	http.Redirect(w, r, "/_api/buckets", 303)
 }
 
 func restPostBucket(w http.ResponseWriter, r *http.Request) {
