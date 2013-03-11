@@ -6,6 +6,7 @@
 .#*
 /generated_suite_test.json
 /tools/createbuckets/createbuckets
+/version_git.go
 _*
 cbgb/cbgb
 tmp

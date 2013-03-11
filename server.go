@@ -12,10 +12,6 @@ import (
 	"github.com/dustin/gomemcached/server"
 )
 
-const (
-	VERSION = "0.0.0"
-)
-
 var serverStart = time.Now()
 
 type reqHandler struct {
