@@ -96,19 +96,26 @@ func main() {
 		mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
 		return
 	}
-	if args[0] == "bucket-path" {
-		mainBucketPath(buckets, args)
+	if mainCmd, ok := mainCmds[args[0]]; ok {
+		mainCmd(buckets, args)
 		return
 	}
 
-	log.Fatalf("error: unknown command: %v", args[0])
+	fmt.Fprintf(os.Stderr, "error: unknown command: %v\n", args[0])
+	os.Exit(1)
+}
+
+var mainCmds = map[string]func(*cbgb.Buckets, []string){
+	"bucket-path": mainBucketPath,
+	"bucket-list": mainBucketList,
 }
 
 func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 	addr string, rest string, staticPath string) {
 	log.Printf("listening data on: %v", addr)
 	if _, err := cbgb.StartServer(addr, buckets, defaultBucketName); err != nil {
-		log.Fatalf("error: could not start server: %s", err)
+		fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
+		os.Exit(1)
 	}
 
 	if rest != ":DISABLED" {
@@ -125,6 +132,21 @@ func mainBucketPath(buckets *cbgb.Buckets, args []string) {
 		os.Exit(1)
 	}
 	fmt.Printf("%v\n", buckets.Path(args[1]))
+}
+
+func mainBucketList(buckets *cbgb.Buckets, args []string) {
+	if len(args) != 1 {
+		fmt.Fprintf(os.Stderr, "error: extra params for %v\n", args[0])
+		os.Exit(1)
+	}
+	bucketNames, err := buckets.LoadNames()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "buckets.LoadNames() err: %v\n", err)
+		os.Exit(1)
+	}
+	for _, bucketName := range bucketNames {
+		fmt.Printf("%v\n", bucketName)
+	}
 }
 
 func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
