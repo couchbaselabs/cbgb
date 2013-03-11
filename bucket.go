@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"hash/crc32"
 	"io/ioutil"
 	"log"
 	"os"
@@ -108,7 +109,7 @@ func (b *Buckets) New(name string,
 	bdir := b.Path(name) // If an accessible bdir directory exists already, it's ok.
 
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
-		if err = os.Mkdir(bdir, 0777); err != nil && !isDir(bdir) {
+		if err = os.MkdirAll(bdir, 0777); err != nil && !isDir(bdir) {
 			return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 		}
 	}
@@ -173,21 +174,46 @@ func (b *Buckets) CloseAll() {
 }
 
 func (b *Buckets) Path(name string) string {
-	return path.Join(b.dir, name+BUCKET_DIR_SUFFIX)
+	c := uint16(crc32.ChecksumIEEE([]byte(name)))
+	lo := fmt.Sprintf("%02x", c&0xff)
+	hi := fmt.Sprintf("%02x", c>>8)
+	// Example result: "$BUCKET_DIR/00/df/default-bucket"
+	return path.Join(b.dir, hi, lo, name+BUCKET_DIR_SUFFIX)
 }
 
 // Reads the buckets directory and returns list of bucket names.
 func (b *Buckets) LoadNames() ([]string, error) {
-	list, err := ioutil.ReadDir(b.dir)
+	res := []string{}
+	listHi, err := ioutil.ReadDir(b.dir)
 	if err != nil {
 		return nil, err
 	}
-	res := make([]string, 0, len(list))
-	for _, entry := range list {
-		if entry.IsDir() &&
-			strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
-			res = append(res,
-				entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
+	for _, entryHi := range listHi {
+		if !entryHi.IsDir() {
+			continue
+		}
+		pathHi := path.Join(b.dir, entryHi.Name())
+		listLo, err := ioutil.ReadDir(pathHi)
+		if err != nil {
+			return nil, err
+		}
+		for _, entryLo := range listLo {
+			if !entryLo.IsDir() {
+				continue
+			}
+			pathLo := path.Join(pathHi, entryLo.Name())
+			list, err := ioutil.ReadDir(pathLo)
+			if err != nil {
+				return nil, err
+			}
+			for _, entry := range list {
+				if !entry.IsDir() ||
+					!strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
+					continue
+				}
+				res = append(res,
+					entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
+			}
 		}
 	}
 	return res, nil

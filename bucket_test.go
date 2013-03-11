@@ -3,6 +3,7 @@ package cbgb
 import (
 	"io/ioutil"
 	"os"
+	"path"
 	"testing"
 	"time"
 
@@ -292,6 +293,23 @@ func TestBucketClose(t *testing.T) {
 	}
 }
 
+func TestBucketPath(t *testing.T) {
+	d, err := ioutil.TempDir("./tmp", "test")
+	if err != nil {
+		t.Fatalf("Expected TempDir to work, got: %v", err)
+	}
+	defer os.RemoveAll(d)
+	b, err := NewBuckets(d,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	p := b.Path("hello")
+	// crc32("hello") == 0x3610a686
+	if p != path.Join(d, "a6", "86", "hello-bucket") {
+		t.Errorf("unepxected bucket path: %v", p)
+	}
+}
+
 func TestBucketsLoadNames(t *testing.T) {
 	d, err := ioutil.TempDir("./tmp", "test")
 	if err != nil {
@@ -327,8 +345,11 @@ func TestBucketsLoadNames(t *testing.T) {
 		t.Fatalf("Expected Buckets.Load() on empty directory to work")
 	}
 
-	os.Mkdir(d+string(os.PathSeparator)+"foo-bucket", 0777)
-	os.Mkdir(d+string(os.PathSeparator)+"bar-bucket", 0777)
+	// crc32("foo") == 0x8c736521
+	// crc32("bar") == 0x76ff8caa
+
+	os.MkdirAll(path.Join(d, "65", "21", "foo-bucket"), 0777)
+	os.MkdirAll(path.Join(d, "8c", "aa", "bar-bucket"), 0777)
 
 	names, err = b.LoadNames()
 	if err != nil || len(names) != 2 {
