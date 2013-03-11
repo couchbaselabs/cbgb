@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -15,6 +16,7 @@ var mutationLogCh = make(chan interface{}, 1024)
 
 var startTime = time.Now()
 
+var verbosity = flag.Int("verbosity", -1, "amount of logging")
 var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
@@ -47,6 +49,10 @@ func init() {
 func main() {
 	flag.Parse()
 	args := flag.Args()
+	if len(args) > 0 || *verbosity == 0 {
+		// There was a sub-command, so turn off logging unless explicitly wanted.
+		log.SetOutput(ioutil.Discard)
+	}
 
 	log.Printf("cbgb")
 	flag.VisitAll(func(f *flag.Flag) {
@@ -85,6 +91,11 @@ func main() {
 
 	if len(args) <= 0 || args[0] == "server" {
 		mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
+		return
+	}
+	if args[0] == "bucket-path" {
+		mainBucketPath(buckets, args)
+		return
 	}
 
 	log.Fatalf("error: unknown command: %v", args[0])
@@ -103,6 +114,14 @@ func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 
 	// Let goroutines do their work.
 	select {}
+}
+
+func mainBucketPath(buckets *cbgb.Buckets, args []string) {
+	if len(args) != 2 {
+		fmt.Fprintf(os.Stderr, "error: need bucket name for %v\n", args[0])
+		os.Exit(1)
+	}
+	fmt.Printf("%v\n", buckets.Path(args[1]))
 }
 
 func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
