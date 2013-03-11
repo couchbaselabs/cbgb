@@ -41,17 +41,20 @@ func includesBucketUUID(r *http.Request, rm *mux.RouteMatch) bool {
 
 func restCouchAPI(r *mux.Router) *mux.Router {
 	r.Handle("/{db};{bucketUUID}",
-		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(includesBucketUUID)
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
+		MatcherFunc(includesBucketUUID)
 	r.Handle("/{db}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD")
 
 	dbr := r.PathPrefix("/{db}/").Subrouter()
 
 	dbr.Handle("/",
-		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD")
+		http.HandlerFunc(couchDbGetDb)).
+		Methods("GET", "HEAD")
 
 	dbr.Handle("/_design/{docId}/_view/{viewId}",
-		http.HandlerFunc(couchDbGetView)).Methods("GET")
+		http.HandlerFunc(couchDbGetView)).
+		Methods("GET")
 
 	dbr.Handle("/_design/{docId}",
 		http.HandlerFunc(couchDbGetDesignDoc)).Methods("GET", "HEAD")
@@ -61,20 +64,29 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 		http.HandlerFunc(couchDbDelDesignDoc)).Methods("DELETE")
 
 	dbr.Handle("/{docId}",
-		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").MatcherFunc(doesNotReferenceVBucket)
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(doesNotReferenceVBucket)
 	dbr.Handle("/{docId}",
-		http.HandlerFunc(couchDbPutDoc)).Methods("PUT").MatcherFunc(doesNotReferenceVBucket)
+		http.HandlerFunc(couchDbPutDoc)).Methods("PUT").
+		MatcherFunc(doesNotReferenceVBucket)
 	dbr.Handle("/{docId}",
-		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE").MatcherFunc(doesNotReferenceVBucket)
+		http.HandlerFunc(couchDbDelDoc)).Methods("DELETE").
+		MatcherFunc(doesNotReferenceVBucket)
 
 	dbr.Handle("/{vbucket};{bucketUUID}",
-		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket).MatcherFunc(includesBucketUUID)
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
 	dbr.Handle("/{vbucket}",
-		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").MatcherFunc(referencesVBucket)
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket)
 	dbr.Handle("/{vbucket};{bucketUUID}/_revs_diff",
-		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").MatcherFunc(referencesVBucket).MatcherFunc(includesBucketUUID)
+		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
 	dbr.Handle("/{vbucket}/_revs_diff",
-		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").MatcherFunc(referencesVBucket)
+		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").
+		MatcherFunc(referencesVBucket)
 
 	return dbr
 }
