@@ -100,15 +100,6 @@ func main() {
 		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
 
-	if buckets.Get(*defaultBucketName) == nil &&
-		*defaultBucketName != "" {
-		_, err := createBucket(*defaultBucketName, bucketSettings)
-		if err != nil {
-			log.Fatalf("error: could not create default bucket: %s, err: %v",
-				*defaultBucketName, err)
-		}
-	}
-
 	if len(args) <= 0 || args[0] == "server" {
 		mainServer(buckets, *defaultBucketName, *addr, *rest, *staticPath)
 		return
@@ -130,6 +121,15 @@ var mainCmds = map[string]func(*cbgb.Buckets, []string){
 
 func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 	addr string, rest string, staticPath string) {
+	if buckets.Get(defaultBucketName) == nil && defaultBucketName != "" {
+		_, err := createBucket(defaultBucketName, bucketSettings)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: could not create default bucket: %s, err: %v",
+				defaultBucketName, err)
+			os.Exit(1)
+		}
+	}
+
 	log.Printf("listening data on: %v", addr)
 	if _, err := cbgb.StartServer(addr, buckets, defaultBucketName); err != nil {
 		fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
