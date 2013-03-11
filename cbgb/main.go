@@ -66,11 +66,11 @@ func init() {
 func main() {
 	flag.Parse()
 	args := flag.Args()
+
 	if len(args) > 0 || *verbosity == 0 {
-		// There was a sub-command, so turn off logging unless explicitly wanted.
 		log.SetOutput(ioutil.Discard)
 	}
-	if *verbosity > 0 {
+	if *verbosity > 0 || (*verbosity == -1 && (len(args) < 1 || args[0] == "server")) {
 		log.SetOutput(os.Stderr)
 	}
 
