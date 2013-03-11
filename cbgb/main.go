@@ -22,28 +22,44 @@ var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
 var staticPath = flag.String("static-path",
-	"static", "path to static content")
+	"static", "path to static web UI content")
 var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
 var numPartitions = flag.Int("num-partitions",
 	1, "default number of partitions for new buckets")
 var defaultQuotaBytes = flagbytes.Bytes("default-quota",
 	"100MB", "quota for default bucket")
-var defaultMemoryOnly = flag.Int("default-memory-only",
-	0, "memory only level for default bucket")
+var defaultMemoryOnly = flag.Int("default-ephemeral",
+	0, "ephemeral level for default bucket")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
-
+		fmt.Fprintf(os.Stderr,
+			"Usage of %s <flags> [command [command-specific-params...]]:\n",
+			os.Args[0])
+		fmt.Fprintf(os.Stderr, "\nflags:\n")
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nMemory only levels:\n")
-		fmt.Fprintf(os.Stderr, " - 0: Fully Resident\n")
-		fmt.Fprintf(os.Stderr, " - 1: Ops not persisted, only partition states\n")
-		fmt.Fprintf(os.Stderr, " - 2: Fully non-resident\n")
+		fmt.Fprintf(os.Stderr, "\nverbosity levels:\n")
+		fmt.Fprintf(os.Stderr, "  1: verbose logging\n")
+		fmt.Fprintf(os.Stderr, "  0: nothing logged\n")
+		fmt.Fprintf(os.Stderr, " -1: server command logs; other commands don't log\n")
+		fmt.Fprintf(os.Stderr, "\nephemeral levels:\n")
+		fmt.Fprintf(os.Stderr, "  0: ops and metadata persisted\n")
+		fmt.Fprintf(os.Stderr, "  1: ops not persisted; metadata persisted\n")
+		fmt.Fprintf(os.Stderr, "  2: nothing persisted\n")
+		fmt.Fprintf(os.Stderr, "\ncommands:\n")
+		cmds := []string{"server (default command)"}
+		for cmd, _ := range mainCmds {
+			cmds = append(cmds, cmd)
+		}
+		sort.Strings(cmds)
+		for _, cmd := range cmds {
+			fmt.Fprintf(os.Stderr, "  %v\n", cmd)
+		}
+
 		os.Exit(1)
 	}
 }
