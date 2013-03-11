@@ -87,7 +87,7 @@ function BucketsCtrl($scope, $http) {
         url: '/_api/buckets',
         data: 'name=' + encodeURIComponent(bucketName) +
           '&password=' + encodeURIComponent($scope.bucketPassword) +
-          '&quota=' + encodeURIComponent($scope.bucketQuotaBytes) +
+          '&quotaBytes=' + encodeURIComponent($scope.bucketQuotaBytes) +
           '&memoryOnly=' + encodeURIComponent($scope.bucketMemoryOnly),
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}
       }).

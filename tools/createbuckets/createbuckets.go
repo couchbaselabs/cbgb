@@ -19,7 +19,7 @@ var base = flag.String("baseurl", "http://127.0.0.1:8077/",
 var concurrency = flag.Int("workers", 8,
 	"How many concurrent workers creating buckets.")
 var verbose = flag.Bool("v", false, "log bucket creation")
-var quota = flagbytes.Bytes("quota", "100MB", "quota for each bucket")
+var quotaBytes = flagbytes.Bytes("quota", "100MB", "quota for each bucket")
 
 var wg sync.WaitGroup
 
@@ -49,7 +49,7 @@ func worker(ustr string, ch <-chan int) {
 	for i := range ch {
 		vals := url.Values{}
 		vals.Set("name", fmt.Sprintf("b%06d", i))
-		vals.Set("quota", fmt.Sprintf("%d", *quota))
+		vals.Set("quotaBytes", fmt.Sprintf("%d", *quotaBytes))
 		vals.Set("memoryOnly", "2")
 		req, err := http.NewRequest("POST", ustr,
 			strings.NewReader(vals.Encode()))

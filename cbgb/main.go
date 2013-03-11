@@ -27,7 +27,7 @@ var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
 var numPartitions = flag.Int("num-partitions",
 	1, "default number of partitions for new buckets")
-var defaultQuota = flagbytes.Bytes("default-quota",
+var defaultQuotaBytes = flagbytes.Bytes("default-quota",
 	"100MB", "quota for default bucket")
 var defaultMemoryOnly = flag.Int("default-memory-only",
 	0, "memory only level for default bucket")
@@ -71,7 +71,7 @@ func main() {
 
 	bucketSettings = &cbgb.BucketSettings{
 		NumPartitions: *numPartitions,
-		QuotaBytes:    int64(*defaultQuota),
+		QuotaBytes:    int64(*defaultQuotaBytes),
 		MemoryOnly:    *defaultMemoryOnly,
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
