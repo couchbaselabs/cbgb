@@ -91,7 +91,7 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 					}
 					pkt.Body = res.Body
 				} else {
-					log.Printf("Change on missing vbucket? %v", m.vb)
+					log.Printf("Change on missing partition? %v", m.vb)
 					continue
 				}
 			}
@@ -113,9 +113,9 @@ func MutationLogger(ch chan interface{}) {
 	for i := range ch {
 		switch o := i.(type) {
 		case mutation:
-			log.Printf("Mutation: %v", o)
+			log.Printf("mutation: %v", o)
 		case vbucketChange:
-			log.Printf("VBucket change: %v", o)
+			log.Printf("partition change: %v", o)
 			if o.newState == VBActive {
 				if vb := o.getVBucket(); vb != nil {
 					// Watch state changes
