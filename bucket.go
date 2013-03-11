@@ -174,15 +174,15 @@ func (b *Buckets) CloseAll() {
 }
 
 func (b *Buckets) Path(name string) string {
-	return BucketPath(b.dir, name)
+	return path.Join(b.dir, BucketPath(name))
 }
 
-func BucketPath(bucketsDir string, bucketName string) string {
+func BucketPath(bucketName string) string {
 	c := uint16(crc32.ChecksumIEEE([]byte(bucketName)))
 	lo := fmt.Sprintf("%02x", c&0xff)
 	hi := fmt.Sprintf("%02x", c>>8)
 	// Example result for "default" bucket: "$BUCKETS_DIR/00/df/default-bucket".
-	return path.Join(bucketsDir, hi, lo, bucketName+BUCKET_DIR_SUFFIX)
+	return path.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX)
 }
 
 // Reads the buckets directory and returns list of bucket names.
