@@ -5,6 +5,7 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/couchbaselabs/cbgb"
@@ -33,14 +34,18 @@ func restNSPools(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &toplevelPool)
 }
 
-func getNSNodeList(host string) []couchbase.Node {
+func getNSNodeList(host, bucket string) []couchbase.Node {
+	port, err := strconv.Atoi((*addr)[strings.LastIndex(*addr, ":")+1:])
+	if err != nil {
+		log.Fatalf("Unable to determine port to advertise")
+	}
 	return []couchbase.Node{
 		couchbase.Node{
 			ClusterCompatibility: 131072,
 			ClusterMembership:    "active",
-			CouchAPIBase:         "http://" + host + "/",
+			CouchAPIBase:         "http://" + host + "/" + bucket,
 			Hostname:             host,
-			Ports:                map[string]int{"direct": 11211},
+			Ports:                map[string]int{"direct": port},
 			Status:               "healthy",
 			Version:              cbgb.VERSION + "-cbgb",
 		},
@@ -51,7 +56,7 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
 		"buckets": map[string]interface{}{"uri": "/pools/default/buckets"},
 		"name":    "default",
-		"nodes":   getNSNodeList(r.Host),
+		"nodes":   getNSNodeList(r.Host, ""),
 		"stats":   map[string]interface{}{"uri": "/pools/default/stats"},
 	})
 }
@@ -82,7 +87,7 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		Type:         "membase",
 		Name:         bucketName,
 		NodeLocator:  "vbucket",
-		Nodes:        getNSNodeList(host),
+		Nodes:        getNSNodeList(host, bucketName),
 		Replicas:     1,
 		URI:          "/pools/default/buckets/" + bucketName + "?bucket_uuid=" + bucketUUID,
 		UUID:         bucketUUID,
@@ -90,7 +95,12 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 	rv.VBucketServerMap.HashAlgorithm = "CRC"
 	rv.VBucketServerMap.NumReplicas = 1
 	rv.VBucketServerMap.ServerList = []string{getBindAddress(host)}
-	rv.VBucketServerMap.VBucketMap = [][]int{{0}}
+
+	np := b.GetBucketSettings().NumPartitions
+	rv.VBucketServerMap.VBucketMap = make([][]int, np)
+	for i := 0; i < np; i++ {
+		rv.VBucketServerMap.VBucketMap[i] = []int{0, -1}
+	}
 	return rv, nil
 }
 

@@ -12,9 +12,11 @@
 package main
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"sort"
 	"strconv"
@@ -28,15 +30,15 @@ import (
 )
 
 func referencesVBucket(r *http.Request, rm *mux.RouteMatch) bool {
-	return strings.Contains(r.RequestURI, "%2f")
+	return strings.Contains(strings.ToLower(r.RequestURI), "%2f")
 }
 
 func doesNotReferenceVBucket(r *http.Request, rm *mux.RouteMatch) bool {
-	return !strings.Contains(r.RequestURI, "%2f")
+	return !strings.Contains(strings.ToLower(r.RequestURI), "%2f")
 }
 
 func includesBucketUUID(r *http.Request, rm *mux.RouteMatch) bool {
-	return strings.Contains(r.RequestURI, "%3b")
+	return strings.Contains(strings.ToLower(r.RequestURI), "%3b")
 }
 
 func restCouchAPI(r *mux.Router) *mux.Router {
@@ -80,12 +82,59 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 	dbr.Handle("/{vbucket}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
 		MatcherFunc(referencesVBucket)
+	dbr.Handle("/{vbucket};{bucketUUID}/",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/",
+		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket)
+
+	dbr.Handle("/{vbucket};{bucketUUID}/{docId}",
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/{docId}",
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket)
+
+	dbr.Handle("/{vbucket};{bucketUUID}/_local/{docId}",
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/_local/{docId}",
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket)
+	dbr.Handle("/{vbucket};{bucketUUID}/_local/{docId}/{source}/{destination}",
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/_local/{docId}/{source}/{destination}",
+		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
+		MatcherFunc(referencesVBucket)
+
 	dbr.Handle("/{vbucket};{bucketUUID}/_revs_diff",
 		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").
 		MatcherFunc(referencesVBucket).
 		MatcherFunc(includesBucketUUID)
 	dbr.Handle("/{vbucket}/_revs_diff",
 		http.HandlerFunc(couchDbRevsDiff)).Methods("POST").
+		MatcherFunc(referencesVBucket)
+
+	dbr.Handle("/{vbucket};{bucketUUID}/_bulk_docs",
+		http.HandlerFunc(couchDbBulkDocs)).Methods("POST").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/_bulk_docs",
+		http.HandlerFunc(couchDbBulkDocs)).Methods("POST").
+		MatcherFunc(referencesVBucket)
+
+	dbr.Handle("/{vbucket};{bucketUUID}/_ensure_full_commit",
+		http.HandlerFunc(couchDbEnsureFullCommit)).Methods("POST").
+		MatcherFunc(referencesVBucket).
+		MatcherFunc(includesBucketUUID)
+	dbr.Handle("/{vbucket}/_ensure_full_commit",
+		http.HandlerFunc(couchDbEnsureFullCommit)).Methods("POST").
 		MatcherFunc(referencesVBucket)
 
 	return dbr
@@ -154,6 +203,10 @@ func couchDbGetDb(w http.ResponseWriter, r *http.Request) {
 // TODO this implementation does no conflict resolution
 // only suitable for one way replications
 func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
+	_, _, bucket := checkDb(w, r)
+	if bucket == nil {
+		return
+	}
 	revsDiffRequest := map[string]interface{}{}
 	d := json.NewDecoder(r.Body)
 	err := d.Decode(&revsDiffRequest)
@@ -169,6 +222,94 @@ func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, revsDiffResponse)
 }
 
+type BulkDocsItemMeta struct {
+	Id         string  `json:"id"`
+	Rev        string  `json:"rev"`
+	Expiration float64 `json:"expiration"`
+	Flags      float64 `json:"flags"`
+	Deleted    bool    `json:"deleted,omitempty"`
+	Att_reason string  `json:"att_reason,omitempty"`
+}
+
+type BulkDocsItem struct {
+	Meta   BulkDocsItemMeta `json:"meta"`
+	Base64 string           `json:"base64"`
+}
+
+type BulkDocsRequest struct {
+	Docs []BulkDocsItem `json:"docs"`
+}
+
+// TODO this implementation uses the wrong memcached commands
+// it should use commands that can overwrite the metadata
+// for now this is done with the wrong commands just to get
+// data transfer up and running
+func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
+	_, _, bucket := checkDb(w, r)
+	if bucket == nil {
+		return
+	}
+
+	var bulkDocsRequest BulkDocsRequest
+	d := json.NewDecoder(r.Body)
+	err := d.Decode(&bulkDocsRequest)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("Unable to parse _bulk_docs body as JSON: %v", err), 500)
+		return
+	}
+
+	bulkDocsResponse := make([]map[string]interface{}, 0, len(bulkDocsRequest.Docs))
+	for _, doc := range bulkDocsRequest.Docs {
+		key := []byte(doc.Meta.Id)
+		vbucketId := cbgb.VBucketIdForKey(key, bucket.GetBucketSettings().NumPartitions)
+		vbucket := bucket.GetVBucket(vbucketId)
+		if vbucket == nil {
+			http.Error(w, fmt.Sprintf("Invalid vbucket for this key: %v - %v", key, err), 500)
+			return
+		}
+
+		r := base64.NewDecoder(base64.StdEncoding, strings.NewReader(doc.Base64))
+		val, err := ioutil.ReadAll(r)
+		if err != nil {
+			http.Error(w, fmt.Sprintf("Error decoding base64 data _bulk_docs body as JSON for key: %v - %v", key, err), 500)
+			return
+		}
+
+		response := vbucket.Dispatch(nil, &gomemcached.MCRequest{
+			Opcode:  gomemcached.SET,
+			VBucket: vbucketId,
+			Key:     key,
+			Body:    val,
+		})
+
+		// TODO proper error handling
+		// for now we just bail if anything ever goes wrong
+		if response.Status != gomemcached.SUCCESS {
+			log.Printf("Got error writing data: %v - %v", string(key), string(response.Body))
+			http.Error(w, "Internal Error", 500)
+			return
+		} else {
+			// TODO return actual revision created
+			// here we just lie and pretend to have created the requested revsion (we did not)
+			bulkDocsResponse = append(bulkDocsResponse, map[string]interface{}{"id": doc.Meta.Id, "rev": doc.Meta.Rev})
+		}
+	}
+	w.WriteHeader(201)
+	jsonEncode(w, bulkDocsResponse)
+}
+
+// TODO wait for writes to this vbucket to be persisted
+// for now, lie
+func couchDbEnsureFullCommit(w http.ResponseWriter, r *http.Request) {
+	_, _, bucket := checkDb(w, r)
+	if bucket == nil {
+		return
+	}
+
+	w.WriteHeader(201)
+	jsonEncode(w, map[string]interface{}{"ok": true})
+}
+
 func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 	_, _, bucket, docId := checkDocId(w, r)
 	if bucket == nil || docId == "" {
@@ -176,7 +317,7 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 	}
 	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
-		http.Error(w, "Not Found", 404)
+		http.Error(w, `{"error": "not_found", "reason": "missing"}`, 404)
 		return
 	}
 	// TODO: Content Type, Accepts, much to leverage from sync_gateway.
@@ -393,6 +534,9 @@ func checkDb(w http.ResponseWriter, r *http.Request) (
 		// ensure that it refers to a valid vbucket
 		// we don't return it because none of our functionality will use it
 		bucketName = bucketName + "%2f" + vbucketString
+		if vbucketString == "master" {
+			return vars, bucketName, bucket
+		}
 		vbucketIdFull, err := strconv.ParseUint(vbucketString, 10, 16)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
