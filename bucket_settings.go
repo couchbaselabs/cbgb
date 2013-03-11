@@ -72,8 +72,5 @@ func (bs *BucketSettings) save(bucketDir string) error {
 		return err
 	}
 	os.Rename(fname, fnameOld)
-	if err = os.Rename(fnameNew, fname); err != nil {
-		return err
-	}
-	return nil
+	return os.Rename(fnameNew, fname)
 }
