@@ -1,9 +1,11 @@
 package cbgb
 
 import (
+	"io"
 	"io/ioutil"
 	"os"
 	"path"
+	"path/filepath"
 	"testing"
 	"time"
 
@@ -341,7 +343,7 @@ func TestBucketsLoadNames(t *testing.T) {
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
-	if err = b.Load(); err != nil {
+	if err = b.Load(false); err != nil {
 		t.Fatalf("Expected Buckets.Load() on empty directory to work")
 	}
 
@@ -469,7 +471,7 @@ func TestMissingBucketsDir(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Expected names to fail on missing dir")
 	}
-	err = b.Load()
+	err = b.Load(false)
 	if err == nil {
 		t.Fatalf("Expected load to fail on missing dir")
 	}
@@ -493,7 +495,7 @@ func TestBucketsLoad(t *testing.T) {
 	b.New("b2", b.settings)
 	b.Get("b1").Flush()
 	b.Get("b2").Flush()
-	err = b.Load()
+	err = b.Load(false)
 	if err == nil {
 		t.Errorf("expected re-Buckets.Load() to fail")
 	}
@@ -506,7 +508,7 @@ func TestBucketsLoad(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
-	err = b2.Load()
+	err = b2.Load(false)
 	if err != nil {
 		t.Errorf("expected re-Buckets.Load() to fail")
 	}
@@ -670,7 +672,7 @@ func TestMemoryOnlyBucketSettingsReload(t *testing.T) {
 	}
 	defer buckets1.CloseAll()
 
-	err = buckets1.Load()
+	err = buckets1.Load(false)
 	if err != nil {
 		t.Errorf("expected buckets reload to work, got: %v", err)
 	}
@@ -713,7 +715,7 @@ func TestPersistNothing(t *testing.T) {
 	}
 	defer buckets1.CloseAll()
 
-	err = buckets1.Load()
+	err = buckets1.Load(false)
 	if err != nil {
 		t.Errorf("expected buckets reload to work, got: %v", err)
 	}
@@ -802,5 +804,93 @@ func TestBucketQuotaBytes(t *testing.T) {
 	})
 	if res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected to have not reached quota, got: %v", res)
+	}
+}
+
+func TestReloadOnlyNewDirectory(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	buckets0, err := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
+	defer buckets0.CloseAll()
+
+	b0, err := buckets0.New("foo",
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	b0.CreateVBucket(2)
+	b0.SetVBState(2, VBActive)
+	r0 := &reqHandler{currentBucket: b0}
+	testLoadInts(t, r0, 2, 5)
+	b0.Flush()
+	b0.Close()
+
+	buckets1, err := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	if err != nil {
+		t.Fatalf("Expected NewBuckets to succeed: %v", err)
+	}
+	defer buckets1.CloseAll()
+
+	err = buckets1.Load(true)
+	if err != nil {
+		t.Errorf("expected buckets reload to work, got: %v", err)
+	}
+	b1 := buckets1.Get("foo")
+	if b1 == nil {
+		t.Errorf("expected bucket foo to be there")
+	}
+
+	err = buckets1.Load(true) // Load again.
+	if err != nil {
+		t.Errorf("expected buckets reload to work, got: %v", err)
+	}
+	b1x := buckets1.Get("foo")
+	if b1x == nil {
+		t.Errorf("expected bucket foo to be there")
+	}
+	if b1x != b1 {
+		t.Errorf("expected bucket foo to be bucket foo")
+	}
+
+	// Copy all files from foo dir to bar dir.
+	fooPath := buckets1.Path("foo")
+	barPath := buckets1.Path("bar")
+	os.MkdirAll(barPath, 0777)
+	filepath.Walk(fooPath, func(p string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		sf, err := os.Open(p)
+		if err != nil {
+			return err
+		}
+		df, err := os.OpenFile(path.Join(barPath, path.Base(p)),
+			os.O_TRUNC|os.O_CREATE, 0666)
+		if err != nil {
+			return err
+		}
+		_, err = io.Copy(df, sf)
+		return err
+	})
+
+	err = buckets1.Load(true) // Load again.
+	if err != nil {
+		t.Errorf("expected buckets reload to work, got: %v", err)
+	}
+	bx := buckets1.Get("bar")
+	if bx == nil {
+		t.Errorf("expected bar dir to be found")
+	}
+	b1x = buckets1.Get("foo")
+	if b1x == nil {
+		t.Errorf("expected bucket foo to be there")
+	}
+	if b1x != b1 {
+		t.Errorf("expected bucket foo to be bucket foo")
 	}
 }

@@ -219,22 +219,28 @@ func (b *Buckets) LoadNames() ([]string, error) {
 	return res, nil
 }
 
-// Loads all buckets from the buckets directory.
-func (b *Buckets) Load() error {
+// Loads all buckets from the buckets directory tree.  If
+// errorIfBucketAlreadyExists is false any existing (already loaded)
+// buckets are left unchanged.
+func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 	bucketNames, err := b.LoadNames()
 	if err != nil {
 		return err
 	}
 	for _, bucketName := range bucketNames {
+		log.Printf("loading bucket: %v", bucketName)
+		if b.Get(bucketName) != nil {
+			if !ignoreIfBucketAlreadyExists {
+				return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
+					bucketName))
+			}
+			log.Printf("loading bucket: %v, already loaded", bucketName)
+			continue
+		}
 		b, err := b.New(bucketName, b.settings)
 		if err != nil {
 			return err
 		}
-		if b == nil {
-			return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
-				bucketName))
-		}
-		log.Printf("loading bucket: %v", bucketName)
 		if err = b.Load(); err != nil {
 			return err
 		}

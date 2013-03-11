@@ -69,7 +69,7 @@ func main() {
 	}
 
 	log.Printf("loading buckets from: %v", *data)
-	err = buckets.Load()
+	err = buckets.Load(false)
 	if err != nil {
 		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
