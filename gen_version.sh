@@ -1,6 +1,6 @@
 #!/bin/sh
 
-sed s/@VERSION@/`git describe --always`/ > version_git.go <<EOF
+sed s/@VERSION@/`git describe`/ > version_git.go <<EOF
 // +build has_version
 
 package cbgb
