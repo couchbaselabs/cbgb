@@ -38,7 +38,7 @@ var bucketSettings *cbgb.BucketSettings
 func init() {
 	flag.Usage = func() {
 		fmt.Fprintf(os.Stderr,
-			"Usage of %s <flags> [command [command-specific-params...]]:\n",
+			"usage: %s <flags> [command [command-specific-params...]]:\n",
 			os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nflags:\n")
 		flag.PrintDefaults()
@@ -59,7 +59,6 @@ func init() {
 		for _, cmd := range cmds {
 			fmt.Fprintf(os.Stderr, "  %v\n", cmd)
 		}
-
 		os.Exit(1)
 	}
 }
@@ -75,7 +74,7 @@ func main() {
 		log.SetOutput(os.Stderr)
 	}
 
-	log.Printf("cbgb")
+	log.Printf("cbgb - %v", cbgb.VERSION)
 	flag.VisitAll(func(f *flag.Flag) {
 		log.Printf("  %v=%v", f.Name, f.Value)
 	})
@@ -126,6 +125,7 @@ func main() {
 var mainCmds = map[string]func(*cbgb.Buckets, []string){
 	"bucket-path": mainBucketPath,
 	"bucket-list": mainBucketList,
+	"version":     mainVersion,
 }
 
 func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
@@ -166,6 +166,10 @@ func mainBucketList(buckets *cbgb.Buckets, args []string) {
 	for _, bucketName := range bucketNames {
 		fmt.Printf("%v\n", bucketName)
 	}
+}
+
+func mainVersion(buckets *cbgb.Buckets, args []string) {
+	fmt.Printf("%v\n", cbgb.VERSION)
 }
 
 func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
