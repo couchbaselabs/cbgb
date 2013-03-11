@@ -53,6 +53,9 @@ func main() {
 		// There was a sub-command, so turn off logging unless explicitly wanted.
 		log.SetOutput(ioutil.Discard)
 	}
+	if *verbosity > 0 {
+		log.SetOutput(os.Stderr)
+	}
 
 	log.Printf("cbgb")
 	flag.VisitAll(func(f *flag.Flag) {
