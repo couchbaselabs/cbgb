@@ -156,7 +156,7 @@ func TestNewBucketAggregateStats(t *testing.T) {
 	}
 	bssExp := &BucketStoreStats{
 		Stats:      STORES_PER_BUCKET,
-		NodeAllocs: 2,
+		NodeAllocs: bss.NodeAllocs,
 	}
 	if !bss.Equal(bssExp) {
 		t.Errorf("Expected new bss to equal %#v, got: %#v",

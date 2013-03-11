@@ -389,7 +389,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	}
 	bssInitial := &BucketStoreStats{
 		Stats:      STORES_PER_BUCKET,
-		NodeAllocs: 2,
+		NodeAllocs: bss.NodeAllocs,
 	}
 	if !bss.Equal(bssInitial) {
 		t.Errorf("Expected GetLastBucketStoreStats() to be %#v, got: %#v",
@@ -420,7 +420,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	}
 	bssNext := &BucketStoreStats{
 		Stats:      STORES_PER_BUCKET,
-		NodeAllocs: 19,
+		NodeAllocs: bss.NodeAllocs,
 	}
 	if !bss.Equal(bssNext) {
 		t.Errorf("Expected bucket store stats to be %#v, got: %#v",
