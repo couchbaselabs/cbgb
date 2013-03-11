@@ -1111,7 +1111,7 @@ func jsonFindParse(t *testing.T, b []byte, path string) (interface{}, error) {
 	return rv, err
 }
 
-func validateSubset(t *testing.T, exname string, got, exemplar []byte) {
+func validateSubset(t *testing.T, upath, exname string, got, exemplar []byte) {
 	ptrs, err := jsonpointer.ListPointers(got)
 	if err != nil {
 		t.Fatalf("Error listing pointers: %v", err)
@@ -1120,26 +1120,26 @@ func validateSubset(t *testing.T, exname string, got, exemplar []byte) {
 	for _, p := range ptrs {
 		dg, err := jsonFindParse(t, got, p)
 		if err != nil {
-			t.Fatalf("Error loading %q from %s: %v",
-				p, got, err)
+			t.Fatalf("%v: Error loading %q from %s: %v",
+				upath, p, got, err)
 		}
 
 		eg, err := jsonFindParse(t, exemplar, p)
 		if err != nil {
-			t.Errorf("Error loading %q from exemplar %v: %v\n%s",
-				p, exname, err, exemplar)
+			t.Errorf("%v: Error loading %q from exemplar %v: %v\n%s",
+				upath, p, exname, err, exemplar)
 			continue
 		}
 		dt := fmt.Sprintf("%T", dg)
 		et := fmt.Sprintf("%T", eg)
 		if dt != et {
-			t.Errorf("Type mismatch at %v of %v (%v != %v)",
-				p, exname, dt, et)
+			t.Errorf("%v: Type mismatch at %v of %v (%v != %v)",
+				upath, p, exname, dt, et)
 		}
 	}
 }
 
-func validateJson(t *testing.T, jsonbody, path string) {
+func validateJson(t *testing.T, upath, jsonbody, path string) {
 	f, err := os.Open("../testdata/" + path + ".json")
 	if err != nil {
 		t.Fatalf("Error opening exemplar: %v", err)
@@ -1150,7 +1150,7 @@ func validateJson(t *testing.T, jsonbody, path string) {
 		t.Fatalf("Error loading exemplar %v: %v", path, err)
 	}
 
-	validateSubset(t, path, []byte(jsonbody), exemplar)
+	validateSubset(t, upath, path, []byte(jsonbody), exemplar)
 }
 
 func TestRestAPIPoolsDefault(t *testing.T) {
@@ -1194,7 +1194,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		case rr.Code == 501 && fn == "":
 			t.Logf("%v is not yet implemented", p)
 		case rr.Code == 200:
-			validateJson(t, rr.Body.String(), fn)
+			validateJson(t, p, rr.Body.String(), fn)
 		default:
 			t.Errorf("expected %v to work, got: %#v, %v",
 				p, rr, rr.Body.String())
