@@ -1157,7 +1157,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 
-	b, err := buckets.New("test", nil)
+	b, err := buckets.New("test", bucketSettings)
 	if err != nil {
 		t.Fatalf("Error initializing test bucket: %v", err)
 	}
