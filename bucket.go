@@ -225,7 +225,7 @@ func (b *Buckets) LoadNames() ([]string, error) {
 
 // Loads all buckets from the buckets directory tree.  If
 // errorIfBucketAlreadyExists is false any existing (already loaded)
-// buckets are left unchanged.
+// buckets are left unchanged (existing buckets are not reloaded).
 func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 	bucketNames, err := b.LoadNames()
 	if err != nil {
@@ -241,11 +241,11 @@ func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 			log.Printf("loading bucket: %v, already loaded", bucketName)
 			continue
 		}
-		b, err := b.New(bucketName, b.settings)
+		bucket, err := b.New(bucketName, b.settings)
 		if err != nil {
 			return err
 		}
-		if err = b.Load(); err != nil {
+		if err = bucket.Load(); err != nil {
 			return err
 		}
 	}
