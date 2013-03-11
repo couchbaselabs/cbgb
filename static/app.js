@@ -103,6 +103,17 @@ function BucketsCtrl($scope, $http) {
       });
   }
 
+  $scope.bucketsRescan = function() {
+    $http.post("/_api/bucketsRescan").
+      success(function() {
+          alert("Buckets rescan directory succeeded");
+          retrieveBucketNames();
+      }).
+      error(function(data) {
+          alert("Buckets rescan directory failed");
+      });
+  }
+
   function retrieveBucketNames() {
     $http.get('/_api/buckets').
       success(function(data) {
