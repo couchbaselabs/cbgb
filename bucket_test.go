@@ -869,11 +869,13 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 		if err != nil {
 			return err
 		}
+		defer sf.Close()
 		df, err := os.OpenFile(path.Join(barPath, path.Base(p)),
 			os.O_TRUNC|os.O_CREATE, 0666)
 		if err != nil {
 			return err
 		}
+		defer df.Close()
 		_, err = io.Copy(df, sf)
 		return err
 	})
