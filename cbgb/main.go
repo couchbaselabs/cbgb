@@ -29,8 +29,8 @@ var numPartitions = flag.Int("num-partitions",
 	1, "default number of partitions for new buckets")
 var defaultQuotaBytes = flagbytes.Bytes("default-quota",
 	"100MB", "quota for default bucket")
-var defaultMemoryOnly = flag.Int("default-ephemeral",
-	0, "ephemeral level for default bucket")
+var defaultPersistence = flag.Int("default-persistence",
+	2, "persistence level for default bucket")
 
 var buckets *cbgb.Buckets
 var bucketSettings *cbgb.BucketSettings
@@ -46,10 +46,10 @@ func init() {
 		fmt.Fprintf(os.Stderr, "  1: verbose logging\n")
 		fmt.Fprintf(os.Stderr, "  0: nothing logged\n")
 		fmt.Fprintf(os.Stderr, " -1: server command logs; other commands don't log\n")
-		fmt.Fprintf(os.Stderr, "\nephemeral levels:\n")
-		fmt.Fprintf(os.Stderr, "  0: ops and metadata persisted\n")
-		fmt.Fprintf(os.Stderr, "  1: ops not persisted; metadata persisted\n")
-		fmt.Fprintf(os.Stderr, "  2: nothing persisted\n")
+		fmt.Fprintf(os.Stderr, "\npersistence levels:\n")
+		fmt.Fprintf(os.Stderr, "  2: metadata persisted and ops persisted\n")
+		fmt.Fprintf(os.Stderr, "  1: metadata persisted and ops not persisted\n")
+		fmt.Fprintf(os.Stderr, "  0: nothing persisted\n")
 		fmt.Fprintf(os.Stderr, "\ncommands:\n")
 		cmds := []string{"server (default command)"}
 		for cmd, _ := range mainCmds {
@@ -87,7 +87,7 @@ func main() {
 	bucketSettings = &cbgb.BucketSettings{
 		NumPartitions: *numPartitions,
 		QuotaBytes:    int64(*defaultQuotaBytes),
-		MemoryOnly:    *defaultMemoryOnly,
+		MemoryOnly:    cbgb.MemoryOnly_LEVEL_PERSIST_NOTHING - *defaultPersistence,
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
 	if err != nil {
