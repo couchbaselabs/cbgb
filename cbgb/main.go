@@ -27,8 +27,9 @@ var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
 var numPartitions = flag.Int("num-partitions",
 	1, "default number of partitions for new buckets")
-var quota = flagbytes.Bytes("default-quota", "100MB", "quota for default bucket")
-var defaultMemoryOnly = flag.Int("default-mem-only",
+var defaultQuota = flagbytes.Bytes("default-quota",
+	"100MB", "quota for default bucket")
+var defaultMemoryOnly = flag.Int("default-memory-only",
 	0, "memory only level for default bucket")
 
 var buckets *cbgb.Buckets
@@ -39,7 +40,7 @@ func init() {
 		fmt.Fprintf(os.Stderr, "Usage of %s:\n", os.Args[0])
 
 		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\nMemory Levels:\n")
+		fmt.Fprintf(os.Stderr, "\nMemory only levels:\n")
 		fmt.Fprintf(os.Stderr, " - 0: Fully Resident\n")
 		fmt.Fprintf(os.Stderr, " - 1: Ops not persisted, only partition states\n")
 		fmt.Fprintf(os.Stderr, " - 2: Fully non-resident\n")
@@ -70,7 +71,7 @@ func main() {
 
 	bucketSettings = &cbgb.BucketSettings{
 		NumPartitions: *numPartitions,
-		QuotaBytes:    int64(*quota),
+		QuotaBytes:    int64(*defaultQuota),
 		MemoryOnly:    *defaultMemoryOnly,
 	}
 	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
