@@ -21,7 +21,8 @@ var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
 var rest = flag.String("rest", ":DISABLED", "rest protocol listen address")
 var staticPath = flag.String("static-path",
-	"static", "path to static web UI content")
+	"http://downloads.northscale.com/cbgb/static.zip",
+	"path to static web UI content")
 var defaultBucketName = flag.String("default-bucket-name",
 	cbgb.DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
 var numPartitions = flag.Int("num-partitions",

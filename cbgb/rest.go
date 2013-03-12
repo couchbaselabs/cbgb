@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"runtime/pprof"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gorilla/mux"
@@ -53,8 +54,23 @@ func restAPI(r *mux.Router, staticPath string) {
 		restPostRuntimeGC).Methods("POST")
 	r.HandleFunc("/_api/settings",
 		restGetSettings).Methods("GET")
-	r.PathPrefix("/_static/").Handler(
-		http.StripPrefix("/_static/", http.FileServer(http.Dir(staticPath))))
+
+	initStatic(r, staticPath)
+}
+
+func initStatic(r *mux.Router, staticPath string) {
+	if strings.HasPrefix(staticPath, "http://") {
+		zs, err := zipStatic(staticPath)
+		if err != nil {
+			log.Fatalf("Error initializing zip static: %v", err)
+		}
+		r.PathPrefix("/_static/").Handler(
+			http.StripPrefix("/_static/", zs))
+	} else {
+		r.PathPrefix("/_static/").Handler(
+			http.StripPrefix("/_static/",
+				http.FileServer(http.Dir(staticPath))))
+	}
 }
 
 // For settings that are constant throughout server process lifetime.
