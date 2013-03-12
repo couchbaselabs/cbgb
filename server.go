@@ -79,7 +79,7 @@ func (rh *reqHandler) HandleMessage(r io.Reader, w io.Writer,
 		return &gomemcached.MCResponse{}
 	case gomemcached.TAP_CONNECT:
 		chpkt, cherr := transmitPackets(w)
-		return doTap(rh.currentBucket, req, chpkt, cherr)
+		return doTap(rh.currentBucket, req, r, chpkt, cherr)
 	case gomemcached.STAT:
 		err := doStats(rh.currentBucket, w, string(req.Key))
 		if err != nil {

@@ -74,7 +74,7 @@ func TestTapChanges(t *testing.T) {
 		Extras: make([]byte, 4),
 	}
 
-	go doTap(rh.currentBucket, treq, chpkt, cherr)
+	go doTap(rh.currentBucket, treq, nil, chpkt, cherr)
 
 	vb0, _ := testBucket.CreateVBucket(0)
 	testBucket.SetVBState(0, VBActive)

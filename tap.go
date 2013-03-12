@@ -2,6 +2,7 @@ package cbgb
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -27,7 +28,7 @@ func (m mutation) String() string {
 // How often to send opaque "heartbeats" on tap streams.
 var tapTickFreq = time.Second
 
-func doTap(b Bucket, req *gomemcached.MCRequest,
+func doTap(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	chpkt chan<- transmissible, cherr <-chan error) *gomemcached.MCResponse {
 	tc, err := req.ParseTapCommands()
 	if err != nil {
@@ -39,7 +40,7 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 
 	res, yesDump := isTapDump(tc)
 	if yesDump {
-		return doTapDump(b, req, chpkt, cherr, tc)
+		return doTapDump(b, req, r, chpkt, cherr, tc)
 	}
 	if res != nil {
 		return res
@@ -47,10 +48,10 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 
 	// TODO: TAP_BACKFILL, but mind the gap between backfill and tap-forward.
 
-	return doTapForward(b, req, chpkt, cherr, tc)
+	return doTapForward(b, req, r, chpkt, cherr, tc)
 }
 
-func doTapForward(b Bucket, req *gomemcached.MCRequest,
+func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	chpkt chan<- transmissible, cherr <-chan error,
 	tc gomemcached.TapConnect) *gomemcached.MCResponse {
 	bch := make(chan interface{})
@@ -149,7 +150,7 @@ func isTapDump(tc gomemcached.TapConnect) (*gomemcached.MCResponse, bool) {
 	return nil, true
 }
 
-func doTapDump(b Bucket, req *gomemcached.MCRequest,
+func doTapDump(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	chpkt chan<- transmissible, cherr <-chan error,
 	tc gomemcached.TapConnect) *gomemcached.MCResponse {
 	var res *gomemcached.MCResponse
