@@ -37,7 +37,10 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 		}
 	}
 
-	log.Printf("TAP connect: %#v", tc)
+	res := doTapDump(b, req, chpkt, cherr, tc)
+	if res != nil {
+		return res
+	}
 
 	bch := make(chan interface{})
 	mch := make(chan interface{}, 1000)
@@ -117,6 +120,71 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 	}
 
 	return &gomemcached.MCResponse{Fatal: true} // Unreachable.
+}
+
+func doTapDump(b Bucket, req *gomemcached.MCRequest,
+	chpkt chan<- transmissible, cherr <-chan error,
+	tc gomemcached.TapConnect) *gomemcached.MCResponse {
+	v, ok := tc.Flags[gomemcached.DUMP]
+	if !ok {
+		return nil
+	}
+	switch vx := v.(type) {
+	case bool:
+		if !vx {
+			return nil
+		}
+	default:
+		return &gomemcached.MCResponse{Fatal: true}
+	}
+
+	var res *gomemcached.MCResponse
+	var err error
+
+	np := b.GetBucketSettings().NumPartitions
+	for i := 0; i < np; i++ {
+		vb := b.GetVBucket(uint16(i))
+		if vb == nil {
+			continue
+		}
+		if vb.GetVBState() != VBActive {
+			continue
+		}
+
+		errVisit := vb.ps.visitItems(nil, true, func(i *item) bool {
+			// TODO: Need to occasionally send TAP_ACK's.
+			chpkt <- &gomemcached.MCRequest{
+				Opcode:  gomemcached.TAP_MUTATION,
+				VBucket: vb.vbid,
+				Key:     i.key,
+				Cas:     i.cas,
+				Extras:  make([]byte, 16),
+				Body:    i.data,
+			}
+			select {
+			case err = <-cherr:
+				return false
+			default:
+			}
+			return true
+		})
+
+		// TODO: Determine if we should close this now.
+		// close(chpkt)
+
+		if errVisit != nil {
+			return &gomemcached.MCResponse{Fatal: true}
+		}
+
+		if err == nil {
+			err = <-cherr
+		}
+		if err != nil {
+			return &gomemcached.MCResponse{Fatal: true}
+		}
+	}
+
+	return res
 }
 
 func MutationLogger(ch chan interface{}) {
