@@ -37,11 +37,22 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 		}
 	}
 
-	res := doTapDump(b, req, chpkt, cherr, tc)
+	res, yesDump := isTapDump(tc)
+	if yesDump {
+		return doTapDump(b, req, chpkt, cherr, tc)
+	}
 	if res != nil {
 		return res
 	}
 
+	// TODO: TAP_BACKFILL, but mind the gap between backfill and tap-forward.
+
+	return doTapForward(b, req, chpkt, cherr, tc)
+}
+
+func doTapForward(b Bucket, req *gomemcached.MCRequest,
+	chpkt chan<- transmissible, cherr <-chan error,
+	tc gomemcached.TapConnect) *gomemcached.MCResponse {
 	bch := make(chan interface{})
 	mch := make(chan interface{}, 1000)
 
@@ -122,22 +133,25 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 	return &gomemcached.MCResponse{Fatal: true} // Unreachable.
 }
 
-func doTapDump(b Bucket, req *gomemcached.MCRequest,
-	chpkt chan<- transmissible, cherr <-chan error,
-	tc gomemcached.TapConnect) *gomemcached.MCResponse {
+func isTapDump(tc gomemcached.TapConnect) (*gomemcached.MCResponse, bool) {
 	v, ok := tc.Flags[gomemcached.DUMP]
 	if !ok {
-		return nil
+		return nil, false
 	}
 	switch vx := v.(type) {
 	case bool:
 		if !vx {
-			return nil
+			return nil, false
 		}
 	default:
-		return &gomemcached.MCResponse{Fatal: true}
+		return &gomemcached.MCResponse{Fatal: true}, false
 	}
+	return nil, true
+}
 
+func doTapDump(b Bucket, req *gomemcached.MCRequest,
+	chpkt chan<- transmissible, cherr <-chan error,
+	tc gomemcached.TapConnect) *gomemcached.MCResponse {
 	var res *gomemcached.MCResponse
 	var err error
 
