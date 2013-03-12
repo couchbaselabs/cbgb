@@ -39,7 +39,7 @@ func testLoadInts(t *testing.T, rh *reqHandler, vbid int, numItems int) {
 			Body:    []byte(strconv.Itoa(i)),
 			VBucket: uint16(vbid),
 		}
-		res := rh.HandleMessage(nil, req)
+		res := rh.HandleMessage(nil, nil, req)
 		if res.Status != gomemcached.SUCCESS {
 			t.Errorf("expected SET of %v to work, got: %v", i, res)
 		}
@@ -54,7 +54,7 @@ func testExpectInts(t *testing.T, rh *reqHandler, vbid int, expectedInts []int,
 		VBucket: uint16(vbid),
 	}
 	w := &bytes.Buffer{}
-	res := rh.HandleMessage(w, req)
+	res := rh.HandleMessage(nil, w, req)
 	if res.Status != gomemcached.SUCCESS {
 		t.Errorf("testExpectInts: %v - expected RGET success, got: %v",
 			desc, res)
@@ -237,7 +237,7 @@ func TestSaveLoadMutations(t *testing.T) {
 			Key:     []byte(x.key),
 			Body:    []byte(x.val),
 		}
-		res := r1.HandleMessage(ioutil.Discard, req)
+		res := r1.HandleMessage(nil, ioutil.Discard, req)
 		if res.Status != gomemcached.SUCCESS {
 			t.Errorf("Expected %v for %v:%v/%v, got %v",
 				gomemcached.SUCCESS, x.op, x.vb, x.key, res.Status)

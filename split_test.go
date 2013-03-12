@@ -73,7 +73,7 @@ func TestSplitRange(t *testing.T) {
 		if x.val == "NO_BODY" {
 			req.Body = nil
 		}
-		res := rh.HandleMessage(nil, req)
+		res := rh.HandleMessage(nil, nil, req)
 		if res.Status != x.expStatus {
 			t.Errorf("%v: Expected %v for %v:%v, got: %v, body: %v",
 				testNum, x.expStatus, x.op, x.key, res.Status, string(res.Body))

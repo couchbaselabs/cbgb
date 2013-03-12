@@ -793,7 +793,7 @@ func TestBucketQuotaBytes(t *testing.T) {
 		t.Errorf("reached quota earlier than expected")
 	}
 
-	res := r0.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res := r0.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode:  gomemcached.SET,
 		VBucket: 2,
 		Key:     []byte("toobig"),
@@ -803,7 +803,7 @@ func TestBucketQuotaBytes(t *testing.T) {
 		t.Errorf("expected to have reached quota, got: %v", res)
 	}
 
-	res = r0.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = r0.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode:  gomemcached.SET,
 		VBucket: 2,
 		Key:     []byte("shouldfit"),

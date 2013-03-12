@@ -11,7 +11,7 @@ import (
 
 func TestSaslListMechs(t *testing.T) {
 	rh := reqHandler{currentBucket: nil}
-	res := rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res := rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_LIST_MECHS,
 	})
 	if res == nil {
@@ -20,7 +20,7 @@ func TestSaslListMechs(t *testing.T) {
 	if !bytes.Equal(res.Body, []byte("PLAIN")) {
 		t.Errorf("expected SASL_LIST_MECHS to be PLAIN")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode:  gomemcached.SASL_LIST_MECHS,
 		VBucket: 1,
 	})
@@ -31,13 +31,13 @@ func TestSaslListMechs(t *testing.T) {
 
 func TestSaslBadAuthReq(t *testing.T) {
 	rh := reqHandler{currentBucket: nil}
-	res := rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res := rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 	})
 	if res.Status != gomemcached.EINVAL {
 		t.Errorf("expected SASL_AUTH with bad mech/key to fail, got: %v", res)
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode:  gomemcached.SASL_AUTH,
 		VBucket: 1,
 		Key:     []byte("PLAIN"),
@@ -45,7 +45,7 @@ func TestSaslBadAuthReq(t *testing.T) {
 	if res.Status != gomemcached.EINVAL {
 		t.Errorf("expected SASL_AUTH with nonzero vbucket to fail, got: %v", res)
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00"),
@@ -53,7 +53,7 @@ func TestSaslBadAuthReq(t *testing.T) {
 	if res.Status != gomemcached.EINVAL {
 		t.Errorf("expected SASL_AUTH with short body to fail, got: %v", res)
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("aaa"),
@@ -61,7 +61,7 @@ func TestSaslBadAuthReq(t *testing.T) {
 	if res.Status != gomemcached.EINVAL {
 		t.Errorf("expected SASL_AUTH with bad body to fail, got: %v", res)
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00aa"),
@@ -83,7 +83,7 @@ func TestSaslRejectedAuth(t *testing.T) {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
 	rh := reqHandler{currentBucket: nil, buckets: buckets}
-	res := rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res := rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00not-a-bucket\x00"),
@@ -94,7 +94,7 @@ func TestSaslRejectedAuth(t *testing.T) {
 	if rh.currentBucket != nil {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00not-a-bucket\x00some-pswd"),
@@ -105,7 +105,7 @@ func TestSaslRejectedAuth(t *testing.T) {
 	if rh.currentBucket != nil {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00\x00some-pswd-but-missing-a-bucket"),
@@ -116,7 +116,7 @@ func TestSaslRejectedAuth(t *testing.T) {
 	if rh.currentBucket != nil {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00\x00"),
@@ -151,7 +151,7 @@ func TestSaslAuth(t *testing.T) {
 			PasswordHash:  "a nice password",
 		})
 	rh := reqHandler{currentBucket: nil, buckets: buckets}
-	res := rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res := rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00nopwd\x00"),
@@ -162,7 +162,7 @@ func TestSaslAuth(t *testing.T) {
 	if rh.currentBucket != nopwd {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00nopwd\x00wrong pswd"),
@@ -173,7 +173,7 @@ func TestSaslAuth(t *testing.T) {
 	if rh.currentBucket != nopwd {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00haspwd\x00a nice password"),
@@ -184,7 +184,7 @@ func TestSaslAuth(t *testing.T) {
 	if rh.currentBucket != haspwd {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00haspwd\x00a badpassword"),
@@ -195,7 +195,7 @@ func TestSaslAuth(t *testing.T) {
 	if rh.currentBucket != haspwd {
 		t.Errorf("expected currentBucket to be nil")
 	}
-	res = rh.HandleMessage(ioutil.Discard, &gomemcached.MCRequest{
+	res = rh.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
 		Opcode: gomemcached.SASL_AUTH,
 		Key:    []byte("PLAIN"),
 		Body:   []byte("\x00haspwd\x00"),

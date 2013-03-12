@@ -19,7 +19,8 @@ type reqHandler struct {
 	currentBucket Bucket
 }
 
-func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (rh *reqHandler) HandleMessage(r io.Reader, w io.Writer,
+	req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	switch req.Opcode {
 	case gomemcached.QUIT:
 		return &gomemcached.MCResponse{
@@ -99,11 +100,41 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 }
 
 func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
-	log.Printf("Started session with %v", addr)
+	defer s.Close()
+
+	log.Printf("Started session, addr: %v", addr)
 	defer func() {
-		log.Printf("Finished session with %v", addr)
+		log.Printf("Finished session, addr: %v", addr)
 	}()
-	memcached.HandleIO(s, handler)
+
+	var err error
+	for err == nil {
+		err = handleMessage(s, s, handler)
+	}
+	if err != io.EOF {
+		log.Printf("Error on session, addr: %v, err: %v", addr, err)
+	}
+}
+
+func handleMessage(r io.Reader, w io.Writer, handler *reqHandler) error {
+	req, err := memcached.ReadPacket(r)
+	if err != nil {
+		return err
+	}
+	res := handler.HandleMessage(r, w, &req)
+	if res == nil { // Quiet command
+		return nil
+	}
+	if !res.Fatal {
+		res.Opcode = req.Opcode
+		res.Opaque = req.Opaque
+		err = res.Transmit(w)
+		if err != nil {
+			return err
+		}
+		return nil
+	}
+	return io.EOF
 }
 
 func waitForConnections(ls net.Listener, buckets *Buckets, defaultBucketName string) {
