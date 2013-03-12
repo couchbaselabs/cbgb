@@ -1,0 +1,41 @@
+<html>
+  <head>
+    <title>CBGB Downloads</title>
+
+    <script type="text/javascript" src="/monitor/jquery.min.js"></script>
+
+    <style type="text/css">
+#bubbles {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 500px;
+  font-size: 10px;
+}
+    </style>
+  </head>
+
+  <body>
+    <h1>Download CBGB Server <span class="version"></span></h1>
+
+    <ul>
+      <li><a href="cbgb.mac.gz">MacOS X</a></li>
+      <li><a href="cbgb.win64.exe.gz">Windows</a>
+        (or <a href="cbgb.win32.exec.gz">32-bit</a>)
+      </li>
+      <li><a href="cbgb.lin64.gz">Linux (64-bit)</a></li>
+      <li><a href="cbgb.lin32.gz">Linux (32-bit)</a></li>
+      <li><a href="cbgb.arm.gz">Linux (arm)</a>
+          (or <a href="cbgb.arm5.gz">arm5</a>)
+      </li>
+      <li><a href="cbgb.fbsd.gz">FreeBSD (64-bit)</a></li>
+    </ul>
+
+    <script type="text/javascript">
+      $(function() {
+        $.ajax("version.json").success(function(d) {
+          $(".version").text(d.version);
+        });
+      } );
+    </script>
+</html>

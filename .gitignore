@@ -4,6 +4,8 @@
 *.test
 *~
 .#*
+/dist/cbgb.*.gz
+/dist/version.json
 /generated_suite_test.json
 /tools/createbuckets/createbuckets
 /version_git.go
