@@ -27,6 +27,23 @@ func (z *zipHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	http.ServeContent(w, req, req.URL.Path, z.ts, bytes.NewReader([]byte(data)))
 }
 
+var httpTimeFormats = []string{
+	http.TimeFormat,
+	time.RFC850,
+	time.ANSIC,
+}
+
+// Stolen from go ~1.1
+func parseHTTPTime(text string) (t time.Time, err error) {
+	for _, layout := range httpTimeFormats {
+		t, err = time.Parse(layout, text)
+		if err == nil {
+			return
+		}
+	}
+	return
+}
+
 // XXX:  This code has no tests.  :(
 func zipStatic(path string) (*zipHandler, error) {
 	log.Printf("Loading static content from %v", path)
@@ -59,7 +76,7 @@ func zipStatic(path string) (*zipHandler, error) {
 	}
 	defer zr.Close()
 
-	lastTs, err := http.ParseTime(res.Header.Get("Last-Modified"))
+	lastTs, err := parseHTTPTime(res.Header.Get("Last-Modified"))
 	if err != nil {
 		lastTs = time.Now()
 	}
