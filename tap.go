@@ -28,7 +28,16 @@ func (m mutation) String() string {
 var tapTickFreq = time.Second
 
 func doTap(b Bucket, req *gomemcached.MCRequest,
-	chpkt chan<- transmissible, cherr <-chan error) error {
+	chpkt chan<- transmissible, cherr <-chan error) *gomemcached.MCResponse {
+	tc, err := req.ParseTapCommands()
+	if err != nil {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body:   []byte(fmt.Sprintf("ParseTapCommands err: %v", err)),
+		}
+	}
+
+	log.Printf("TAP connect: %#v", tc)
 
 	bch := make(chan interface{})
 	mch := make(chan interface{}, 1000)
@@ -102,11 +111,12 @@ func doTap(b Bucket, req *gomemcached.MCRequest,
 				Opcode: gomemcached.TAP_OPAQUE,
 				Extras: make([]byte, 8),
 			}
-		case err := <-cherr:
-			return err
+		case <-cherr:
+			return &gomemcached.MCResponse{Fatal: true}
 		}
 	}
-	panic("unreachable")
+
+	return &gomemcached.MCResponse{Fatal: true} // Unreachable.
 }
 
 func MutationLogger(ch chan interface{}) {

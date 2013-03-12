@@ -25,6 +25,15 @@ func TestTapSetup(t *testing.T) {
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.TAP_CONNECT,
 	}
+	res := rh.HandleMessage(&errWriter{io.EOF}, req)
+	if res.Status != gomemcached.EINVAL {
+		t.Fatalf("expected EINVAL due to bad TAP_CONNECT request, got: %v", res)
+	}
+
+	req = &gomemcached.MCRequest{
+		Opcode: gomemcached.TAP_CONNECT,
+		Extras: make([]byte, 4),
+	}
 
 	// Adjust the tick time for the test since this is really only
 	// the condition that will transmit for this test.
@@ -34,10 +43,9 @@ func TestTapSetup(t *testing.T) {
 		tapTickFreq = origFreq
 	}()
 
-	res := rh.HandleMessage(&errWriter{io.EOF}, req)
-
+	res = rh.HandleMessage(&errWriter{io.EOF}, req)
 	if !res.Fatal {
-		t.Fatalf("Expected fatality after error tap bringup")
+		t.Fatalf("Expected fatality after error tap bringup, got: %v", res)
 	}
 }
 
@@ -63,6 +71,7 @@ func TestTapChanges(t *testing.T) {
 
 	treq := &gomemcached.MCRequest{
 		Opcode: gomemcached.TAP_CONNECT,
+		Extras: make([]byte, 4),
 	}
 
 	go doTap(rh.currentBucket, treq, chpkt, cherr)

@@ -78,10 +78,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, req *gomemcached.MCRequest) *go
 		return &gomemcached.MCResponse{}
 	case gomemcached.TAP_CONNECT:
 		chpkt, cherr := transmitPackets(w)
-		err := doTap(rh.currentBucket, req, chpkt, cherr)
-		// Currently no way for this to return without failing
-		log.Printf("Error tapping: %v", err)
-		return &gomemcached.MCResponse{Fatal: true}
+		return doTap(rh.currentBucket, req, chpkt, cherr)
 	case gomemcached.STAT:
 		err := doStats(rh.currentBucket, w, string(req.Key))
 		if err != nil {
