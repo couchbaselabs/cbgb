@@ -2,6 +2,7 @@
 
 project=github.com/couchbaselabs/cbgb
 top=`go list -f '{{.Dir}}' $project`
+version=`git describe`
 
 cd $top
 ./gen_version.sh
@@ -14,7 +15,7 @@ testpkg() {
 }
 
 mkversion() {
-    echo "{\"version\": \"`git describe`\"}" > $DIST/version.json
+    echo "{\"version\": \"$version\"}" > $DIST/version.json
 }
 
 build() {
@@ -43,6 +44,12 @@ compress() {
     wait
 }
 
+static() {
+    rm $DIST/static.zip
+    cd $top/static
+    zip -r $DIST/static.zip *
+}
+
 upload() {
     cbfsclient ${cbfsserver:-http://cbfs.hq.couchbase.com:8484/} upload \
         -ignore=$DIST/.cbfsclient.ignore -delete -v \
@@ -53,4 +60,5 @@ testpkg
 mkversion
 build
 compress
+static
 upload

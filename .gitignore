@@ -5,6 +5,7 @@
 *~
 .#*
 /dist/cbgb.*.gz
+/dist/static.zip
 /dist/version.json
 /generated_suite_test.json
 /tools/createbuckets/createbuckets
