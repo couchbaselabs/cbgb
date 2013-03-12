@@ -12,6 +12,11 @@ import (
 
 func main() {
 	for _, arg := range os.Args[1:] {
-		fmt.Printf("%s\n", cbgb.BucketPath(arg))
+		bp, err := cbgb.BucketPath(arg)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: illegal bucket name: %v\n", arg)
+			os.Exit(1)
+		}
+		fmt.Printf("%s\n", bp)
 	}
 }

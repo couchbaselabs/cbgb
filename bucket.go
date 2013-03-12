@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"regexp"
 	"strconv"
 	"strings"
 	"sync"
@@ -102,13 +103,15 @@ func (b *Buckets) New(name string,
 	if defaultSettings != nil {
 		settings = defaultSettings.Copy()
 	}
-
 	settings.UUID = createNewUUID()
 
-	// TODO: Need name checking & encoding for safety/security.
-	bdir := b.Path(name) // If an accessible bdir directory exists already, it's ok.
+	bdir, err := b.Path(name)
+	if err != nil {
+		return nil, err
+	}
 
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		// If an accessible bdir directory exists already, it's ok.
 		if err = os.MkdirAll(bdir, 0777); err != nil && !isDir(bdir) {
 			return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
 		}
@@ -157,7 +160,10 @@ func (b *Buckets) Close(name string, purgeFiles bool) {
 	}
 
 	if purgeFiles {
-		os.RemoveAll(b.Path(name))
+		bp, err := b.Path(name)
+		if err == nil {
+			os.RemoveAll(bp)
+		}
 	}
 }
 
@@ -173,16 +179,27 @@ func (b *Buckets) CloseAll() {
 	}
 }
 
-func (b *Buckets) Path(name string) string {
-	return path.Join(b.dir, BucketPath(name))
+func (b *Buckets) Path(name string) (string, error) {
+	bp, err := BucketPath(name)
+	if err != nil {
+		return "", err
+	}
+	return path.Join(b.dir, bp), nil
 }
 
-func BucketPath(bucketName string) string {
+func BucketPath(bucketName string) (string, error) {
+	match, err := regexp.MatchString("^[A-Za-z0-9\\-_]+$", bucketName)
+	if err != nil {
+		return "", err
+	}
+	if !match {
+		return "", fmt.Errorf("bad bucket name: %v", bucketName)
+	}
 	c := uint16(crc32.ChecksumIEEE([]byte(bucketName)))
 	lo := fmt.Sprintf("%02x", c&0xff)
 	hi := fmt.Sprintf("%02x", c>>8)
 	// Example result for "default" bucket: "$BUCKETS_DIR/00/df/default-bucket".
-	return path.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX)
+	return path.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX), nil
 }
 
 // Reads the buckets directory and returns list of bucket names.

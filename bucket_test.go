@@ -305,10 +305,17 @@ func TestBucketPath(t *testing.T) {
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
-	p := b.Path("hello")
+	p, err := b.Path("hello")
 	// crc32("hello") == 0x3610a686
+	if err != nil {
+		t.Errorf("expected b.Path() to work, got: %v", err)
+	}
 	if p != path.Join(d, "a6", "86", "hello-bucket") {
 		t.Errorf("unepxected bucket path: %v", p)
+	}
+	p, err = b.Path("../bad-bucket-name")
+	if err == nil {
+		t.Errorf("expected bad b.Path() to error")
 	}
 }
 
@@ -858,8 +865,8 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 	}
 
 	// Copy all files from foo dir to bar dir.
-	fooPath := buckets1.Path("foo")
-	barPath := buckets1.Path("bar")
+	fooPath, _ := buckets1.Path("foo")
+	barPath, _ := buckets1.Path("bar")
 	os.MkdirAll(barPath, 0777)
 	filepath.Walk(fooPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
