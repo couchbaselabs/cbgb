@@ -1,12 +1,14 @@
 package cbgb
 
 import (
+	"encoding/binary"
 	"fmt"
 	"io"
 	"log"
 	"time"
 
 	"github.com/dustin/gomemcached"
+	"github.com/dustin/gomemcached/server"
 )
 
 // Message sent on object change
@@ -153,12 +155,11 @@ func isTapDump(tc gomemcached.TapConnect) (*gomemcached.MCResponse, bool) {
 func doTapDump(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	chpkt chan<- transmissible, cherr <-chan error,
 	tc gomemcached.TapConnect) *gomemcached.MCResponse {
-	var res *gomemcached.MCResponse
 	var err error
 
 	np := b.GetBucketSettings().NumPartitions
-	for i := 0; i < np; i++ {
-		vb := b.GetVBucket(uint16(i))
+	for vbid := 0; vbid < np; vbid++ {
+		vb := b.GetVBucket(uint16(vbid))
 		if vb == nil {
 			continue
 		}
@@ -170,7 +171,7 @@ func doTapDump(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 			// TODO: Need to occasionally send TAP_ACK's.
 			chpkt <- &gomemcached.MCRequest{
 				Opcode:  gomemcached.TAP_MUTATION,
-				VBucket: vb.vbid,
+				VBucket: uint16(vbid),
 				Key:     i.key,
 				Cas:     i.cas,
 				Extras:  make([]byte, 16),
@@ -183,23 +184,39 @@ func doTapDump(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 			}
 			return true
 		})
-
-		// TODO: Determine if we should close this now.
-		// close(chpkt)
-
 		if errVisit != nil {
+			close(chpkt)
 			return &gomemcached.MCResponse{Fatal: true}
 		}
-
-		if err == nil {
-			err = <-cherr
-		}
 		if err != nil {
+			close(chpkt)
 			return &gomemcached.MCResponse{Fatal: true}
 		}
 	}
 
-	return res
+	doTapAck(r, chpkt, cherr)
+
+	close(chpkt)
+	return &gomemcached.MCResponse{Fatal: true}
+}
+
+func doTapAck(r io.Reader, chpkt chan<- transmissible, cherr <-chan error) error {
+	ackReq := &gomemcached.MCRequest{
+		Opcode: gomemcached.TAP_OPAQUE,
+		Extras: make([]byte, 8),
+	}
+	TAP_FLAG_ACK := uint16(0x01)
+	binary.BigEndian.PutUint16(ackReq.Extras[2:], TAP_FLAG_ACK)
+
+	chpkt <- ackReq
+	select {
+	case err := <-cherr:
+		return err
+	default:
+	}
+
+	_, err := memcached.ReadPacket(r)
+	return err
 }
 
 func MutationLogger(ch chan interface{}) {
