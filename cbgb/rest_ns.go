@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/go-couchbase"
@@ -46,19 +47,25 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 			ClusterMembership:    "active",
 			CouchAPIBase:         "http://" + host + "/" + bucket,
 			Hostname:             host,
-			Ports:                map[string]int{"direct": port},
-			Status:               "healthy",
-			Version:              cbgb.VERSION + "-cbgb",
+			Ports: map[string]int{
+				"direct": port,
+				"proxy":  0,
+			},
+			Status:  "healthy",
+			Version: cbgb.VERSION + "-cbgb",
 		},
 	}
 }
 
 func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
-		"buckets": map[string]interface{}{"uri": "/pools/default/buckets"},
-		"name":    "default",
-		"nodes":   getNSNodeList(r.Host, ""),
-		"stats":   map[string]interface{}{"uri": "/pools/default/stats"},
+		"buckets": map[string]interface{}{
+			"uri":          "/pools/default/buckets",
+			"streamingUri": "/poolsStreaming/default/buckets",
+		},
+		"name":  "default",
+		"nodes": getNSNodeList(r.Host, ""),
+		"stats": map[string]interface{}{"uri": "/pools/default/stats"},
 	})
 }
 
@@ -92,6 +99,7 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		Nodes:        getNSNodeList(host, bucketName),
 		Replicas:     1,
 		URI:          "/pools/default/buckets/" + bucketName + "?bucket_uuid=" + bucketUUID,
+		StreamingURI: "/poolsStreaming/default/buckets/" + bucketName,
 		UUID:         bucketUUID,
 	}
 	// TODO: Perhaps dynamically generate a SASL password here, such
@@ -161,6 +169,32 @@ func restNSBucket(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &b)
 }
 
+// Wraps any REST response to make a "streaming" version.
+func restNSStreaming(orig func(http.ResponseWriter,
+	*http.Request),) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		f, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Not flushable", 500)
+			log.Printf("Can't flush %v", w)
+			return
+		}
+
+		for {
+			orig(w, r)
+			f.Flush()
+			_, err := w.Write([]byte("\n\n\n\n"))
+			if err != nil {
+				log.Printf("Error sending streaming result: %v", err)
+				return
+			}
+			f.Flush()
+			time.Sleep(time.Second * 30)
+		}
+	}
+}
+
 func restNSBucketDDocs(w http.ResponseWriter, r *http.Request) {
 	rows, err := getNSBucketDDocs(r.Host, mux.Vars(r)["bucketname"],
 		r.FormValue("bucket_uuid"))
@@ -207,4 +241,7 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
 	r.HandleFunc("/pools/default/buckets", restNSBucketList)
 	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs", restNSBucketDDocs)
+	r.HandleFunc("/poolsStreaming/default", restNSStreaming(restNSPoolsDefault))
+	r.HandleFunc("/poolsStreaming/default/buckets/{bucketname}",
+		restNSStreaming(restNSBucket))
 }
