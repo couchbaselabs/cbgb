@@ -151,9 +151,16 @@ func TestTapChanges(t *testing.T) {
 	mustNotTransmit("no vbucket")
 }
 
-func makeMustTapFuncs(t *testing.T, chpkt chan transmissible) (
+func makeMustTapFuncs(t *testing.T, rh *reqHandler, chpkt chan transmissible) (
+	sendReq func(req *gomemcached.MCRequest),
 	mustTransmit func(m string, typ gomemcached.CommandCode) *gomemcached.MCRequest,
 	mustBeTapAck func(req *gomemcached.MCRequest)) {
+	sendReq = func(req *gomemcached.MCRequest) {
+		res := rh.HandleMessage(ioutil.Discard, nil, req)
+		if res.Status != gomemcached.SUCCESS {
+			t.Fatalf("Error doing set#1: %v", res)
+		}
+	}
 	mustTransmit = func(m string, typ gomemcached.CommandCode) *gomemcached.MCRequest {
 		select {
 		case m := <-chpkt:
@@ -178,7 +185,7 @@ func makeMustTapFuncs(t *testing.T, chpkt chan transmissible) (
 			t.Fatalf("expected TAP_FLAG_ACK, got: %#v", req)
 		}
 	}
-	return mustTransmit, mustBeTapAck
+	return sendReq, mustTransmit, mustBeTapAck
 }
 
 func TestTapDumpEmptyBucket(t *testing.T) {
@@ -194,7 +201,7 @@ func TestTapDumpEmptyBucket(t *testing.T) {
 	chpkt := make(chan transmissible, 128)
 	cherr := make(chan error, 1)
 
-	mustTransmit, mustBeTapAck := makeMustTapFuncs(t, chpkt)
+	_, mustTransmit, mustBeTapAck := makeMustTapFuncs(t, &rh, chpkt)
 
 	treq := &gomemcached.MCRequest{
 		Opcode: gomemcached.TAP_CONNECT,
@@ -209,5 +216,50 @@ func TestTapDumpEmptyBucket(t *testing.T) {
 
 	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
 
+	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
+}
+
+func TestTapDumpBucket(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer testBucket.Close()
+	testBucket.CreateVBucket(0)
+	testBucket.SetVBState(0, VBActive)
+	rh := reqHandler{currentBucket: testBucket}
+
+	chpkt := make(chan transmissible, 128)
+	cherr := make(chan error, 1)
+	sendReq, mustTransmit, mustBeTapAck := makeMustTapFuncs(t, &rh, chpkt)
+
+	sendReq(&gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("1"),
+		Body:   []byte("100"),
+	})
+	sendReq(&gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("2"),
+		Body:   []byte("200"),
+	})
+
+	treq := &gomemcached.MCRequest{
+		Opcode: gomemcached.TAP_CONNECT,
+		Extras: make([]byte, 4),
+	}
+	binary.BigEndian.PutUint32(treq.Extras, uint32(gomemcached.DUMP))
+
+	ackRes := &gomemcached.MCResponse{
+		Opcode: gomemcached.TAP_OPAQUE,
+	}
+	ackBuf := bytes.NewBuffer(ackRes.Bytes())
+
+	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
+
+	mustTransmit("mutation", gomemcached.TAP_MUTATION)
+	mustTransmit("mutation", gomemcached.TAP_MUTATION)
 	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
 }
