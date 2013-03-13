@@ -25,7 +25,7 @@ func TestTapSetup(t *testing.T) {
 	req := &gomemcached.MCRequest{
 		Opcode: gomemcached.TAP_CONNECT,
 	}
-	res := rh.HandleMessage(nil, &errWriter{io.EOF}, req)
+	res := rh.HandleMessage(&errWriter{io.EOF}, nil, req)
 	if res.Status != gomemcached.EINVAL {
 		t.Fatalf("expected EINVAL due to bad TAP_CONNECT request, got: %v", res)
 	}
@@ -43,7 +43,7 @@ func TestTapSetup(t *testing.T) {
 		tapTickFreq = origFreq
 	}()
 
-	res = rh.HandleMessage(nil, &errWriter{io.EOF}, req)
+	res = rh.HandleMessage(&errWriter{io.EOF}, nil, req)
 	if !res.Fatal {
 		t.Fatalf("Expected fatality after error tap bringup, got: %v", res)
 	}
@@ -103,7 +103,7 @@ func TestTapChanges(t *testing.T) {
 	}
 
 	sendReq := func(req *gomemcached.MCRequest) {
-		res := rh.HandleMessage(nil, ioutil.Discard, req)
+		res := rh.HandleMessage(ioutil.Discard, nil, req)
 		if res.Status != gomemcached.SUCCESS {
 			t.Fatalf("Error doing set#1: %v", res)
 		}

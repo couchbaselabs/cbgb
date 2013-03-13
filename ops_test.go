@@ -112,7 +112,7 @@ func TestBasicOps(t *testing.T) {
 			Body:    []byte(x.val),
 		}
 
-		res := rh.HandleMessage(nil, ioutil.Discard, req)
+		res := rh.HandleMessage(ioutil.Discard, nil, req)
 
 		if res == nil && x.expStatus == ignored {
 			// this was a "normal" quiet command
@@ -424,13 +424,13 @@ func TestStats(t *testing.T) {
 	}
 
 	// TODO:  maybe grab the results and look at them.
-	res := rh.HandleMessage(nil, ioutil.Discard, req)
+	res := rh.HandleMessage(ioutil.Discard, nil, req)
 
 	if res != nil {
 		t.Fatalf("Expected nil from stats, got %v", res)
 	}
 
-	res = rh.HandleMessage(nil, &errWriter{io.EOF}, req)
+	res = rh.HandleMessage(&errWriter{io.EOF}, nil, req)
 	if !res.Fatal {
 		t.Fatalf("Expected Fatal from a bad stats, got %v", res)
 	}
@@ -656,7 +656,7 @@ func testChangesSince(t *testing.T, changesSinceCAS uint64, numItems int) {
 
 	w := &bytes.Buffer{}
 
-	res := rh.HandleMessage(nil, w, req)
+	res := rh.HandleMessage(w, nil, req)
 	if res.Opcode != CHANGES_SINCE {
 		t.Errorf("Expected last changes opcode %v, got %v",
 			CHANGES_SINCE, res.Opcode)
@@ -718,11 +718,13 @@ func TestChangesSinceTransmitError(t *testing.T) {
 			Key:    []byte(k),
 			Body:   []byte(k),
 		})
+
 	}
-	res := rh.HandleMessage(nil, w, &gomemcached.MCRequest{
+	res := rh.HandleMessage(w, nil, &gomemcached.MCRequest{
 		Opcode: CHANGES_SINCE,
 		Cas:    0,
 	})
+
 	if !res.Fatal {
 		t.Errorf("Expected fatal response due to transmit error, %v", res)
 	}
@@ -1053,7 +1055,7 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 
 	w := &bytes.Buffer{}
 
-	res := rh.HandleMessage(nil, w, req)
+	res := rh.HandleMessage(w, nil, req)
 	if res.Opcode != gomemcached.RGET {
 		t.Errorf("Expected last rget response opcode %v, got %v",
 			gomemcached.RGET, res.Opcode)
@@ -1138,7 +1140,7 @@ func TestSlowClient(t *testing.T) {
 			Opcode: gomemcached.RGET,
 			Key:    []byte("a"),
 		}
-		res := rh.HandleMessage(nil, sw, req)
+		res := rh.HandleMessage(sw, nil, req)
 		if res.Status != gomemcached.SUCCESS {
 			t.Errorf("Expected success but was unsuccessful")
 		}
@@ -1230,7 +1232,7 @@ func TestStoreFrontBack(t *testing.T) {
 				Key:     []byte(x.key),
 				Body:    []byte(x.val),
 			}
-			res := rh.HandleMessage(nil, ioutil.Discard, req)
+			res := rh.HandleMessage(ioutil.Discard, nil, req)
 			if res.Status != x.expStatus {
 				t.Errorf("Expected %v for %v:%v/%v, got %v",
 					x.expStatus, x.op, x.vb, x.key, res.Status)
@@ -1255,7 +1257,7 @@ func TestStoreFrontBack(t *testing.T) {
 		VBucket: active,
 	}
 	w := &bytes.Buffer{}
-	res := rh.HandleMessage(nil, w, req)
+	res := rh.HandleMessage(w, nil, req)
 	if res.Status != gomemcached.SUCCESS {
 		t.Errorf("Expected RGET success, got: %v", res)
 	}
@@ -1383,7 +1385,7 @@ func TestMutationOps(t *testing.T) {
 			Body:    []byte(x.val),
 		}
 
-		res := rh.HandleMessage(nil, ioutil.Discard, req)
+		res := rh.HandleMessage(ioutil.Discard, nil, req)
 
 		if res == nil && x.expStatus == ignored {
 			// this was a "normal" quiet command
@@ -1526,7 +1528,7 @@ func TestArithOps(t *testing.T) {
 			binary.BigEndian.PutUint32(req.Extras[16:20], uint32(0))
 		}
 
-		res := rh.HandleMessage(nil, ioutil.Discard, req)
+		res := rh.HandleMessage(ioutil.Discard, nil, req)
 
 		if res == nil && x.expStatus == ignored {
 			// this was a "normal" quiet command

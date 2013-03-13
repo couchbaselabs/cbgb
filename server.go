@@ -19,7 +19,7 @@ type reqHandler struct {
 	currentBucket Bucket
 }
 
-func (rh *reqHandler) HandleMessage(r io.Reader, w io.Writer,
+func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 	req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	switch req.Opcode {
 	case gomemcached.QUIT:
@@ -116,12 +116,12 @@ func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
 	}
 }
 
-func handleMessage(r io.Reader, w io.Writer, handler *reqHandler) error {
+func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) error {
 	req, err := memcached.ReadPacket(r)
 	if err != nil {
 		return err
 	}
-	res := handler.HandleMessage(r, w, &req)
+	res := handler.HandleMessage(w, r, &req)
 	if res == nil { // Quiet command
 		return nil
 	}

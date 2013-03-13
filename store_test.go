@@ -54,7 +54,7 @@ func testExpectInts(t *testing.T, rh *reqHandler, vbid int, expectedInts []int,
 		VBucket: uint16(vbid),
 	}
 	w := &bytes.Buffer{}
-	res := rh.HandleMessage(nil, w, req)
+	res := rh.HandleMessage(w, nil, req)
 	if res.Status != gomemcached.SUCCESS {
 		t.Errorf("testExpectInts: %v - expected RGET success, got: %v",
 			desc, res)
@@ -237,7 +237,7 @@ func TestSaveLoadMutations(t *testing.T) {
 			Key:     []byte(x.key),
 			Body:    []byte(x.val),
 		}
-		res := r1.HandleMessage(nil, ioutil.Discard, req)
+		res := r1.HandleMessage(ioutil.Discard, nil, req)
 		if res.Status != gomemcached.SUCCESS {
 			t.Errorf("Expected %v for %v:%v/%v, got %v",
 				gomemcached.SUCCESS, x.op, x.vb, x.key, res.Status)

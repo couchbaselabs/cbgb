@@ -76,7 +76,7 @@ func TestCompaction(t *testing.T) {
 			Key:     []byte(x.key),
 			Body:    []byte(x.val),
 		}
-		res := r0.HandleMessage(nil, ioutil.Discard, req)
+		res := r0.HandleMessage(ioutil.Discard, nil, req)
 		if res.Status != gomemcached.SUCCESS {
 			t.Errorf("Expected %v for %v:%v/%v, got %v",
 				gomemcached.SUCCESS, x.op, x.vb, x.key, res.Status)
@@ -262,12 +262,13 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 	}
 
 	// Also exercise deletion codepaths.
-	r0.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
+	r0.HandleMessage(ioutil.Discard, nil, &gomemcached.MCRequest{
 		Opcode:  gomemcached.DELETE,
 		VBucket: uint16(2),
 		Key:     []byte(strconv.Itoa(3)),
 	})
-	r0.HandleMessage(nil, ioutil.Discard, &gomemcached.MCRequest{
+
+	r0.HandleMessage(ioutil.Discard, nil, &gomemcached.MCRequest{
 		Opcode:  gomemcached.DELETE,
 		VBucket: uint16(2),
 		Key:     []byte(strconv.Itoa(4)),
