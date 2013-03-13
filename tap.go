@@ -215,6 +215,7 @@ func doTapAck(r io.Reader, chpkt chan<- transmissible, cherr <-chan error) error
 	default:
 	}
 
+	// TODO: Validate that the response matches the ACK that we expect.
 	_, err := memcached.ReadPacket(r)
 	return err
 }

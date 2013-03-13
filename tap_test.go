@@ -1,6 +1,8 @@
 package cbgb
 
 import (
+	"bytes"
+	"encoding/binary"
 	"io"
 	"io/ioutil"
 	"os"
@@ -147,4 +149,59 @@ func TestTapChanges(t *testing.T) {
 	time.Sleep(100 * time.Millisecond) // settle
 	vb0.observer.Submit(mutation{vb: 1, key: testKey})
 	mustNotTransmit("no vbucket")
+}
+
+func TestTapDumpEmptyBucket(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer testBucket.Close()
+	rh := reqHandler{currentBucket: testBucket}
+
+	chpkt := make(chan transmissible, 128)
+	cherr := make(chan error, 1)
+
+	treq := &gomemcached.MCRequest{
+		Opcode: gomemcached.TAP_CONNECT,
+		Extras: make([]byte, 4),
+	}
+	binary.BigEndian.PutUint32(treq.Extras, uint32(gomemcached.DUMP))
+
+	ackRes := &gomemcached.MCResponse{
+		Opcode: gomemcached.TAP_OPAQUE,
+	}
+	ackBuf := bytes.NewBuffer(ackRes.Bytes())
+
+	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
+
+	mustTransmit := func(m string, typ gomemcached.CommandCode) *gomemcached.MCRequest {
+		select {
+		case m := <-chpkt:
+			req := m.(*gomemcached.MCRequest)
+			if req.Opcode != typ {
+				t.Fatalf("On %v, expected op %v, got %v",
+					m, typ, req.Opcode)
+			}
+			return req
+		case <-time.After(100 * time.Millisecond):
+			t.Fatalf("No change received at %v.", m)
+		}
+		return nil
+	}
+
+	mustBeAck := func(req *gomemcached.MCRequest) {
+		if req == nil || req.Extras == nil {
+			t.Fatalf("expected req for mustBeAck")
+		}
+		flags := binary.BigEndian.Uint16(req.Extras[2:])
+		TAP_FLAG_ACK := uint16(0x01)
+		if flags&TAP_FLAG_ACK == 0 {
+			t.Fatalf("expected TAP_FLAG_ACK, got: %#v", req)
+		}
+	}
+
+	mustBeAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
 }
