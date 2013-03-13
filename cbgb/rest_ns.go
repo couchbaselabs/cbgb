@@ -78,7 +78,8 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 	if b == nil {
 		return nil, fmt.Errorf("No such bucket: %v", bucketName)
 	}
-	bucketUUID := b.GetBucketSettings().UUID
+	bs := b.GetBucketSettings()
+	bucketUUID := bs.UUID
 	if uuid != "" && uuid != bucketUUID {
 		return nil, fmt.Errorf("Bucket uuid does not match the requested.")
 	}
@@ -93,11 +94,16 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		URI:          "/pools/default/buckets/" + bucketName + "?bucket_uuid=" + bucketUUID,
 		UUID:         bucketUUID,
 	}
+	// TODO: Perhaps dynamically generate a SASL password here, such
+	// based on server start time.
+	if bs.PasswordHashFunc == "" && bs.PasswordSalt == "" {
+		rv.Password = bs.PasswordHash // The json saslPassword field.
+	}
 	rv.VBucketServerMap.HashAlgorithm = "CRC"
 	rv.VBucketServerMap.NumReplicas = 1
 	rv.VBucketServerMap.ServerList = []string{getBindAddress(host)}
 
-	np := b.GetBucketSettings().NumPartitions
+	np := bs.NumPartitions
 	rv.VBucketServerMap.VBucketMap = make([][]int, np)
 	for i := 0; i < np; i++ {
 		rv.VBucketServerMap.VBucketMap[i] = []int{0, -1}
