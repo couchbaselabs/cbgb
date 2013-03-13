@@ -151,6 +151,36 @@ func TestTapChanges(t *testing.T) {
 	mustNotTransmit("no vbucket")
 }
 
+func makeMustTapFuncs(t *testing.T, chpkt chan transmissible) (
+	mustTransmit func(m string, typ gomemcached.CommandCode) *gomemcached.MCRequest,
+	mustBeTapAck func(req *gomemcached.MCRequest)) {
+	mustTransmit = func(m string, typ gomemcached.CommandCode) *gomemcached.MCRequest {
+		select {
+		case m := <-chpkt:
+			req := m.(*gomemcached.MCRequest)
+			if req.Opcode != typ {
+				t.Fatalf("On %v, expected op %v, got %v",
+					m, typ, req.Opcode)
+			}
+			return req
+		case <-time.After(100 * time.Millisecond):
+			t.Fatalf("No change received at %v.", m)
+		}
+		return nil
+	}
+	mustBeTapAck = func(req *gomemcached.MCRequest) {
+		if req == nil || req.Extras == nil {
+			t.Fatalf("expected req for mustBeAck")
+		}
+		flags := binary.BigEndian.Uint16(req.Extras[2:])
+		TAP_FLAG_ACK := uint16(0x01)
+		if flags&TAP_FLAG_ACK == 0 {
+			t.Fatalf("expected TAP_FLAG_ACK, got: %#v", req)
+		}
+	}
+	return mustTransmit, mustBeTapAck
+}
+
 func TestTapDumpEmptyBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
@@ -163,6 +193,8 @@ func TestTapDumpEmptyBucket(t *testing.T) {
 
 	chpkt := make(chan transmissible, 128)
 	cherr := make(chan error, 1)
+
+	mustTransmit, mustBeTapAck := makeMustTapFuncs(t, chpkt)
 
 	treq := &gomemcached.MCRequest{
 		Opcode: gomemcached.TAP_CONNECT,
@@ -177,31 +209,5 @@ func TestTapDumpEmptyBucket(t *testing.T) {
 
 	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
 
-	mustTransmit := func(m string, typ gomemcached.CommandCode) *gomemcached.MCRequest {
-		select {
-		case m := <-chpkt:
-			req := m.(*gomemcached.MCRequest)
-			if req.Opcode != typ {
-				t.Fatalf("On %v, expected op %v, got %v",
-					m, typ, req.Opcode)
-			}
-			return req
-		case <-time.After(100 * time.Millisecond):
-			t.Fatalf("No change received at %v.", m)
-		}
-		return nil
-	}
-
-	mustBeAck := func(req *gomemcached.MCRequest) {
-		if req == nil || req.Extras == nil {
-			t.Fatalf("expected req for mustBeAck")
-		}
-		flags := binary.BigEndian.Uint16(req.Extras[2:])
-		TAP_FLAG_ACK := uint16(0x01)
-		if flags&TAP_FLAG_ACK == 0 {
-			t.Fatalf("expected TAP_FLAG_ACK, got: %#v", req)
-		}
-	}
-
-	mustBeAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
+	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
 }
