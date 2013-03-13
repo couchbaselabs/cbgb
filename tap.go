@@ -40,17 +40,45 @@ func doTap(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 		}
 	}
 
-	res, yesDump := isTapDump(tc)
-	if yesDump {
-		return doTapDump(b, req, r, chpkt, cherr, tc)
-	}
+	res, yesDump := isTapFlagTrue(tc, gomemcached.DUMP)
 	if res != nil {
 		return res
 	}
+	res, yesBackFill := isTapFlagTrue(tc, gomemcached.BACKFILL)
+	if res != nil {
+		return res
+	}
+	if yesDump || yesBackFill {
+		res := doTapBackFill(b, req, r, chpkt, cherr, tc)
+		if res != nil {
+			return res
+		}
+		if yesDump {
+			close(chpkt)
+			return &gomemcached.MCResponse{Fatal: true}
+		}
+	}
 
-	// TODO: TAP_BACKFILL, but mind the gap between backfill and tap-forward.
+	// TODO: There's probably a mutation gap between backfill and tap-forward.
 
 	return doTapForward(b, req, r, chpkt, cherr, tc)
+}
+
+func isTapFlagTrue(tc gomemcached.TapConnect, flag gomemcached.TapConnectFlag) (
+	*gomemcached.MCResponse, bool) {
+	v, ok := tc.Flags[flag]
+	if !ok {
+		return nil, false
+	}
+	switch vx := v.(type) {
+	case bool:
+		if !vx {
+			return nil, false
+		}
+	default:
+		return &gomemcached.MCResponse{Fatal: true}, false
+	}
+	return nil, true
 }
 
 func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
@@ -136,23 +164,7 @@ func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	return &gomemcached.MCResponse{Fatal: true} // Unreachable.
 }
 
-func isTapDump(tc gomemcached.TapConnect) (*gomemcached.MCResponse, bool) {
-	v, ok := tc.Flags[gomemcached.DUMP]
-	if !ok {
-		return nil, false
-	}
-	switch vx := v.(type) {
-	case bool:
-		if !vx {
-			return nil, false
-		}
-	default:
-		return &gomemcached.MCResponse{Fatal: true}, false
-	}
-	return nil, true
-}
-
-func doTapDump(b Bucket, req *gomemcached.MCRequest, r io.Reader,
+func doTapBackFill(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	chpkt chan<- transmissible, cherr <-chan error,
 	tc gomemcached.TapConnect) *gomemcached.MCResponse {
 	var err error
@@ -194,10 +206,14 @@ func doTapDump(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 		}
 	}
 
+	// TODO: Skipping error handling for now, as it always errors
+	// since the memcached.ReadPacket() is expecting a REQ instead of
+	// RES for the ACK's header magic.  The fix involves exposing more
+	// helper functions in gomemcached to help us flip the REQ/RES
+	// stream direction.
 	doTapAck(r, chpkt, cherr)
 
-	close(chpkt)
-	return &gomemcached.MCResponse{Fatal: true}
+	return nil
 }
 
 func doTapAck(r io.Reader, chpkt chan<- transmissible, cherr <-chan error) error {
