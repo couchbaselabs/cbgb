@@ -29,6 +29,8 @@ import (
 	"github.com/robertkrimen/otto"
 )
 
+const maxViewErrors = 100
+
 func referencesVBucket(r *http.Request, rm *mux.RouteMatch) bool {
 	return strings.Contains(strings.ToLower(r.RequestURI), "%2f")
 }
@@ -413,31 +415,49 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		vb := bucket.GetVBucket(uint16(vbid))
 		if vb != nil {
 			var errVisit error
+			numErr := 0
 			err = vb.Visit(nil, func(key []byte, data []byte) bool {
 				docId := string(key)
 
-				var doc interface{}
-				errVisit = json.Unmarshal(data, &doc)
-				if errVisit != nil {
+				if numErr > maxViewErrors {
 					return false
 				}
 
-				odoc, errVisit := OttoFromGo(o, doc)
-				if errVisit != nil {
+				docType := "json"
+				var doc interface{}
+				err := json.Unmarshal(data, &doc)
+				if err != nil {
+					doc = base64.StdEncoding.EncodeToString(data)
+					docType = "base64"
+				}
+
+				odoc, err := OttoFromGo(o, doc)
+				if err != nil {
+					log.Printf("Error sending object into otto %s: %v",
+						data, err)
+					errVisit = err
 					return false
 				}
 
 				meta := map[string]interface{}{
-					"id": docId,
+					"id":   docId,
+					"type": docType,
 				}
 				ometa, err := OttoFromGo(o, meta)
 				if err != nil {
+					log.Printf("Error sending meta object into otto: %v -> %v",
+						meta, err)
+					errVisit = err
 					return false
 				}
 
-				_, errVisit = fnv.Call(fnv, odoc, ometa)
-				if errVisit != nil {
-					return false
+				_, err = fnv.Call(fnv, odoc, ometa)
+				if err != nil {
+					log.Printf("Error executing view function on %s (%s) -> %v",
+						key, data, err)
+					numErr++
+					errVisit = err
+					return true
 				}
 
 				for _, emit := range emits {
@@ -453,7 +473,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					err), 400)
 				return
 			}
-			if errVisit != nil {
+			if numErr > maxViewErrors && errVisit != nil {
 				http.Error(w, fmt.Sprintf("view visit function error: %v",
 					errVisit), 400)
 				return
