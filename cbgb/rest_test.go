@@ -1180,7 +1180,6 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/stats":                                   "",
 		"/pools/default/buckets":                                 "pools_default_buckets",
 		"/pools/default":                                         "pools_default",
-		"/poolsStreaming":                                        "",
 		"/pools":                                                 "pools",
 	}
 

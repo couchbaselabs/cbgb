@@ -60,8 +60,7 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
 		"buckets": map[string]interface{}{
-			"uri":          "/pools/default/buckets",
-			"streamingUri": "/poolsStreaming/default/buckets",
+			"uri": "/pools/default/buckets",
 		},
 		"name":  "default",
 		"nodes": getNSNodeList(r.Host, ""),
