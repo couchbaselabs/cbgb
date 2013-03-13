@@ -40,15 +40,13 @@ func doTap(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 		}
 	}
 
-	res, yesDump := isTapFlagTrue(tc, gomemcached.DUMP)
+	// TODO: TAP of a vbucket list.
+
+	res, yesDump := tapFlagBool(&tc, gomemcached.DUMP)
 	if res != nil {
 		return res
 	}
-	res, yesBackFill := isTapFlagTrue(tc, gomemcached.BACKFILL)
-	if res != nil {
-		return res
-	}
-	if yesDump || yesBackFill {
+	if yesDump || tapFlagExists(&tc, gomemcached.BACKFILL) {
 		res := doTapBackFill(b, req, r, chpkt, cherr, tc)
 		if res != nil {
 			return res
@@ -64,7 +62,7 @@ func doTap(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	return doTapForward(b, req, r, chpkt, cherr, tc)
 }
 
-func isTapFlagTrue(tc gomemcached.TapConnect, flag gomemcached.TapConnectFlag) (
+func tapFlagBool(tc *gomemcached.TapConnect, flag gomemcached.TapConnectFlag) (
 	*gomemcached.MCResponse, bool) {
 	v, ok := tc.Flags[flag]
 	if !ok {
@@ -72,13 +70,16 @@ func isTapFlagTrue(tc gomemcached.TapConnect, flag gomemcached.TapConnectFlag) (
 	}
 	switch vx := v.(type) {
 	case bool:
-		if !vx {
-			return nil, false
-		}
+		return nil, vx
 	default:
 		return &gomemcached.MCResponse{Fatal: true}, false
 	}
-	return nil, true
+	return nil, false
+}
+
+func tapFlagExists(tc *gomemcached.TapConnect, flag gomemcached.TapConnectFlag) bool {
+	_, ok := tc.Flags[flag]
+	return ok
 }
 
 func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,

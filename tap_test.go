@@ -217,6 +217,8 @@ func TestTapDumpEmptyBucket(t *testing.T) {
 	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
 
 	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
+
+	mustTapDone("dump done", t, chpkt)
 }
 
 func TestTapDumpBucket(t *testing.T) {
@@ -265,18 +267,22 @@ func TestTapDumpBucket(t *testing.T) {
 	sendReq(&gomemcached.MCRequest{
 		Opcode: gomemcached.SET,
 		Key:    []byte("should-not-see"),
-		Body:   []byte("this-mutation-on-the-tap-stream"),
+		Body:   []byte("this-mutation-on-the-tap-stream-after-the-ACK"),
 	})
 
 	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
 
+	mustTapDone("dump done", t, chpkt)
+}
+
+func mustTapDone(m string, t *testing.T, chpkt chan transmissible) {
 	var more transmissible
 	select {
 	case more = <-chpkt:
 	default:
 	}
 	if more != nil {
-		t.Fatalf("didn't expect to see forward mutations on tap dump, got %v", more)
+		t.Fatalf("didn't expect to see more tap msgs, got: %v, for: %v", more, m)
 	}
 }
 
@@ -323,4 +329,63 @@ func TestTapDumpInactiveBucket(t *testing.T) {
 	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
 
 	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
+
+	mustTapDone("dump done", t, chpkt)
+}
+
+func TestTapBackFillBucket(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	testBucket, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer testBucket.Close()
+	testBucket.CreateVBucket(0)
+	testBucket.SetVBState(0, VBActive)
+	rh := reqHandler{currentBucket: testBucket}
+
+	chpkt := make(chan transmissible, 128)
+	cherr := make(chan error, 1)
+	sendReq, mustTransmit, mustBeTapAck := makeMustTapFuncs(t, &rh, chpkt)
+
+	sendReq(&gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("1"),
+		Body:   []byte("100"),
+	})
+	sendReq(&gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("2"),
+		Body:   []byte("200"),
+	})
+
+	treq := &gomemcached.MCRequest{
+		Opcode: gomemcached.TAP_CONNECT,
+		Extras: make([]byte, 4),
+		Body:   make([]byte, 8), // BACKFILL body is 64-bits.
+	}
+	binary.BigEndian.PutUint32(treq.Extras, uint32(gomemcached.BACKFILL))
+
+	ackRes := &gomemcached.MCResponse{
+		Opcode: gomemcached.TAP_OPAQUE,
+	}
+	ackBuf := bytes.NewBuffer(ackRes.Bytes())
+
+	go doTap(rh.currentBucket, treq, ackBuf, chpkt, cherr)
+
+	mustTransmit("mutation0", gomemcached.TAP_MUTATION)
+	mustTransmit("mutation1", gomemcached.TAP_MUTATION)
+
+	time.Sleep(10 * time.Millisecond) // Let TAP get to new mutation.
+
+	sendReq(&gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("should-see"),
+		Body:   []byte("this-mutation-on-the-tap-stream-after-the-ACK"),
+	})
+
+	mustBeTapAck(mustTransmit("ack-wanted", gomemcached.TAP_OPAQUE))
+
+	mustTransmit("post-DUMP-mutation", gomemcached.TAP_MUTATION)
 }
