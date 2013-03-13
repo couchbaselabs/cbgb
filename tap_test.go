@@ -261,7 +261,23 @@ func TestTapDumpBucket(t *testing.T) {
 
 	mustTransmit("mutation", gomemcached.TAP_MUTATION)
 	mustTransmit("mutation", gomemcached.TAP_MUTATION)
+
+	sendReq(&gomemcached.MCRequest{
+		Opcode: gomemcached.SET,
+		Key:    []byte("should-not-see"),
+		Body:   []byte("this-mutation-on-the-tap-stream"),
+	})
+
 	mustBeTapAck(mustTransmit("ack wanted", gomemcached.TAP_OPAQUE))
+
+	var more transmissible
+	select {
+	case more = <-chpkt:
+	default:
+	}
+	if more != nil {
+		t.Fatalf("didn't expect to see forward mutations on tap dump, got %v", more)
+	}
 }
 
 func TestTapDumpInactiveBucket(t *testing.T) {
