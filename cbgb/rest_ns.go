@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -104,13 +105,64 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 	return rv, nil
 }
 
+func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
+	b := buckets.Get(bucketName)
+	if b == nil {
+		return nil, fmt.Errorf("No such bucket: %v", bucketName)
+	}
+	bucketUUID := b.GetBucketSettings().UUID
+	if uuid != "" && uuid != bucketUUID {
+		return nil, fmt.Errorf("Bucket uuid does not match the requested.")
+	}
+	rows := make([]interface{}, 0)
+	var errVisit, errJson error
+	errVisit = b.VisitDDocs(nil, func(key []byte, data []byte) bool {
+		var j interface{}
+		errJson = json.Unmarshal(data, &j)
+		if errJson != nil {
+			return false
+		}
+		rows = append(rows,
+			map[string]interface{}{
+				"doc": map[string]interface{}{
+					"json": j,
+					"meta": map[string]interface{}{
+						"id": string(key),
+						// TODO: "rev" meta field.
+					},
+				},
+			})
+		return true
+	})
+	if errVisit != nil {
+		return nil, fmt.Errorf("VisitDDocs err: %v", errVisit)
+	}
+	if errJson != nil {
+		return nil, fmt.Errorf("json parse err: %v", errJson)
+	}
+	rv := map[string]interface{}{}
+	rv["rows"] = rows
+	return rv, nil
+}
+
 func restNSBucket(w http.ResponseWriter, r *http.Request) {
-	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"], r.FormValue("bucket_uuid"))
+	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"],
+		r.FormValue("bucket_uuid"))
 	if err != nil {
 		http.Error(w, err.Error(), 404)
 		return
 	}
 	jsonEncode(w, &b)
+}
+
+func restNSBucketDDocs(w http.ResponseWriter, r *http.Request) {
+	rows, err := getNSBucketDDocs(r.Host, mux.Vars(r)["bucketname"],
+		r.FormValue("bucket_uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
+	}
+	jsonEncode(w, &rows)
 }
 
 func restNSBucketList(w http.ResponseWriter, r *http.Request) {
@@ -133,7 +185,6 @@ func restNSAPI(r *mux.Router) {
 		"/pools/default/buckets/{bucketname}/stats",
 		"/pools/default/buckets/{bucketname}/nodes",
 		"/pools/default/buckets/{bucketname}/nodes/{node}/stats",
-		"/pools/default/buckets/{bucketname}/ddocs",
 		"/pools/default/buckets/{bucketname}/localRandomKey",
 		"/pools/default/bucketsStreaming/{bucketname}",
 		"/pools/default/stats",
@@ -149,4 +200,5 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
 	r.HandleFunc("/pools/default/buckets", restNSBucketList)
+	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs", restNSBucketDDocs)
 }

@@ -60,6 +60,7 @@ type Bucket interface {
 	GetDDocVBucket() *vbucket
 	GetDDoc(ddocId string) ([]byte, error)
 	SetDDoc(ddocId string, body []byte) error
+	VisitDDocs(start []byte, visitor func(key []byte, data []byte) bool) error
 
 	GetItemBytes() int64
 }

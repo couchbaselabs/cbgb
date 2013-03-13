@@ -32,3 +32,8 @@ func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
 	}
 	return nil
 }
+
+func (b *livebucket) VisitDDocs(start []byte,
+	visitor func(key []byte, data []byte) bool) error {
+	return b.vbucketDDoc.Visit(start, visitor)
+}

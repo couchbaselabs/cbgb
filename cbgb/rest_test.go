@@ -1163,6 +1163,9 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 	}
 	defer b.Close()
 
+	b.SetDDoc("_design/buildboard",
+		[]byte(`{"views": {"builds": {"map": "function (doc, meta) {}"}}}`))
+
 	mr := testSetupMux(d)
 
 	ns_server_paths := map[string]string{
@@ -1170,7 +1173,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/buckets/{bucketname}/stats":              "",
 		"/pools/default/buckets/{bucketname}/nodes":              "",
 		"/pools/default/buckets/{bucketname}/nodes/{node}/stats": "",
-		"/pools/default/buckets/{bucketname}/ddocs":              "",
+		"/pools/default/buckets/{bucketname}/ddocs":              "pools_default_buckets_cbfs_ddocs",
 		"/pools/default/buckets/{bucketname}/localRandomKey":     "",
 		"/pools/default/bucketsStreaming/{bucketname}":           "",
 		"/pools/default/buckets/{bucketname}":                    "pools_default_buckets_cbfs",
