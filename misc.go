@@ -91,7 +91,7 @@ func isDir(path string) bool {
 }
 
 // TODO: replace with proper UUID implementation
-func createNewUUID() string {
+func CreateNewUUID() string {
 	val1 := rand.Int63()
 	val2 := rand.Int63()
 	uuid := fmt.Sprintf("%x%x", val1, val2)

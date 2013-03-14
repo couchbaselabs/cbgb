@@ -104,7 +104,7 @@ func (b *Buckets) New(name string,
 	if defaultSettings != nil {
 		settings = defaultSettings.Copy()
 	}
-	settings.UUID = createNewUUID()
+	settings.UUID = CreateNewUUID()
 
 	bdir, err := b.Path(name)
 	if err != nil {

@@ -17,8 +17,8 @@ import (
 
 var toplevelPool = couchbase.Pools{
 	ImplementationVersion: cbgb.VERSION + "-cbgb",
-	IsAdmin:               false,
-	UUID:                  "abc",
+	IsAdmin:               true, // TODO: Need real auth.
+	UUID:                  cbgb.CreateNewUUID(),
 	Pools: []couchbase.RestPool{
 		{
 			Name:         "default",
