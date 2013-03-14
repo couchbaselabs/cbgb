@@ -8,6 +8,7 @@
 /dist/static.zip
 /dist/version.json
 /generated_suite_test.json
+/tools/bucketpath/bucketpath
 /tools/createbuckets/createbuckets
 /version_git.go
 _*
