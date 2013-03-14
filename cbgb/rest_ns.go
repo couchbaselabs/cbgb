@@ -244,3 +244,11 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/poolsStreaming/default/buckets/{bucketname}",
 		restNSStreaming(restNSBucket))
 }
+
+func restNSServe(restNS string, staticPathNS string) {
+	r := mux.NewRouter()
+	restNSAPI(r)
+	initStatic(r, "/", staticPathNS)
+	log.Printf("listening rest-ns on: %v", restNS)
+	log.Fatal(http.ListenAndServe(restNS, r))
+}

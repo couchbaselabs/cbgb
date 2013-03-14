@@ -15,10 +15,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func restMain(rest string, staticPath string) {
+func restServe(rest string, staticPath string) {
 	r := mux.NewRouter()
 	restAPI(r, staticPath)
-	restNSAPI(r)
 	restCouchAPI(r)
 	r.Handle("/", http.RedirectHandler("/_static/app.html", 302))
 	log.Printf("listening rest on: %v", rest)
@@ -55,20 +54,20 @@ func restAPI(r *mux.Router, staticPath string) {
 	r.HandleFunc("/_api/settings",
 		restGetSettings).Methods("GET")
 
-	initStatic(r, staticPath)
+	initStatic(r, "/_static/", staticPath)
 }
 
-func initStatic(r *mux.Router, staticPath string) {
+func initStatic(r *mux.Router, staticPrefix, staticPath string) {
 	if strings.HasPrefix(staticPath, "http://") {
 		zs, err := zipStatic(staticPath)
 		if err != nil {
 			log.Fatalf("Error initializing zip static: %v", err)
 		}
-		r.PathPrefix("/_static/").Handler(
-			http.StripPrefix("/_static/", zs))
+		r.PathPrefix(staticPrefix).Handler(
+			http.StripPrefix(staticPrefix, zs))
 	} else {
-		r.PathPrefix("/_static/").Handler(
-			http.StripPrefix("/_static/",
+		r.PathPrefix(staticPrefix).Handler(
+			http.StripPrefix(staticPrefix,
 				http.FileServer(http.Dir(staticPath))))
 	}
 }

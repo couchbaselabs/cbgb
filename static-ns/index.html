@@ -1,0 +1,2681 @@
+<!DOCTYPE html>
+<!--[if IE 7 ]>    <html class="ie7" lang="en"> <![endif]-->
+<!--[if IE 8 ]>    <html class="ie8" lang="en"> <![endif]-->
+<!--[if (gte IE 9)|!(IE)]><!--><html lang="en"><!--<![endif]-->
+<head>
+  <title>Couchbase Console</title>
+  <link rel="stylesheet" type="text/css" href="css/codemirror.css">
+  <link rel="stylesheet" type="text/css" href="css/screen.css">
+  <link rel="stylesheet" type="text/css" href="css/print.css">
+  <link rel="stylesheet" type="text/css" href="css/jquery-ui.couchbase.css">
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+  <meta http-equiv="X-UA-Compatible" content="chrome=1">
+</head>
+<body class="auth nojs">
+  <script>document.body.className = "auth";</script>
+  <div class="io-error-notice-wrapper"><span class="io-error-notice" style="display:none;"></span></div>
+  <div id="container">
+    <div class="page-header">
+      <div class="cnt_holder main_holder">
+        <div class="topper_nav">
+          <span class="only-when-below-20" style="display:none;">NOTE: need all 2.0 nodes to enable 2.0-only features<b>&bull;</b></span>
+          <span id="edit-internal-settings-link" style="display:none;"><a onclick="runInternalSettingsDialog();">Edit internal settings</a> <b>&bull;</b></span>
+          <a id="switch_support_docs" href="http://docs.couchbase.org/couchbase-manual-2.0/couchbase-getting-started.html" target="cbdocs">Documentation</a>
+          <b>&bull;</b> <a id="switch_support_forums" href="http://www.couchbase.org/forums/couchbase/couchbase-server-20-developer-preview" target="cbforums">Support Forums</a>
+          <b>&bull;</b> <a href="javascript:showAbout();">About</a>
+          <i class="sign-out-link"><b>&bull;</b> <a href="javascript:ThePage.signOut();">Sign Out</a></i>
+        </div>
+        <a href="index.html"><span class="logo">&nbsp;</span></a>
+        <div id="global_progress" class="closed disable_toggle">
+          <i class="toggle">i</i>
+          <ul id="global_progress_container"></ul>
+        </div>
+      </div>
+    </div><!-- .page-header -->
+
+    <div id="headerNav">
+      <div class="contents">
+        <ul>
+          <!--<li class="line"></li>-->
+          <li class="line"><a id="switch_overview" href="#visitSec=overview">Cluster Overview</a></li>
+          <li class="line"><a id="switch_servers" href="#visitSec=servers">Server Nodes</a></li>
+          <li class="line"><a id="switch_buckets" href="#visitSec=buckets">Data Buckets</a></li>
+          <li class="line only-when-20"><a id="switch_views" href="#visitSec=views">Views</a></li>
+          <li class="line only-when-20"><a id="switch_replications" href="#visitSec=replications">XDCR</a></li>
+          <li class="line"><a id="switch_log" href="#visitSec=log">Log</a></li>
+          <li class="line" id="nav_settings_container"><a href="#visitSec=settings" id="switch_settings">Settings</a></li>
+        </ul>
+        <script id="nav_settings_template" type="text/html">
+        <a href="#visitSec=settings" id="switch_settings">Settings
+        {% if (enabled && newVersion!==false && newVersion!==undefined) { %}
+        <span class="badge notify"><span>!</span></span>
+        {% } %}</a>
+        </script>
+      </div>
+    </div><!-- #headerNav -->
+
+    <div id="mainContainer" class="main_holder">
+      <div id="mainPanel" class="mainPanel">
+
+        <div id="overview" style="display:none">
+          <h1>Cluster Overview</h1>
+          <div id="notice_container"></div>
+          <div class="shadow_box">
+            <div class="hdr">
+              <span class="staleness-notice">Difficulties communicating with the
+              cluster; displaying cached information!</span>Cluster
+            </div>
+            <div class="section" id="overview_clusters_block">
+              <div class="item ram-item">
+                <div class="label">
+                  <strong>RAM Overview</strong>
+                </div>
+                <div class="line_cnt"></div>
+              </div>
+              <div class="item disk-item">
+                <div class="label">
+                  <strong>Disk Overview</strong>
+                </div>
+                <div class="line_cnt"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shadow_box">
+            <div class="hdr">
+              <span class="staleness-notice">Difficulties communicating
+              with the cluster; displaying cached information!</span>
+              Buckets <span>(<span class="buckets-number">??</span> active)</span>
+            </div>
+            <div class="section">
+              <div class="item">
+                <div class="graph_main">
+                  <span class="graph_info_label">Operations per second</span>
+                  <div id="overview_ops_graph" class="graph"></div>
+                </div>
+                <div class="graph_main">
+                  <span class="graph_info_label">Disk fetches per second</span>
+                  <div id="overview_reads_graph" class="graph"></div>
+                </div>
+                <div class="no_stats_marker">
+                  <span class="with_buckets">Waiting for samples...</span>
+                  <span class="without_buckets">No buckets currently defined! Go to <a href="#sec=buckets">Manage Buckets</a> to create some.</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="shadow_box">
+            <div class="hdr">
+              <span class="staleness-notice">Difficulties communicating with
+              the cluster; displaying cached information!</span>Servers
+            </div>
+            <div class="section" id="overview_servers_block">
+              <div class="item ovf">
+                <div class="actservers">
+                  <h3>Active Servers: <span id="active-servers-count">??</span></h3>
+                  <!-- <p>CPU Load Max: <b>98%</b></p> -->
+                  <!-- <p>CPU Load Avg: <b>98%</b></p> -->
+                  <!-- <p>CPU Load Min: <b>98%</b></p> -->
+                  <!-- <a href="#">Monitor All Servers</a> -->
+                </div>
+                <ul>
+                  <li class="fail">
+                    <span class="when-non-zero">
+                      <a href="#visitServersTab=pending">Servers Failed Over: <span class="failed-over-count">??</span></a>
+                      <span class="badge"><span class="failed-over-count">??</span></span>
+                    </span>
+                    <span class="when-zero">Servers Failed Over: 0</span>
+                  </li>
+                  <li class="down">
+                    <span class="when-non-zero">
+                      <a href="#visitServersTab=active">Servers Down: <span class="down-count">??</span></a>
+                      <span class="badge"><span class="down-count">??</span></span>
+                    </span>
+                    <span class="when-zero">Servers Down: 0</span>
+                  </li>
+                  <li class="pending">
+                    <span class="when-non-zero">
+                      <a href="#visitServersTab=pending">Servers Pending Rebalance: <span class="pending-count">??</span></a>
+                      <span class="badge"><span class="pending-count">??</span></span>
+                    </span><span class="when-zero">Servers Pending Rebalance: 0</span>
+                  </li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="servers" style="display:none">
+          <h1>Servers</h1>
+          <div class="warning_message failover_warning">
+            Fail Over Warning: <span class="warning-text"></span>
+          </div>
+          <div id="auto_failover_count_container" class="warning_message" style="display:none;">
+            A server was automatically failed over
+            <a class="auto_failover_count_reset edit_btn">
+              <span>Reset Quota</span>
+            </a>
+          </div>
+          <div class="shadow_box">
+            <div class="header_2">
+              <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+              <a class="add_button btn_1"><span>Add Server</span></a>
+              <a class="rebalance_button btn_1"><span>Rebalance</span></a>
+              <a class="stop_rebalance_button btn_1"><span>Stop Rebalance</span></a>
+              <ul class="tabs">
+                <li class="tab_left"><a>Active Servers</a></li>
+                <li class="tab_right" id="rebalance_tab">
+                  <a>Pending Rebalance</a>
+                  <span class="badge"><span>1</span></span>
+                </li>
+              </ul>
+            </div>
+            <div class="panes">
+              <div>
+                <div id="active_server_list_container" class="servers_list"></div>
+              </div><div>
+                <div id="pending_server_list_container" class="servers_list"></div>
+              </div>
+            </div>
+          </div>
+          <script id="manage_server_list_template" type="text/html">
+          <table class="list" style="width:100%">
+            <tbody>
+              <tr>
+                <th class="node_name" colspan="2" style="text-align:left;">Server Node Name</th>
+                <th></th>
+                <th>RAM Usage</th>
+                <th>Swap Usage</th>
+                <th>CPU Usage</th>
+                <th>Data/Disk Usage</th>
+                <th colspan="2" style="text-indent:18px;">Items (Active / Replica)</th>
+                <th></th>
+              </tr>
+            <!-- {% if (!rows.length) { %} -->
+              <tr class="server_row rebalance_empty">
+                <td colspan="10">There are no servers pending rebalance.</td>
+              </tr>
+            <!-- {% } %} -->
+            <!-- {% _.each(rows, function (s) { %} -->
+
+            <!-- {% if (s.reAddPossible) { %} -->
+              <tr class="add_back_row">
+                <td colspan="10">{%= V.setData('server', s) %}
+                  <a href="#" class="add_back_btn re_add_button"></a>
+                  <span class="add_b_message">This server is now reachable. Do you want to add it back to the cluster on the next rebalance?</span>
+                </td>
+              </tr>
+            <!-- {% } %} -->
+
+              <tr class="server_row {%= s.nodeClass %}" id="{%= h(s.otpNode.replace('@', '-')) %}">
+
+                <td class="node_name ellipsis" colspan="2">{%= V.setData('server', s) %}
+              <!-- {% if (s.reAddPossible) { %} -->
+                  <a href="#openServer={%= h(s.otpNode) %}"><ins class="expander closed"></ins></a>
+                  {%= V.stripPortHTML(s.hostname, rows) %}
+              <!-- {% } else { %} -->
+                  <!-- {% if (s.nodeClass == 'server_down' || !expandingAllowed) { %} -->
+                  {%= h(s.hostname) %}
+                  <!-- {% } else { %} -->
+                  <a href="#openServer={%= h(s.otpNode) %}" title="Show Server Node info"><ins class="expander closed"></ins></a>
+                  <a href="#sec=analytics&statsHostname={%= h(s.hostname) %}" title="View Analytics for {%= h(s.hostname) %}">{%= V.stripPortHTML(s.hostname, rows) %}</a>
+                  <!-- {% } %} -->
+              <!-- {% } %} -->
+                </td>
+
+                <td class="{%= s.nodeClass %}"></td>
+
+                <td class="ram">
+                  <!-- {% if ((s.memoryTotal > 0) && isFinite(s.memoryFree)) { %} -->
+                  <div class="vertical_bar">
+                    <div class="used" style="height:{%= (s.memoryTotal - s.memoryFree) / s.memoryTotal * 100 %}%;top:{%= 105 - ((s.memoryTotal - s.memoryFree) / s.memoryTotal * 100) %}%"></div>
+                  </div>
+                  <div class="wrap">{%= h(truncateTo3Digits((s.memoryTotal - s.memoryFree) / s.memoryTotal * 100)) %}%</div>
+                  <!-- {% } else { %} -->
+                  <div class="not_active">N/A</div>
+                  <!-- {% } %} -->
+                </td>
+
+                <td class="ram">
+                  <!-- {% if (s.systemStats.swap_total > 0 && isFinite(s.systemStats.swap_used)) { %} -->
+                  <div class="vertical_bar">
+                    <div class="used" style="height:{%= s.systemStats.swap_used / s.systemStats.swap_total * 100 %}%;top:{%= 105 - (s.systemStats.swap_used / s.systemStats.swap_total * 100) %}%"></div>
+                  </div>
+                  <div class="wrap"> {%= h(truncateTo3Digits((s.systemStats.swap_used / s.systemStats.swap_total) * 100)) %}%</div>
+                  <!-- {% } else { %} -->
+                  <div class="not_active">N/A</div>
+                  <!-- {% } %} -->
+                </td>
+
+                <td class="ram">
+                  <!-- {% if (isFinite(s.systemStats.cpu_utilization_rate)) { %} -->
+                  <div class="vertical_bar">
+                    <div class="used" style="height:{%= Math.floor(s.systemStats.cpu_utilization_rate * 100) / 100 %}%;top:{%= 105 - (Math.floor(s.systemStats.cpu_utilization_rate * 100) / 100) %}%"></div>
+                  </div>
+                  <div class="wrap">{%= h(truncateTo3Digits(Math.floor(s.systemStats.cpu_utilization_rate * 100) / 100)) %}%</div>
+                  <!-- {% } else { %} -->
+                  <div class="not_active">N/A</div>
+                  <!-- {% } %} -->
+                </td>
+
+                <td class="ram">
+                  {%= (function (dataSize, diskUsage) {
+                         if (dataSize == null || diskUsage == null) {
+                           return "N/A";
+                         }
+                         return V.formatQuantity(dataSize) + " /<br>" + V.formatQuantity(diskUsage);
+                      })(s.couchDataSize, s.couchDiskUsage) %}
+                </td>
+
+                <td class="rep">
+                  {%= V.formatQuantity(s.interestingStats.curr_items || 0, '', 1000, ' ') %}/<br>
+                  {%= V.formatQuantity(s.interestingStats.vb_replica_curr_items || 0, '', 1000, ' ') %}
+                </td>
+
+                <!-- {% if (s.clusterMembership == 'inactiveAdded') { %} -->
+                <td colspan="2">
+                  <a href="#" class="list_button btn_cancel eject_server"><span>Cancel</span></a>
+                  <span class="pending_add_message">Pending Add</span>
+                </td>
+                <!-- {% } else if (s.pendingEject) { %} -->
+                <td class="actions" colspan="2">
+                  <a href="#" class="list_button btn_cancel remove_from_list"><span>Cancel</span></a>
+                  <span class="pending_add_message">Pending Removal</span>
+                </td>
+                <!-- {% } else { %} -->
+                <td class="actions" colspan="2">
+                  <a class="list_button eject_server"><span>Remove</span></a>
+                  <a class="list_button failover_server"><span>Fail Over</span></a>
+                  <span class="failed_over_message">Failed Over: Pending Removal</span>
+                </td>
+                <!-- {% } %} -->
+
+              </tr>
+            <!-- {% if (expandingAllowed) { %} -->
+              <tr><td colspan="10" class="settings-placeholder" style="display:none;">{%= ServersSection.renderServerDetails(s) %}</td></tr>
+            <!-- {% } %} -->
+          <!-- {% }); %} -->
+            </tbody>
+          </table>
+          </script>
+
+          <script id="server_details_template" type="text/html">
+          <div class="first gong_rb">
+            <div class="pad">
+              <a class="edit_btn float_right disabled">Edit</a>
+              <table class="properties_table">
+                <tr>
+                    <td>Server Name: <span>{%= h(hostname) %}</span></td>
+                    <td>Uptime: <span>{%= h(formatUptime(uptime)) %}</span></td>
+                </tr>
+                <tr>
+                    <td>OS: <span>{%= h(os) %}</span></td>
+                    <td>Version: <span>{%= h(DAL.prettyVersion(version, true)) %}</span></td>
+                </tr>
+              </table>
+            </div>
+            <div class="side side_1"></div>
+            <div class="side side_2"></div>
+            <div class="side side_3"></div>
+            <div class="side side_4"></div>
+          </div>
+          <div class="additional_server_info">
+            <h3>Memory Cache</h3>
+            <div class="info_block">
+              <span class="dynamic_ram">Dynamic RAM:</span>
+              <div class="usage-block">{%= V.thisElement(function (e) {ServersSection.renderUsage(e, obj.storageTotals.ram, true)}) %}</div>
+            </div>
+            <h3>Disk Storage</h3>
+            <div class="info_block">
+              <span class="disk_storage">
+                <span>Disk One: </span>
+                  <span class="path" title="{%= h(storage.hdd[0].path) %}">{%= h(storage.hdd[0].path.length > 25 ? "..." + storage.hdd[0].path.slice( -25 ) : storage.hdd[0].path) %}</span>
+              </span>
+              <div class="usage-block">{%= V.thisElement(function (e) {ServersSection.renderUsage(e, obj.storageTotals.hdd)}) %}</div>
+            </div>
+          </div><!-- additional_server_info -->
+          </script>
+        </div>
+
+        <div id="analytics" style="display:none">
+          <span class="block nav float_right configure_view"></span>
+          <h1>
+            <span class="when-normal-stats">DATA BUCKETS: </span><span class="when-specific-stats"><em class="specific-stat-description"></em> for bucket: </span>
+            <select id="analytics_buckets_select"></select>
+            <span class="when-normal-stats"> on <select id="analytics_servers_select"></select></span>
+          </h1>
+          <div id="date_slider_container">
+            <div id="date_slider"></div>
+            <ul>
+              <li><a id="zoom_minute">Minute</a></li>
+              <li><a id="zoom_hour">Hour</a></li>
+              <li><a id="zoom_day">Day</a></li>
+              <li><a id="zoom_week">Week</a></li>
+              <li><a id="zoom_month">Month</a></li>
+              <li><a id="zoom_year">Year</a></li>
+            </ul>
+          </div>
+          <div id="current_stat_info">
+            <h3>
+              <span class="i">i</span>
+              <span class="current-graph-name"><!-- stat name --></span>
+            </h3>
+            <p class="current-graph-desc"><!-- stat description --></p>
+          </div>
+          <div class="shadow_box" style="width:780px;">
+            <div class="section">
+              <div class="header_2">
+                <span class="block nav float_right">
+                  <span class="stats-period-container">
+                    <span class="with_samples current">Last <b class="stats_visible_period">?</b></span><span class="without_samples current">No samples, yet</span>
+                  </span>
+                  <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+                </span>
+                General Bucket Analytics
+                <!--<ul class="tabs">
+                  <li class="tab_left"><a id="general_analytics">General</a></li>
+                  <li><a id="view_index_analytics">View &amp; Index</a></li>
+                  <li class="tab_right"><a id="replication_analytics">Replication</a></li>
+                </ul>-->
+              </div>
+              <div class="analytics_graph_main">
+                <h2 class="current-graph-name"></h2>
+                <span class="graph_info_label block right active_node_count"><!-- 3 active nodes --></span>
+                <div id="analytics_main_graph_grid">
+                  <div id="analytics_main_graph"></div>
+                </div>
+              </div>
+              <script id="new_stats_block_template" type="text/html">
+                      {% _.each(blocks, function (blockInfo) { %}
+                      <div id="{%= h(blockInfo.id) %}" class="darker_block {%= blockInfo.extraCSSClasses %}">
+                        {% if (!blockInfo.hideThis) { %}<h3 class="block-expander"><ins></ins>{%= h(blockInfo.blockName) %}</h3>{% } %}
+                        <div class="stats">
+                        {% if (blockInfo.columns) { %}
+                          <ul class="col_headers">
+                          {% _.each(blockInfo.columns, function (columnName) { %}
+                            <li>{%= h(columnName) %}</li>
+                          {% }); %}
+                          </ul>
+                        {% } %}
+                        {% _.each(blockInfo.stats, function (statInfo) {var name = statInfo.name; var title = statInfo.title; if (statInfo.hidden) {return;} %}
+                          <div id="{%= h(statInfo.id) %}" class="analytics-small-graph {%= (statInfo.missing ? 'dim' : '') %}" data-graph="{%=h(name)%}">
+                            <div class="small_graph_block" style="width: 168px; height: 36px;"></div>
+                            <span class="small_graph_label">
+                              <span class="value">0</span><span class="label-text"> {%= h(title) %}</span>
+                            </span>
+                            <!-- <input type="checkbox" > -->
+                            <ins class="right-arrow">
+                              <ul>
+                              </ul>
+                            </ins>
+                            {% if (statInfo.desc) { %}<div class="graph_tooltip"><span>{%= h(statInfo.desc) %}</span></div>{% } %}
+                          </div>
+                        {% }); %}
+                          <div class="clear"></div>
+                        </div>
+                      </div>
+                      {% }); %}
+              </script>
+              <div id="stats_container"></div>
+            </div>
+          </div><!-- shadow_box -->
+          <div class="shadow_box" style="width:780px;">
+            <div class="section" id="top_keys_block">
+              <h2 class="header_2">
+                TOP KEYS
+              </h2>
+              <p id="top_keys_container"></p>
+              <script id="top_keys_template" type="text/html">
+                      <table class="lined_tab">
+                        <thead>
+                          <tr>
+                            <th>Key</th>
+                            <th>Ops/Sec</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <!-- {% $.each(rows, function () { %} -->
+                          <tr>
+                            <td style="max-width:600px;word-wrap:break-word">{%= h(this.name) %}</td>
+                            <td>{%= h(Math.round(this.ops * 100.0) / 100.0) %}</td>
+                          </tr>
+                          <!-- {% }); %} -->
+                        </tbody>
+                      </table>
+              </script>
+            </div> <!-- section -->
+          </div> <!-- END shadow box -->
+        </div>
+
+        <div id="buckets" style="display:none">
+          <h1>Data Buckets</h1>
+          <div class="shadow_box" id="couchbase_buckets">
+            <div id="manage_buckets_top_bar" class="header_2">
+              <h4 style="float:left;line-height:34px;">Couchbase Buckets</h4>
+              <div class="right" style="overflow:hidden;">
+                <button class="button_200 create-bucket-button" style="float:right;">Create New Data Bucket</button>
+                <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+              </div>
+            </div>
+            <div id="bucket_list_container"></div>
+          </div>
+
+          <div class="shadow_box" id="memcached_buckets" style="display:none">
+            <div id="manage_buckets_top_bar" class="header_2">
+              <h4 style="float:left">Memcached Buckets</h4>
+              <div class="right">
+                <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+              </div>
+            </div>
+            <div id="memcached_bucket_list_container"></div>
+          </div>
+
+          <script id="bucket_list_template" type="text/html">
+            <table class="list" width="100%">
+              <tr>
+                <th class="bucket_name">Bucket Name</th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th>Nodes</th>
+                <th colspan="2">Item Count</th>
+                <th>Ops/sec</th>
+                <th colspan="2" class="disk_fetch">Disk Fetches/sec</th>
+                <th colspan="2" class="hit_ratio">Hit Ratio</th>
+                <th colspan="2">RAM/Quota Usage</th>
+                <th colspan="2">Data/Disk Usage</th>
+                <th></th>
+                <th></th>
+                <th></th>
+                <th class="last"></th>
+              </tr>
+              <!-- {% if (!rows.length) { %} -->
+              <tr><td colspan="18" style="padding:15px">No buckets currently defined! Click "Create New Data Bucket" above to create one.</td></tr>
+              <!-- {% } %} -->
+              <!-- {% $.each(rows, function () { %} -->
+              <tr class="{%= this.bucketTypeName.toLowerCase() %}">
+                <td class="bucket_name ellipsis" colspan="4">
+                  <a class="disable-if-stale" href="#visitBucket={%= h(encodeURIComponent(this.name)) %}" title="Show Bucket info"><span class="expander closed"></span></a>
+                  <a class="disable-if-stale" title="View Analytics for {%= h(this.name) %}" href="#sec=analytics&statsBucket={%= h(encodeURIComponent(this.uri)) %}">{%= h(this.name) %}</a>
+                </td>
+                <td>
+                  <span id="{%= h(this.name) %}_health" class="health_graph"></span>
+                  {%= this.nodes.length %}
+                </td>
+                <td colspan="2">{%= h(this.basicStats.itemCount) %}</td>
+                <td>{%= h(truncateTo3Digits(this.basicStats.opsPerSec)) %}</td>
+                {% if (this.bucketType == 'membase') { %}
+                  <td colspan="2">
+                    {% if (this.basicStats.diskFetches !== undefined) { %}
+                    {%= h(truncateTo3Digits(this.basicStats.diskFetches)) %}
+                    {% } else { %}N/A{% } %}
+                  </td>
+                {% } %}
+                {% if (this.bucketType == 'memcached') { %}
+                  <td colspan="2">{%= h(truncateTo3Digits(this.basicStats.hitRatio * 100)) %}%</td>
+                {% } %}
+                <td colspan="2">{%= V.formatQuantity(this.basicStats.memUsed) %} /<br> {%= V.formatQuantity(this.quota.ram) %}</td>
+                <td colspan="2">
+                  {% if (this.bucketType == 'membase') { %}
+                    {%= V.formatQuantity(this.basicStats.dataUsed) %} /<br> {%= V.formatQuantity(this.basicStats.diskUsed) %}
+                  {% } else { %}N/A{% } %}
+                </td>
+                <td colspan="4" class="last">
+                  {% if (this.bucketType == 'membase') { %}
+                    <a class="list_button disable-if-stale only-when-20" href="#sec=views&viewsBucket={%= h(this.name) %}"><span>Views</span></a>
+                    <a class="list_button only-when-20" href="#sec=documents&bucketName={%= encodeURIComponent(this.name) %}&documentsPageNumber=0"><span>Documents</span></a>{% } %}
+                </td>
+              </tr>
+              <tr>
+                <td colspan="18" class="settings-placeholder">
+                  {%= BucketsSection.renderBucketDetails(this) %}
+                </td>
+              </tr>
+              <!-- {% }); %} -->
+            </table>
+          </script>
+
+          <script id="bucket_settings_template" type="text/html">
+            <div class="gong_rb">
+              <div class="pad">
+                <div>
+                  Access Control: <span>{%= (authType == 'none') ? 'Port' : ((name == 'default') ? 'None' : 'Authentication') %}{%= (authType == 'none') ? (': ' + proxyPort) : '' %}</span>
+                </div>
+                {% if (bucketType == 'membase') { %}
+                  <div>
+                    Replicas: <span>{%= replicaNumber != 0 ? V.count(replicaNumber, 'replica copy') : 'disabled' %}</span>
+                  </div>
+                  <div>
+                    Compaction: <span class="bucket_progress_container" data-name="{%= h(name) %}">
+                    {%= thisBucketCompactionTask ? thisBucketCompactionTask.progress + "% complete" : "Not active" %}
+                    </span>
+                  </div>
+                {% } %}
+                <div class="last">
+                  <a class="inner_btn" href="#editBucket={%= h(encodeURIComponent(uri)) %}">Edit</a>
+                  {% if (!showCancel && !noCompaction) { %}
+                    <button class="inner_btn compact_btn {%= disableCompact ? 'disabled' : ''%}" data-uri="{%= h(controllers.compactAll) %}"><span>Compact</span></button>
+                  {% } else if (!noCompaction) { %}
+                    <button class="inner_btn cancel_compact_btn {%= disableCancel ? 'disabled' : ''%}" data-uri="{%= h(thisBucketCompactionTask.cancelURI) %}"><span>Cancel</span></button>
+                  {% } %}
+                </div>
+              </div>
+              <div class="side side_1"></div>
+              <div class="side side_2"></div>
+              <div class="side side_3"></div>
+              <div class="side side_4"></div>
+            </div>
+
+            <div class="additional_server_info bucket_details">
+              <h2>Cache Size</h2>
+              <div class="size-gauge for-ram"></div>
+            {%= V.thisElement(function (e) {BucketsSection.renderRAMDetailsGauge(e, obj);}) %}
+              <label class="for-hdd-quota">
+                <span>Dynamic RAM Quota:</span>
+                <span>{%= h(V.formatQuantity(ramQuota)) %}</span>
+                <abbr></abbr>
+              </label>
+
+            {% if (storageInfoRelevant) { %}
+              <h2>Storage Size</h2>
+              <label class="for-hdd-quota">
+                <span>Persistence Enabled:</span>
+                <span>Yes</span>
+                <abbr></abbr>
+              </label>
+
+              <div class="size-gauge for-hdd"></div>
+            {%= V.thisElement(function (e) {BucketsSection.renderHDDDetailsGauge(e, obj)}) %}
+
+              <label class="for-hdd-quota" style="padding:0;">
+                <span>Disk Usage:</span>
+                <span>{%= h(V.formatQuantity(basicStats.diskUsed)) %}</span><br>
+                <span>Data Usage:</span>
+                <span>{%= h(V.formatQuantity(basicStats.dataUsed)) %}</span>
+                <abbr></abbr>
+              </label>
+            {% } %} <!-- storageInfoRelevant -->
+            </div><!-- additional_server_info -->
+          </script>
+        </div>
+
+        <div id="logs" style="display:none">
+          <!-- Shadow box -->
+          <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+          <span class="block nav float_right configure_view">
+            <a href="diag" target="_blank">Generate Diagnostic Report</a>
+          </span>
+          <h1>Log</h1>
+          <div class="shadow_box">
+            <div class="panes">
+              <div id="logs_container"></div>
+              <script id="logs_template" type="text/html">
+                <table class="lined_tab">
+                  <thead>
+                    <tr>
+                      <th>Event</th>
+                      <th>Module Code</th>
+                      <th>Server Node</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- {% _.each(rows, function (logRow) { %} -->
+                    <tr>
+                      <td>{%= h(logRow.text).replace(/\n/g, "<br />") %}</td>
+                      <td>{%= h(logRow.module) + (new String(1000 + parseInt(logRow.code))).slice(-3)%}</td>
+                      <td>{%= h(logRow.node) %}</td>
+                      <td class="text_11 nobr">{%=V.formatLogTStamp(logRow.tstamp)%}
+                    </tr>
+                    <!-- {% }); %} -->
+                  </tbody>
+                </table>
+              </script>
+            </div>
+          </div>
+        </div>
+
+        <div id="settings" style="display:none">
+          <h1>Settings</h1>
+          <div class="shadow_box">
+            <div class="section">
+              <div class="header_2">
+                <ul class="tabs">
+                  <li class="tab_left"><a id="settings_update_notifications">Update Notifications</a></li>
+                  <li><a id="settings_auto_failover">Auto-Failover</a></li>
+                  <li><a id="settings_alerts">Alerts</a></li>
+                  <li><a id="settings_compaction">Auto-Compaction</a></li>
+                  <li class="tab_right"><a id="settings_sample_buckets">Sample Buckets</a></li>
+                </ul>
+              </div>
+              <div class="panes clearfix">
+                <div id="notifications_container" class="notifications-updates"><div class='spinner' style="height:350px;line-height:350px;width:100%"><span>Loading...</span></div></div>
+                <div id="auto_failover_container" class="auto_failover"><div class='spinner' style="height:350px;line-height:350px;width:100%"><span>Loading...</span></div></div>
+                <div id="email_alerts_container" class="email_alerts"><div class='spinner' style="height:350px;line-height:350px;width:100%"><span>Loading...</span></div></div>
+                <div id="compaction_container"><form>
+                  <fieldset class="auto_compaction persistent-only">
+                    <legend>Auto-Compaction</legend>
+                    <p>The Auto-Compaction daemon compacts databases and their respective
+                    view indexes when all the condition parameters are satisfied.</p>
+                    <ul>
+                      <li><h4>Database Fragmentation</h4></li>
+                      <li class="database">
+                        <span>
+                          <input type="checkbox"
+                                 id="48099acb-df16-4e1e-9949-2aaccfeb9e41"
+                                 class="check-for-databaseFragmentationThresholdPercentage" />
+                        </span>
+                        <span class="input_wrapper">
+                          <input type="number"
+                                 id="decaebe7-bb14-4c1f-9bb1-70ceb7fb2e43"
+                                 name="databaseFragmentationThreshold[percentage]" />%
+                        </span>
+                        <label for="decaebe7-bb14-4c1f-9bb1-70ceb7fb2e43">
+                          <span>at which point compaction is triggered</span>
+                        </label>
+                        <div class="error-container err-databaseFragmentationThreshold-percentage-"></div>
+                     </li>
+                      <li class="database">
+                        <input type="checkbox"
+                               class="check-for-databaseFragmentationThresholdSize" />
+                        <span class="input_wrapper">
+                          <input type="number" id="settings-db-compaction-size"
+                                 name="databaseFragmentationThreshold[size]"
+                                 class="size" />MB
+                        </span>
+                        <label for="settings-db-compaction-size">
+                          <span>at which point compaction is triggered</span>
+                        </label>
+                        <div class="error-container err-databaseFragmentationThreshold-size-"></div>
+                      </li>
+
+                      <li><h4>View Fragmentation</h4></li>
+                      <li class="view">
+
+                        <input type="checkbox" id="0a2cb7a3-84b7-4822-bf32-87d3e192926a" class="check-for-viewFragmentationThresholdPercentage" />
+                        <span class="input_wrapper">
+                          <input id="8e49a092-3108-46ed-b5c3-9b95c4ceda6f" name="viewFragmentationThreshold[percentage]" type="number" />%
+                        </span>
+                        <label for="8e49a092-3108-46ed-b5c3-9b95c4ceda6f">
+                          <span>at which point compaction is triggered</span>
+                        </label>
+                        <div class="error-container err-viewFragmentationThreshold-percentage-"></div>
+                      </li>
+                      <li class="view">
+                        <input type="checkbox" class="check-for-viewFragmentationThresholdSize" />
+                        <span class="input_wrapper">
+                          <input type="number" id="settings-view-compaction-size"
+                                 name="viewFragmentationThreshold[size]"
+                                 class="size" />MB
+                        </span>
+                        <label for="settings-view-compaction-size">
+                          <span>at which point compaction is triggered</span>
+                        </label>
+                        <div class="error-container err-viewFragmentationThreshold-size-"></div>
+
+                      </li>
+                      <li class="period">
+                        <span class="toggle">
+                          <input type="checkbox" id="f5962927-16af-4eb6-802c-86fe6c3a238d" class="check-for-allowedTimePeriod"/> <label for="f5962927-16af-4eb6-802c-86fe6c3a238d">Time Period</label>
+                        </span>
+                        <span class="input_wrapper">
+                          <input id="8a786bbb-e9df-46d4-8733-2993ae0c2b95" name="allowedTimePeriod[fromHour]" type="number" min="0" max="23" placeholder="HH" />:<input name="allowedTimePeriod[fromMinute]" type="number" min="0" max="59" placeholder="MM" />
+                          - <input name="allowedTimePeriod[toHour]" type="number" min="0" max="23" placeholder="HH" />:<input name="allowedTimePeriod[toMinute]" type="number" min="0" max="59" placeholder="MM" />
+                        </span>
+                        <label for="8a786bbb-e9df-46d4-8733-2993ae0c2b95">
+                          <span>during which compaction is allowed</span>
+                        </label>
+                        <div class="error-container err-allowedTimePeriod"></div>
+                        <div class="error-container err-allowedTimePeriod-fromHour-"></div>
+                        <div class="error-container err-allowedTimePeriod-fromMinute-"></div>
+                        <div class="error-container err-allowedTimePeriod-toHour-"></div>
+                        <div class="error-container err-allowedTimePeriod-toMinute-"></div>
+                        <ul>
+                          <li>
+                            <input type="hidden" name="allowedTimePeriod[abortOutside]" value="false" />
+                            <input id="302bc9f8-0a98-4963-85a4-5670ab8f1c25" type="checkbox" name="allowedTimePeriod[abortOutside]" value="true" />
+                            <label for="302bc9f8-0a98-4963-85a4-5670ab8f1c25">Abort compaction if run time exceeds the above period</label>
+                            <div class="error-container err-allowedTimePeriod-abortOutside-"></div>
+                          </li>
+                        </ul>
+                      </li>
+                      <li>
+                        <input type="hidden" name="parallelDBAndViewCompaction" value="false" />
+                        <input id="f6fb6488-c05a-4baa-88f7-27032da6600b" type="checkbox" name="parallelDBAndViewCompaction" value="true" />
+                        <label for="f6fb6488-c05a-4baa-88f7-27032da6600b">Process Database and View compaction in parallel</label>
+                        <div class="error-container err-parallelDBAndViewCompaction"></div>
+                      </li>
+                    </ul>
+                  </fieldset> <!-- .auto_compaction -->
+                  <div class="save_cancel">
+                    <button class="save_button float_right" type="submit">
+                      Save
+                    </button>
+                  </div>
+                </form></div>
+                <div id="sample_buckets_container"><form id="sample_buckets_form">
+                  <p id="sample_buckets_quota_warning" class="warning_message">
+                    Your cluster does not have enough RAM quota available to create
+                    the selected sample data buckets. Please free at least
+                    <span id="sampleQuotaRequired"></span>MB of RAM Quota per node.
+                  </p>
+                  <p id="sample_buckets_rebalance_warning" class="warning_message">
+                    Can not load samples during rebalance.
+                  </p>
+                  <p>Sample buckets are available to demonstrate the power of
+                    Couchbase Server. These samples contain data and sample MapReduce
+                    queries.</p>
+                  <h3>Installed Samples</h3>
+                  <ul id="installed_samples"></ul>
+                  <h3>Available Samples</h3>
+                  <ul id="available_samples"></ul>
+                    <div class="save_cancel">
+                    <button class="save_button float_right" type="submit"
+                            id="sample_buckets_settings_btn">
+                      Create
+                    </button>
+                   </div>
+                </form></div>
+              </div>
+            </div>
+          </div>
+
+          <script id="notifications_template" type="text/html">
+            <p>You are running version {%= h(version) %}</p>
+            {% if (enabled===true) { %}
+              {% if (newVersion===undefined) { %}
+              <p class="warning"><strong>Warning</strong> – There
+                was a problem with retreiving the update information.</p>
+              {% } else if (newVersion===false) { %}
+              <p>No updates available.</p>
+              {% } else { %}
+              <p>A new version ({%= h(newVersion) %}) is available:</p>
+              <ul>
+                <li>
+                  <a href="{%= h(links.release) %}">Release notes</a>
+                </li>
+                <li>
+                  <a href="{%= h(links.download) %}">Download</a>
+                  the new version
+                </li>
+              </ul>
+                {% if (info!='') { %}
+                <p>{%= h(info) %}</p>
+                {% } %}
+              {% } %}
+            {% } %}
+            <label class="for-enable-replicas">
+              {% if (enabled===true) { %}
+              <input type="checkbox" id="notification-updates" checked="checked">
+              {% } else { %}
+              <input type="checkbox" id="notification-updates">
+              {% } %}
+              <span>Enable software update notifications.</span>
+              <a href="#" class="more_info">What's this?</a>
+            </label>
+            <p class="more_info">
+              Enabling software update notifications allows notification in
+              the Couchbase web console when a new version of Couchbase Server
+              is available. Configuration information transferred in the
+              update check is anonymous and does not include any stored
+              key-value data.
+            </p>
+            <div class="save_cancel">
+              <button class="save_button float_right" type="button"
+                      disabled="disabled">
+                Save
+              </button>
+            </div>
+          </script>
+          <script id="auto_failover_template" type="text/html">
+            <label class="for-enable-replicas"
+                   for="auto_failover_enabled">
+              <input type="checkbox" id="auto_failover_enabled">
+              <span>Enable auto-failover</span>
+            </label>
+            <label for="auto_failover_timeout">
+              <span>Timeout: </span>
+            </label>
+            <input type="text" id="auto_failover_timeout"
+                   value="{%= timeout %}" disabled="disabled" />
+            <a class="text_11 tooltip"><span>What's this?</span>
+              <span class="tooltip_msg"><span>
+                  How long (in seconds) a node must be considered down before it gets auto-failed-over.
+              </span></span>
+            </a>
+            <div class="error-container err-timeout"></div>
+            {% if (count > 0) { %}
+            <div class="count_reset">
+              A server was automatically failed over
+              <a class="auto_failover_count_reset edit_btn">
+                <span>Reset Quota</span>
+              </a>
+            </div>
+            {% } %}
+            <div class="save_cancel">
+              <button class="save_button float_right" type="button"
+                      disabled="disabled">
+                Save
+              </button>
+            </div>
+          </script>
+          <script id="email_alerts_template" type="text/html">
+            <label class="for-enable-replicas"
+                   for="email_alerts_enabled">
+              <input type="checkbox" id="email_alerts_enabled" />
+              <span>Enable email alerts</span>
+            </label>
+            <fieldset>
+              <legend>Email Server Settings</legend>
+              <div class="row">
+                <label for="email_alerts_host">
+                  <span>Host:</span>
+                </label>
+                <input type="text" id="email_alerts_host"
+                       value="{%= h(emailServer.host) %}" disabled="disabled" />
+              </div>
+              <div>
+                <label for="email_alerts_port">
+                  <span>Port:</span>
+                </label>
+                <input type="text" id="email_alerts_port"
+                       value="{%= h(emailServer.port) %}" disabled="disabled" />
+                <div class="error-container err-email_port"></div>
+              </div>
+              <label for="email_alerts_user">
+                <span>Username:</span>
+              </label>
+              <input type="text" id="email_alerts_user"
+                     value="{%= h(emailServer.user) %}" disabled="disabled" />
+              <label for="email_alerts_pass">
+                <span>Password:</span>
+              </label>
+              <input type="password" id="email_alerts_pass"
+                     value="{%= h(emailServer.pass) %}" disabled="disabled" />
+              <label for="email_alerts_encrypt">
+                <span>Require TLS:</span>
+              </label>
+              <input type="checkbox" id="email_alerts_encrypt"
+                     {% if (emailServer.encrypt) { %}
+                     checked="checked"
+                     {% } %}
+                     />
+            </fieldset>
+            <fieldset>
+              <legend>Email Settings</legend>
+              <label for="email_alerts_sender">
+                <span>Sender email:</span>
+              </label>
+              <input type="text" id="email_alerts_sender"
+                     value="{%= h(sender) %}" disabled="disabled" />
+              <div class="error-container err-sender"></div>
+              <label for="email_alerts_sender">
+                <span>Recipients:</span>
+              </label>
+              <textarea id="email_alerts_recipients" disabled="disabled">{%= h(recipients) %}</textarea>
+              <span style="vertical-align:top;margin:0 5px;line-height:24px">separate addresses with comma "," or semicolon ";" or spaces " "</span></div>
+              <div class="error-container err-recipients"></div>
+              <div><button class="edit_btn" id="test_email">Test Mail</button> <span>using the settings above</span></div>
+            </fieldset>
+            <fieldset id="email_alerts_alerts">
+              <legend>Available Alerts</legend>
+              <div class="checkboxes">
+                {% for (var i=0; i<alerts.length; i++) { %}
+                <label for="email_alerts_alerts_{%= h(alerts[i].label) %}">
+                  <input type="checkbox"
+                         id="email_alerts_alerts_{%= h(alerts[i].value) %}"
+                         value="{%= h(alerts[i].value) %}"
+                         {% if (alerts[i].enabled) { %}
+                         checked="checked"
+                         {% } %}
+                         />
+                  <span>{%= h(alerts[i].label) %}</span>
+                </label>
+                {% } %}
+              </div>
+            </fieldset>
+            <div class="save_cancel">
+              <button class="save_button float_right" type="button"
+                      disabled="disabled">
+                Save
+              </button>
+            </div>
+          </script>
+        </div>
+
+        <div id="views" style="display:none">
+          <h1 style="clear:both;overflow:hidden">
+            <span style="float:left"><select id="views_bucket_select"></select> &gt; <a href="#visitSec=views">Views</a>
+              <span class="when-inside-view">
+                &gt; <select id="views_view_select"></select>
+              </span>
+            </span>
+          </h1>
+          <div class="shadow_box" id="views_list">
+            <div class="header_2">
+              <ul class="tabs switcher">
+                <li class="tab_left">
+                  <a>Development Views</a>
+                </li>
+                <li class="tab_right">
+                  <a>Production Views</a>
+                  <span class="badge notify"><span id="prod_view_count">??</span></span>
+                </li>
+              </ul>
+              <div class="create_view">
+                <a class="button_200 btn_create when-in-dev"><span>Create Development View</span></a>
+                <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+              </div>
+            </div>
+            <div class="panes">
+              <div>
+                <div id="development_views_list_container" class="views_list"></div>
+              </div>
+              <div>
+                <div id="production_views_list_container" class="views_list"></div>
+              </div>
+            </div>
+          </div>
+
+          <script id="views_list_template" type="text/html">
+            <table class="list">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Language</th>
+                <th>Status</th>
+                <th><div style="display:none">Disk Size</div></th>
+                <th colspan=2 class="last"></th>
+              </tr>
+            </thead>
+            <tbody>
+            <!-- {% if (loading) { %} -->
+            <tr>
+                <td colspan="6" class='spinner' style="height:400px"><span>Loading...</span></td>
+            </tr>
+            <!-- {% } else { %} -->
+            <!-- {% if (!bucketName) { %} -->
+              <tr>
+                <td colspan="6" class="empty">
+                  <span>
+                    No buckets currently defined! Go to
+                    <a href="#sec=buckets">Data Buckets</a>
+                    to create some.
+                  </span>
+                </td>
+              </tr>
+            <!-- {% } else if (rows.ddocsAreInFactMissing) { %} -->
+              <tr><td colspan="6" class="empty">
+                <span style="line-height:23px">This node doesn't host current bucket yet, so for list of design docs, please, visit different node's UI</span>
+              </td></tr>
+            <!-- {% } else if (!rows.length) { %} -->
+              <tr><td colspan="6" class="empty">
+                <span class="when-in-dev" style="line-height:23px">There are currently no Design Documents in Development. Click "Create Development View" above to create one.</span>
+                <span class="when-in-prod" style="line-height:23px">There are no Design Documents currently published. Please visit "Development Views" to create one.</span>
+              </td></tr>
+            <!-- {% } else { %} -->
+            <!-- {% _.each(rows, function (ddoc) {  %} -->
+              <tr>
+                <td class="design_doc_name ellipsis">
+                  {%= h(ddoc.meta.id) %}
+                </td>
+                <td class="langv">{%= h(ddoc.language || "javascript") %}</td>
+                <td>
+                  <!-- {% if (ddoc.progress) {  %} -->
+                  <div class="indexer_progress">
+                    <div class="usage_smallest">
+                      <div class="used" style="width: {%= h(ddoc.progress) %}%"></div>
+                    </div>
+                    <span class="ddoc_message">{%= (ddoc.taskType == 'indexer') ? "Indexing" : "Compacting" %} {%= h(ddoc.progress) %}%</span>
+                  </div>
+                  <!-- {% } %} -->
+                </td>
+                <td colspan="3">
+                  <a class="list_button when-in-prod" href="#copyDDoc={%=h(encodeURIComponent(ddoc.meta.id))%}"><span>Copy to Dev</span></a>
+                  <a class="list_button when-in-dev {%= ddoc.isEmpty ? 'disabled' : ''%}" href="#publishDDoc={%=h(encodeURIComponent(ddoc.meta.id))%}"><span>Publish</span></a>
+                  <a class="list_button when-in-dev" href="#addView={%=h(encodeURIComponent(ddoc.meta.id))%}"><span>Add View</span></a>
+                  <a class="list_button when-in-dev" href="#addSpatial={%=h(encodeURIComponent(ddoc.meta.id))%}"><span>Add Spatial View</span></a>
+                  <a class="list_button" href="#deleteDDoc={%=h(encodeURIComponent(ddoc.meta.id))%}"><span>Delete</span></a>
+                  <button class="list_button {%= ViewsSection.maybeDisabledCompactButtonAttr(ddoc)%} {%= ddoc.isEmpty ? 'disabled' : ''%}" onclick="ViewsSection.compactDDoc({%= h(JSON.stringify(ddoc.meta.id)) %}, this);"><span>Compact</span></button>
+                </td>
+              </tr>
+              <!-- {% if (_.size(ddoc.json.viewInfos) < 1 && _.size(ddoc.json.spatialInfos) < 1) { %} -->
+              <tr><td colspan="5" style="padding:15px;line-height:23px;">No views defined!<span class="when-in-dev"> Click "Create Development View" above to create one.</span></td></tr>
+              <!-- {% } else { if (_.size(ddoc.json.viewInfos) > 0) { %} -->
+              <!-- {% _.each(ddoc.json.viewInfos, function (viewInfo) { %} -->
+              <tr>
+                <td class="view_name ellipsis" colspan="5">
+                  <a style="display:block;line-height:33px;" href="{%=h(viewInfo.viewLink)%}">{%= h(viewInfo.name) %}</a>
+                </td>
+                <td>
+                  <a class="list_button btn_remove" href="{%=h(viewInfo.removeLink)%}"><span>Delete</span></a>
+                  <a class="list_button btn_edit" href="{%=h(viewInfo.viewLink)%}"><span>{%= ddoc.isDevModeDoc ? 'Edit' : 'Show' %}</span></a>
+                </td>
+              </tr>
+              <!-- {% }); %} -->
+              <!-- {% } if (_.size(ddoc.json.spatialInfos) > 0) { %} -->
+              <!-- {% _.each(ddoc.json.spatialInfos, function (spatialInfo) { %} -->
+              <tr>
+                <td class="view_name ellipsis" colspan="5">
+                  <a href="{%=h(spatialInfo.viewLink)%}">[Spatial] {%= h(spatialInfo.name) %}</a>
+                </td>
+                <td>
+                  <a class="list_button btn_remove" href="{%=h(spatialInfo.removeLink)%}"><span>Delete</span></a>
+                </td>
+              </tr>
+              <!-- {% }); %} -->
+              <!-- {% } } %} -->
+            <!-- {% }); %} -->
+            <!-- {% } %} -->
+          <!-- {% } %} -->
+            </tbody>
+            </table>
+          </script>
+
+          <div id="view_details" style="display:none;">
+            <div id="no_sample_docs" class="shadow_box" style="display:none">
+              <h3 class="block-expander" style="padding:15px">Bucket is currently empty.</h3>
+            </div>
+            <div id="sample_docs" class="shadow_box darker_block">
+               <h3 class="block-expander"><ins></ins><span class="view_head docs_title" style="text-transform:none;">SAMPLE DOCUMENT</span>
+                <span class="buttons">
+                  <a class="btn_1" id="preview_random_doc">
+                    <span>Preview a Random Document</span>
+                  </a>
+                  <a class="btn_1" id="edit_sample_doc" href="#">
+                    <span>Edit Document</span>
+                  </a>
+                </span>
+                <div class="ellipsis documents_notice"></div>
+               </h3>
+              <div id="sample_documents_container" class="sample_documents stats"></div>
+            </div>
+
+            <script id="sample_documents_template" type="text/html">
+            <!-- {% if (loading) { %} -->
+              <div class="spinner" style="height:100px;line-height:100px;"><span>loading...</span></div>
+            <!-- {% } else { %} -->
+              <!-- {% if (data) { %} -->
+                <pre class="json">{%= $.futon.formatJSON(data.json, {html:true}) %}</pre>
+                <pre class="meta">{%= $.futon.formatJSON(data.meta, {html:true}) %}</pre>
+              <!-- {% } else { %} -->
+                <pre style="text-align:center;">A document with that ID does not exist</pre>
+              <!-- {% } %} -->
+            <!-- {% } %} -->
+            </script>
+
+            <div class="shadow_box viewcode" id="viewcode" style="display:none;">
+              <div class="darker_block">
+                <h3 class="block-expander"><ins></ins><span class="view_head">View Code</span>
+                  <span class="buttons">
+                    <a id="save_view_as" class="btn_1"><span>Save As...</span></a>
+                    <a id="just_save_view" class="btn_1"><span>Save</span></a>
+                  </span>
+                  <div id="view_code_errors" class="ellipsis"></div>
+                </h3>
+                <div class="stats">
+                  <table class="list"><tbody><tr>
+                    <td class="code map" style="width: 654px;">
+                      <label for="viewcode_map">Map</label>
+                      <textarea spellcheck="false" cols="20" rows="11" class="map" id="viewcode_map"></textarea>
+                    </td>
+                    <td class="splitter grippie"></td>
+                    <td class="code reduce">
+                      <label for="viewcode_reduce">Reduce<span class="when-in-dev"> (<span id="built_in_reducers">built in: <a>_count</a>, <a>_sum</a>, <a>_stats</a></span>)</span></label>
+                      <textarea placeholder="(optional)" spellcheck="false" cols="20" rows="11" class="reduce" id="viewcode_reduce"></textarea>
+                    </td>
+                  </tr></tbody></table>
+                </div>
+              </div>
+            </div>
+
+            <div class="shadow_box viewcode" id="spatialcode" style="display:none;">
+              <div class="darker_block">
+                <h3 class="block-expander"><ins></ins><span class="view_head">Spatial Code</span>
+                  <span class="buttons">
+                    <a id="save_spatial_as" class="btn_1"><span>Save As...</span></a>
+                    <a id="just_save_spatial" class="btn_1"><span>Save</span></a>
+                  </span>
+                  <div id="spatial_code_errors" class="ellipsis"></div>
+                </h3>
+                <div class="stats">
+                  <table class="list"><tbody><tr>
+                    <td class="code map" style="width: 654px;">
+                      <label for="spatialcode_fun">Spatial</label>
+                      <textarea spellcheck="false" cols="20" rows="11" class="map" id="spatialcode_fun"></textarea>
+                    </td>
+                  </tr></tbody></table>
+                </div>
+              </div>
+            </div>
+
+            <script id="filter_template" type="text/html">
+               <h2>{%= h(title) %}</h2>
+              <div class="filters_container">
+                <div class="filters_btn"></div>
+                <div class="filters_popup">
+                <form>
+                  <div class="key">
+                      <!--{% if (items.conflict) {%}--><div>
+                        <label for="{%= prefix %}_filter_conflicts">conflicts</label>
+                        <input id="{%= prefix %}_filter_conflicts" name="conflicts" type="checkbox">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.bbox) {%}--><div>
+                        <label for="{%= prefix %}_filter_bbox">bbox</label>
+                        <input id="{%= prefix %}_filter_bbox" name="bbox" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.descending) {%}--><div>
+                        <label for="{%= prefix %}_filter_descending">descending</label>
+                        <input id="{%= prefix %}_filter_descending" name="descending" type="checkbox">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.startkey) {%}--><div>
+                        <label for="{%= prefix %}_filter_startkey">startkey</label>
+                        <input id="{%= prefix %}_filter_startkey" name="startkey" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.endkey) {%}--><div>
+                        <label for="{%= prefix %}_filter_endkey">endkey</label>
+                        <input id="{%= prefix %}_filter_endkey" name="endkey" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.startkeyDocid) {%}--><div>
+                        <label for="{%= prefix %}_filter_startkey_docid">startkey_docid</label>
+                        <input id="{%= prefix %}_filter_startkey_docid" name="startkey_docid" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.endkeyDocid) {%}--><div>
+                        <label for="{%= prefix %}_filter_endkey_docid">endkey_docid</label>
+                        <input id="{%= prefix %}_filter_endkey_docid" name="endkey_docid" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.group) {%}--><div>
+                        <label for="{%= prefix %}_filter_group">group</label>
+                        <input id="{%= prefix %}_filter_group" name="group" type="checkbox">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.groupLevel) {%}--><div>
+                        <label for="{%= prefix %}_filter_group_level">group_level</label>
+                        <input id="{%= prefix %}_filter_group_level" name="group_level" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.includeDocs) {%}--><div>
+                        <label for="{%= prefix %}_filter_include_docs">include_docs</label>
+                        <input id="{%= prefix %}_filter_include_docs" name="include_docs" type="checkbox">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.inclusiveEnd) {%}--><div>
+                        <label for="{%= prefix %}_filter_inclusive_end">inclusive_end</label>
+                        <input id="{%= prefix %}_filter_inclusive_end" name="inclusive_end" type="checkbox">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.key) {%}--><div>
+                        <label for="{%= prefix %}_filter_key">key</label>
+                        <input id="{%= prefix %}_filter_key" name="key" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.keys) {%}--><div>
+                        <label for="{%= prefix %}_filter_keys">keys</label>
+                        <input id="{%= prefix %}_filter_keys" name="keys" type="text">
+                      </div><!--{% }%}-->
+                      <!--{% if (items.reduce) {%}--><div>
+                        <label for="{%= prefix %}_filter_reduce">reduce</label>
+                        <div style="display: inline-block">
+                          <select id="{%= prefix %}_filter_reduce" name="reduce" class="selectBox" multiple="multiple">
+                            <option value="true">true</option>
+                            <option value="false">false</option>
+                            <option value="none">none</option>
+                          </select>
+                        </div>
+                      </div><!--{% }%}-->
+                      <!--{% if (items.stale) {%}--><div>
+                        <label for="{%= prefix %}_filter_stale">stale</label>
+                          <div style="display: inline-block">
+                            <select id="{%= prefix %}_filter_stale" name="stale" class="selectBox" multiple="multiple">
+                              <option value="false">false</option>
+                              <option value="update_after">update_after</option>
+                              <option value="ok">ok</option>
+                            </select>
+                          </div>
+                        </div><!--{% }%}-->
+                      <!--{% if (items.connectionTimeout) {%}--><div>
+                        <label for="{%= prefix %}_filter_connection_timeout">connection_timeout</label>
+                        <input id="{%= prefix %}_filter_connection_timeout" name="connection_timeout" type="text" placeholder="milliseconds">
+                      </div><!--{% }%}-->
+                    </div>
+                    <div class="btn_wrap">
+                      <button type="submit" class="list_button"><span>Close</span></button>
+                      <button type="reset" class="list_button"><span>Reset</span></button>
+                    </div>
+                </div>
+                <form>
+              </div>
+              <a href="#" target="_blank" class="filters_url"></a>
+
+            </script>
+
+            <div id="view_results_block" class="results_block" style="display:none;">
+              <div id="view_filter_container" class="filter_container"></div>
+              <a id="view_run_button" class="run_button btn_1 bt_marg"><span>Show Results</span></a>
+              <span class="ic_prev_next">
+                <a class="arr_prev"></a>
+                <a class="arr_next"></a>
+              </span> <!--/ic_prev_next-->
+              <div class="clr"></div>
+              <!--/filter result-->
+              <div class="shadow_box">
+                <ul class="tabs dev-subset-switcher when-in-dev">
+                  <li class="tab_left"><a class="subset_dev">Development Time Subset</a></li>
+                  <li class="tab_right"><a class="subset_prod">Full Cluster Data Set</a></li>
+                </ul>
+                <div id="view_results_spinner" class="spinner" style="height:100px;line-height:100px;display:none;"><span>Loading...</span></div>
+                <div id="view_results_container" class="content c_result"></div>
+              </div>
+              <script id="view_results_template" type="text/html">
+              <table class="list align_text" style="width:100%">
+                <!-- {% if (errors) { %} -->
+                  <tr>
+                      <th class="keycol">Errors</th>
+                      <th></th>
+                  </tr>
+                  <tbody class="list_errors">
+                  <!-- {% _.each(errors, function (r) { %} -->
+                    <tr>
+                        <td {%= !r.showBtn ? 'colspan="2"' : "" %}>
+                          <div><span class="label">from:</span> <span>{%= r.from %}</span></div>
+                          <div><span class="label">reason:</span> <span>{%= r.reason %} {%= r.explain ? "(" + r.explain + ")" : "" %}</span></div>
+                        </td>
+                        <!-- {% if (r.showBtn) { %} -->
+                        <td>
+                          <a class="list_button buttontn_remove" onclick="ViewsSection.viewResultsURLCell.runView();"><span>
+                            Run Query Again
+                          </span></a>
+                        </td>
+                        <!-- {% } %} -->
+                    </tr>
+                  <!-- {% }); %} -->
+                  </tbody>
+                <!-- {% } %} -->
+                <!-- {% if (!errors || rows.length) { %} -->
+                <tr>
+                    <th class="keycol">Key</th>
+                    <th>Value</th>
+                </tr>
+                <!-- {% } %} -->
+              <!-- {% if (!rows.lackOfValue) { %} -->
+                <!-- {% if (rows.length) { %}
+                <!-- {% _.each(rows, function (r) { %} -->
+                  <tbody>
+                  <tr>
+                      <td class="keycol">
+                          <div class="key ellipsis" title="{%= h(JSON.stringify(r.key)) %}">{%= h(JSON.stringify(r.key)) %}</div>
+                          {% if (h(r.id) !== "undefined") { %}
+                            <a class="id ellipsis sample-document-link" data-sample-doc-id="{%= h(r.id) %}" href="#">{%= h(r.id) %}</a>
+                          {% } else { %}
+                            <div class="id ellipsis">{%= h(r.id) %}</div>
+                          {% } %}
+                      </td>
+                      <td class="ellipsis">{%= $.futon.formatJSON(r.value, {html:true}) %}</td>
+                  </tr>
+                  </tbody>
+                <!-- {% }); %} -->
+                <!-- {% } else { %} -->
+                  <!--{% if (!errors) { %} -->
+                    <tr>
+                        <td colspan="2" style="text-align:center">The results of this view is empty.</td>
+                    </tr>
+                  <!-- {% } %} -->
+                <!-- {% } %} -->
+              <!-- {% } else { %} -->
+                <tbody>
+                <tr><td colspan="2" style="text-align:center">To see the results of this view, click "Show Results" above.</td></tr>
+                </tbody>
+              <!-- {% } %} -->
+              </table>
+                </script>
+            </div>
+
+            <div id="spatial_results_block" class="results_block" style="display:none;">
+              <div id="spatial_filter_container" class="filter_container"></div>
+              <a id="spatial_run_button" class="run_button btn_1 bt_marg"><span>Show Results</span></a>
+              <span class="ic_prev_next">
+                <a class="arr_prev"></a>
+                <a class="arr_next"></a>
+              </span> <!--/ic_prev_next-->
+              <div class="clr"></div>
+              <!--/filter result-->
+              <div class="shadow_box">
+                <ul class="tabs dev-subset-switcher when-in-dev">
+                  <li class="tab_left"><a class="subset_dev">Development Time Subset</a></li>
+                  <li class="tab_right"><a class="subset_prod">Full Cluster Data Set</a></li>
+                </ul>
+                <div id="spatial_results_spinner" class="spinner" style="height:100px;line-height:100px;display:none;"><span>Loading...</span></div>
+                <div id="spatial_results_container" class="content c_result"></div>
+              </div>
+              <script id="spatial_results_template" type="text/html">
+              <table class="list align_text" style="width:100%">
+                <tr>
+                    <th class="keycol">Bbox</th>
+                    <th class="keycol">Geometry</th>
+                    <th>Value</th>
+                </tr>
+              <!-- {% if (!rows.lackOfValue) { %} -->
+                <!-- {% _.each(rows, function (r) { %} -->
+                <tbody>
+                <tr>
+                    <td class="keycol">
+                        <div class="key">{%= h(JSON.stringify(r.bbox)) %}</div>
+                        {% if (h(r.id) !== "undefined") { %}
+                          <a class="id">{%= h(r.id) %}</a>
+                        {% } else { %}
+                          <div class="id">{%= h(r.id) %}</div>
+                        {% } %}
+                    </td>
+                    <td>{%= h(JSON.stringify(r.geometry)) %}</td>
+                    <td>{%= $.futon.formatJSON(r.value, {html:true}) %}</td>
+                </tr>
+                </tbody>
+                <!-- {% }); %} -->
+              <!-- {% } else { %} -->
+                <tbody>
+                <tr><td colspan="3" style="text-align:center">To see the results of this view, click "Show Results" above.</td></tr>
+                </tbody>
+              <!-- {% } %} -->
+              </table>
+                </script>
+            </div>
+
+          </div>
+        </div>
+
+        <div id="replications" style="display:none">
+          <h1>Replications</h1>
+          <!-- Clusters -->
+          <div id="cluster_references" class="shadow_box">
+            <div class="darker_block bucket_details">
+              <h3 class="block-expander">
+                <ins></ins><span class="view_head">Remote Clusters</span>
+                <span class="buttons">
+                  <a class="btn_1" id="create_cluster_reference">
+                    <span>Create Cluster Reference</span>
+                  </a>
+                </span>
+              </h3>
+
+              <div class="stats" id="cluster_reference_list_container">
+              </div>
+              <script id="cluster_reference_list_template" type="text/html">
+              <table class="list" style="width:100%">
+                <tr>
+                  <th>Name</th>
+                  <th>IP/hostname</th>
+                  <th></th>
+                </tr>
+                <!-- {% if (rows.length > 0) { %} -->
+                <!-- {% _.each(rows, function (r) { %} -->
+                <tr data-name="{%= h(r.name) %}">
+                  <td>{%= h(r.name) %}</td>
+                  <td><a href="{%= window.location.protocol +'//'+ h(r.hostname) + '/index.html#sec=analytics&amp;statsHostname=' + h(encodeURIComponent(r.hostname)) %}" target="blank">{%= h(r.hostname) %}</a></td>
+                  <td>
+                    <a class="list_button edit-button"><span>Edit</span></a>
+                    <a class="list_button delete-button"><span>Delete</span></a>
+                  </td>
+                </tr>
+                <!-- {% }); %} -->
+                <!-- {% } else { %} -->
+                <tr><td colspan="3" style="text-align:center">No cluster references defined. Please create one.</td></tr>
+                <!-- {% } %} -->
+              </table>
+              </script>
+            </div>
+          </div>
+
+          <!-- Ongoing Replications -->
+          <div id="ongoing_replications" class="shadow_box">
+            <div class="darker_block bucket_details">
+              <h3>
+                <span class="view_head" style="padding-left: 0">Ongoing Replications</span>
+                <span class="buttons">
+                  <a class="btn_1" id="create_replication">
+                    <span>Create Replication</span>
+                  </a>
+                </span>
+              </h3>
+
+              <div class="stats" id="ongoing_replications_list_container">
+              </div>
+              <script id="ongoing_replications_list_template" type="text/html">
+              <table class="list" style="width:100%">
+                <tr>
+                  <th>Bucket</th>
+                  <th>From</th>
+                  <th>To</th>
+                  <th>Status</th>
+                  <th>When</th>
+                  <th></th>
+                </tr>
+                <!-- {% if (rows.length > 0) { %} -->
+                <!-- {% _.each(rows, function (r) { %} -->
+                <tr>
+                  <td>{%= h(r.bucket) %}</td>
+                  <td style="color:#777">this cluster</td>
+                  <td>{%= h(r.to) %}</td>
+                  <td>{%= V.formatReplicationStatus(r) %}</td>
+                  <td>{%= h(r.when) %}</td>
+                  <td>
+                    <a class="list_button" href="#deleteReplication={%=h(encodeURIComponent(r.cancelURI))%}"><span>Delete</span></a>
+                  </td>
+                </tr>
+                <!-- {% }); %} -->
+                <!-- {% } else { %} -->
+                <tr><td colspan="7" style="text-align:center">There are no
+                replications currently in progress.</td></tr>
+                <!-- {% } %} -->
+              </table>
+              </script>
+            </div>
+          </div>
+        </div>
+
+          <div id="documents" style="display:none">
+            <div class="doc_header">
+              <div class="wrap">
+                <select id="docs_buckets_select"></select> &gt; <a id="bread_crump_doc">Documents</a>
+              </div>
+              <div class="items_per_list_wrap">
+                  <select>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="20">20</option>
+                    <option value="50">50</option>
+                    <option value="100">100</option>
+                  </select>
+              </div>
+              <div class="ic_prev_next">
+                <a class="arr_prev disabled"></a>
+                <a class="arr_next disabled"></a>
+              </div>
+              <div class="docs_info">
+                Current page: <span class="docs_crnt_pg">1</span>
+              </div>
+            </div>
+
+            <div id="documents_details" style="display:none;" class="shadow_box">
+              <div class="header_2 servers_header">
+                <div class="docs_title"></div>
+                <div class="editing_ctrls">
+                  <a class="btn_1 disabled" id="doc_delete"><span>Delete</span></a>
+                  <a class="btn_1 disabled" id="doc_saveas"><span>Save As...</span></a>
+                  <a class="btn_1 btn_save disabled" id="doc_save"><span>Save</span></a>
+                  <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+                </div>
+                <div class="ellipsis documents_notice"></div>
+              </div>
+              <textarea id="json_doc" spellcheck="false" cols="20" rows="11"></textarea>
+            </div>
+
+            <div id="documents_list" class="shadow_box">
+              <div class="header_2 servers_header">
+                <div class="docs_title"></div>
+                <div class="editing_ctrls">
+                  <form id="search_doc" action="#">
+                    <input type="text" id="docs_lookup_doc_by_id"
+                           placeholder="Document ID" disabled >
+                    <button type="submit" class="btn_1 disabled" id="docs_lookup_doc_by_id_btn">
+                      <span>Lookup Id</span>
+                    </button>
+                  </form>
+                  <a class="btn_1 btn_create disabled"><span>Create Document</span></a>
+                  <span class="staleness-notice">Difficulties communicating with the cluster; displaying cached information!</span>
+                </div>
+                <div class="ellipsis documents_notice"></div>
+              </div>
+
+              <div id="documents_list_container">Documents</div>
+              <div class="ic_prev_next bottom">
+                <a class="arr_prev disabled"></a>
+                <a class="arr_next disabled"></a>
+              </div>
+              <script id="documents_list_template" type="text/html">
+                <table class="list" style="width:100%">
+                  <thead>
+                    <tr>
+                      <th class="keycol">ID</th>
+                      <th>&#160;</th>
+                      <th>Сontent</th>
+                      <th>&#160;</th>
+                      <th>&#160;</th>
+                      <th>&#160;</th>
+                      <th>&#160;</th>
+                      <th>&#160;</th>
+                      <th>&#160;</th>
+                      <th>&#160;</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                  <!-- {% if (loading) { %} -->
+                      <tr>
+                        <td colspan="10" class='spinner'><span>Loading...</span></td>
+                      </tr>
+                  <!-- {% } else if (rows.length > 0) { %} -->
+                  <!-- {% _.each(rows, function (r) { %} -->
+                      <tr class="align_text">
+                          <td class="key ellipsis" colspan="2">
+                            <a href="#sec=documents&bucketName={%= encodeURIComponent(bucketName) %}&documentsPageNumber={%= pageNumber %}&docId={%= encodeURIComponent(r.id) %}">{%= h(r.key) %}</a>
+                          </td>
+                          <td class="ellipsis" colspan="5">{%= $.futon.formatJSON(r.doc.json, {html:true}) %}</td>
+                          <td colspan="3">
+                            <button class="list_button delete_btn" data-id="{%= h(r.id) %}"><span>Delete</span></button>
+                            <a href="#sec=documents&bucketName={%= encodeURIComponent(bucketName) %}&documentsPageNumber={%= pageNumber %}&docId={%= encodeURIComponent(r.id) %}" class="list_button btn_edit"><span>Edit Document</span></a></td>
+                      </tr>
+                  <!-- {% }); %} -->
+                <!-- {% } else { %} -->
+                  <tr>
+                    <td colspan="10" class="empty_docs">There are currently no documents in this bucket{%= searchCriteria ? ' corresponding to the search criteria' : '.' %}</td>
+                  </tr>
+                <!-- {% } %} -->
+                </tbody>
+                </table>
+              </script>
+            </div>
+          </div>
+
+        <div id="coming" style="display:none">
+          <h1>UI error encountered. This content does not exist yet.</h1>
+        </div>
+      </div>
+    </div>
+    <!-- mainContainer -->
+
+    <div class="page-footer">
+      <div class="main_holder">
+        <h1>Copyright &copy; 2012 <a href="http://couchbase.com" target="_blank">Couchbase, Inc.</a> All rights reserved.</h1>
+      </div>
+    </div>
+  </div>
+  <!-- #container -->
+
+<!-- dialogs -->
+<div class="dialog bucket_details really" id="internal_settings_dialog">
+  <form>
+    <fieldset style="padding:0; padding-right: 10px;">
+      <input type="hidden" name="indexAwareRebalanceDisabled" value="false">
+      <input type="hidden" name="rebalanceIndexWaitingDisabled" value="false">
+      <input type="hidden" name="rebalanceIndexPausingDisabled" value="false">
+      <input type="hidden" name="rebalanceIgnoreViewCompactions" value="false">
+      <label><span style="min-width:300px;cursor:help;float:none;display:inline-block;" title="When not disabled makes sure indexes are always up-to-date during rebalance">Disable index aware rebalance:</span><input type="checkbox" name="indexAwareRebalanceDisabled" value="true"></label>
+      <label><span style="min-width:300px;cursor:help;float:none;display:inline-block;" title="Whether index aware rebalance waiting for index up-to-dateness should be disabled. Makes rebalance faster">Disable index waiting during rebalance:</span><input type="checkbox" name="rebalanceIndexWaitingDisabled" value="true"></label>
+      <label><span style="min-width:300px;cursor:help;float:none;display:inline-block;" title="That's too complex to explain">Disable index pausing during rebalance:</span><input type="checkbox" name="rebalanceIndexPausingDisabled" value="true"></label>
+      <label><span style="min-width:300px;cursor:help;float:none;display:inline-block;">Don't compact views during rebalance</span><input type="checkbox" name="rebalanceIgnoreViewCompactions" value="true"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">Max in-/out-going backfills per node<br> during rebalance:</span><input maxlength="5" style="width:1.5em;" name="rebalanceMovesPerNode"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">VBucket moves per node<br>before forced view compaction:</span><input maxlength="5" style="width:1.5em;" name="rebalanceMovesBeforeCompaction"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">Max parallel main index tasks per node:</span><input maxlength="5" style="width:1.5em;" name="maxParallelIndexers"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">Max parallel replica index tasks per node:</span><input maxlength="5" style="width:1.5em;" name="maxParallelReplicaIndexers"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">Maximum Bucket Count:</span><input maxlength="3" style="width:1.5em;" name="maxBucketCount"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">XDCR Max Replications per Bucket:</span><input maxlength="3" style="width:1.5em;" name="xdcrMaxConcurrentReps"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">XDCR Checkpoint Interval:</span><input maxlength="5" style="width:2.5em;" name="xdcrCheckpointInterval"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">XDCR Batch Count:</span><input maxlength="5" style="width:2.5em;" name="xdcrWorkerBatchSize"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">XDCR Batch Size (kB):</span><input maxlength="6" style="width:2.5em;" name="xdcrDocBatchSizeKb"></label>
+      <label><span style="min-width:300px;float:none;display:inline-block;">XDCR Failure Retry Interval:</span><input maxlength="3" style="width:1.5em;" name="xdcrFailureRestartInterval"></label>
+    </fieldset>
+    <div class="save_cancel">
+      <button class="save_button float_right" type="submit">Save</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<div class="dialog bucket_details really" id="bucket_details_dialog">
+  <h1><span class="when-editing">Configure Bucket</span><span class="when-creating">Create Bucket</span></h1>
+  <form>
+    <fieldset class="bucket_settings">
+      <legend>Bucket Settings</legend>
+      <ul>
+        <li>
+          <label class="for-name"><span>Bucket Name:</span><input disabled name="name" value="Bucket Name"><span class="error-container err-name"></span></label>
+        </li>
+        <li>
+          <fieldset class="radiogroup for-bucket-type">
+            <legend>Bucket Type:</legend>
+            <ul>
+              <li><label><input type="radio" name="bucketType" value="membase"> Couchbase</label></li>
+              <li><label><input type="radio" name="bucketType" value="memcached"> Memcached</label></li>
+            </ul>
+          </fieldset>
+        </li>
+      </ul>
+    </fieldset>
+
+    <fieldset style="margin-top:0">
+      <legend>Memory Size</legend>
+      <div class="size-gauge for-ram">
+        <div class="t">Cluster quota (<span class="total">192 Gb</span>)</div>
+        <div class="gauge">
+          <div>
+            <div style="width: 68%;" class="green"></div>
+            <div style="width: 33%;" class="blue"></div>
+          </div>
+        </div>
+        <table class="b"><tr>
+          <td class="blue">Other Buckets (<span class="other">15 Gb</span>)</td>
+          <td class="green">This Bucket (<span class="this">5 Gb</span>)</td>
+          <td>Free (<span class="free">12 Gb</span>)</td>
+        </tr></table>
+      </div>
+
+      <input name="ramQuotaMB" type="hidden" />
+      <label class="for-ram-quota">
+        <span>Per Node RAM Quota:</span>
+        <input name="ramQuotaMB" type="text" value="30" />
+        <abbr>MB</abbr>
+      </label>
+
+      <div class="error-container err-ramQuotaMB"></div>
+      <em class="memcached-summary when-non-persistent"></em>
+    </fieldset>
+
+    <fieldset>
+      <legend>Access Control</legend>
+      <div class="wrap_acc">
+        <label class="for-sasl-password"><input id="bucket_details_sasl_selected" type="radio" name="authType" value="sasl" checked>
+          <span><em class="when-default">Standard port (TCP port 11211. ASCII protocol or Binary auth-less)</em><em class="when-not-default">Standard port (TCP port 11211. Needs SASL auth.)</em></span>
+        </label>
+        <label class="for-sasl-password-input"><span>Enter password: </span><input type="password" name="saslPassword" disabled value=""></label>
+        <label class="for-ascii"><input type="radio" name="authType" value="none"><span>Dedicated port (supports ASCII protocol and is auth-less)</span></label>
+        <label class="for-proxy-port"><span>Protocol Port:</span><input name="proxyPort"><span class="error-container err-proxyPort"></span></label>
+      </div>
+    </fieldset>
+
+    <fieldset class="persistent-only">
+      <legend>Replicas</legend>
+      <div class="repli">
+      <label class="for-enable-replicas"><input type="checkbox" checked><span>Enable </span></label>
+      <input class="hidden-replica-number" type="hidden" name="replicaNumber" value="0" disabled>
+      <label class="for-replica-number">
+        <select name="replicaNumber"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+        <span>Number of replica (backup) copies</span>
+        <span class="error-container err-replicaNumber"></span>
+      </label>
+      </div>
+      <input type="hidden" name="replicaIndex" value="0"/>
+      <label style="padding-left: 20px;"><input type="checkbox" name="replicaIndex" value="1" style="margin-right:5px;"/>Index replicas</label>
+    </fieldset> <!-- .persistent-only -->
+
+    <fieldset class="auto_compaction persistent-only">
+      <legend>Auto-Compaction</legend>
+      <p>The Auto-Compaction daemon compacts databases and their respective
+      view indexes when all the condition parameters are satisfied.</p>
+      <ul>
+        <li><input type="hidden" name="autoCompactionDefined" value="false" />
+          <label><input type="checkbox" name="autoCompactionDefined" value="true" /> Override the default autocompaction settings?</label>
+        </li>
+      </ul><ul class="autocompaction-settings">
+        <li><h4>Database Fragmentation</h4></li>
+        <li class="database">
+          <span>
+            <input type="checkbox"
+                   id="db_frag_check"
+                   class="check-for-databaseFragmentationThresholdPercentage" />
+          </span>
+          <span class="input_wrapper">
+            <input type="number"
+                   id="32cc3a81-c0e9-495a-836e-3fdeb1384110"
+                   name="databaseFragmentationThreshold[percentage]" />%
+          </span>
+          <label for="32cc3a81-c0e9-495a-836e-3fdeb1384110">
+            <span>at which point compaction is triggered</span>
+          </label>
+          <div class="error-container err-databaseFragmentationThreshold-percentage-"></div>
+        </li>
+        <li class="database">
+          <input type="checkbox"
+                 class="check-for-databaseFragmentationThresholdSize" />
+          <span class="input_wrapper">
+            <input type="number" id="dialog-db-compaction-size"
+                   name="databaseFragmentationThreshold[size]"
+                   class="size" />MB
+          </span>
+          <label for="dialog-db-compaction-size">
+            <span>at which point compaction is triggered</span>
+          </label>
+          <div class="error-container err-databaseFragmentationThreshold-size-"></div>
+        </li>
+
+        <li><h4>View Fragmentation</h4></li>
+        <li class="view">
+
+          <input type="checkbox" id="view_frag_check" class="check-for-viewFragmentationThresholdPercentage" />
+          <span class="input_wrapper">
+            <input id="f9a08cc9-e572-4b6e-b4d2-1fe2b0b11852"
+                   name="viewFragmentationThreshold[percentage]" type="number" />%
+          </span>
+          <label for="f9a08cc9-e572-4b6e-b4d2-1fe2b0b11852">
+            <span>at which point compaction is triggered</span>
+          </label>
+          <div class="error-container err-viewFragmentationThreshold-percentage-"></div>
+        </li>
+        <li class="view">
+          <input type="checkbox" class="check-for-viewFragmentationThresholdSize" />
+          <span class="input_wrapper">
+            <input type="number" id="dialog-view-compaction-size"
+                   name="viewFragmentationThreshold[size]"
+                   class="size" />MB
+          </span>
+          <label for="dialog-view-compaction-size">
+            <span>at which point compaction is triggered</span>
+          </label>
+          <div class="error-container err-viewFragmentationThreshold-size-"></div>
+                      </li>
+        <li class="period">
+          <span class="toggle">
+            <input type="checkbox" id="period_check" class="check-for-allowedTimePeriod"/> <label for="period_check">Time Period</label>
+          </span>
+          <span class="input_wrapper">
+            <input id="2cbc1fe9-d580-4126-9c7e-777fe7adf233" name="allowedTimePeriod[fromHour]" type="number" min="0" max="23" placeholder="HH" />:<input name="allowedTimePeriod[fromMinute]" type="number" min="0" max="59" placeholder="MM" />
+            - <input name="allowedTimePeriod[toHour]" type="number" min="0" max="23" placeholder="HH" />:<input name="allowedTimePeriod[toMinute]" type="number" min="0" max="59" placeholder="MM" />
+          </span>
+          <label for="2cbc1fe9-d580-4126-9c7e-777fe7adf233">
+            <span>during which compaction is allowed</span>
+          </label>
+          <div class="error-container err-allowedTimePeriod"></div>
+          <div class="error-container err-allowedTimePeriod-fromHour-"></div>
+          <div class="error-container err-allowedTimePeriod-fromMinute-"></div>
+          <div class="error-container err-allowedTimePeriod-toHour-"></div>
+          <div class="error-container err-allowedTimePeriod-toMinute-"></div>
+          <ul>
+            <li>
+              <input type="hidden" name="allowedTimePeriod[abortOutside]" value="false" />
+              <input id="66fdfb02-6c6f-453e-9ae3-fa011ecd42c0" type="checkbox" name="allowedTimePeriod[abortOutside]" value="true" />
+              <label for="66fdfb02-6c6f-453e-9ae3-fa011ecd42c0">Abort compaction if run time exceeds the above period</label>
+              <div class="error-container err-allowedTimePeriod-abortOutside-"></div>
+            </li>
+          </ul>
+        </li>
+        <li>
+          <input type="hidden" name="parallelDBAndViewCompaction" value="false" />
+          <input id="089ccca1-8688-41f9-a126-71a871b2ecf6" type="checkbox" name="parallelDBAndViewCompaction" value="true" />
+          <label for="089ccca1-8688-41f9-a126-71a871b2ecf6">Process Database and View compaction in parallel</label>
+          <div class="error-container err-parallelDBAndViewCompaction"></div>
+        </li>
+      </ul>
+    </fieldset> <!-- .auto_compaction -->
+
+    <fieldset style="margin-top:0">
+      <legend>Flush</legend>
+      <label class="for-enable-flush">
+        <input type="checkbox" name="flushEnabled" value="1">
+        <span>Enable </span>
+      </label>
+    </fieldset>
+
+    <div class="save_cancel">
+      <span class="when-editing">
+        <button class="save_button float_right" type="submit">Save</button>
+        <button class="delete_button">Delete</button>
+        <button class="flush_button">Flush</button>
+      </span>
+      <span class="when-creating"><button class="save_button float_right" type="submit">Create</button></span>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<div class="dialog" id="bucket_flush_dialog" title="Flushing">
+  <form>
+    <div class="clearfix">
+      <div class="err">
+        <p>Flushing this bucket will result in complete data loss for this bucket. <br/>Are you sure you want to flush it?</p>
+      </div>
+    </div>
+    <div class="save_cancel clearfix">
+      <button onClick="BucketsSection.flushCurrentBucket();" type="button" class="flush_button float_right">Flush</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<div class="dialog" id="bucket_remove_dialog" title="Removing">
+  <form>
+    <div class="clearfix">
+      <div class="err">
+        <p>Removing this bucket will result in complete data loss for this bucket. <br/>Are you sure you want to remove it?</p>
+      </div>
+    </div>
+    <div class="save_cancel clearfix">
+      <button onClick="BucketsSection.removeCurrentBucket();" type="button" class="delete_button float_right">Delete</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+
+<!-- Create Document -->
+<div class="dialog join_cluster" id="create_document_dialog" title="Create Document" style="width:400px">
+  <span class="warning pat_10" style="display:none;"></span>
+  <form>
+    <fieldset style="padding-top:10px">
+      <ul>
+        <li>
+          <label for="new_doc_id" style="width:auto">Document ID:</label>
+          <input type="text" name="id" id="new_doc_id" />
+        </li>
+      </ul>
+    </fieldset>
+    <div class="save_cancel clearfix">
+      <button type="submit" class="save_button float_right">Create</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+<!-- END Create Document -->
+<!-- END Save Document as -->
+<div class="dialog join_cluster" id="save_documentas_dialog" title="Save Document As" style="width:400px">
+  <form>
+    <fieldset style="padding-top:10px">
+      <ul>
+        <li>
+          <label for="new_doc_id" style="width:auto">Document ID:</label>
+          <input type="text" name="id" id="saveas_id" />
+        </li>
+      </ul>
+    </fieldset>
+    <div class="save_cancel clearfix">
+      <button type="submit" class="save_button float_right">Save As</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+<!-- END Save Document as -->
+
+<div class="dialog join_cluster" id="join_cluster_dialog" title="Add Server">
+  <!-- Join cluster -->
+  <p class="warning pat_10" id="join_cluster_dialog_errors_container"></p>
+  <script id="join_cluster_dialog_errors_template" type="text/html">
+    <!-- {% _.each(rows, function (e) { %} -->
+    <strong>Attention</strong> - {%= h(e) %}<br>
+    <!-- {% }); %} -->
+  </script>
+  <form>
+    <fieldset>
+      <ul>
+        <li>
+          <label class="label" for="add-server-hostname">Server IP Address*:</label>
+          <input type="text" class="inp" name="hostname" id="add-server-hostname" />
+          <a class="text_11 tooltip"><span>What's this?</span>
+            <span class="tooltip_msg"><span>
+              This is the hostname or IP address of a server node that you wish to add.
+            </span></span>
+          </a>
+        </li>
+      </ul>
+    </fieldset>
+    <fieldset>
+      <legend>Security <a class="text_11 tooltip"><span>What's this?</span>
+        <span class="tooltip_msg"><span>
+          Enter the username and password for the node you want to add to this cluster.
+        </span></span></a>
+      </legend>
+      <ul>
+        <li>
+          <label class="label" for="user_inp">Username:</label>
+          <input type="text" class="inp" name="user" id="user_inp" />
+        </li>
+        <li>
+          <label class="label" for="password_inp">Password:</label>
+          <input type="password" class="inp" name="password" id="password_inp" />
+        </li>
+      </ul>
+    </fieldset>
+    <div class="save_cancel clearfix">
+      <button type="submit" class="save_button float_right">Add Server</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+  <!-- END join cluster -->
+</div>
+<!--  eject confirmation dialog -->
+<div class="dialog" id="eject_confirmation_dialog" title="Confirm Server Removal">
+  <div class="lbox">
+    <div class="content">
+      <div class="pas_20">
+        <div class="warning pat_20">
+          <strong>Warning</strong> – Removing this server from the cluster will reduce cache capacity across all data buckets. Are you sure you want to remove this server?
+        </div>
+      </div>
+      <div class="right save_cancel pas_20 footer_bg">
+        <button type="submit" class="save_button float_right">Remove</button>
+        <a class="close float_right">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END eject confirmation dialog -->
+<!--  add confirmation dialog -->
+<div class="dialog" id="add_confirmation_dialog" title="Confirm Server Addition">
+  <div class="content">
+    <div class="pas_20">
+      <div class="warning pat_20">
+        <strong>Warning</strong> – Adding a server to this cluster means all data on that server will be removed.
+      </div>
+    </div>
+    <div class="right save_cancel pas_20 footer_bg">
+      <button type="submit" class="save_button float_right">Add Server</button>
+      <a class="close cancel_button float_right">Cancel</a>
+    </div>
+  </div>
+</div>
+<!-- END add confirmation dialog -->
+<!-- failover confirmation dialog -->
+<div class="dialog" id="failover_confirmation_dialog" title="Confirm Node Fail Over">
+  <div class="lbox">
+    <div class="content">
+      <div class="pas_20">
+        <div class="warning pat_20 warning_up_backfill">
+          <strong>Attention</strong> – A significant amount of data stored on this node
+          does not yet have replica (backup) copies! Failing over the node now will
+          irrecoverably lose that data when the incomplete replica is
+          activated and this node is removed from the cluster. It is
+          recommended to select "Remove Server" and rebalance to
+          safely remove the node without any data loss.
+          <label><input type="checkbox" name="confirmation"> Please confirm Failover.</label>
+        </div>
+        <div class="warning pat_20 warning_up_no_backfill">
+          <strong>Warning</strong> – Failing over the node will remove it from the cluster and activate a replica.
+          Operations currently in flight and not yet replicated, will be lost. Rebalancing will be required
+          to add the node back into the cluster. Consider using "Remove from Cluster" and rebalancing instead of Failover,
+          to avoid any loss of data. Please confirm Failover.
+        </div>
+        <div class="warning pat_20 warning_down_backfill">
+          <strong>Attention</strong> – There are not replica (backup) copies of all data
+          on this node! Failing over the node now will irrecoverably
+          lose that data when the incomplete replica is activated and
+          this node is removed from the cluster. If the node might
+          come back online, it is recommended to wait.
+          Check this box if you want to failover the node, despite the resulting data loss
+          <label><input type="checkbox" name="confirmation"> Please confirm Failover.</label>
+        </div>
+        <div class="warning pat_20 warning_down_no_backfill">
+          <strong>Warning</strong> – Failing over the node will remove it from the cluster and activate a replica.
+          Operations not replicated before the node became unresponsive, will be lost.
+          Rebalancing will be required to add the node back into the cluster. Please confirm Failover.
+        </div>
+      </div>
+      <div class="right save_cancel">
+        <button type="submit" class="save_button float_right">Fail Over</button>
+          <a class="close cancel_button float_right">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END failover confirmation dialog -->
+<!-- Stop rebalance confirmation dialog -->
+<div class="dialog" id="stop_rebalance_confirmation_dialog"
+     title="Confirm Rebalance Stop">
+  <div class="lbox type_2">
+    <div class="content">
+      <div class="pas_20">
+        <div class="warning pat_20">
+          <strong>Warning</strong> – Stopping rebalance is unsafe at this
+          moment since cluster may be in a partitioned state. Continue only if
+          you're perfectly sure that this is not the case.
+        </div>
+        <div class="right save_cancel">
+          <button type="submit"
+                  class="save_button float_right">Stop</button>
+          <a class="close cancel_button float_right">Cancel</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END stop rebalance confirmation dialog -->
+<!-- Leave cluster -->
+<div class="dialog" id="generic_dialog">
+  <div class="lbox">
+    <div class="center">
+      <div class="pad">
+        <div class="pas_20">
+          <div class="pat_10">
+            <p class="dialog-text">Really eject this node from cluster?</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END Leave cluster -->
+<!--  delete designdoc confirmation dialog -->
+<div class="dialog" id="delete_designdoc_confirmation_dialog" title="Delete Design Document">
+  <div class="lbox">
+    <div class="content">
+      <div class="pas_20">
+        <div class="warning pat_20">
+          <strong>Warning</strong> – The views contained in this Design Document will no longer be accessible. Are you sure you want to remove this Design Document?
+        </div>
+      </div>
+      <div class="right save_cancel pas_20 footer_bg">
+        <button type="submit" class="save_button float_right">Delete</button>
+        <a class="close float_right">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END delete designdoc confirmation dialog -->
+<!--  delete designdoc confirmation dialog -->
+<div class="dialog" id="delete_document_confirmation_dialog" title="Delete Document">
+  <div class="lbox">
+    <div class="content">
+      <div class="pas_20">
+        <div class="warning pat_20">
+          <div class="error"></div>
+          <strong>Warning</strong> – Are you sure you want to remove this Document?
+        </div>
+      </div>
+      <div class="right save_cancel pas_20 footer_bg">
+        <button type="submit" class="save_button float_right">Delete</button>
+        <a class="close float_right">Cancel</a>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- END delete designdoc confirmation dialog -->
+<!-- copy design doc dialog -->
+<div class="dialog bucket_details" id="copy_designdoc_dialog" title="Copy Design Document" style="width:30em">
+  <form>
+    <div class="clearfix">
+      <label for="copy_ddoc_ddoc_name" class="bolder">Document Name:</label>
+      <div style="width:20em; margin: 8px 0; padding: 0 5px; border: 1px solid #CCD3D7;background-color:white;font-size:13px;line-height:normal;">
+      <table style="margin:0;padding:0;border:0;width:260px;">
+        <tr><td><label for="copy_ddoc_ddoc_name" style="line-height:inherit;">_design/dev_</label></td>
+        <td style="width:2000px;"><input id="copy_ddoc_ddoc_name" name="ddoc_name" style="width:100%;border:0;padding:0;font-family:inherit;color:inherit;"></td></tr>
+      </table></div>
+       <p><strong>NOTE:</strong> Development Mode (_design/dev_) provides the opportunity to edit and test
+       your map/reduce views against a subset of data&mdash;without overloading the cluster.</p>
+    </div>
+    <div class="save_cancel">
+      <button class="save_button float_right" type="submit">Copy</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+<!-- END copy design doc -->
+<!-- copy view dialog -->
+<div class="dialog bucket_details" id="copy_view_dialog" title="Copy View" style="width:30em">
+  <span class="warning pat_10" style="display:none;"></span>
+  <form>
+    <div class="clearfix" style="padding-top:15px">
+       <label class="bolder">Design Document Name:</label>
+       <div style="width:20em; margin: 8px 0; padding: 0 5px; border: 1px solid #CCD3D7;background-color:white;font-size:13px;line-height:normal;">
+       <table style="margin:0;padding:0;border:0;width:260px;">
+         <tr><td><label for="copy_view_ddoc_name" style="line-height:inherit;">_design/dev_</label></td>
+         <td style="width:2000px;"><input id="copy_view_ddoc_name" name="designdoc_name" style="width:100%;border:0;padding:0;font-family:inherit;color:inherit;" /></td></tr>
+       </table></div>
+       <label class="bolder">View Name:</label>
+       <input name="view_name" class="view_name" value="??" />
+    </div>
+    <div class="save_cancel">
+      <button class="save_button float_right" type="submit">Save</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+<!-- END copy view dialog -->
+<!-- </div> --> <!-- #container -->
+<!-- About -->
+<div class="dialog" id="about_server_dialog">
+  <div class="lbox">
+    <div class="config-top">
+      <img src="images/couchbase_logo.png" alt="Couchbase Logo" />
+      <h1>About Couchbase Server</h1>
+    </div>
+    <div class="center">
+      <p class="dialog-text" id="about_versions"></p>
+      <p class="dialog-text">Cluster State ID: <span id="cluster_state_id"></span></p>
+    </div>
+    <div class="config-bottom">
+      <button name="close" value="Close" class="submit close direction-button" id="about-close" type="submit">Close</button>
+    </div>
+  </div>
+</div>
+<!-- END about -->
+
+<!-- Create Cluster Reference -->
+<div class="dialog join_cluster" id="create_cluster_reference_dialog" title="Create Cluster Reference" style="width:500px">
+  <div class="warning pat_10" id="create_cluster_reference_dialog_errors_container"></div>
+  <script id="create_cluster_reference_dialog_errors_template" type="text/html">
+    <!-- {% _.each(rows, function (e) { %} -->
+    <strong>Attention</strong> - {%= h(e) %}<br>
+    <!-- {% }); %} -->
+  </script>
+  <form>
+    <fieldset>
+      <ul>
+       <li><label for="cluster_reference_name">Cluster Name:</label>
+         <input name="name" id="cluster_reference_name" /></li>
+       <li><label for="cluster_reference_hostname">IP/hostname:</label>
+         <input name="hostname" id="cluster_reference_hostname" />
+         <a class="text_11 tooltip"><span>What's this?</span>
+           <span class="tooltip_msg"><span>
+             This is the hostname or IP address of a node in the cluster you want
+             to add.
+           </span></span>
+         </a>
+       </ul>
+     </fieldset>
+     <fieldset>
+     <legend>Security
+       <a class="text_11 tooltip"><span>What's this?</span>
+         <span class="tooltip_msg"><span>
+           These are the login credentials for the remote cluster.
+         </span></span>
+       </a>
+     </legend>
+     <ul>
+       <li><label>Username:</label>
+         <input name="username" /></li>
+       <li><label>Password:</label>
+         <input name="password" type="password" /></li>
+     </ul>
+    </fieldset>
+    <div class="save_cancel">
+      <button class="save_button float_right" type="submit">Save</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+<!-- END Create Cluster Reference -->
+
+<!-- Create Replication -->
+<div class="dialog join_cluster" id="create_replication_dialog" title="Create Replication" style="width:600px">
+  <div class="warning pat_10" id="create_replication_dialog_errors_container" style="line-height: 18px;"></div>
+  <script id="create_replication_dialog_errors_template" type="text/html">
+    <!-- {% _.each(rows, function (e) { %} -->
+    <strong>Attention</strong> - {%= h(e) %}<br>
+    <!-- {% }); %} -->
+  </script>
+  <form>
+    <fieldset></fieldset>
+      <fieldset style="float:left;">
+        <legend>Replicate changes from:</legend>
+        <ul>
+          <li><label>Cluster:</label>
+            <span style="font-size: 0.7em;font-weight: bold;margin-left: 0.2em;">this cluster</span>
+          </li>
+          <li><label for="replication_from_bucket">Bucket:</label>
+            <select name="fromBucket" id="replication_from_bucket"></select>
+          </li>
+         </ul>
+       </fieldset>
+       <fieldset style="float:left;clear:right">
+         <legend>To:</legend>
+         <ul>
+           <li><label for="replication_to_cluster">Cluster:</label>
+             <select name="toCluster" id="replication_to_cluster">
+               <option>remote cluster list</option>
+             </select>
+           </li>
+           <li><label for="replication_to_bucket">Bucket:</label>
+             <input name="toBucket" id="replication_to_bucket" />
+             <!-- TODO: this needs to become a select box like the one above -->
+           </li>
+         </ul>
+       </fieldset>
+     </fieldset><input type="hidden" name="replicationType" value="continuous" />
+<!--     <fieldset style="margin-left:4em;clear:both">
+     <ul>
+       <li><input name="replicationType" type="radio" value="one-time" id="replication_rate_one_time" /><label for="replication_rate_one_time">One-time</label></li>
+       <li><input name="replicationType" type="radio" id="replication_type_scheduled" />
+         <label for="replication_type_scheduled">Scheduled</label>
+         <ul>
+           <li style="font-size:12px">
+             <label>Begin <input type="radio" name="when" /> now</label> <span style="color:#777">OR</span>
+             <label><input type="radio" name="when" /> at</label>
+             <input type="number" placeholder="HH" name="when_hour" />:<input type="number" placeholder="MM" name="when_minutes" />
+             <select name="timezone">
+               <option>PDT</option>
+             </select>
+           </li>
+           <li style="font-size:12px">and <label>Run
+             <select name="frequency">
+               <option>once</option>
+               <option>every half hour</option>
+               <option>hourly</option>
+               <option>daily</option>
+               <option>weekly</option>
+             </select></label>
+           </li>
+         </ul>
+       </li>
+       <li><input name="replicationType" value="continuous" type="radio" id="replication_rate_continous" /><label for="replication_rate_continous">Continous</label></li>
+     </ul>
+    </fieldset>  -->
+    <div class="save_cancel">
+      <button class="save_button float_right replicate-button" type="submit" style="margin-left:12px;">Replicate</button>
+      <a class="close">Cancel</a>
+    </div>
+  </form>
+</div>
+<!-- END Create Replication -->
+
+<div class="auth_block" id="auth_dialog">
+  <div class="page-header">
+    <div class="cnt_holder main_holder">
+      <div class="topper_nav">
+          <a href="javascript:showAbout();">About</a>
+          <i class="sign-out-link" style="display:none"><b>&bull;</b> <a href="javascript:ThePage.signOut();">Sign Out</a></i>
+      </div>
+      <a href="index.html"><span class="logo"> </span></a>
+    </div>
+  </div>
+  <div class="pad">
+    <div class="alert_red" id="auth_failed_message" style="display:none;">
+      <div class="al_text">
+        Login failed. Try again.
+      </div>
+    </div>
+    <form id="login_form" class="form block">
+      <fieldset>
+        <ul>
+          <li>
+            <label for="login_inp">Username:</label>
+            <input type="text" name="login" id="login_inp" class="inp" />
+          </li>
+          <li>
+            <label for="password2_inp">Password:</label>
+            <input type="password" name="password" id="password2_inp" class="inp" />
+          </li>
+        </ul>
+        <input type="submit" value="Sign In" class="submit" />
+      </fieldset>
+
+      <div class="spinner">
+        <noscript style="color:#1F292E;text-shadow: 0px 1px 0px #a6b1b3;line-height: 2em;padding:5% 10%;display:block;">
+        Your browser does not support JavaScript, or it is currently disabled. This application requires a browser with JavaScript enabled. Please, see the documentation for details.
+        </noscript>
+        <span>Loading...</span>
+      </div>
+    </form>
+  </div>
+</div>
+<!-- END auth_block -->
+<div class="init_block" id="init_block">
+
+  <div class="pad" id="init_welcome_dialog">
+    <div class="pad-header">
+      <img class="logo" src="images/logo_large.png" alt="Couchbase logo" />
+      <div class="tagline">
+        Simple. Fast. Elastic.
+      </div>
+    </div>
+    <form id="init_welcome_form" class="clearfix">
+      <div class="version" style="display:none;"><span class="couchbase-version"></span></div>
+      <input type="image" name="setup" alt="Setup" class="submit next focusme" src="images/welcome-setup-button.png" />
+    </form>
+    <div class="welcome-footer">
+      Copyright &copy; 2012 Couchbase, Inc. All Rights Reserved
+      <a href="http://www.couchbase.com/company/contact" id="welcome-footer-contact" target="_blank">Contact</a> <a href="javascript:showAbout();">About</a>
+    </div>
+  </div>
+  <!-- END welcome_block -->
+  <div class="pad" id="init_cluster_dialog">
+    <div class="config-top">
+      <h1>Configure Server</h1>
+      <h2>Step <span class="current-step">1</span> of 5</h2>
+    </div>
+    <h2 class="question">Configure Disk Storage</h2>
+    <div class="disk_setup_block">
+      <div>
+        <form>
+          <input type="submit" style="width:0px; height: 0px; visibility: hidden;">
+
+          <div>
+            <label for="setup_db_path_input">Databases Path:</label>
+            <input type="text" name="db_path"
+                   id="setup_db_path_input" class="path-box" />
+            <br class="clear" />
+          </div>
+
+          <div>
+            <label>Free:</label>
+            <span style="font-size:10pt; margin-left:5px; line-height: 25px;"
+                  class="total-db-size">---</span>
+          </div>
+
+          <div>
+            <label for="setup_index_path_input">Indices Path:</label>
+            <input type="text" name="index_path"
+                   id="setup_index_path_input" class="path-box" />
+            <br class="clear" />
+          </div>
+
+        <div>
+          <label>Free:</label>
+          <span style="font-size:10pt; margin-left:5px; line-height: 25px;"
+                class="total-index-size">---</span>
+        </div>
+
+        </form>
+        <p class="when-enterprise">
+          If you use this server in a production, use different file systems for databases and indices.
+        </p>
+      </div>
+      <div class="warning pat_10 init_cluster_dialog_errors_container" style="display:none;"></div>
+    </div>
+    <h2 class="question">Join Cluster / Start new Cluster</h2>
+    <p class="pad_10">
+    If you want to add this server to an existing Couchbase Cluster, select "Join a
+    cluster now".
+    Alternatively, you may create a new Couchbase Cluster by selecting "Start a new
+    cluster".
+    </p><p class="pad_10" style="padding-top: 5px;">
+    If you start a new cluster the "Per Server RAM Quota" you set below will define
+    the amount of RAM each server provides to the Couchbase Cluster. This value will
+    be inherited by all servers subsequently joining the cluster, so please set
+    appropriately.
+    </p>
+    <form id="init_cluster_form" class="form block"><input type="submit" style="width:0px; height: 0px;">
+      <div class="pat_10">
+         <label>
+           <input type="radio" name="join_cluster" id="no-join-cluster" checked />
+           Start a new cluster.
+         </label>
+         <div class="memory-quota">
+           <div>
+             <label>RAM Available: <span class="ram-total-size"></span></label>
+           </div>
+           <div>
+             <label style="width:auto;" for="init_dynamic_ram_quota">Per Server RAM Quota:</label>
+             <input type="text" class="focusme" id="init_dynamic_ram_quota" name="dynamic-ram-quota" value="" />
+             <span>MB (256 MB &mdash; <span class="ram-max-size"></span> MB)</span>
+           </div>
+         </div>
+         <div class="warning pat_10" id="init_cluster_dialog_memory_errors_container" style="display:none;"></div>
+      </div>
+      <div class="pat_10">
+        <label>
+          <input type="radio" name="join_cluster" id="join-cluster" />
+          Join a cluster now.
+        </label>
+        <div class="login-credentials">
+          <div>
+            <label for="clusterMemberHostIp">IP Address:</label>
+            <input type="text" class="inp" name="hostname" id="clusterMemberHostIp" value="" />
+            <br class="clear" />
+          </div>
+          <div>
+            <label for="join_user_input">Username:</label>
+            <input type="text" class="inp" name="user" id="join_user_input" value="Administrator" />
+            <br class="clear" />
+          </div>
+          <div>
+            <label for="join_password_input">Password:</label>
+            <input type="password" class="inp" name="password" id="join_password_input" />
+            <br class="clear" />
+          </div>
+          <p class="warning pat_10 join_cluster_dialog_errors_container"></p>
+       </div>
+      </div>
+    </form>
+    <div class="config-bottom">
+      <button name="next" value="Next" class="submit next direction-button" id="step-2-next" type="submit">Next</button>
+    </div>
+    </div>
+  <!-- END init_cluster_block -->
+
+  <div class="pad bucket_details really" id="init_bucket_dialog">
+    <div class="config-top">
+      <h1>Create Default Bucket</h1>
+      <h2>Step <span class="current-step">3</span> of 5</h2>
+    </div>
+    <form><div class="clearfix">
+      <h2>Bucket Settings</h2>
+      <div class="bucket-icon"></div>
+      <label class="for-name"><span>Bucket Name:</span> <strong>default</strong></label>
+      <div class="for-bucket-type"><span>Bucket Type:</span>
+       <label><input type="radio" name="bucketType" value="membase"> Couchbase</label>
+       <label><input type="radio" name="bucketType" value="memcached"> Memcached</label>
+      </div>
+      <h2>Memory Size</h2>
+      <div class="size-gauge for-ram">
+        <div class="t">Cluster quota (<span class="total">192 Gb</span>)</div>
+        <div class="gauge">
+          <div>
+            <div style="width: 68%;" class="green"></div>
+            <div style="width: 33%;" class="blue"></div>
+          </div>
+        </div>
+        <table class="b"><tr>
+          <!-- <td class="blue" style="display:none;">Other Buckets (<span class="other">15 Gb</span>)</td> -->
+          <td class="green">This Bucket (<span class="this">5 Gb</span>)</td>
+          <td>Free (<span class="free">12 Gb</span>)</td>
+        </tr></table>
+      </div>
+      <label class="for-ram-quota">
+        <span>
+          <em class="when-non-persistent">Per Node RAM Quota:</em>
+          <em class="when-persistent">Per Node RAM Quota:</em>
+        </span>
+        <input name="ramQuotaMB" class="focusme" value="30" />
+        <abbr>MB</abbr>
+      </label>
+      <div class="error-container err-ramQuotaMB"></div>
+            <em class="memcached-summary when-non-persistent"></em>
+      <div class="persistent-only">
+        <h2>Replicas</h2>
+        <label class="for-enable-replicas"><input type="checkbox" checked disabled><span>Enable </span></label>
+        <input class="hidden-replica-number" type="hidden" name="replicaNumber" value="0" disabled>
+        <label class="for-replica-number">
+          <select name="replicaNumber"><option value="1">1</option><option value="2">2</option><option value="3">3</option></select>
+          <span>Number of replica (backup) copies</span>
+          <span class="error-container err-replicaNumber"></span>
+        </label>
+        <input type="hidden" name="replicaIndex" value="0"/>
+        <label style="padding-left: 20px; clear:both;"><input type="checkbox" name="replicaIndex" value="1" style="margin-right:5px;"/>Index replicas</label>
+      </div><!-- .persistent-only -->
+
+      <h2>Flush</h2>
+      <label class="for-enable-flush">
+        <input type="checkbox" name="flushEnabled" value="1">
+        <span>Enable </span>
+      </label>
+
+    </div><div class="config-bottom clearfix">
+    <button name="finish" class="submit finish direction-button" type="submit">Next</button>
+    <button name="back" class="submit back direction-button" id="step-init-bucket-back" type="button">Back</button>
+    </div></form>
+  </div>
+  <!-- END init_bucket_block -->
+
+  <div class="pad" id="init_update_notifications_dialog"><form>
+    <div class="config-top">
+      <h1>Notifications</h1>
+      <h2>Step <span class="current-step">4</span> of 5</h2>
+    </div>
+    <h2 class="question">Update Notifications</h2>
+    <p class="pad_10">
+      <label for="init-notifications-updates-enabled">
+        <input type="checkbox" id="init-notifications-updates-enabled" checked="checked">
+        <span>Enable software update notifications</span>
+      </label>
+      <a href="#" class="more_info" tabindex="-1">What's this?</a>
+    </p>
+    <p class="more_info pad_10">
+      Enabling software update notifications allows notification in the Couchbase web console when a new version of Couchbase Server is available. Configuration information transferred in the update check is anonymous and does not include any stored key-value data.
+    </p>
+    <div class="when-community">
+      <h2 class="question">Community Updates</h2>
+      <p class="pad_10">Please provide your email address to join the community and receive news on coming events.</p>
+    </div>
+    <div class="when-enterprise">
+      <h2 class="question">Product Registration</h2>
+      <p class="pad_10 clearfix">Register your Enterprise Edition of Couchbase Server below.</p>
+    </div>
+    <div class="pad_10 warn" style="color:#EC5223;font-family:Verdana, Helvetica, Sans-Serif; font-size:10pt; font-weight:lighter; line-height:20px; margin-left:75px; width:500px;" id="update_notifications_errors_container"></div>
+    <script type="text/html" id="update_notifications_errors_template">
+      <ul>
+      <!-- {% _.each(rows, function (errorMsg) { %} -->
+        <li>{%= h(errorMsg) %}</li>
+      <!-- {% }); %} -->
+      </ul>
+    </script>
+    <p class="pad_10">
+      <label for="init-join-community-email">
+        <span class="field-label">Email:</span>
+        <input id="init-join-community-email">
+        <span class="error-container err-name"></span>
+      </label>
+    </p>
+    <p class="pad_10">
+      <label for="init-join-community-firstname">
+        <span class="field-label">First name:</span>
+        <input id="init-join-community-firstname">
+        <span class="error-container err-firstname"></span>
+      </label>
+    </p>
+    <p class="pad_10">
+      <label for="init-join-community-lastname">
+        <span class="field-label">Last name:</span>
+        <input id="init-join-community-lastname">
+        <span class="when-required" style="color:red;">*</span>
+        <span class="error-container err-lastname"></span>
+      </label>
+    </p>
+    <p class="pad_10">
+      <label for="init-join-community-company">
+        <span class="field-label">Company:</span>
+        <input id="init-join-community-company">
+        <span class="error-container err-company"></span>
+      </label>
+    </p>
+    <p class="when-enterprise pad_10">
+      <label for="init-join-terms"><input type="checkbox" id="init-join-terms">
+        <span>I agree to the <a href="http://www.couchbase.com/agreement/free-license" target="_blank">terms and conditions</a> associated with this product. <span style="color:red">*</span></span>
+      </label>
+    </p>
+    <div class="config-bottom">
+      <button name="next" value="Next" class="submit next direction-button" id="step-3-next" type="submit">Next</button>
+      <button name="back" value="Back" class="submit back direction-button" id="step-3-back" type="button">Back</button>
+    </div>
+  </form></div>
+  <!-- END init_update_notifications-->
+  <div class="pad" id="init_sample_buckets_dialog"><form>
+    <div class="config-top">
+      <h1>Sample Buckets</h1>
+      <h2>Step <span class="current-step">2</span> of 5</h2>
+    </div>
+    <h2 class="question">Sample Data and MapReduce</h2>
+    <p class="pad_10">
+      Sample buckets are available to demonstrate the power of Couchbase Server.
+      These samples contain data and sample MapReduce queries.
+    </p>
+    <h3>Installed Samples</h3>
+    <ul id="setup_installed_samples"></ul>
+    <h3>Available Samples</h3>
+    <ul id="setup_available_samples"></ul>
+    <div class="config-bottom">
+      <button name="next" value="Next" class="submit next direction-button" id="step-4-next" type="submit">Next</button>
+      <button name="back" value="Back" class="submit back direction-button" id="step-4-back" type="button">Back</button>
+    </div>
+  </form></div>
+  <!-- END init_sample_buckets_dialog -->
+  <div class="pad" id="init_secure_dialog">
+   <div class="config-top">
+      <h1>Configure Server</h1>
+      <h2>Step <span class="current-step">5</span> of 5</h2>
+    </div>
+    <div class="alert_red" id="init_secure_failed_message" style="display:none;">
+      <div class="al_text">
+        Could not secure the server because of bad input.
+      </div>
+    </div>
+    <h2 class="title">Secure this Server</h2>
+    <p class="pad_10">
+      Please create an administrator account for this Server. If you want to join other
+      servers to this one to form a cluster, you will need to use these administrator
+      credentials in the "join cluster" process.
+    </p>
+    <form id="init_secure_form" class="form block" action="/settings/web">
+      <input type="text" name="port"
+            style="display:none;" value="SAME"/>
+      <div class="warn">
+        <ul></ul>
+      </div>
+      <div class="username-input">
+        <label for="secure-username">Username:</label>
+        <input type="text" name="username" class="inp" value="Administrator" id="secure-username" maxlength="24" />
+      </div>
+      <div class="password-input">
+        <label for="secure-password">Password:</label>
+        <input type="password" name="password" class="inp focusme" id="secure-password" maxlength="24" />
+      </div>
+      <div class="password-input-verify">
+        <label for="secure-password">Verify Password:</label>
+        <input type="password" name="password" class="inp" id="secure-password-verify" maxlength="24" />
+      </div>
+      <!--button type="submit" style="display:none;"></button-->
+    <div class="config-bottom">
+      <button name="finish" value="Finish" class="submit finish direction-button" id="step-5-finish" type="submit">Next</button>
+      <button name="back" value="Back" class="submit back direction-button" id="step-5-back" type="button">Back</button>
+    </div>
+    </form>
+  </div>
+  <!-- END init_secure_block -->
+</div>
+<!-- END init_block -->
+<script id="notice_template" type="text/html">
+<div class="shadow_box notice">
+    <h2 class="header_2">Couchbase Server Message<span style="float: right; color: black; font-size: 13px;">click to dismiss</span></h2>
+    <div class="pad_10 success_msg">
+      <p class="info_text">{%= h(text) %}</p>
+    </div>
+</div>
+</script>
+<script id="noticeErr_template" type="text/html">
+<div class="shadow_box notice">
+    <h2 class="header_2">Couchbase Server Alert<span style="float: right; color: black; font-size: 13px;">click to dismiss</span></h2>
+    <div class="pad_10 error_msg">
+      <p class="info_text">{%= h(text) %}</p>
+    </div>
+</div>
+</script>
+
+<!--[if IE]><script language="javascript" type="text/javascript" src="js/excanvas.min.js"></script><![endif]-->
+<script src="js/jquery.js"></script>
+<script>
+$(function() {
+  if ($.browser.mozilla) {
+    $('body').addClass('firefox');
+  }
+});
+</script>
+<script src="js/jquery-ui.custom.js"></script>
+<script src="js/jquery.flot.js"></script>
+<script src="js/jquery.sparkline.js"></script>
+<script type="text/javascript" src="js/jquery.selectBox.js"></script>
+<script src="js/jquery.ba-bbq.js"></script>
+<script src="js/jquery.ba-outside-events.js"></script>
+<!--[if lt IE 9]>
+<script>
+$(window).bind('template:rendered', function () {
+  $('table.lined_tab').each(function () {
+    $(this).find('tr:has(td):odd').addClass('highlight');
+  });
+});
+</script>
+<![endif]-->
+<script src="js/underscore.js"></script>
+<script src="js/tools.tabs.js"></script>
+<script src="js/jquery.cookie.js"></script>
+<script src="js/futon.format.js"></script>
+<script src="js/codemirror/codemirror.js"></script>
+<script src="js/codemirror/javascript.js"></script>
+<script src="js/misc.js"></script>
+<script src="js/base64.js"></script>
+<script src="js/cells.js"></script>
+<script src="js/app-ui-misc.js"></script>
+<script src="js/app-misc.js"></script>
+<script src="js/core-data.js"></script>
+<script src="js/analytics.js"></script>
+<script src="js/servers.js"></script>
+<script src="js/settings.js"></script>
+<script src="js/buckets.js"></script>
+<script src="js/filter.js"></script>
+<script src="js/views.js"></script>
+<script src="js/replications.js"></script>
+<script src="js/documents.js"></script>
+<script src="js/overview.js"></script>
+<script src="js/all-images.js"></script>
+<script src="js/global_progress.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
