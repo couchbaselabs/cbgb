@@ -32,6 +32,12 @@ func notImplemented(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "Not implemented", 501)
 }
 
+func restNSVersion(w http.ResponseWriter, r *http.Request) {
+	jsonEncode(w, map[string]interface{}{
+		"implementationVersion": cbgb.VERSION + "-cbgb",
+	})
+}
+
 func restNSPools(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &toplevelPool)
 }
@@ -235,6 +241,7 @@ func restNSAPI(r *mux.Router) {
 		r.HandleFunc(p, notImplemented).Methods("GET")
 	}
 
+	r.HandleFunc("/versions", restNSVersion)
 	r.HandleFunc("/pools", restNSPools)
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)

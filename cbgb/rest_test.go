@@ -1181,6 +1181,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/buckets":                                 "pools_default_buckets",
 		"/pools/default":                                         "pools_default",
 		"/pools":                                                 "pools",
+		"/versions":                                              "versions",
 	}
 
 	for pattern, fn := range ns_server_paths {
