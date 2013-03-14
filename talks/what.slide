@@ -1,0 +1,62 @@
+what is cbgb?
+
+Dustin Sallings
+2013-03-14
+
+* The Mission
+
+.image what/cbgb.jpg
+
+Our mission is to build a DB for everybody else.
+
+* Why a New Thing?
+
+.image what/scaleopoly.png
+
+* The Story
+
+.image what/seabee.png
+
+* But Why the Name CBGB? - CouchBase GigaBuckets!
+
+.image what/pudding.jpg
+
+(*) backronym independently recommended both by Aaron and Jens
+
+* What Features are Supported
+
+.image what/asterisk.jpg
+
+We consider any app that works under couchbase that doesn't work under
+cbgb to be a bug and fix it.
+
+So far, cbugg, cbfs, sync_gateway and some java apps have been tested
+successfully.
+
+* Does it Performance?
+
+We haven't done much in the way of performance, but one of our goal
+apps was a java-based tool that does performance test.  It had the
+following to say about cbgb:
+
+    Operations: measured 51000ops out of total 51000ops.
+    Percentile (microseconds) for "get" Workload:
+       50%:225   75%:253   95%:343   99%:424
+    Percentile (microseconds) for "set" Workload:
+       50%:298   75%:329   95%:404   99%:812
+    Elapsed: 12181ms
+
+That's a bit under 5k ops/s with a 99% get latency of < .5ms.
+
+[We know of optimization we have to do there]
+
+* Where Can I Run It?
+
+Coming soon to every cheap web host everywhere!
+
+In the meantime, we have regular builds for various combinations of:
+
+.image what/runson.png
+
+Single-binary distribution -- ~2MB of download + ~160k for the
+management console automatically downloaded when you run it.
