@@ -47,11 +47,14 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 	if err != nil {
 		log.Fatalf("Unable to determine port to advertise")
 	}
+	couchApiBaseHost := strings.Split(host, ":")[0]
+	couchApiBasePort := strings.Split(*rest, ":")[1]
+	couchApiBase := couchApiBaseHost + ":" + couchApiBasePort + "/" + bucket
 	return []couchbase.Node{
 		couchbase.Node{
 			ClusterCompatibility: 131072,
 			ClusterMembership:    "active",
-			CouchAPIBase:         "http://" + host + "/" + bucket,
+			CouchAPIBase:         "http://" + couchApiBase,
 			Hostname:             host,
 			Ports: map[string]int{
 				"direct": port,
@@ -224,6 +227,10 @@ func restNSBucketList(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, &rv)
 }
 
+func restNSSettingsStats(w http.ResponseWriter, r *http.Request) {
+	jsonEncode(w, map[string]interface{}{"sendStats": false})
+}
+
 func restNSAPI(r *mux.Router) {
 	ns_server_paths := []string{
 		"/pools/default/buckets/{bucketname}/statsDirectory",
@@ -250,6 +257,7 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/poolsStreaming/default", restNSStreaming(restNSPoolsDefault))
 	r.HandleFunc("/poolsStreaming/default/buckets/{bucketname}",
 		restNSStreaming(restNSBucket))
+	r.HandleFunc("/settings/stats", restNSSettingsStats)
 }
 
 func restNSServe(restNS string, staticPathNS string) {
