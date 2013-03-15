@@ -169,3 +169,7 @@ Map/reduce functions, etc. likely by using Otto.
 ## Bucket quotas
 
 Simple storage quota per bucket is supported.
+
+## Management web U/I
+
+Optional management web U/I is auto-downloaded on startup.
