@@ -69,6 +69,7 @@ type livebucket struct {
 	observer     broadcast.Broadcaster
 
 	bucketItemBytes int64
+	activity        int64
 
 	stats    BucketStatsSnapshot
 	statLock sync.Mutex
@@ -280,6 +281,7 @@ func (b *livebucket) GetVBucket(vbid uint16) *vbucket {
 	if b == nil || !b.Available() {
 		return nil
 	}
+	atomic.AddInt64(&b.activity, 1)
 	vbp := atomic.LoadPointer(&b.vbuckets[vbid])
 	return (*vbucket)(vbp)
 }

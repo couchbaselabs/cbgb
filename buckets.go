@@ -10,7 +10,11 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
+	"time"
 )
+
+var bucketCloser = newPeriodically(time.Minute*5, 1)
 
 // Holder of buckets.
 type Buckets struct {
@@ -39,9 +43,15 @@ func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error
 // TODO: Need clearer names around New vs Create vs Open vs Destroy,
 // especially now that there's persistence.
 func (b *Buckets) New(name string,
-	defaultSettings *BucketSettings) (rv Bucket, err error) {
+	defaultSettings *BucketSettings) (Bucket, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
+
+	return b.newUnlocked(name, defaultSettings)
+}
+
+func (b *Buckets) newUnlocked(name string,
+	defaultSettings *BucketSettings) (rv Bucket, err error) {
 
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already exists: %v", name)
@@ -94,7 +104,21 @@ func (b *Buckets) Get(name string) Bucket {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	return b.buckets[name]
+	rv, ok := b.buckets[name]
+	if rv != nil {
+		return rv
+	}
+	if !ok {
+		return nil
+	}
+
+	// Doesn't exist, try to load it.
+	rv, err := b.loadBucketUnlocked(name)
+	if err != nil {
+		// XXX: bug-508: Clean up...
+		return nil
+	}
+	return rv
 }
 
 // Close the named bucket, optionally purging all its files.
@@ -108,6 +132,7 @@ func (b *Buckets) Close(name string, purgeFiles bool) {
 	}
 
 	if purgeFiles {
+		// Permanent destroy
 		bp, err := b.Path(name)
 		if err == nil {
 			os.RemoveAll(bp)
@@ -206,7 +231,7 @@ func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 			continue
 		}
 
-		err = b.LoadBucket(bucketName)
+		_, err = b.LoadBucket(bucketName)
 		if err != nil {
 			return err
 		}
@@ -215,11 +240,59 @@ func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 }
 
 // Load a specific bucket by name.
-func (b *Buckets) LoadBucket(name string) error {
+func (b *Buckets) LoadBucket(name string) (Bucket, error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	return b.loadBucketUnlocked(name)
+}
+
+func (b *Buckets) loadBucketUnlocked(name string) (Bucket, error) {
 	log.Printf("loading bucket: %v", name)
-	bucket, err := b.New(name, b.settings)
+	bucket, err := b.newUnlocked(name, b.settings)
 	if err != nil {
-		return err
+		// XXX: bug-508: clean up
+		return nil, err
 	}
-	return bucket.Load()
+	var ch chan bool
+	if lb, ok := bucket.(*livebucket); ok {
+		ch = lb.availablech
+	}
+	bucketCloser.Register(ch, b.makeCloser(name))
+	return bucket, bucket.Load()
+}
+
+func (b *Buckets) makeCloser(name string) func(time.Time) bool {
+	return func(t time.Time) bool {
+		nrv := b.maybeClose(name)
+		return !nrv
+	}
+}
+
+// Returns true if the bucket is closed
+func (b *Buckets) maybeClose(name string) bool {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	bucket := b.buckets[name]
+	if bucket == nil {
+		return true
+	}
+
+	lb, ok := bucket.(*livebucket)
+	if !ok {
+		b.Close(name, false)
+		return true
+	}
+
+	val := atomic.LoadInt64(&lb.activity)
+	if val > 0 {
+		atomic.AddInt64(&lb.activity, -val)
+		return false
+	}
+
+	log.Printf("Passivating bucket %v", name)
+	lb.Close()
+	b.buckets[name] = nil
+	return true
 }
