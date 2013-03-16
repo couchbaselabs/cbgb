@@ -198,22 +198,29 @@ func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 		return err
 	}
 	for _, bucketName := range bucketNames {
-		log.Printf("loading bucket: %v", bucketName)
 		if b.Get(bucketName) != nil {
 			if !ignoreIfBucketAlreadyExists {
-				return errors.New(fmt.Sprintf("loading bucket %v, but it exists already",
-					bucketName))
+				return fmt.Errorf("loading bucket %v, but it exists already",
+					bucketName)
 			}
 			log.Printf("loading bucket: %v, already loaded", bucketName)
 			continue
 		}
-		bucket, err := b.New(bucketName, b.settings)
+
+		err = b.LoadBucket(bucketName)
 		if err != nil {
-			return err
-		}
-		if err = bucket.Load(); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// Load a specific bucket by name.
+func (b *Buckets) LoadBucket(name string) error {
+	log.Printf("loading bucket: %v", name)
+	bucket, err := b.New(name, b.settings)
+	if err != nil {
+		return err
+	}
+	return bucket.Load()
 }
