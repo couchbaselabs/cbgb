@@ -1,7 +1,6 @@
 package cbgb
 
 import (
-	"errors"
 	"fmt"
 	"hash/crc32"
 	"io/ioutil"
@@ -24,7 +23,7 @@ type Buckets struct {
 // Build a new holder of buckets.
 func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error) {
 	if !isDir(dirForBuckets) {
-		return nil, errors.New(fmt.Sprintf("not a directory: %v", dirForBuckets))
+		return nil, fmt.Errorf("not a directory: %v", dirForBuckets)
 	}
 	buckets := &Buckets{
 		buckets:  map[string]Bucket{},
@@ -45,7 +44,7 @@ func (b *Buckets) New(name string,
 	defer b.lock.Unlock()
 
 	if b.buckets[name] != nil {
-		return nil, errors.New(fmt.Sprintf("bucket already exists: %v", name))
+		return nil, fmt.Errorf("bucket already exists: %v", name)
 	}
 
 	settings := &BucketSettings{}
@@ -62,7 +61,7 @@ func (b *Buckets) New(name string,
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
 		// If an accessible bdir directory exists already, it's ok.
 		if err = os.MkdirAll(bdir, 0777); err != nil && !isDir(bdir) {
-			return nil, errors.New(fmt.Sprintf("could not access bucket dir: %v", bdir))
+			return nil, fmt.Errorf("could not access bucket dir: %v", bdir)
 		}
 	}
 
