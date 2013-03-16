@@ -1394,6 +1394,7 @@ $(function () {
   });
 
   function updateVisibleStuff() {
+    return; // CBGB
     $('.only-when-20')[lastCompatMode ? 'hide' : 'show']();
     $('.only-when-below-20')[lastCompatMode ? 'show' : 'hide']();
   }

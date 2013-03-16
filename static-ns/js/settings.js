@@ -54,6 +54,7 @@ var SettingsSection = {
     });
   },
   init: function () {
+    return; // CBGB
     this.tabs = new TabsCell('settingsTabs',
                              '#settings .tabs',
                              '#settings .panes > div',
@@ -67,6 +68,7 @@ var SettingsSection = {
     SampleBucketSection.init();
   },
   onEnter: function () {
+    return; // CBGB
     SampleBucketSection.refresh();
     UpdatesNotificationsSection.refresh();
     AutoFailoverSection.refresh();
@@ -593,6 +595,7 @@ var AutoFailoverSection = {
   },
   // Refreshes the auto-failover status that is shown in the server screen
   refreshStatus: function() {
+    return; // CBGB
     this.autoFailoverEnabledStatus.recalculate();
   },
   // Call this function to validate the form

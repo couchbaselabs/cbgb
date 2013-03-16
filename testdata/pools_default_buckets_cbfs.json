@@ -18,6 +18,7 @@
     "bucketCapabilitiesVer": "",
     "bucketType": "membase",
     "controllers": {
+        "flush": "/pools/default/buckets/cbfs/controller/doFlush",
         "compactAll": "/pools/default/buckets/cbfs/controller/compactBucket",
         "compactDB": "/pools/default/buckets/cbfs/controller/compactDatabases"
     },

@@ -36,6 +36,7 @@ var ServersSection = {
     });
   },
   renderEverything: function () {
+    return; // CBGB
     this.detailsWidget.prepareDrawing();
 
     var details = this.poolDetails.value;

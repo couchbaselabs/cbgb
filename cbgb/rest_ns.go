@@ -27,6 +27,17 @@ var toplevelPool = couchbase.Pools{
 		},
 	}}
 
+func getBindAddress(host string) string {
+	if strings.Index(*addr, ":") > 0 {
+		return *addr
+	}
+	n, _, err := net.SplitHostPort(host)
+	if err != nil {
+		return *addr
+	}
+	return n + *addr
+}
+
 func notImplemented(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Request for %v:%v", r.Method, r.URL.Path)
 	http.Error(w, "Not implemented", 501)
@@ -74,18 +85,51 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 		"name":  "default",
 		"nodes": getNSNodeList(r.Host, ""),
 		"stats": map[string]interface{}{"uri": "/pools/default/stats"},
+
+		// Barely enough JSON for NS web U/I compatibility...
+		"tasks": map[string]interface{}{"uri": "/pools/default/tasks"},
+		"controllers": map[string]interface{}{
+			"replication": map[string]interface{}{
+				"createURI": "/CBGB-replication-createURI",
+				"infosURI":  "/CBGB-replication-createURI",
+			},
+		},
+		"nodeStatusesUri":      "/nodeStatuses",
+		"rebalanceProgressUri": "/pools/default/rebalanceProgress",
+		"storageTotals": map[string]interface{}{
+			"hdd": map[string]interface{}{
+				"total": 1,
+				"used":  0,
+			},
+			"ram": map[string]interface{}{
+				"total": 1,
+				"used":  0,
+			},
+		},
 	})
 }
 
-func getBindAddress(host string) string {
-	if strings.Index(*addr, ":") > 0 {
-		return *addr
+func restNSBucketList(w http.ResponseWriter, r *http.Request) {
+	rv := []*couchbase.Bucket{}
+	for _, bn := range buckets.GetNames() {
+		b, err := getNSBucket(r.Host, bn, "")
+		if err != nil {
+			http.Error(w, err.Error(), 404)
+			return
+		}
+		rv = append(rv, b)
 	}
-	n, _, err := net.SplitHostPort(host)
+	jsonEncode(w, &rv)
+}
+
+func restNSBucket(w http.ResponseWriter, r *http.Request) {
+	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"],
+		r.FormValue("bucket_uuid"))
 	if err != nil {
-		return *addr
+		http.Error(w, err.Error(), 404)
+		return
 	}
-	return n + *addr
+	jsonEncode(w, &b)
 }
 
 func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
@@ -98,6 +142,7 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 	if uuid != "" && uuid != bucketUUID {
 		return nil, fmt.Errorf("Bucket uuid does not match the requested.")
 	}
+	bucketUUIDSuffix := "?bucket_uuid=" + bucketUUID
 	rv := &couchbase.Bucket{
 		AuthType:     "sasl",
 		Capabilities: []string{"couchapi"},
@@ -106,9 +151,23 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		NodeLocator:  "vbucket",
 		Nodes:        getNSNodeList(host, bucketName),
 		Replicas:     1,
-		URI:          "/pools/default/buckets/" + bucketName + "?bucket_uuid=" + bucketUUID,
+		URI:          "/pools/default/buckets/" + bucketName + bucketUUIDSuffix,
 		StreamingURI: "/poolsStreaming/default/buckets/" + bucketName,
 		UUID:         bucketUUID,
+		Controllers: map[string]interface{}{
+			"flush":      "/pools/default/buckets/" + bucketName + "/controller/doFlush",
+			"compactAll": "/pools/default/buckets/" + bucketName + "/controller/compactBucket",
+		},
+		BasicStats: map[string]interface{}{
+			"memUsed":  0,
+			"diskUsed": 0,
+		},
+		DDocs: map[string]interface{}{
+			"uri": "/pools/default/buckets/" + bucketName + "/ddocs" + bucketUUIDSuffix,
+		},
+		Quota: map[string]float64{
+			"ram": 1,
+		},
 	}
 	// TODO: Perhaps dynamically generate a SASL password here, such
 	// based on server start time.
@@ -125,6 +184,16 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		rv.VBucketServerMap.VBucketMap[i] = []int{0, -1}
 	}
 	return rv, nil
+}
+
+func restNSBucketDDocs(w http.ResponseWriter, r *http.Request) {
+	rows, err := getNSBucketDDocs(r.Host, mux.Vars(r)["bucketname"],
+		r.FormValue("bucket_uuid"))
+	if err != nil {
+		http.Error(w, err.Error(), 404)
+		return
+	}
+	jsonEncode(w, &rows)
 }
 
 func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
@@ -167,16 +236,6 @@ func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
 	return rv, nil
 }
 
-func restNSBucket(w http.ResponseWriter, r *http.Request) {
-	b, err := getNSBucket(r.Host, mux.Vars(r)["bucketname"],
-		r.FormValue("bucket_uuid"))
-	if err != nil {
-		http.Error(w, err.Error(), 404)
-		return
-	}
-	jsonEncode(w, &b)
-}
-
 // Wraps any REST response to make a "streaming" version.
 func restNSStreaming(orig func(http.ResponseWriter,
 	*http.Request),) func(http.ResponseWriter, *http.Request) {
@@ -203,32 +262,12 @@ func restNSStreaming(orig func(http.ResponseWriter,
 	}
 }
 
-func restNSBucketDDocs(w http.ResponseWriter, r *http.Request) {
-	rows, err := getNSBucketDDocs(r.Host, mux.Vars(r)["bucketname"],
-		r.FormValue("bucket_uuid"))
-	if err != nil {
-		http.Error(w, err.Error(), 404)
-		return
-	}
-	jsonEncode(w, &rows)
-}
-
-func restNSBucketList(w http.ResponseWriter, r *http.Request) {
-	rv := []*couchbase.Bucket{}
-
-	for _, bn := range buckets.GetNames() {
-		b, err := getNSBucket(r.Host, bn, "")
-		if err != nil {
-			http.Error(w, err.Error(), 404)
-			return
-		}
-		rv = append(rv, b)
-	}
-	jsonEncode(w, &rv)
-}
-
 func restNSSettingsStats(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{"sendStats": false})
+}
+
+func restNSPoolsDefaultTasks(w http.ResponseWriter, r *http.Request) {
+	jsonEncode(w, map[string]interface{}{})
 }
 
 func restNSAPI(r *mux.Router) {
@@ -254,6 +293,7 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
 	r.HandleFunc("/pools/default/buckets", restNSBucketList)
 	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs", restNSBucketDDocs)
+	r.HandleFunc("/pools/default/tasks", restNSPoolsDefaultTasks)
 	r.HandleFunc("/poolsStreaming/default", restNSStreaming(restNSPoolsDefault))
 	r.HandleFunc("/poolsStreaming/default/buckets/{bucketname}",
 		restNSStreaming(restNSBucket))
