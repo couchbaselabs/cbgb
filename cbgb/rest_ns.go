@@ -71,8 +71,9 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 				"direct": port,
 				"proxy":  0,
 			},
-			Status:  "healthy",
-			Version: cbgb.VERSION + "-cbgb",
+			Status:   "healthy",
+			Version:  cbgb.VERSION + "-cbgb",
+			ThisNode: true,
 		},
 	}
 }

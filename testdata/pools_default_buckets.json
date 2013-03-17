@@ -63,7 +63,8 @@
                     "swap_used": 0
                 },
                 "uptime": "5275784",
-                "version": "2.0.0-1976-rel-enterprise"
+                "version": "2.0.0-1976-rel-enterprise",
+                "thisNode": true
             },
             {
                 "clusterCompatibility": 131072,
