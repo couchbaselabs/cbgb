@@ -85,13 +85,6 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 	dbr.Handle("/{vbucket}",
 		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
 		MatcherFunc(referencesVBucket)
-	dbr.Handle("/{vbucket};{bucketUUID}/",
-		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
-		MatcherFunc(referencesVBucket).
-		MatcherFunc(includesBucketUUID)
-	dbr.Handle("/{vbucket}/",
-		http.HandlerFunc(couchDbGetDb)).Methods("GET", "HEAD").
-		MatcherFunc(referencesVBucket)
 
 	dbr.Handle("/{vbucket};{bucketUUID}/{docId}",
 		http.HandlerFunc(couchDbGetDoc)).Methods("GET", "HEAD").
