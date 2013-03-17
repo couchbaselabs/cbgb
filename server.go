@@ -102,11 +102,6 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
 	defer s.Close()
 
-	log.Printf("Started session, addr: %v", addr)
-	defer func() {
-		log.Printf("Finished session, addr: %v", addr)
-	}()
-
 	var err error
 	for err == nil {
 		err = handleMessage(s, s, handler)
@@ -141,7 +136,6 @@ func waitForConnections(ls net.Listener, buckets *Buckets, defaultBucketName str
 	for {
 		s, e := ls.Accept()
 		if e == nil {
-			log.Printf("Got a connection from %v", s.RemoteAddr())
 			bucket := buckets.Get(defaultBucketName)
 			handler := &reqHandler{
 				buckets:       buckets,
