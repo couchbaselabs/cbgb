@@ -29,14 +29,8 @@ type BucketSettings struct {
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {
-	return &BucketSettings{
-		NumPartitions:    bs.NumPartitions,
-		PasswordHashFunc: bs.PasswordHashFunc,
-		PasswordHash:     bs.PasswordHash,
-		PasswordSalt:     bs.PasswordSalt,
-		QuotaBytes:       bs.QuotaBytes,
-		MemoryOnly:       bs.MemoryOnly,
-	}
+	rv := *bs
+	return &rv
 }
 
 // Returns a safe subset (no passwords) useful for JSON-ification.
