@@ -141,15 +141,18 @@ func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || ddocId == "" {
 		return
 	}
-	body, err := bucket.GetDDoc("_design/" + ddocId)
+	ddocIdFull := "_design/" + ddocId
+	body, err := bucket.GetDDoc(ddocIdFull)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("getDDoc err: %v", err), 500)
+		http.Error(w, fmt.Sprintf("getDDoc err: %v, ddocIdFull: %v",
+			err, ddocIdFull), 500)
 		return
 	}
 	if body == nil {
 		http.Error(w, "Not Found", 404)
 		return
 	}
+	w.Header().Add("X-Couchbase-Meta", walrus.MakeMeta(ddocIdFull))
 	w.Write(body)
 }
 
@@ -317,6 +320,7 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: Content Type, Accepts, much to leverage from sync_gateway.
+	w.Header().Add("X-Couchbase-Meta", walrus.MakeMeta(docId))
 	w.Write(res.Body)
 }
 
