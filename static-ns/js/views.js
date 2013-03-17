@@ -1587,6 +1587,9 @@ var ViewsSection = {
                  callback("ok");
                },
                function (error, status, unexpected) {
+                 if (status == 201) { // CBGB
+                   return begin();
+                 }
                  if (status == 409) {
                    return begin();
                  }

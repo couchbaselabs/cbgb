@@ -169,6 +169,7 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		Quota: map[string]float64{
 			"ram": 1,
 		},
+		LocalRandomKeyURI: "/pools/default/buckets/" + bucketName + "/localRandomKey",
 	}
 	// TODO: Perhaps dynamically generate a SASL password here, such
 	// based on server start time.
@@ -223,6 +224,9 @@ func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
 						// TODO: "rev" meta field.
 					},
 				},
+				"controllers": map[string]interface{}{
+					"TODO": "what controllers go here?",
+				},
 			})
 		return true
 	})
@@ -271,13 +275,16 @@ func restNSPoolsDefaultTasks(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{})
 }
 
+func restNSLocalRandomKey(w http.ResponseWriter, r *http.Request) {
+	jsonEncode(w, map[string]interface{}{"ok": false})
+}
+
 func restNSAPI(r *mux.Router) {
 	ns_server_paths := []string{
 		"/pools/default/buckets/{bucketname}/statsDirectory",
 		"/pools/default/buckets/{bucketname}/stats",
 		"/pools/default/buckets/{bucketname}/nodes",
 		"/pools/default/buckets/{bucketname}/nodes/{node}/stats",
-		"/pools/default/buckets/{bucketname}/localRandomKey",
 		"/pools/default/bucketsStreaming/{bucketname}",
 		"/pools/default/stats",
 		"/poolsStreaming",
@@ -293,9 +300,14 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
 	r.HandleFunc("/pools/default/buckets", restNSBucketList)
-	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs", restNSBucketDDocs)
-	r.HandleFunc("/pools/default/tasks", restNSPoolsDefaultTasks)
-	r.HandleFunc("/poolsStreaming/default", restNSStreaming(restNSPoolsDefault))
+	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs",
+		restNSBucketDDocs)
+	r.HandleFunc("/pools/default/buckets/{bucketname}/localRandomKey",
+		restNSLocalRandomKey)
+	r.HandleFunc("/pools/default/tasks",
+		restNSPoolsDefaultTasks)
+	r.HandleFunc("/poolsStreaming/default",
+		restNSStreaming(restNSPoolsDefault))
 	r.HandleFunc("/poolsStreaming/default/buckets/{bucketname}",
 		restNSStreaming(restNSBucket))
 	r.HandleFunc("/settings/stats", restNSSettingsStats)
@@ -304,7 +316,12 @@ func restNSAPI(r *mux.Router) {
 func restNSServe(restNS string, staticPathNS string) {
 	r := mux.NewRouter()
 	restNSAPI(r)
+
+	cbr := r.PathPrefix("/couchBase/").Subrouter()
+	restCouchAPI(cbr)
+
 	initStatic(r, "/", staticPathNS)
+
 	log.Printf("listening rest-ns on: %v", restNS)
 	log.Fatal(http.ListenAndServe(restNS, r))
 }

@@ -1174,7 +1174,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		"/pools/default/buckets/{bucketname}/nodes":              "",
 		"/pools/default/buckets/{bucketname}/nodes/{node}/stats": "",
 		"/pools/default/buckets/{bucketname}/ddocs":              "pools_default_buckets_cbfs_ddocs",
-		"/pools/default/buckets/{bucketname}/localRandomKey":     "",
+		"/pools/default/buckets/{bucketname}/localRandomKey":     "pools_default_buckets_cbfs_localRandomKey",
 		"/pools/default/bucketsStreaming/{bucketname}":           "",
 		"/pools/default/buckets/{bucketname}":                    "pools_default_buckets_cbfs",
 		"/pools/default/stats":                                   "",
