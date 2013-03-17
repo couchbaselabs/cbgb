@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/walrus"
@@ -57,7 +58,7 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 		Methods("GET", "HEAD")
 
 	dbr.Handle("/_design/{docId}/_view/{viewId}",
-		http.HandlerFunc(couchDbGetView)).
+		http.HandlerFunc(deadlinedHandler(time.Second, couchDbGetView))).
 		Methods("GET")
 
 	dbr.Handle("/_design/{docId}",
@@ -332,6 +333,28 @@ func couchDbPutDoc(w http.ResponseWriter, r *http.Request) {
 
 func couchDbDelDoc(w http.ResponseWriter, r *http.Request) {
 	http.Error(w, "unimplemented", 501)
+}
+
+func deadlinedHandler(deadline time.Duration, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		q := ""
+		if r.URL.RawQuery != "" {
+			q = "?" + r.URL.RawQuery
+		}
+
+		wd := time.AfterFunc(deadline, func() {
+			log.Printf("%v:%v%v is taking longer than %v",
+				r.Method, r.URL.Path, q, deadline)
+		})
+
+		h(w, r)
+
+		if !wd.Stop() {
+			log.Printf("%v:%v%v eventually finished in %v",
+				r.Method, r.URL.Path, q, time.Since(start))
+		}
+	}
 }
 
 func couchDbGetView(w http.ResponseWriter, r *http.Request) {
