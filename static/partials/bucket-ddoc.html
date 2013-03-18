@@ -38,10 +38,12 @@
         <li ng-repeat="(viewName, view) in ddoc.views">
           view: {{viewName}}
           <div>
-            map:
-            <pre>{{view.map}}</pre>
-            reduce:
-            <pre>{{view.reduce}}</pre>
+            <legend>map</legend>
+            <textarea class="view viewMap">{{view.map}}</textarea>
+          </div>
+          <div>
+            <legend>reduce</legend>
+            <textarea class="view viewReduce">{{view.reduce}}</textarea>
           </div>
         </li>
       </ul>
