@@ -15,15 +15,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func restServe(rest string, staticPath string) {
-	r := mux.NewRouter()
-	restAPI(r, staticPath)
-	restCouchAPI(r)
-	r.Handle("/", http.RedirectHandler("/_static/app.html", 302))
-	log.Printf("listening rest on: %v", rest)
-	log.Fatal(http.ListenAndServe(rest, r))
-}
-
 func restAPI(r *mux.Router, staticPath string) {
 	r.HandleFunc("/_api/buckets",
 		restGetBuckets).Methods("GET")
@@ -77,9 +68,12 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
 		"addr":              *addr,
 		"data":              *data,
-		"rest":              *rest,
+		"rest-couch":        *restCouch,
+		"rest-ns":           *restNS,
+		"static-path":       *staticPath,
 		"defaultBucketName": *defaultBucketName,
 		"bucketSettings":    bucketSettings,
+		"verbose":           *verbose,
 	})
 }
 

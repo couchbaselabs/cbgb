@@ -19,8 +19,10 @@ var startTime = time.Now()
 var verbose = flag.Bool("v", true, "amount of logging")
 var addr = flag.String("addr", ":11211", "data protocol listen address")
 var data = flag.String("data", "./tmp", "data directory")
-var rest = flag.String("rest", ":8092", "rest protocol listen address")
-var restNS = flag.String("rest-ns", ":8091", "rest NS protocol listen address")
+var restCouch = flag.String("rest-couch",
+	":8092", "rest couch protocol listen address")
+var restNS = flag.String("rest-ns",
+	":8091", "rest NS protocol listen address")
 var staticPath = flag.String("static-path",
 	"http://downloads.northscale.com/cbgb/static.zip",
 	"path to static web UI content")
@@ -85,11 +87,11 @@ func main() {
 		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
 
-	mainServer(buckets, *defaultBucketName, *addr, *rest, *restNS, *staticPath)
+	mainServer(buckets, *defaultBucketName, *addr, *restCouch, *restNS, *staticPath)
 }
 
 func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
-	addr string, rest string, restNS string, staticPath string) {
+	addr string, restCouch string, restNS string, staticPath string) {
 	if buckets.Get(defaultBucketName) == nil && defaultBucketName != "" {
 		_, err := createBucket(defaultBucketName, bucketSettings)
 		if err != nil {
@@ -105,11 +107,11 @@ func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 		os.Exit(1)
 	}
 
-	if rest != "" {
-		go func() { restServe(rest, staticPath) }()
+	if restCouch != "" {
+		go restCouchServe(restCouch, staticPath)
 	}
 	if restNS != "" {
-		go func() { restNSServe(restNS, staticPath+"-ns") }()
+		go restNSServe(restNS, staticPath)
 	}
 
 	// Let goroutines do their work.

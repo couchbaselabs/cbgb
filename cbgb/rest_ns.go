@@ -59,7 +59,7 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 		log.Fatalf("Unable to determine port to advertise")
 	}
 	couchApiBaseHost := strings.Split(host, ":")[0]
-	couchApiBasePort := strings.Split(*rest, ":")[1]
+	couchApiBasePort := strings.Split(*restCouch, ":")[1]
 	couchApiBase := couchApiBaseHost + ":" + couchApiBasePort + "/" + bucket
 	return []couchbase.Node{
 		couchbase.Node{
@@ -313,15 +313,13 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/settings/stats", restNSSettingsStats)
 }
 
-func restNSServe(restNS string, staticPathNS string) {
+func restNSServe(restNS string, staticPath string) {
 	r := mux.NewRouter()
+	restAPI(r, staticPath)
 	restNSAPI(r)
-
 	cbr := r.PathPrefix("/couchBase/").Subrouter()
 	restCouchAPI(cbr)
-
-	initStatic(r, "/", staticPathNS)
-
+	r.Handle("/", http.RedirectHandler("/_static/app.html", 302))
 	log.Printf("listening rest-ns on: %v", restNS)
 	log.Fatal(http.ListenAndServe(restNS, r))
 }

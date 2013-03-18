@@ -30,6 +30,13 @@ import (
 	"github.com/robertkrimen/otto"
 )
 
+func restCouchServe(rest string, staticPath string) {
+	r := mux.NewRouter()
+	restCouchAPI(r)
+	log.Printf("listening rest-couch on: %v", rest)
+	log.Fatal(http.ListenAndServe(rest, r))
+}
+
 const maxViewErrors = 100
 
 func referencesVBucket(r *http.Request, rm *mux.RouteMatch) bool {
