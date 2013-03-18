@@ -57,6 +57,10 @@ func restCouchAPI(r *mux.Router) *mux.Router {
 		http.HandlerFunc(couchDbGetDb)).
 		Methods("GET", "HEAD")
 
+	dbr.Handle("/_all_docs",
+		http.HandlerFunc(deadlinedHandler(time.Second, couchDbAllDocs))).
+		Methods("GET")
+
 	dbr.Handle("/_design/{docId}/_view/{viewId}",
 		http.HandlerFunc(deadlinedHandler(time.Second, couchDbGetView))).
 		Methods("GET")
@@ -750,4 +754,12 @@ func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
 		}
 	}
 	return result, nil
+}
+
+func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
+	p, err := cbgb.ParseViewParams(r)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("param parsing err: %v", err), 400)
+		return
+	}
 }
