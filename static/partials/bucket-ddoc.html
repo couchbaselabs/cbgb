@@ -1,4 +1,4 @@
-<div ng-controller="BucketDDocsCtrl">
+<div ng-controller="BucketDDocCtrl">
   <div ng-show="err" class="alert alert-error">
     <i class="icon-flag"></i> {{err}}
   </div>
@@ -22,7 +22,13 @@
       </a>
       <span class="divider">/</span>
     </li>
-    <li class="active"><i class="icon-tags"></i> design docs</li>
+    <li>
+      <a href="#/buckets/{{bucketName}}/{{ddocName}}">
+        <i class="icon-tags"></i> design docs
+      </a>
+      <span class="divider">/</span>
+    </li>
+    <li class="active"><i class="icon-tag"></i> {{ddocName}}</li>
   </ul>
 
   <div class="row main">
@@ -30,11 +36,11 @@
       <legend>Design docs for bucket: {{bucketName}}</legend>
       <ul>
         <li>
-          <i class="icon-tags"></i> design docs:
+          <i class="icon-random"></i> ddocs:
           <ul>
             <li ng-repeat="ddoc in ddocs.rows">
               <a href="#/buckets/{{bucketName}}/{{ddoc.doc.meta.id}}">
-                <i class="icon-tag"></i> {{ddoc.doc.meta.id}}
+                {{ddoc.doc.meta.id}}
               </a>
               <ul>
                 <li ng-repeat="view in ddoc.doc.json.views">

@@ -13,6 +13,9 @@ angular.module('cbgb', []).
       when('/buckets/:bucketName/ddocs',
            {templateUrl: 'partials/bucket-ddocs.html',
             controller: BucketDDocsCtrl}).
+      when('/buckets/:bucketName/_design/:ddocNameSuffix',
+           {templateUrl: 'partials/bucket-ddoc.html',
+            controller: BucketDDocCtrl}).
       when('/buckets/:bucketName/stats',
            {templateUrl: 'partials/bucket-stats.html',
             controller: BucketStatsCtrl}).
@@ -424,4 +427,7 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
   }
 
   retrieveDDocs();
+}
+
+function BucketDDocCtrl($scope, $routeParams, $http) {
 }
