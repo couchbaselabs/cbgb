@@ -451,7 +451,7 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
       return
     }
 
-    ddoc = $scope.ddoc
+    ddoc = $scope.ddoc;
     if (!ddoc) {
       $scope.viewCreateResult = "error: missing existing ddoc";
       return
@@ -468,19 +468,52 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
     }
 
     $scope.viewCreateResult = "adding view: " + viewName + " ...";
+    ddocSaveActual(ddoc, "viewCreateResult",
+                   "added view: " + viewName + " to: " + $scope.ddocName,
+                   "error saving design doc: " + $scope.ddocName);
+  }
+
+  $scope.ddocSave = function() {
+    var dirty = false;
+
+    ddoc = $scope.ddoc;
+    if (!ddoc.views) {
+      ddoc.views = {};
+    }
+    for (var viewName in ddoc.views) {
+      console.log(viewName);
+      var tid = $scope.bucketName + "/" + $scope.ddocName + "/" + viewName;
+      _.each(["map", "reduce"], function(kind) {
+          var prev = ddoc.views[viewName][kind] || "";
+          var curr = document.getElementById(tid + "-" + kind).value;
+          if (curr != prev) {
+            ddoc.views[viewName][kind] = curr;
+            dirty = true;
+          }
+      });
+    }
+
+    if (dirty) {
+      $scope.ddocSaveResult = "saving design doc: " + $scope.ddocName + " ...";
+      ddocSaveActual(ddoc, "ddocSaveResult",
+                     "saved design doc: " + $scope.ddocName,
+                     "error saving design doc: " + $scope.ddocName);
+
+    }
+  }
+
+  function ddocSaveActual(ddoc, msgName, msgSuccess, msgError) {
     $http({
         method: 'PUT',
         url: '/couchBase/' + $scope.bucketName + '/' + $scope.ddocName,
         data: ddoc
       }).
       success(function(data) {
-        $scope.viewCreateResult =
-          "added view: " + viewName + " to: " + $scope.ddocName;
+        $scope[msgName] = msgSuccess;
         retrieveDDoc();
       }).
       error(function(data) {
-        $scope.viewCreateResult =
-          "error saving design doc: " + $scope.ddocName + "; error: " + data;
+        $scope[msgName] = msgError + "; error: " + data;
       });
   }
 

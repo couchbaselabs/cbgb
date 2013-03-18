@@ -34,19 +34,34 @@
   <div class="row main">
     <div class="span8">
       <legend>Design doc: {{ddocNameSuffix}}</legend>
+      <button type="submit" class="btn" ng-click="ddocSave()">
+        Save Design Doc
+      </button>
+      <span ng-show="ddocSaveResult">{{ddocSaveResult}}</span>
+      <br/>
+      <br/>
       <ul>
         <li ng-repeat="(viewName, view) in ddoc.views">
-          view: {{viewName}}
+          <legend>view: {{viewName}}</legend>
           <div>
-            <legend>map</legend>
-            <textarea class="view viewMap">{{view.map}}</textarea>
+            <label>map:
+              <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-map"
+              class="view viewMap">{{view.map}}</textarea>
+            </label>
           </div>
           <div>
-            <legend>reduce</legend>
-            <textarea class="view viewReduce">{{view.reduce}}</textarea>
+            <label>reduce:
+              <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-reduce"
+              class="view viewReduce">{{view.reduce}}</textarea>
+            </label>
           </div>
         </li>
       </ul>
+      <br/>
+      <button type="submit" class="btn" ng-click="ddocSave()">
+        Save Design Doc
+      </button>
+      <span ng-show="ddocSaveResult">{{ddocSaveResult}}</span>
     </div>
     <div class="span4">
       <form name="ddocCreateForm">
