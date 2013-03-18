@@ -1,0 +1,36 @@
+<div ng-controller="BucketDDocsCtrl">
+  <div ng-show="err" class="alert alert-error">
+    <i class="icon-flag"></i> {{err}}
+  </div>
+
+  <ul class="breadcrumb">
+    <li><a href="#/server"><i class="icon-home"></i> server</a><span class="divider">/</span></li>
+    <li><a href="#/buckets"><i class="icon-book"></i> buckets</a><span class="divider">/</span></li>
+    <li><a href="#/buckets/{{bucketName}}"><i class="icon-folder-open"></i> {{bucketName}}</a><span class="divider">/</span></li>
+    <li class="active"><i class="icon-eye-open"></i> design docs</li>
+  </ul>
+
+  <div class="row main">
+    <div class="span8">
+      <legend>Design docs for bucket: {{bucketName}}</legend>
+    </div>
+    <div class="span4">
+      <form name="ddocCreateForm">
+        <legend>Create new design doc</legend>
+        <label>Design doc name
+          <input type="text"
+                name="ddocName"
+                required
+                placeholder="_design/your-design-doc-name"
+                ng-model="ddocName"/>
+        </label>
+        <button type="submit" class="btn" ng-click="ddocCreate()">
+          Create Design Doc
+        </button>
+      </form>
+      <div ng-show="ddocCreateResult">
+        {{ddocCreateResult}}
+      </div>
+    </div>
+  </div>
+</div>

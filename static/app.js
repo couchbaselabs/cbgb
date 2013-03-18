@@ -10,6 +10,9 @@ angular.module('cbgb', []).
       when('/buckets/:bucketName',
            {templateUrl: 'partials/bucket.html',
             controller: BucketCtrl}).
+      when('/buckets/:bucketName/ddocs',
+           {templateUrl: 'partials/bucket-ddocs.html',
+            controller: BucketDDocsCtrl}).
       when('/buckets/:bucketName/stats',
            {templateUrl: 'partials/bucket-stats.html',
             controller: BucketStatsCtrl}).
@@ -343,4 +346,19 @@ function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
       .attr("x", function(d, i) { return -barW - xMargin; })
       .remove();
   }
+}
+
+function BucketDDocsCtrl($scope, $routeParams, $http) {
+  $scope.bucketName = $routeParams.bucketName;
+
+  $http.get('/_api/buckets/' + $scope.bucketName + '/ddocs').
+    success(function(data) {
+      $scope.ddocs = data;
+      $scope.err = null;
+    }).
+    error(function() {
+      $scope.err = restErrorMsg
+    });
+
+  $scope.orderChoice = 'id';
 }
