@@ -145,3 +145,50 @@ func ParseViewParams(params Form) (p *ViewParams, err error) {
 
 	return p, nil
 }
+
+// Merge incoming, sorted ViewRows by Key.
+func MergeViewRows(inSorted []chan *ViewRow, out chan *ViewRow) {
+	end := &ViewRow{} // Sentinel.
+	arr := make([]*ViewRow, len(inSorted))
+
+	receiveViewRow := func(i int, in chan *ViewRow) {
+		v, ok := <-in
+		if !ok {
+			arr[i] = end
+		} else {
+			arr[i] = v
+		}
+	}
+
+	for i, in := range inSorted { // Initialize the arr.
+		receiveViewRow(i, in)
+	}
+
+	pickLeast := func() (int, *ViewRow) {
+		// TODO: Inefficient to iterate over array every time.
+		ileast := -1
+		vleast := end
+		for i, v := range arr {
+			if vleast == end {
+				ileast = i
+				vleast = v
+			} else if v != end {
+				if walrus.CollateJSON(vleast.Key, v.Key) > 0 {
+					ileast = i
+					vleast = v
+				}
+			}
+		}
+		return ileast, vleast
+	}
+
+	for {
+		i, v := pickLeast()
+		if v == end {
+			close(out)
+			return
+		}
+		out <- v
+		receiveViewRow(i, inSorted[i])
+	}
+}

@@ -100,3 +100,152 @@ func TestParseViewParams(t *testing.T) {
 		t.Errorf("expected %#v, got %#v", exp, p)
 	}
 }
+
+func TestMergeViewRows(t *testing.T) {
+	expectViewRows := func(msg string, c chan *ViewRow, exp []string) {
+		for i, s := range exp {
+			v, ok := <-c
+			if !ok {
+				t.Errorf("expectViewRows expected %v for %v, index %v,"+
+					" but chan was closed", s, msg, i)
+			}
+			if v.Key != s {
+				t.Errorf("expectViewRows %v to equal %v, index %v, for %v",
+					v, s, i, msg)
+			}
+		}
+		v, ok := <-c
+		if ok {
+			t.Errorf("expectViewRows expected chan closed for %v, but got %v",
+				msg, v)
+		}
+	}
+
+	feed := func(c chan *ViewRow, arr []string) {
+		for _, s := range arr {
+			c <- &ViewRow{Key: s}
+		}
+		close(c)
+	}
+
+	out := make(chan *ViewRow, 1)
+	go MergeViewRows(nil, out)
+	expectViewRows("empty merge", out, []string{})
+
+	out = make(chan *ViewRow, 1)
+	in0 := make(chan *ViewRow, 1)
+	in := []chan *ViewRow{in0}
+	close(in[0])
+	go MergeViewRows(in, out)
+	expectViewRows("merge closed chan", out, []string{})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 := make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1}
+	close(in[0])
+	close(in[1])
+	go MergeViewRows(in, out)
+	expectViewRows("merge 2 closed chans", out, []string{})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0}
+	go feed(in[0], []string{})
+	go MergeViewRows(in, out)
+	expectViewRows("empty feed channel", out, []string{})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1}
+	go feed(in[0], []string{})
+	go feed(in[1], []string{})
+	go MergeViewRows(in, out)
+	expectViewRows("empty feed channels", out, []string{})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0}
+	go feed(in[0], []string{"a", "b", "c"})
+	go MergeViewRows(in, out)
+	expectViewRows("1 feed channel", out, []string{"a", "b", "c"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1}
+	go feed(in[0], []string{"a", "c", "e"})
+	go feed(in[1], []string{"b", "d", "f"})
+	go MergeViewRows(in, out)
+	expectViewRows("2 feed channel", out,
+		[]string{"a", "b", "c", "d", "e", "f"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1}
+	go feed(in[0], []string{"a", "b", "c"})
+	go feed(in[1], []string{})
+	go MergeViewRows(in, out)
+	expectViewRows("1 empty feed channel", out,
+		[]string{"a", "b", "c"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in2 := make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1, in2}
+	go feed(in[0], []string{"a", "b", "c"})
+	go feed(in[1], []string{})
+	go feed(in[2], []string{})
+	go MergeViewRows(in, out)
+	expectViewRows("2 empty feed channel", out,
+		[]string{"a", "b", "c"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1}
+	go feed(in[0], []string{})
+	go feed(in[1], []string{"a", "b", "c"})
+	go MergeViewRows(in, out)
+	expectViewRows("other empty feed channel", out,
+		[]string{"a", "b", "c"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in2 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1, in2}
+	go feed(in[0], []string{})
+	go feed(in[1], []string{"a", "b", "c"})
+	go feed(in[2], []string{})
+	go MergeViewRows(in, out)
+	expectViewRows("more empty feed channel", out,
+		[]string{"a", "b", "c"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in2 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1, in2}
+	go feed(in[0], []string{"c"})
+	go feed(in[1], []string{"b"})
+	go feed(in[2], []string{"a"})
+	go MergeViewRows(in, out)
+	expectViewRows("reversed feed channels", out,
+		[]string{"a", "b", "c"})
+
+	out = make(chan *ViewRow, 1)
+	in0 = make(chan *ViewRow, 1)
+	in1 = make(chan *ViewRow, 1)
+	in2 = make(chan *ViewRow, 1)
+	in = []chan *ViewRow{in0, in1, in2}
+	go feed(in[0], []string{"b", "c"})
+	go feed(in[1], []string{"b", "c"})
+	go feed(in[2], []string{"a", "a"})
+	go MergeViewRows(in, out)
+	expectViewRows("repeated feed channel", out,
+		[]string{"a", "a", "b", "b", "c", "c"})
+}
