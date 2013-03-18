@@ -24,6 +24,10 @@ angular.module('cbgb', []).
 
 var restErrorMsg = "error communicating with server; please try again.";
 
+var bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
+var ddocNamePattern = /^[A-Za-z0-9\-_\/]+$/;
+var viewNamePattern = /^[A-Za-z0-9\-_]+$/;
+
 function ServerCtrl($scope, $http) {
   $scope.serverGC = function() {
     $http.post("/_api/runtime/gc").
@@ -63,7 +67,6 @@ function ServerCtrl($scope, $http) {
 
 function BucketsCtrl($scope, $http) {
   $scope.bucketName = "";
-  $scope.bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
   $scope.bucketPassword = "";
   $scope.bucketQuotaBytes = 1000000;
   $scope.bucketMemoryOnly = 0;
@@ -73,14 +76,14 @@ function BucketsCtrl($scope, $http) {
     if (bucketName.length <= 0) {
       return
     }
-    if (!bucketName.match($scope.bucketNamePattern)) {
+    if (!bucketName.match(bucketNamePattern)) {
       $scope.bucketCreateResult =
         "error: please use alphanumerics, dashes, and underscores only";
       return
     }
     if (_.contains($scope.names, bucketName)) {
       $scope.bucketCreateResult =
-      "error: bucket " + bucketName + " already exists";
+        "error: bucket " + bucketName + " already exists";
       return
     }
 
@@ -95,9 +98,7 @@ function BucketsCtrl($scope, $http) {
         headers: {'Content-Type': 'application/x-www-form-urlencoded'}
       }).
       success(function(data) {
-        console.log(data);
-        $scope.bucketCreateResult =
-          "created bucket: " + bucketName;
+        $scope.bucketCreateResult = "created bucket: " + bucketName;
         retrieveBucketNames();
       }).
       error(function(data) {
@@ -350,23 +351,20 @@ function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
 
 function BucketDDocsCtrl($scope, $routeParams, $http) {
   $scope.bucketName = $routeParams.bucketName;
-  $scope.ddocNamePattern = /^[A-Za-z0-9\-_\/]+$/;
-  $scope.viewNamePattern = /^[A-Za-z0-9\-_]+$/;
 
   $scope.ddocCreate = function() {
     var ddocName = $scope.ddocName;
-    if (ddocName.length <= 0) {
+    if (!ddocName || ddocName.length <= 0) {
       return
     }
-    if (!ddocName.match($scope.ddocNamePattern)) {
+    if (!ddocName.match(ddocNamePattern)) {
       $scope.ddocCreateResult =
         "error: please use alphanumerics, slashes, dashes, and underscores only" +
         " for design doc name";
       return
     }
     if (ddocName.length <= "_design/".length) {
-      $scope.ddocCreateResult =
-        "error: design doc name is too short";
+      $scope.ddocCreateResult = "error: design doc name is too short";
       return
     }
     if (ddocName.search("_design/") != 0) {
@@ -379,34 +377,32 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
     if (viewName.length <= 0) {
       return
     }
-    if (!viewName.match($scope.viewNamePattern)) {
+    if (!viewName.match(viewNamePattern)) {
       $scope.ddocCreateResult =
         "error: please use alphanumerics, dashes, and underscores only" +
         " for view name";
       return
     }
     if (viewName.length <= 0) {
-      $scope.ddocCreateResult =
-        "error: missing view name";
+      $scope.ddocCreateResult = "error: missing view name";
       return
     }
 
     $scope.ddocCreateResult = "creating design doc: " + ddocName + " ...";
-    data = {
+    ddoc = {
       "id": ddocName,
       "views": {}
     }
-    data.views[viewName] = {
+    ddoc.views[viewName] = {
       "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
     }
     $http({
         method: 'PUT',
         url: '/couchBase/' + $scope.bucketName + '/' + ddocName,
-        data: data
+        data: ddoc
       }).
       success(function(data) {
-        $scope.ddocCreateResult =
-          "created design doc: " + ddocName;
+        $scope.ddocCreateResult = "created design doc: " + ddocName;
         retrieveDDocs();
       }).
       error(function(data) {
@@ -433,6 +429,52 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
   $scope.bucketName = $routeParams.bucketName;
   $scope.ddocNameSuffix = $routeParams.ddocNameSuffix;
   $scope.ddocName = "_design/" + $routeParams.ddocNameSuffix;
+
+  $scope.viewCreate = function() {
+    var viewName = $scope.viewName;
+    if (!viewName || viewName.length <= 0) {
+      return
+    }
+    if (!viewName.match(viewNamePattern)) {
+      $scope.viewCreateResult =
+        "error: please use alphanumerics, dashes, and underscores only" +
+        " for view name";
+      return
+    }
+    if (viewName.length <= 0) {
+      $scope.viewCreateResult = "error: missing view name";
+      return
+    }
+
+    ddoc = $scope.ddoc
+    if (!ddoc) {
+      $scope.viewCreateResult = "error: missing existing ddoc";
+      return
+    }
+    if (ddoc.views[viewName]) {
+      $scope.viewCreateResult = "error: view of the same name already exists";
+      return
+    }
+    ddoc.views[viewName] = {
+      "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
+    }
+
+    $scope.viewCreateResult = "adding view: " + viewName + " ...";
+    $http({
+        method: 'PUT',
+        url: '/couchBase/' + $scope.bucketName + '/' + $scope.ddocName,
+        data: ddoc
+      }).
+      success(function(data) {
+        $scope.viewCreateResult =
+          "added view: " + viewName + " to design doc: " + $scope.ddocName;
+        retrieveDDoc();
+      }).
+      error(function(data) {
+        $scope.viewCreateResult =
+          "error saving design doc: " + $scope.ddocName + "; error: " + data;
+      });
+  }
 
   function retrieveDDoc() {
     $http.get('/couchBase/' + $scope.bucketName + '/' + $scope.ddocName).
