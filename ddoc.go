@@ -6,7 +6,7 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
-func (b *livebucket) GetDDocVBucket() *vbucket {
+func (b *livebucket) GetDDocVBucket() *VBucket {
 	return b.vbucketDDoc
 }
 

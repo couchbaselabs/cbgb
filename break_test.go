@@ -35,9 +35,9 @@ type testDef map[string][]testItem
   ]
 */
 
-type op func(b *vbucket, memo interface{}) (interface{}, error)
+type op func(b *VBucket, memo interface{}) (interface{}, error)
 
-func dispatchCounter(v *vbucket, initial uint64,
+func dispatchCounter(v *VBucket, initial uint64,
 	cmd gomemcached.CommandCode) error {
 
 	req := &gomemcached.MCRequest{
@@ -57,7 +57,7 @@ func dispatchCounter(v *vbucket, initial uint64,
 
 }
 
-func dispatchTestCommand(v *vbucket, cas uint64,
+func dispatchTestCommand(v *VBucket, cas uint64,
 	cmd gomemcached.CommandCode) (*gomemcached.MCResponse, error) {
 
 	req := &gomemcached.MCRequest{
@@ -79,7 +79,7 @@ func dispatchTestCommand(v *vbucket, cas uint64,
 	return res, err
 }
 
-func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
+func shortTestDispatch(v *VBucket, cmd gomemcached.CommandCode) error {
 	_, err := dispatchTestCommand(v, 0, cmd)
 	return err
 }
@@ -91,20 +91,20 @@ func shortTestDispatch(v *vbucket, cmd gomemcached.CommandCode) error {
 //   appendUsingCAS
 //   prependUsingCAS
 var opMap = map[string]op{
-	"add": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"add": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.ADD)
 	},
-	"set": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"set": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.SET)
 	},
-	"setRetainCAS": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"setRetainCAS": func(v *VBucket, memo interface{}) (interface{}, error) {
 		res, err := dispatchTestCommand(v, 0, gomemcached.SET)
 		if err != nil {
 			return nil, err
 		}
 		return res.Cas, err
 	},
-	"setUsingCAS": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"setUsingCAS": func(v *VBucket, memo interface{}) (interface{}, error) {
 		casid, ok := memo.(uint64)
 		if !ok {
 			return nil, fmt.Errorf("Memo doesn't contain a CAS: %+v", memo)
@@ -115,25 +115,25 @@ var opMap = map[string]op{
 		}
 		return 0, err
 	},
-	"incr": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"incr": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, dispatchCounter(v, ^uint64(0), gomemcached.INCREMENT)
 	},
-	"incrWithDefault": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"incrWithDefault": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, dispatchCounter(v, 0, gomemcached.INCREMENT)
 	},
-	"decr": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"decr": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, dispatchCounter(v, ^uint64(0), gomemcached.DECREMENT)
 	},
-	"decrWithDefault": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"decrWithDefault": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, dispatchCounter(v, 0, gomemcached.DECREMENT)
 	},
-	"get": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"get": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.GET)
 	},
-	"del": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"del": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, shortTestDispatch(v, gomemcached.DELETE)
 	},
-	"deleteUsingCAS": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"deleteUsingCAS": func(v *VBucket, memo interface{}) (interface{}, error) {
 		casid, ok := memo.(uint64)
 		if !ok {
 			return nil, fmt.Errorf("Memo doesn't contain a CAS: %+v", memo)
@@ -144,10 +144,10 @@ var opMap = map[string]op{
 		}
 		return 0, err
 	},
-	"assert": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"assert": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, nil
 	},
-	"assertMissing": func(v *vbucket, memo interface{}) (interface{}, error) {
+	"assertMissing": func(v *VBucket, memo interface{}) (interface{}, error) {
 		return nil, nil
 	},
 }

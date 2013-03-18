@@ -40,9 +40,9 @@ type Bucket interface {
 
 	GetBucketSettings() *BucketSettings
 
-	CreateVBucket(vbid uint16) (*vbucket, error)
+	CreateVBucket(vbid uint16) (*VBucket, error)
 	DestroyVBucket(vbid uint16) (destroyed bool)
-	GetVBucket(vbid uint16) *vbucket
+	GetVBucket(vbid uint16) *VBucket
 	SetVBState(vbid uint16, newState VBState) error
 
 	GetBucketStore(int) *bucketstore
@@ -51,7 +51,7 @@ type Bucket interface {
 
 	Statish
 
-	GetDDocVBucket() *vbucket
+	GetDDocVBucket() *VBucket
 	GetDDoc(ddocId string) ([]byte, error)
 	SetDDoc(ddocId string, body []byte) error
 	VisitDDocs(start []byte, visitor func(key []byte, data []byte) bool) error
@@ -64,7 +64,7 @@ type livebucket struct {
 	dir          string
 	settings     *BucketSettings
 	vbuckets     [MAX_VBUCKETS]unsafe.Pointer // *vbucket
-	vbucketDDoc  *vbucket
+	vbucketDDoc  *VBucket
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
 
@@ -188,7 +188,7 @@ func (b *livebucket) Close() error {
 	close(b.availablech)
 	for vbid, _ := range b.vbuckets {
 		if vbp := atomic.LoadPointer(&b.vbuckets[vbid]); vbp != nil {
-			vb := (*vbucket)(vbp)
+			vb := (*VBucket)(vbp)
 			vb.Close()
 		}
 	}
@@ -276,22 +276,22 @@ func (b *livebucket) Load() (err error) {
 	return nil
 }
 
-func (b *livebucket) GetVBucket(vbid uint16) *vbucket {
+func (b *livebucket) GetVBucket(vbid uint16) *VBucket {
 	// TODO: Revisit the available approach, as it feels racy.
 	if b == nil || !b.Available() {
 		return nil
 	}
 	atomic.AddInt64(&b.activity, 1)
 	vbp := atomic.LoadPointer(&b.vbuckets[vbid])
-	return (*vbucket)(vbp)
+	return (*VBucket)(vbp)
 }
 
-func (b *livebucket) casVBucket(vbid uint16, vb *vbucket, vbPrev *vbucket) bool {
+func (b *livebucket) casVBucket(vbid uint16, vb *VBucket, vbPrev *VBucket) bool {
 	return atomic.CompareAndSwapPointer(&b.vbuckets[vbid],
 		unsafe.Pointer(vbPrev), unsafe.Pointer(vb))
 }
 
-func (b *livebucket) CreateVBucket(vbid uint16) (*vbucket, error) {
+func (b *livebucket) CreateVBucket(vbid uint16) (*VBucket, error) {
 	if b == nil || !b.Available() {
 		return nil, errors.New("cannot create vbucket as bucket is unavailable")
 	}
@@ -442,7 +442,7 @@ type vbucketChange struct {
 	oldState, newState VBState
 }
 
-func (c vbucketChange) getVBucket() *vbucket {
+func (c vbucketChange) getVBucket() *VBucket {
 	if c.bucket == nil {
 		return nil
 	}

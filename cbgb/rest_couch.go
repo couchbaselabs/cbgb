@@ -757,15 +757,70 @@ func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
 	return result, nil
 }
 
+func visitVBucketAllDocs(vb *cbgb.VBucket, ch chan *cbgb.ViewRow) {
+	if vb != nil {
+		vb.Visit(nil, func(key []byte, data []byte) bool {
+			docId := string(key)
+			docType := "json"
+			var doc interface{}
+			err := json.Unmarshal(data, &doc)
+			if err != nil {
+				doc = base64.StdEncoding.EncodeToString(data)
+				docType = "base64"
+			}
+			// TODO: The couchdb spec emits Value instead of Doc.
+			ch <- &cbgb.ViewRow{
+				Id:  docId,
+				Key: docId,
+				Doc: &cbgb.ViewDocValue{
+					Meta: map[string]interface{}{
+						"id":   docId,
+						"type": docType,
+						// TODO: rev.
+					},
+					Json: doc,
+				},
+			}
+			return true
+		})
+	}
+	close(ch)
+}
+
 func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 	_, _, bucket := checkDb(w, r)
 	if bucket == nil {
 		return
 	}
-
-	_, err := cbgb.ParseViewParams(r)
+	_, err := cbgb.ParseViewParams(r) // TODO: Handle params.
 	if err != nil {
 		http.Error(w, fmt.Sprintf("param parsing err: %v", err), 400)
 		return
 	}
+	out := make(chan *cbgb.ViewRow, 1)
+	np := bucket.GetBucketSettings().NumPartitions
+	in := make([]chan *cbgb.ViewRow, np+1)
+	for vbid := 0; vbid < np+1; vbid++ {
+		in[vbid] = make(chan *cbgb.ViewRow, 1)
+	}
+	go cbgb.MergeViewRows(in, out)
+	for vbid := 0; vbid < np; vbid++ {
+		go visitVBucketAllDocs(bucket.GetVBucket(uint16(vbid)), in[vbid])
+	}
+	go visitVBucketAllDocs(bucket.GetDDocVBucket(), in[np])
+	w.Write([]byte(`{"rows":[`))
+	i := 0
+	for vr := range out {
+		j, err := json.Marshal(vr)
+		if err == nil {
+			if i > 0 {
+				w.Write([]byte(",\n"))
+			}
+			_, err = w.Write(j)
+			if err == nil {
+				i++
+			}
+		} // TODO: else, json marshalling and Write error handling.
+	}
+	w.Write([]byte(fmt.Sprintf(`],"total_rows":%v}`, i)))
 }

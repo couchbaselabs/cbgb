@@ -161,11 +161,11 @@ func StartServer(addr string, buckets *Buckets, defaultBucketName string) (net.L
 	return ls, nil
 }
 
-func GetVBucketForKey(b Bucket, key []byte) *vbucket {
+func GetVBucketForKey(b Bucket, key []byte) *VBucket {
 	return b.GetVBucket(VBucketIdForKey(key, b.GetBucketSettings().NumPartitions))
 }
 
-func GetVBucket(b Bucket, key []byte, vbs VBState) *vbucket {
+func GetVBucket(b Bucket, key []byte, vbs VBState) *VBucket {
 	vb := GetVBucketForKey(b, key)
 	if vb == nil || vb.GetVBState() != vbs {
 		return nil

@@ -37,7 +37,7 @@ func (sr VBSplitRangeParts) Swap(i, j int) {
 	sr[i], sr[j] = sr[j], sr[i]
 }
 
-func vbSplitRange(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbSplitRange(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	if req.Body != nil {
 		sr := &VBSplitRange{}
 		if err := json.Unmarshal(req.Body, sr); err != nil {
@@ -52,7 +52,7 @@ func vbSplitRange(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gom
 	return &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 }
 
-func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
+func (v *VBucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 	// Spliting to just 1 new destination vbucket is allowed.  It's
 	// equivalent to re-numbering a vbucket with a different
 	// vbucket-id.
@@ -93,7 +93,7 @@ func (v *vbucket) splitRange(sr *VBSplitRange) (res *gomemcached.MCResponse) {
 	return v.splitRangeActual(sr.Splits)
 }
 
-func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.MCResponse) {
+func (v *VBucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 
 	var transferSplits func(int)
@@ -111,7 +111,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 		}
 
 		vbid := uint16(splits[splitIdx].VBucketId)
-		var vb *vbucket
+		var vb *VBucket
 		created := false
 		if vbid != v.Meta().Id {
 			vb, _ = v.parent.CreateVBucket(vbid)
@@ -175,7 +175,7 @@ func (v *vbucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 	return
 }
 
-func (v *vbucket) rangeCopyTo(dst *vbucket,
+func (v *VBucket) rangeCopyTo(dst *VBucket,
 	minKeyInclusive []byte, maxKeyExclusive []byte) (err error) {
 	// TODO: Should this be under src and/or dst Apply()/Mutate() protection?
 	// TODO: The bucketstore might want to compact the dst in the middle of copying?

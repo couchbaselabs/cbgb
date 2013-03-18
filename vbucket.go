@@ -43,7 +43,7 @@ func VBucketIdForKey(key []byte, numVBuckets int) uint16 {
 	return uint16((crc32.ChecksumIEEE(key) >> uint32(16)) & uint32(numVBuckets-1))
 }
 
-type vbucket struct {
+type VBucket struct {
 	parent    Bucket
 	vbid      uint16
 	meta      unsafe.Pointer // *VBMeta
@@ -57,11 +57,11 @@ type vbucket struct {
 	bucketItemBytes *int64
 }
 
-func (v vbucket) String() string {
+func (v VBucket) String() string {
 	return fmt.Sprintf("{vbucket %v}", v.vbid)
 }
 
-type dispatchFun func(v *vbucket, w io.Writer,
+type dispatchFun func(v *VBucket, w io.Writer,
 	req *gomemcached.MCRequest) *gomemcached.MCResponse
 
 var dispatchTable = [256]dispatchFun{
@@ -103,8 +103,8 @@ var dispatchTable = [256]dispatchFun{
 }
 
 func newVBucket(parent Bucket, vbid uint16, bs *bucketstore,
-	bucketItemBytes *int64) (rv *vbucket, err error) {
-	rv = &vbucket{
+	bucketItemBytes *int64) (rv *VBucket, err error) {
+	rv = &VBucket{
 		parent:          parent,
 		vbid:            vbid,
 		meta:            unsafe.Pointer(&VBMeta{Id: vbid, State: VBDead.String()}),
@@ -118,11 +118,11 @@ func newVBucket(parent Bucket, vbid uint16, bs *bucketstore,
 	return rv, nil
 }
 
-func (v *vbucket) Meta() *VBMeta {
+func (v *VBucket) Meta() *VBMeta {
 	return (*VBMeta)(atomic.LoadPointer(&v.meta))
 }
 
-func (v *vbucket) Close() error {
+func (v *VBucket) Close() error {
 	if v == nil {
 		return nil
 	}
@@ -130,7 +130,7 @@ func (v *vbucket) Close() error {
 	return v.observer.Close()
 }
 
-func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (v *VBucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	atomic.AddInt64(&v.stats.Ops, 1)
 	f := dispatchTable[req.Opcode]
 	if f == nil {
@@ -143,7 +143,7 @@ func (v *vbucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached
 	return f(v, w, req)
 }
 
-func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
+func (v *VBucket) get(key []byte) *gomemcached.MCResponse {
 	return v.Dispatch(nil, &gomemcached.MCRequest{
 		Opcode:  gomemcached.GET,
 		Key:     key,
@@ -151,17 +151,17 @@ func (v *vbucket) get(key []byte) *gomemcached.MCResponse {
 	})
 }
 
-func (v *vbucket) Apply(fun func()) {
+func (v *VBucket) Apply(fun func()) {
 	v.lock.Lock()
 	defer v.lock.Unlock()
 	fun()
 }
 
-func (v *vbucket) GetVBState() (res VBState) {
+func (v *VBucket) GetVBState() (res VBState) {
 	return parseVBState(v.Meta().State)
 }
 
-func (v *vbucket) SetVBState(newState VBState,
+func (v *VBucket) SetVBState(newState VBState,
 	cb func(prevState VBState)) (prevState VBState, err error) {
 	prevState = VBDead
 	// The bs.apply() ensures we're not compacting/flushing while
@@ -189,7 +189,7 @@ func (v *vbucket) SetVBState(newState VBState,
 	return prevState, err
 }
 
-func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
+func (v *VBucket) setVBMeta(newMeta *VBMeta) (err error) {
 	// This should only be called when holding the bucketstore
 	// service/apply "lock", to ensure a Flush between changes stream
 	// update and COLL_VBMETA update is atomic.
@@ -220,7 +220,7 @@ func (v *vbucket) setVBMeta(newMeta *VBMeta) (err error) {
 	return nil
 }
 
-func (v *vbucket) load() (err error) {
+func (v *VBucket) load() (err error) {
 	v.Apply(func() {
 		meta := v.Meta().Copy()
 
@@ -268,13 +268,13 @@ func (v *vbucket) load() (err error) {
 	return err
 }
 
-func (v *vbucket) AddStatsTo(dest *Stats, key string) {
+func (v *VBucket) AddStatsTo(dest *Stats, key string) {
 	if parseVBState(v.Meta().State) == VBActive { // TODO: handle stats sub-key.
 		dest.Add(&v.stats)
 	}
 }
 
-func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (v *VBucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	if len(req.Key) > MAX_ITEM_KEY_LENGTH {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.EINVAL,
@@ -298,7 +298,7 @@ func (v *vbucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse
 	return nil
 }
 
-func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Gets, 1)
 
 	res = v.checkRange(req)
@@ -340,7 +340,7 @@ func vbGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 // Responds with the changes since the req.Cas, with the last response
 // in the response stream having no key.
 // TODO: Support a limit on changes-since, perhaps in the req.Extras.
-func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbChangesSince(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Opcode: req.Opcode, Cas: req.Cas}
 
 	var err error
@@ -386,7 +386,7 @@ func vbChangesSince(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 	return res
 }
 
-func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbGetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	v.Apply(func() {
 		if j, err := json.Marshal(v.Meta()); err == nil {
 			res = &gomemcached.MCResponse{Body: j}
@@ -401,7 +401,7 @@ func vbGetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 // version, until (perhaps) one day when we have auth checking.
 var allow_vbSetVBMeta bool = false
 
-func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbSetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 	if !allow_vbSetVBMeta {
 		return
@@ -453,7 +453,7 @@ func vbSetVBMeta(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 	return res
 }
 
-func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (
+func vbRGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
 	res *gomemcached.MCResponse) {
 	// From http://code.google.com/p/memcached/wiki/RangeOps
 	// Extras field  Bits
@@ -506,7 +506,7 @@ func vbRGet(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (
 	return res
 }
 
-func (v *vbucket) Visit(start []byte, visitor func(key []byte, data []byte) bool) error {
+func (v *VBucket) Visit(start []byte, visitor func(key []byte, data []byte) bool) error {
 	return v.ps.visitItems(start, true, func(i *item) bool {
 		return visitor(i.key, i.data)
 	})

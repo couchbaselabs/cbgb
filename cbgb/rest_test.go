@@ -1101,6 +1101,62 @@ func TestReverseViewRows(t *testing.T) {
 	}
 }
 
+func TestCouchAllDocs(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://127.0.0.1/default/_all_docs", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd := &cbgb.ViewResult{}
+	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	if dd.TotalRows != 0 || len(dd.Rows) != 0 {
+		t.Errorf("expected 0 rows, got: %v, %v", dd.TotalRows, len(dd.Rows))
+	}
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`, nil)
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_all_docs", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &cbgb.ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, got: %v", err)
+	}
+	k := []string{"_design/d0", "a", "b", "c", "d"}
+	if dd.TotalRows != len(k) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(k), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+	}
+}
+
 func jsonFindParse(t *testing.T, b []byte, path string) (interface{}, error) {
 	d, err := jsonpointer.Find(b, path)
 	if err != nil {

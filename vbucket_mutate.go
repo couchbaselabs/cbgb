@@ -12,7 +12,7 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
-func vbMutate(v *vbucket, w io.Writer,
+func vbMutate(v *VBucket, w io.Writer,
 	req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Mutations, 1)
 
@@ -124,7 +124,7 @@ func vbMutate(v *vbucket, w io.Writer,
 	return res
 }
 
-func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
+func vbMutateValidate(v *VBucket, w io.Writer, req *gomemcached.MCRequest,
 	cmd gomemcached.CommandCode, itemOld *item) (*gomemcached.MCResponse, error) {
 	if cmd == gomemcached.ADD && itemOld != nil {
 		return &gomemcached.MCResponse{
@@ -147,7 +147,7 @@ func vbMutateValidate(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	return nil, nil
 }
 
-func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
+func vbMutateItemNew(v *VBucket, w io.Writer, req *gomemcached.MCRequest,
 	cmd gomemcached.CommandCode, itemCas uint64, itemOld *item) (*gomemcached.MCResponse,
 	*item, uint64, error) {
 
@@ -233,7 +233,7 @@ func vbMutateItemNew(v *vbucket, w io.Writer, req *gomemcached.MCRequest,
 	return nil, itemNew, aval, nil
 }
 
-func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Deletes, 1)
 
 	res = v.checkRange(req)
@@ -301,13 +301,13 @@ func vbDelete(v *vbucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	return res
 }
 
-func (v *vbucket) mkVBucketSweeper() func(time.Time) bool {
+func (v *VBucket) mkVBucketSweeper() func(time.Time) bool {
 	return func(time.Time) bool {
 		return v.expScan()
 	}
 }
 
-func (v *vbucket) expScan() bool {
+func (v *VBucket) expScan() bool {
 	now := time.Now()
 	// expired := atomic.LoadUint64(&v.stats.Expirable)
 	var cleaned int64
@@ -342,7 +342,7 @@ func computeExp(exp uint32, tsrc func() time.Time) uint32 {
 	return rv
 }
 
-func (v *vbucket) getUnexpired(key []byte, now time.Time) (*item, error) {
+func (v *VBucket) getUnexpired(key []byte, now time.Time) (*item, error) {
 	i, err := v.ps.get(key)
 	if err != nil || i == nil {
 		return nil, err
@@ -356,7 +356,7 @@ func (v *vbucket) getUnexpired(key []byte, now time.Time) (*item, error) {
 
 // Invoked when the caller believes the item has expired.  We double
 // check here in case some concurrent race has mutated the item.
-func (v *vbucket) expire(key []byte, now time.Time) (err error) {
+func (v *VBucket) expire(key []byte, now time.Time) (err error) {
 	var deltaItemBytes int64
 
 	v.Apply(func() {
