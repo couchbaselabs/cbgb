@@ -16,7 +16,19 @@
       <ul>
         <li>
           <i class="icon-random"></i> ddocs:
-          <pre>{{ddocs | json}}</pre>
+          <ul>
+            <li ng-repeat="ddoc in ddocs.rows">
+              {{ddoc.doc.meta.id}}
+              <ul>
+                <li ng-repeat="view in ddoc.doc.json.views">
+                  map:
+                  <pre>{{view.map}}</pre>
+                  reduce:
+                  <pre>{{view.reduce}}</pre>
+                </li>
+              </ul>
+            </li>
+          </ul>
         </li>
       </ul>
     </div>

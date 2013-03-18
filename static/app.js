@@ -412,8 +412,6 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
       });
   }
 
-  $scope.orderChoice = 'id';
-
   function retrieveDDocs() {
     $http.get('/pools/default/buckets/' + $scope.bucketName + '/ddocs').
       success(function(data) {
