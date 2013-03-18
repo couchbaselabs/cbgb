@@ -31,7 +31,7 @@
       <ul>
         <li ng-repeat="ddoc in ddocs.rows">
           <a href="#/buckets/{{bucketName}}/{{ddoc.doc.meta.id}}">
-            <i class="icon-tag"></i> {{ddoc.doc.meta.id}}
+            <i class="icon-tag"></i> {{suffix(ddoc.doc.meta.id)}}
           </a>
         </li>
       </ul>

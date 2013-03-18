@@ -352,6 +352,11 @@ function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
 function BucketDDocsCtrl($scope, $routeParams, $http) {
   $scope.bucketName = $routeParams.bucketName;
 
+  $scope.suffix = function(s) {
+    var a = s.split('/');
+    return a[a.length - 1];
+  }
+
   $scope.ddocCreate = function() {
     var ddocName = $scope.ddocName;
     if (!ddocName || ddocName.length <= 0) {
@@ -451,6 +456,9 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
       $scope.viewCreateResult = "error: missing existing ddoc";
       return
     }
+    if (!ddoc.views) {
+      ddoc.views = {};
+    }
     if (ddoc.views[viewName]) {
       $scope.viewCreateResult = "error: view of the same name already exists";
       return
@@ -467,7 +475,7 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
       }).
       success(function(data) {
         $scope.viewCreateResult =
-          "added view: " + viewName + " to design doc: " + $scope.ddocName;
+          "added view: " + viewName + " to: " + $scope.ddocName;
         retrieveDDoc();
       }).
       error(function(data) {
