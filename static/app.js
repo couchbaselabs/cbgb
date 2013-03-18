@@ -70,13 +70,11 @@ function BucketsCtrl($scope, $http) {
     if (bucketName.length <= 0) {
       return
     }
-
     if (!bucketName.match($scope.bucketNamePattern)) {
       $scope.bucketCreateResult =
         "error: please use alphanumerics, dashes, and underscores only";
       return
     }
-
     if (_.contains($scope.names, bucketName)) {
       $scope.bucketCreateResult =
       "error: bucket " + bucketName + " already exists";
@@ -84,7 +82,6 @@ function BucketsCtrl($scope, $http) {
     }
 
     $scope.bucketCreateResult = "creating bucket: " + bucketName + " ...";
-
     $http({
         method: 'POST',
         url: '/_api/buckets',
@@ -350,15 +347,83 @@ function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
 
 function BucketDDocsCtrl($scope, $routeParams, $http) {
   $scope.bucketName = $routeParams.bucketName;
+  $scope.ddocNamePattern = /^[A-Za-z0-9\-_\/]+$/;
+  $scope.viewNamePattern = /^[A-Za-z0-9\-_]+$/;
 
-  $http.get('/_api/buckets/' + $scope.bucketName + '/ddocs').
-    success(function(data) {
-      $scope.ddocs = data;
-      $scope.err = null;
-    }).
-    error(function() {
-      $scope.err = restErrorMsg
-    });
+  $scope.ddocCreate = function() {
+    var ddocName = $scope.ddocName;
+    if (ddocName.length <= 0) {
+      return
+    }
+    if (!ddocName.match($scope.ddocNamePattern)) {
+      $scope.ddocCreateResult =
+        "error: please use alphanumerics, slashes, dashes, and underscores only" +
+        " for design doc name";
+      return
+    }
+    if (ddocName.length <= "_design/".length) {
+      $scope.ddocCreateResult =
+        "error: design doc name is too short";
+      return
+    }
+    if (ddocName.search("_design/") != 0) {
+      $scope.ddocCreateResult =
+        "error: please start your design doc name with _design/";
+      return
+    }
+
+    var viewName = $scope.viewName;
+    if (viewName.length <= 0) {
+      return
+    }
+    if (!viewName.match($scope.viewNamePattern)) {
+      $scope.ddocCreateResult =
+        "error: please use alphanumerics, dashes, and underscores only" +
+        " for view name";
+      return
+    }
+    if (viewName.length <= 0) {
+      $scope.ddocCreateResult =
+        "error: missing view name";
+      return
+    }
+
+    $scope.ddocCreateResult = "creating design doc: " + ddocName + " ...";
+    data = {
+      "id": ddocName,
+      "views": {}
+    }
+    data.views[viewName] = {
+      "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
+    }
+    $http({
+        method: 'PUT',
+        url: '/couchBase/' + $scope.bucketName + '/' + ddocName,
+        data: data
+      }).
+      success(function(data) {
+        $scope.ddocCreateResult =
+          "created design doc: " + ddocName;
+        retrieveDDocs();
+      }).
+      error(function(data) {
+        $scope.ddocCreateResult =
+          "error creating design doc: " + ddocName + "; error: " + data;
+      });
+  }
 
   $scope.orderChoice = 'id';
+
+  function retrieveDDocs() {
+    $http.get('/pools/default/buckets/' + $scope.bucketName + '/ddocs').
+      success(function(data) {
+          $scope.ddocs = data;
+          $scope.err = null;
+        }).
+      error(function() {
+        $scope.err = restErrorMsg
+      });
+  }
+
+  retrieveDDocs();
 }

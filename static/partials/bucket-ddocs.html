@@ -13,16 +13,29 @@
   <div class="row main">
     <div class="span8">
       <legend>Design docs for bucket: {{bucketName}}</legend>
+      <ul>
+        <li>
+          <i class="icon-eye-open"></i> ddocs:
+          <pre>{{ddocs | json}}</pre>
+        </li>
+      </ul>
     </div>
     <div class="span4">
       <form name="ddocCreateForm">
         <legend>Create new design doc</legend>
-        <label>Design doc name
+        <label>Design doc name<br/>
           <input type="text"
                 name="ddocName"
                 required
                 placeholder="_design/your-design-doc-name"
                 ng-model="ddocName"/>
+        </label>
+        <label>View name<br/>
+          <input type="text"
+                name="viewName"
+                required
+                placeholder="your-view-name"
+                ng-model="viewName"/>
         </label>
         <button type="submit" class="btn" ng-click="ddocCreate()">
           Create Design Doc
