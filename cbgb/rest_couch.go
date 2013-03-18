@@ -435,7 +435,8 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	})
 
 	vr := &cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
-	for vbid := 0; vbid < cbgb.MAX_VBUCKETS; vbid++ {
+	np := bucket.GetBucketSettings().NumPartitions
+	for vbid := 0; vbid < np; vbid++ {
 		vb := bucket.GetVBucket(uint16(vbid))
 		if vb != nil {
 			var errVisit error
@@ -757,7 +758,12 @@ func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
 }
 
 func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
-	p, err := cbgb.ParseViewParams(r)
+	_, _, bucket := checkDb(w, r)
+	if bucket == nil {
+		return
+	}
+
+	_, err := cbgb.ParseViewParams(r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("param parsing err: %v", err), 400)
 		return
