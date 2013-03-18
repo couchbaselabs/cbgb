@@ -29,23 +29,10 @@
     <div class="span8">
       <legend>Design docs for bucket: {{bucketName}}</legend>
       <ul>
-        <li>
-          <i class="icon-tags"></i> design docs:
-          <ul>
-            <li ng-repeat="ddoc in ddocs.rows">
-              <a href="#/buckets/{{bucketName}}/{{ddoc.doc.meta.id}}">
-                <i class="icon-tag"></i> {{ddoc.doc.meta.id}}
-              </a>
-              <ul>
-                <li ng-repeat="view in ddoc.doc.json.views">
-                  map:
-                  <pre>{{view.map}}</pre>
-                  reduce:
-                  <pre>{{view.reduce}}</pre>
-                </li>
-              </ul>
-            </li>
-          </ul>
+        <li ng-repeat="ddoc in ddocs.rows">
+          <a href="#/buckets/{{bucketName}}/{{ddoc.doc.meta.id}}">
+            <i class="icon-tag"></i> {{ddoc.doc.meta.id}}
+          </a>
         </li>
       </ul>
     </div>

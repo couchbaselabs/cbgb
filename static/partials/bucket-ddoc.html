@@ -23,48 +23,32 @@
       <span class="divider">/</span>
     </li>
     <li>
-      <a href="#/buckets/{{bucketName}}/{{ddocName}}">
+      <a href="#/buckets/{{bucketName}}/ddocs">
         <i class="icon-tags"></i> design docs
       </a>
       <span class="divider">/</span>
     </li>
-    <li class="active"><i class="icon-tag"></i> {{ddocName}}</li>
+    <li class="active"><i class="icon-tag"></i> {{ddocNameSuffix}}</li>
   </ul>
 
   <div class="row main">
     <div class="span8">
-      <legend>Design docs for bucket: {{bucketName}}</legend>
+      <legend>Design doc: {{ddocNameSuffix}}</legend>
       <ul>
-        <li>
-          <i class="icon-random"></i> ddocs:
-          <ul>
-            <li ng-repeat="ddoc in ddocs.rows">
-              <a href="#/buckets/{{bucketName}}/{{ddoc.doc.meta.id}}">
-                {{ddoc.doc.meta.id}}
-              </a>
-              <ul>
-                <li ng-repeat="view in ddoc.doc.json.views">
-                  map:
-                  <pre>{{view.map}}</pre>
-                  reduce:
-                  <pre>{{view.reduce}}</pre>
-                </li>
-              </ul>
-            </li>
-          </ul>
+        <li ng-repeat="(viewName, view) in ddoc.views">
+          view: {{viewName}}
+          <div>
+            map:
+            <pre>{{view.map}}</pre>
+            reduce:
+            <pre>{{view.reduce}}</pre>
+          </div>
         </li>
       </ul>
     </div>
     <div class="span4">
       <form name="ddocCreateForm">
-        <legend>Create new design doc</legend>
-        <label>Design doc name<br/>
-          <input type="text"
-                name="ddocName"
-                required
-                placeholder="_design/your-design-doc-name"
-                ng-model="ddocName"/>
-        </label>
+        <legend>Manage</legend>
         <label>View name<br/>
           <input type="text"
                 name="viewName"
@@ -72,12 +56,12 @@
                 placeholder="your-view-name"
                 ng-model="viewName"/>
         </label>
-        <button type="submit" class="btn" ng-click="ddocCreate()">
-          Create Design Doc
+        <button type="submit" class="btn" ng-click="viewCreate()">
+          Add View
         </button>
       </form>
-      <div ng-show="ddocCreateResult">
-        {{ddocCreateResult}}
+      <div ng-show="viewCreateResult">
+        {{viewCreateResult}}
       </div>
     </div>
   </div>

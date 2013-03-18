@@ -430,4 +430,20 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
 }
 
 function BucketDDocCtrl($scope, $routeParams, $http) {
+  $scope.bucketName = $routeParams.bucketName;
+  $scope.ddocNameSuffix = $routeParams.ddocNameSuffix;
+  $scope.ddocName = "_design/" + $routeParams.ddocNameSuffix;
+
+  function retrieveDDoc() {
+    $http.get('/couchBase/' + $scope.bucketName + '/' + $scope.ddocName).
+      success(function(data) {
+          $scope.ddoc = data;
+          $scope.err = null;
+        }).
+      error(function() {
+        $scope.err = restErrorMsg
+      });
+  }
+
+  retrieveDDoc();
 }
