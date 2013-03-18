@@ -806,15 +806,14 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 	}
 	out := make(chan *cbgb.ViewRow, 1)
 	np := bucket.GetBucketSettings().NumPartitions
-	in := make([]chan *cbgb.ViewRow, np+1)
-	for vbid := 0; vbid < np+1; vbid++ {
+	in := make([]chan *cbgb.ViewRow, np)
+	for vbid := 0; vbid < np; vbid++ {
 		in[vbid] = make(chan *cbgb.ViewRow, 1)
 	}
 	go cbgb.MergeViewRows(in, out)
 	for vbid := 0; vbid < np; vbid++ {
 		go visitVBucketAllDocs(bucket.GetVBucket(uint16(vbid)), in[vbid])
 	}
-	go visitVBucketAllDocs(bucket.GetDDocVBucket(), in[np])
 	w.Write([]byte(`{"rows":[`))
 	i := 0
 	for vr := range out {

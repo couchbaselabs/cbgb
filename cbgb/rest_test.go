@@ -1145,7 +1145,7 @@ func TestCouchAllDocs(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
-	k := []string{"_design/d0", "a", "b", "c", "d"}
+	k := []string{"a", "b", "c", "d"}
 	if dd.TotalRows != len(k) {
 		t.Errorf("expected %v rows, got: %v, %v, %v",
 			len(k), dd.TotalRows, dd, rr.Body.String())
