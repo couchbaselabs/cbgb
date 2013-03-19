@@ -84,6 +84,12 @@ func (b *Buckets) newUnlocked(name string,
 		return nil, err
 	}
 
+	var ch chan bool
+	if lb, ok := rv.(*livebucket); ok {
+		ch = lb.availablech
+	}
+	bucketCloser.Register(ch, b.makeCloser(name))
+
 	b.buckets[name] = rv
 	return rv, nil
 }
@@ -254,11 +260,6 @@ func (b *Buckets) loadBucketUnlocked(name string) (Bucket, error) {
 		// XXX: bug-508: clean up
 		return nil, err
 	}
-	var ch chan bool
-	if lb, ok := bucket.(*livebucket); ok {
-		ch = lb.availablech
-	}
-	bucketCloser.Register(ch, b.makeCloser(name))
 	return bucket, bucket.Load()
 }
 
