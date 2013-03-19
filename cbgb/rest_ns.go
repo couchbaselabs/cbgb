@@ -87,27 +87,6 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 		"name":  "default",
 		"nodes": getNSNodeList(r.Host, ""),
 		"stats": map[string]interface{}{"uri": "/pools/default/stats"},
-
-		// Barely enough JSON for NS web U/I compatibility...
-		"tasks": map[string]interface{}{"uri": "/pools/default/tasks"},
-		"controllers": map[string]interface{}{
-			"replication": map[string]interface{}{
-				"createURI": "/CBGB-replication-createURI",
-				"infosURI":  "/CBGB-replication-createURI",
-			},
-		},
-		"nodeStatusesUri":      "/nodeStatuses",
-		"rebalanceProgressUri": "/pools/default/rebalanceProgress",
-		"storageTotals": map[string]interface{}{
-			"hdd": map[string]interface{}{
-				"total": 1,
-				"used":  0,
-			},
-			"ram": map[string]interface{}{
-				"total": 1,
-				"used":  0,
-			},
-		},
 	})
 }
 
@@ -224,9 +203,6 @@ func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
 						"id": string(key),
 						// TODO: "rev" meta field.
 					},
-				},
-				"controllers": map[string]interface{}{
-					"TODO": "what controllers go here?",
 				},
 			})
 		return true
