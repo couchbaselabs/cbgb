@@ -220,7 +220,7 @@ func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
 
 // Wraps any REST response to make a "streaming" version.
 func restNSStreaming(orig func(http.ResponseWriter,
-	*http.Request),) func(http.ResponseWriter, *http.Request) {
+	*http.Request)) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
 		f, ok := w.(http.Flusher)
@@ -262,7 +262,6 @@ func restNSAPI(r *mux.Router) {
 		"/pools/default/buckets/{bucketname}/stats",
 		"/pools/default/buckets/{bucketname}/nodes",
 		"/pools/default/buckets/{bucketname}/nodes/{node}/stats",
-		"/pools/default/bucketsStreaming/{bucketname}",
 		"/pools/default/stats",
 		"/poolsStreaming",
 	}
@@ -276,6 +275,8 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/pools", restNSPools)
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
 	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
+	r.HandleFunc("/pools/default/bucketsStreaming/{bucketname}",
+		restNSStreaming(restNSBucket))
 	r.HandleFunc("/pools/default/buckets", restNSBucketList)
 	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs",
 		restNSBucketDDocs)
