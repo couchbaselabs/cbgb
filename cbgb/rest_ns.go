@@ -58,24 +58,25 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 	if err != nil {
 		log.Fatalf("Unable to determine port to advertise")
 	}
-	couchApiBaseHost := strings.Split(host, ":")[0]
-	couchApiBasePort := strings.Split(*restCouch, ":")[1]
-	couchApiBase := couchApiBaseHost + ":" + couchApiBasePort + "/" + bucket
-	return []couchbase.Node{
-		couchbase.Node{
-			ClusterCompatibility: 131072,
-			ClusterMembership:    "active",
-			CouchAPIBase:         "http://" + couchApiBase,
-			Hostname:             host,
-			Ports: map[string]int{
-				"direct": port,
-				"proxy":  0,
-			},
-			Status:   "healthy",
-			Version:  cbgb.VERSION + "-cbgb",
-			ThisNode: true,
+	node := couchbase.Node{
+		ClusterCompatibility: 131072,
+		ClusterMembership:    "active",
+		Hostname:             host,
+		Ports: map[string]int{
+			"direct": port,
+			"proxy":  0,
 		},
+		Status:   "healthy",
+		Version:  cbgb.VERSION + "-cbgb",
+		ThisNode: true,
 	}
+	if *restCouch != "" {
+		couchApiBaseHost := strings.Split(host, ":")[0]
+		couchApiBasePort := strings.Split(*restCouch, ":")[1]
+		couchApiBase := couchApiBaseHost + ":" + couchApiBasePort + "/" + bucket
+		node.CouchAPIBase = "http://" + couchApiBase
+	}
+	return []couchbase.Node{node}
 }
 
 func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
