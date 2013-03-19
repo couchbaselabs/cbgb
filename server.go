@@ -14,6 +14,8 @@ import (
 
 var serverStart = time.Now()
 
+var dropConnection = &gomemcached.MCResponse{Fatal: true}
+
 type reqHandler struct {
 	buckets       *Buckets
 	currentBucket Bucket
@@ -89,7 +91,10 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 		return nil
 	}
 
-	vb := rh.currentBucket.GetVBucket(req.VBucket)
+	vb, err := rh.currentBucket.GetVBucket(req.VBucket)
+	if err == bucketUnavailable {
+		return dropConnection
+	}
 	if vb == nil {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.NOT_MY_VBUCKET,
