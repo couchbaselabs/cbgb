@@ -143,14 +143,12 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 			"memUsed":  0,
 			"diskUsed": 0,
 		},
-		DDocs: map[string]interface{}{
-			"uri": "/pools/default/buckets/" + bucketName + "/ddocs" + bucketUUIDSuffix,
-		},
 		Quota: map[string]float64{
 			"ram": 1,
 		},
 		LocalRandomKeyURI: "/pools/default/buckets/" + bucketName + "/localRandomKey",
 	}
+	rv.DDocs.URI = "/pools/default/buckets/" + bucketName + "/ddocs" + bucketUUIDSuffix
 	// TODO: Perhaps dynamically generate a SASL password here, such
 	// based on server start time.
 	if bs.PasswordHashFunc == "" && bs.PasswordSalt == "" {
