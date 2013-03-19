@@ -272,7 +272,7 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 	for _, doc := range bulkDocsRequest.Docs {
 		key := []byte(doc.Meta.Id)
 		vbucketId := cbgb.VBucketIdForKey(key, bucket.GetBucketSettings().NumPartitions)
-		vbucket := bucket.GetVBucket(vbucketId)
+		vbucket, _ := bucket.GetVBucket(vbucketId)
 		if vbucket == nil {
 			http.Error(w, fmt.Sprintf("Invalid vbucket for this key: %v - %v", key, err), 500)
 			return
@@ -444,7 +444,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	vr := &cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
 	np := bucket.GetBucketSettings().NumPartitions
 	for vbid := 0; vbid < np; vbid++ {
-		vb := bucket.GetVBucket(uint16(vbid))
+		vb, _ := bucket.GetVBucket(uint16(vbid))
 		if vb != nil {
 			var errVisit error
 			numErr := 0
@@ -595,7 +595,7 @@ func checkDb(w http.ResponseWriter, r *http.Request) (
 			return vars, bucketName, nil
 		}
 		vbucketId := uint16(vbucketIdFull)
-		vbucket := bucket.GetVBucket(vbucketId)
+		vbucket, _ := bucket.GetVBucket(vbucketId)
 		if vbucket == nil {
 			http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
 			return vars, bucketName, nil
@@ -812,7 +812,8 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 	}
 	go cbgb.MergeViewRows(in, out)
 	for vbid := 0; vbid < np; vbid++ {
-		go visitVBucketAllDocs(bucket.GetVBucket(uint16(vbid)), in[vbid])
+		vb, _ := bucket.GetVBucket(uint16(vbid))
+		go visitVBucketAllDocs(vb, in[vbid])
 	}
 	w.Write([]byte(`{"rows":[`))
 	i := 0

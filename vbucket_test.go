@@ -92,7 +92,7 @@ func TestItemBytesPersists(t *testing.T) {
 
 	b1.Load()
 
-	vb1 := b1.GetVBucket(2)
+	vb1, _ := b1.GetVBucket(2)
 
 	if vb0.stats.Items != vb1.stats.Items {
 		t.Errorf("expected to have %v items by stats after re-loading, got: %v",

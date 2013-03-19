@@ -98,7 +98,7 @@ func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 	registered := map[uint16]bool{}
 	defer func() {
 		for vbid := range registered {
-			vb := b.GetVBucket(vbid)
+			vb, _ := b.GetVBucket(vbid)
 			if vb != nil {
 				vb.observer.Unregister(mch)
 			}
@@ -133,7 +133,7 @@ func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 			} else {
 				pkt.Extras = make([]byte, 16) // TODO: fill
 
-				vb := b.GetVBucket(m.vb)
+				vb, _ := b.GetVBucket(m.vb)
 				if vb != nil {
 					// TODO: if vb is suspended, the get() will freeze
 					// the TAP stream until vb is resumed; that may be
@@ -172,7 +172,7 @@ func doTapBackFill(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 
 	np := b.GetBucketSettings().NumPartitions
 	for vbid := 0; vbid < np; vbid++ {
-		vb := b.GetVBucket(uint16(vbid))
+		vb, _ := b.GetVBucket(uint16(vbid))
 		if vb == nil {
 			continue
 		}

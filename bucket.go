@@ -28,6 +28,8 @@ var broadcastMux = broadcast.NewMuxObserver(0, 0)
 var statAggPeriodic = newPeriodically(time.Second, 10)
 var statAggPassivator = newPeriodically(time.Minute*5, 10)
 
+var bucketUnavailable = errors.New("Bucket unavailable")
+
 type Bucket interface {
 	Available() bool
 	Compact() error
@@ -42,7 +44,7 @@ type Bucket interface {
 
 	CreateVBucket(vbid uint16) (*VBucket, error)
 	DestroyVBucket(vbid uint16) (destroyed bool)
-	GetVBucket(vbid uint16) *VBucket
+	GetVBucket(vbid uint16) (*VBucket, error)
 	SetVBState(vbid uint16, newState VBState) error
 
 	GetBucketStore(int) *bucketstore
@@ -276,14 +278,14 @@ func (b *livebucket) Load() (err error) {
 	return nil
 }
 
-func (b *livebucket) GetVBucket(vbid uint16) *VBucket {
+func (b *livebucket) GetVBucket(vbid uint16) (*VBucket, error) {
 	// TODO: Revisit the available approach, as it feels racy.
 	if b == nil || !b.Available() {
-		return nil
+		return nil, bucketUnavailable
 	}
 	atomic.AddInt64(&b.activity, 1)
 	vbp := atomic.LoadPointer(&b.vbuckets[vbid])
-	return (*VBucket)(vbp)
+	return (*VBucket)(vbp), nil
 }
 
 func (b *livebucket) casVBucket(vbid uint16, vb *VBucket, vbPrev *VBucket) bool {
@@ -311,7 +313,7 @@ func (b *livebucket) CreateVBucket(vbid uint16) (*VBucket, error) {
 
 func (b *livebucket) DestroyVBucket(vbid uint16) (destroyed bool) {
 	destroyed = false
-	if vb := b.GetVBucket(vbid); vb != nil {
+	if vb, _ := b.GetVBucket(vbid); vb != nil {
 		vb.SetVBState(VBDead, func(oldState VBState) {
 			if b.casVBucket(vbid, nil, vb) {
 				b.observer.Submit(vbucketChange{b, vbid, oldState, VBDead})
@@ -323,10 +325,10 @@ func (b *livebucket) DestroyVBucket(vbid uint16) (destroyed bool) {
 }
 
 func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
-	vb := b.GetVBucket(vbid)
+	vb, _ := b.GetVBucket(vbid)
 	if vb != nil {
 		_, err := vb.SetVBState(newState, func(oldState VBState) {
-			if b.GetVBucket(vbid) == vb {
+			if vbx, _ := b.GetVBucket(vbid); vbx == vb {
 				b.observer.Submit(vbucketChange{b, vbid, oldState, newState})
 			}
 		})
@@ -446,7 +448,8 @@ func (c vbucketChange) getVBucket() *VBucket {
 	if c.bucket == nil {
 		return nil
 	}
-	return c.bucket.GetVBucket(c.vbid)
+	vb, _ := c.bucket.GetVBucket(c.vbid)
+	return vb
 }
 
 func (c vbucketChange) String() string {

@@ -161,20 +161,20 @@ func StartServer(addr string, buckets *Buckets, defaultBucketName string) (net.L
 	return ls, nil
 }
 
-func GetVBucketForKey(b Bucket, key []byte) *VBucket {
+func GetVBucketForKey(b Bucket, key []byte) (*VBucket, error) {
 	return b.GetVBucket(VBucketIdForKey(key, b.GetBucketSettings().NumPartitions))
 }
 
-func GetVBucket(b Bucket, key []byte, vbs VBState) *VBucket {
-	vb := GetVBucketForKey(b, key)
+func GetVBucket(b Bucket, key []byte, vbs VBState) (*VBucket, error) {
+	vb, err := GetVBucketForKey(b, key)
 	if vb == nil || vb.GetVBState() != vbs {
-		return nil
+		return nil, err
 	}
-	return vb
+	return vb, err
 }
 
 func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
-	vb := GetVBucket(b, key, vbs)
+	vb, _ := GetVBucket(b, key, vbs) // let the lower level error
 	if vb == nil {
 		return nil
 	}
@@ -187,7 +187,7 @@ func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
 }
 
 func SetItem(b Bucket, key []byte, val []byte, vbs VBState) *gomemcached.MCResponse {
-	vb := GetVBucket(b, key, vbs)
+	vb, _ := GetVBucket(b, key, vbs) // let the lower level error
 	if vb == nil {
 		return nil
 	}

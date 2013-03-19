@@ -277,14 +277,14 @@ func TestBucketClose(t *testing.T) {
 	}
 	defer nb.DestroyVBucket(300)
 
-	vb := nb.GetVBucket(300)
+	vb, _ := nb.GetVBucket(300)
 	if vb == nil {
 		t.Fatalf("Expected vb not returned")
 	}
 
 	nb.Close()
 
-	vb2 := nb.GetVBucket(300)
+	vb2, _ := nb.GetVBucket(300)
 	if vb2 != nil {
 		t.Fatalf("Got a vbucket from a closed bucket: %v", vb2)
 	}
@@ -638,7 +638,7 @@ func TestMemoryOnlyLevel1Bucket(t *testing.T) {
 	defer b1.Close()
 
 	b1.Load()
-	vb1 := b1.GetVBucket(2)
+	vb1, _ := b1.GetVBucket(2)
 	if vb1 == nil {
 		t.Errorf("expected vbucket 2 to be there after re-load")
 	}

@@ -118,7 +118,7 @@ func (v *VBucket) splitRangeActual(splits []VBSplitRangePart) (res *gomemcached.
 			created = true
 		}
 		if vb == nil {
-			vb = v.parent.GetVBucket(vbid)
+			vb, _ = v.parent.GetVBucket(vbid)
 		}
 
 		// TODO: Possible race here, in-between creation and access,

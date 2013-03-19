@@ -272,7 +272,7 @@ func updateMutationStats(cmdIn gomemcached.CommandCode, stats *Stats) (cmd gomem
 func AggregateStats(b Bucket, key string) (agg *Stats) {
 	agg = &Stats{}
 	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
-		vb := b.GetVBucket(i)
+		vb, _ := b.GetVBucket(i)
 		if vb != nil {
 			vb.AddStatsTo(agg, key)
 		}

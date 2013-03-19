@@ -131,7 +131,7 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 	partitions := map[string]interface{}{}
 	settings := bucket.GetBucketSettings()
 	for vbid := uint16(0); vbid < uint16(settings.NumPartitions); vbid++ {
-		vb := bucket.GetVBucket(vbid)
+		vb, _ := bucket.GetVBucket(vbid)
 		if vb != nil {
 			vbm := vb.Meta()
 			if vbm != nil {
