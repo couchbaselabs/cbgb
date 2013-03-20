@@ -25,13 +25,13 @@ type Buckets struct {
 }
 
 // Build a new holder of buckets.
-func NewBuckets(dirForBuckets string, settings *BucketSettings) (*Buckets, error) {
-	if !isDir(dirForBuckets) {
-		return nil, fmt.Errorf("not a directory: %v", dirForBuckets)
+func NewBuckets(bdir string, settings *BucketSettings) (*Buckets, error) {
+	if err := os.MkdirAll(bdir, 0777); err != nil && !isDir(bdir) {
+		return nil, fmt.Errorf("could not create/access bucket dir: %v", bdir)
 	}
 	buckets := &Buckets{
 		buckets:  map[string]Bucket{},
-		dir:      dirForBuckets,
+		dir:      bdir,
 		settings: settings.Copy(),
 	}
 	return buckets, nil

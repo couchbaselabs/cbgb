@@ -12,6 +12,20 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+var aNonDirectory = path.Join("tmp", "notadir")
+
+func init() {
+	bdir := "tmp"
+	if err := os.MkdirAll(bdir, 0777); err != nil {
+		panic("Can't make tmp dir")
+	}
+	f, err := os.Create(aNonDirectory)
+	if err != nil {
+		panic("Error creating file: " + err.Error())
+	}
+	f.Close()
+}
+
 func makeTestBucket(t *testing.T) Bucket {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	b, err := NewBucket(testBucketDir,
@@ -25,7 +39,7 @@ func makeTestBucket(t *testing.T) Bucket {
 }
 
 func TestBucketRegistry(t *testing.T) {
-	_, err := NewBuckets("./this-is-not-a-directory",
+	_, err := NewBuckets(aNonDirectory,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

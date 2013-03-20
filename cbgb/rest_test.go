@@ -22,6 +22,10 @@ import (
 func init() {
 	log.SetOutput(ioutil.Discard)
 	*staticPath = "../static"
+	bdir := "tmp"
+	if err := os.MkdirAll(bdir, 0777); err != nil {
+		panic("Can't make tmp dir")
+	}
 }
 
 func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
