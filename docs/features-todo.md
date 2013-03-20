@@ -24,10 +24,6 @@ gat, touch, observe.
 
 Probably random eviction, to start.
 
-## REST API compatibility
-
-Compability with Couchbase REST API needs implementation.
-
 ## Flushing & compacting by activity, not only by time interval
 
 Flushing and compacting are currently triggered only by time interval,

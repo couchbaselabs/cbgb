@@ -173,3 +173,8 @@ Simple storage quota per bucket is supported.
 ## Management web U/I
 
 Optional management web U/I is auto-downloaded on startup.
+
+## REST API compatibility
+
+Compability with Couchbase REST API for basic SDK cases, only for
+single-node situations.
