@@ -74,7 +74,7 @@ func TestPeriodicallySimulated(t *testing.T) {
 	defer close(stopch)
 
 	timesrc := mkSimTime()
-	qt := newPeriodicallyInt(timesrc, 1)
+	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
 	ran := 0
@@ -102,7 +102,7 @@ func TestPeriodicallyUnregister(t *testing.T) {
 	defer close(stopch)
 
 	timesrc := mkSimTime()
-	qt := newPeriodicallyInt(timesrc, 1)
+	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
 	ran := 0
@@ -130,7 +130,7 @@ func TestPeriodicallyPassiveUnregister(t *testing.T) {
 	stopch := make(chan bool)
 
 	timesrc := mkSimTime()
-	qt := newPeriodicallyInt(timesrc, 1)
+	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
 	ran := 0
@@ -166,7 +166,7 @@ func TestPeriodicallyRequestNoIteration(t *testing.T) {
 	defer close(stopch)
 
 	timesrc := mkSimTime()
-	qt := newPeriodicallyInt(timesrc, 1)
+	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
 	ran := 0

@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+const defaultCtlBuf = 16
+
 type periodicRequest struct {
 	k <-chan bool
 	f func(time.Time) bool
@@ -45,17 +47,18 @@ func newPeriodically(period time.Duration, workers int) *periodically {
 		return nil
 	}
 
-	return newPeriodicallyInt(realTicker{time.NewTicker(period)}, workers)
+	return newPeriodicallyInt(realTicker{time.NewTicker(period)},
+		defaultCtlBuf, workers)
 }
 
 // When you want to supply your own time source.
-func newPeriodicallyInt(ticker tickSrc, workers int) *periodically {
+func newPeriodicallyInt(ticker tickSrc, ctlbuf, workers int) *periodically {
 	if workers < 1 {
 		return nil
 	}
 	rv := &periodically{
 		funcs:   map[<-chan bool]func(time.Time) bool{},
-		ctl:     make(chan periodicRequest, 16),
+		ctl:     make(chan periodicRequest, ctlbuf),
 		ticker:  ticker,
 		work:    make(chan periodicWorkItem),
 		running: make(chan bool),
