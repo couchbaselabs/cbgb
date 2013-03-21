@@ -55,7 +55,7 @@ func newPeriodicallyInt(ticker tickSrc, workers int) *periodically {
 	}
 	rv := &periodically{
 		funcs:   map[<-chan bool]func(time.Time) bool{},
-		ctl:     make(chan periodicRequest),
+		ctl:     make(chan periodicRequest, 16),
 		ticker:  ticker,
 		work:    make(chan periodicWorkItem),
 		running: make(chan bool),
