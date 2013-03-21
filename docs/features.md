@@ -1,8 +1,6 @@
-Ideas under exploration include...
+# Main themes of exploration
 
-# Ongoing features
-
-## Developing software using go
+## Distributed systems software using go
 
 Is go a worthy language for distributed, server-side software
 development?  Is it productive not only for initial development but
@@ -27,6 +25,8 @@ Can we reach 1M buckets per server?
 
 ## Append-only, recovery-oriented file format
 
+Inspired by CouchDB, Couchbase and recovery-oriented computing.
+
 ## MVCC
 
 Readers have their own isolated views of the dataset.  Concurrent
@@ -39,7 +39,9 @@ This software has an internal file service API which limits the number
 of open file descriptors that will be used.  This helps support high
 multi-tenancy.
 
-## Time interval compaction
+## Time interval compaction and flushing
+
+Flushing and compaction every N seconds.
 
 ## Item metadata is evictable from memory
 
@@ -76,6 +78,8 @@ re-balanced actively as part of mutation operations.
 
 ## Changes stream de-duplication
 
+Multiple updates to a key will be de-duplicated on the changes stream.
+
 ## Changes-stream instead of checkpoints
 
 The design was built with UPR in mind, levering the changes-stream as
@@ -109,6 +113,8 @@ range partitioned indexes.
 
 ## SASL auth
 
+Memcached binary-protocol bucket SASL auth (PLAIN) is supported.
+
 ## Integrated REST webserver
 
 The software can optionally listen on a REST/HTTP port for
@@ -136,7 +142,13 @@ and simple, single executable deployment.
 
 ## No privileges needed
 
+No need for superuser privileges to install or run.
+
 ## Unit test coverage from day zero
+
+Extensive use of "go test" infrastructure.
+
+For example, use: go test -v ./...
 
 ## Memcached binary-protocol focused
 
@@ -164,7 +176,7 @@ library dependencies.
 
 Map/reduce functions, etc. likely by using Otto.
 
-## Expiration
+## Expirations
 
 ## Bucket quotas
 
