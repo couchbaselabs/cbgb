@@ -279,11 +279,11 @@ func (b *livebucket) Load() (err error) {
 }
 
 func (b *livebucket) GetVBucket(vbid uint16) (*VBucket, error) {
+	atomic.AddInt64(&b.activity, 1)
 	// TODO: Revisit the available approach, as it feels racy.
 	if b == nil || !b.Available() {
 		return nil, bucketUnavailable
 	}
-	atomic.AddInt64(&b.activity, 1)
 	vbp := atomic.LoadPointer(&b.vbuckets[vbid])
 	return (*VBucket)(vbp), nil
 }
