@@ -186,6 +186,10 @@ Simple storage quota per bucket is supported.
 
 Optional management web U/I is auto-downloaded on startup.
 
+## Design doc / view creation & editing web U/I
+
+Simple web U/I to created and edit design docs and views.
+
 ## REST API compatibility
 
 Compability with Couchbase REST API for basic SDK cases, only for
