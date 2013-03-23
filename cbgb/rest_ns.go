@@ -228,8 +228,10 @@ func restNSStreaming(orig func(http.ResponseWriter,
 			return
 		}
 
+		myw := &oneResponder{w: w}
+
 		for {
-			orig(w, r)
+			orig(myw, r)
 			f.Flush()
 			_, err := w.Write([]byte("\n\n\n\n"))
 			if err != nil {

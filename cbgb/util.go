@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -46,4 +47,30 @@ func jsonEncode(w io.Writer, i interface{}) error {
 		http.Error(w.(http.ResponseWriter), err.Error(), 500)
 	}
 	return err
+}
+
+// Responder used for streaming results that prevents duplicate
+// WriteHeader calls from working (while logging what it tried to do)
+type oneResponder struct {
+	w      http.ResponseWriter
+	status int
+}
+
+func (w oneResponder) Header() http.Header {
+	return w.w.Header()
+}
+
+func (w *oneResponder) Write(b []byte) (int, error) {
+	if w.status == 0 {
+		w.status = 200
+	}
+	return w.w.Write(b)
+}
+
+func (w *oneResponder) WriteHeader(i int) {
+	if w.status == 0 {
+		w.w.WriteHeader(i)
+	} else {
+		log.Printf("Ignoring duplicate header write %v -> %v", w.status, i)
+	}
 }
