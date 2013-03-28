@@ -804,11 +804,11 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("param parsing err: %v", err), 400)
 		return
 	}
-	out := make(chan *cbgb.ViewRow, 1)
+	out := make(chan *cbgb.ViewRow)
 	np := bucket.GetBucketSettings().NumPartitions
 	in := make([]chan *cbgb.ViewRow, np)
 	for vbid := 0; vbid < np; vbid++ {
-		in[vbid] = make(chan *cbgb.ViewRow, 1)
+		in[vbid] = make(chan *cbgb.ViewRow)
 	}
 	go cbgb.MergeViewRows(in, out)
 	for vbid := 0; vbid < np; vbid++ {
