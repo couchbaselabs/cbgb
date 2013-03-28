@@ -20,7 +20,7 @@ import (
 // actual server is a different package.
 var fileService = NewFileService(32)
 
-var flushRunner = newPeriodically(10*time.Second, 5)
+var persistRunner = newPeriodically(10*time.Second, 5)
 
 const compact_every = 10000
 
@@ -156,7 +156,7 @@ func (s *bucketstore) flush_unlocked() (int64, error) {
 	return atomic.AddInt64(&s.dirtiness, -d), nil
 }
 
-func (s *bucketstore) periodicFlushAndCompact(time.Time) bool {
+func (s *bucketstore) periodicPersist(time.Time) bool {
 	d, _ := s.Flush()
 	if s.stats.Writes-s.stats.LastCompactAt > compact_every {
 		s.stats.LastCompactAt = s.stats.Writes
@@ -168,9 +168,9 @@ func (s *bucketstore) periodicFlushAndCompact(time.Time) bool {
 	return d > 0
 }
 
-func (s *bucketstore) mkFlushFun() func(time.Time) bool {
+func (s *bucketstore) mkPersistFun() func(time.Time) bool {
 	return func(t time.Time) bool {
-		return s.periodicFlushAndCompact(t)
+		return s.periodicPersist(t)
 	}
 }
 
@@ -178,7 +178,7 @@ func (s *bucketstore) dirty(force bool) {
 	if force || s.bsfMemoryOnly == nil {
 		newval := atomic.AddInt64(&s.dirtiness, 1)
 		if newval == 1 {
-			flushRunner.Register(s.endch, s.mkFlushFun())
+			persistRunner.Register(s.endch, s.mkPersistFun())
 		}
 	}
 }
