@@ -19,6 +19,7 @@ const (
 	MAX_VBUCKETS        = 1024
 	BUCKET_DIR_SUFFIX   = "-bucket" // Suffix allows non-buckets to be ignored.
 	DEFAULT_BUCKET_NAME = "default"
+	STORE_FILE_SUFFIX   = "store"
 	STORES_PER_BUCKET   = 1 // The # of *.store files per bucket (ignoring compaction).
 	VBID_DDOC           = uint16(0xffff)
 )
@@ -81,14 +82,15 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 	var fileNames []string
 
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
-		fileNames, err = latestStoreFileNames(dirForBucket, STORES_PER_BUCKET)
+		fileNames, err = latestStoreFileNames(dirForBucket,
+			STORES_PER_BUCKET, STORE_FILE_SUFFIX)
 		if err != nil {
 			return nil, err
 		}
 	} else {
 		fileNames = make([]string, STORES_PER_BUCKET)
 		for i := 0; i < STORES_PER_BUCKET; i++ {
-			fileNames[i] = makeStoreFileName(i, 0)
+			fileNames[i] = makeStoreFileName(i, 0, STORE_FILE_SUFFIX)
 		}
 	}
 

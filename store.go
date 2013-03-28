@@ -359,7 +359,8 @@ func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
 }
 
 // Find the highest version-numbered store files in a bucket directory.
-func latestStoreFileNames(dirForBucket string, storesPerBucket int) ([]string, error) {
+func latestStoreFileNames(dirForBucket string, storesPerBucket int,
+	storeFileSuffix string) ([]string, error) {
 	fileInfos, err := ioutil.ReadDir(dirForBucket)
 	if err != nil {
 		return nil, err
@@ -367,12 +368,12 @@ func latestStoreFileNames(dirForBucket string, storesPerBucket int) ([]string, e
 	res := make([]string, storesPerBucket)
 	for i := 0; i < storesPerBucket; i++ {
 		latestVer := 0
-		latestName := makeStoreFileName(i, latestVer)
+		latestName := makeStoreFileName(i, latestVer, storeFileSuffix)
 		for _, fileInfo := range fileInfos {
 			if fileInfo.IsDir() {
 				continue
 			}
-			idx, ver, err := parseStoreFileName(fileInfo.Name())
+			idx, ver, err := parseStoreFileName(fileInfo.Name(), storeFileSuffix)
 			if err != nil {
 				continue
 			}
@@ -389,16 +390,19 @@ func latestStoreFileNames(dirForBucket string, storesPerBucket int) ([]string, e
 	return res, err
 }
 
-// The store files follow a "IDX-VER.store" naming pattern.
-func makeStoreFileName(idx int, ver int) string {
-	return fmt.Sprintf("%v-%v.store", idx, ver)
+// The store files follow a "IDX-VER.SUFFIX" naming pattern,
+// such as "0-0.store".
+func makeStoreFileName(idx int, ver int, storeFileSuffix string) string {
+	return fmt.Sprintf("%v-%v.%v", idx, ver, storeFileSuffix)
 }
 
-func parseStoreFileName(fileName string) (idx int, ver int, err error) {
-	if !strings.HasSuffix(fileName, ".store") {
-		return -1, -1, fmt.Errorf("missing a store filename suffix: %v", fileName)
+func parseStoreFileName(fileName string, storeFileSuffix string) (idx int, ver int,
+	err error) {
+	if !strings.HasSuffix(fileName, "."+storeFileSuffix) {
+		return -1, -1, fmt.Errorf("missing suffix: %v in filename: %v",
+			storeFileSuffix, fileName)
 	}
-	base := fileName[0 : len(fileName)-len(".store")]
+	base := fileName[0 : len(fileName)-(1+len(storeFileSuffix))]
 	parts := strings.Split(base, "-")
 	if len(parts) != 2 || len(parts[0]) == 0 || len(parts[1]) == 0 {
 		return -1, -1, fmt.Errorf("not a store filename: %v", fileName)
