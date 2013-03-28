@@ -178,6 +178,8 @@ func (s *bucketstore) dirty(force bool) {
 	if force || s.bsfMemoryOnly == nil {
 		newval := atomic.AddInt64(&s.dirtiness, 1)
 		if newval == 1 {
+			// TODO: Might want to kick off a persistence right now
+			// rather than only schedule a periodic persistence.
 			persistRunner.Register(s.endch, s.mkPersistFun())
 		}
 	}
