@@ -390,7 +390,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "design doc not found", 404)
 		return
 	}
-	var ddoc walrus.DesignDoc
+	var ddoc cbgb.DDoc
 	if err = json.Unmarshal(body, &ddoc); err != nil {
 		http.Error(w, fmt.Sprintf("could not unmarshal design doc, err: %v", err), 500)
 		return
