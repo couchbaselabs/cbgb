@@ -6,6 +6,24 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+type DDoc struct {
+	Language string       `json:"language,omitempty"`
+	Views    Views        `json:"views,omitempty"`
+	Options  *DDocOptions `json:"options,omitempty"`
+}
+
+type DDocOptions struct {
+	LocalSeq      bool `json:"local_seq,omitempty"`
+	IncludeDesign bool `json:"include_design,omitempty"`
+}
+
+type Views map[string]View
+
+type View struct {
+	Map    string `json:"map"`
+	Reduce string `json:"reduce,omitempty"`
+}
+
 func (b *livebucket) GetDDocVBucket() *VBucket {
 	return b.vbucketDDoc
 }

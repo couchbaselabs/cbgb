@@ -76,6 +76,8 @@ type livebucket struct {
 
 	stats    BucketStatsSnapshot
 	statLock sync.Mutex
+
+	ddocs unsafe.Pointer // map[string]*DDoc
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {
