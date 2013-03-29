@@ -381,18 +381,14 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "missing viewId from path", 400)
 		return
 	}
-	body, err := bucket.GetDDoc("_design/" + ddocId)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("getDDoc err: %v", err), 500)
+	ddocs := bucket.GetDDocs()
+	if ddocs == nil {
+		http.Error(w, "getDDocs nil", 500)
 		return
 	}
-	if body == nil {
+	ddoc, ok := (*ddocs)["_design/" + ddocId]
+	if !ok {
 		http.Error(w, "design doc not found", 404)
-		return
-	}
-	var ddoc cbgb.DDoc
-	if err = json.Unmarshal(body, &ddoc); err != nil {
-		http.Error(w, fmt.Sprintf("could not unmarshal design doc, err: %v", err), 500)
 		return
 	}
 	view, ok := ddoc.Views[viewId]
