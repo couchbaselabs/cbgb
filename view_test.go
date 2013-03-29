@@ -3,6 +3,8 @@ package cbgb
 import (
 	"bytes"
 	"encoding/json"
+	"io/ioutil"
+	"os"
 	"sort"
 	"testing"
 )
@@ -248,4 +250,34 @@ func TestMergeViewRows(t *testing.T) {
 	go MergeViewRows(in, out)
 	expectViewRows("repeated feed channel", out,
 		[]string{"a", "a", "b", "b", "c", "c"})
+}
+
+func TestStaleness(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	r0 := &reqHandler{currentBucket: b0}
+	v0, _ := b0.CreateVBucket(2)
+	if v0.staleness != 0 {
+		t.Errorf("expected freshness with a new vbucket, got: %v", v0.staleness)
+	}
+
+	b0.SetVBState(2, VBActive)
+	if v0.staleness != 0 {
+		t.Errorf("expected freshness with an active vbucket, got: %v", v0.staleness)
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	if v0.staleness != 5 {
+		t.Errorf("expected 5 staleness after data loading, got: %v", v0.staleness)
+	}
 }
