@@ -2,6 +2,7 @@ package main
 
 import (
 	"io/ioutil"
+	"math"
 	"testing"
 
 	"github.com/robertkrimen/otto"
@@ -55,4 +56,25 @@ func TestJSReductions(t *testing.T) {
 		t.Fatalf("Error running tests: %v", err)
 	}
 
+}
+
+func TestZeroate(t *testing.T) {
+	tests := []struct {
+		in  interface{}
+		exp float64
+	}{
+		{nil, 0},
+		{"seven", 0},
+		{math.NaN(), 0},
+		{math.Inf(1), 0},
+		{math.Inf(-1), 0},
+		{3.14, 3.14},
+	}
+
+	for _, test := range tests {
+		got := zeroate(test.in)
+		if math.Abs(math.Max(test.exp, got)-math.Min(test.exp, got)) > 0.0001 {
+			t.Errorf("Expected %v for %v, got %v", test.exp, test.in, got)
+		}
+	}
 }
