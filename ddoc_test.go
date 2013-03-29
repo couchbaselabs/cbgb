@@ -86,3 +86,37 @@ func TestGetSetDDoc(t *testing.T) {
 		t.Errorf("expecting no ddoc for missing ddoc")
 	}
 }
+
+func TestGetSetDDocs(t *testing.T) {
+	d, err := ioutil.TempDir("./tmp", "test")
+	if err != nil {
+		t.Fatalf("Expected TempDir to work, got: %v", err)
+	}
+	defer os.RemoveAll(d)
+
+	bs, err := NewBuckets(d,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer bs.CloseAll()
+
+	b, _ := bs.New("thebucket", bs.settings)
+	ddocs := b.GetDDocs()
+	if ddocs == nil {
+		t.Errorf("expected non-nil ddocs, got nil")
+	}
+	e := DDocs{}
+	e["hi"] = &DDoc{}
+	if b.SetDDocs(&e, &e) {
+		t.Errorf("expected set ddocs to fail on bad CAS")
+	}
+	if b.GetDDocs() != ddocs {
+		t.Errorf("expected get ddocs to still be the same")
+	}
+	if !b.SetDDocs(ddocs, &e) {
+		t.Errorf("expected set ddocs to work")
+	}
+	if b.GetDDocs() != &e {
+		t.Errorf("expected get ddocs to be e")
+	}
+}

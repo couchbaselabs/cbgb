@@ -58,6 +58,8 @@ type Bucket interface {
 	GetDDoc(ddocId string) ([]byte, error)
 	SetDDoc(ddocId string, body []byte) error
 	VisitDDocs(start []byte, visitor func(key []byte, data []byte) bool) error
+	GetDDocs() *DDocs
+	SetDDocs(old, val *DDocs) bool
 
 	GetItemBytes() int64
 }
@@ -77,7 +79,7 @@ type livebucket struct {
 	stats    BucketStatsSnapshot
 	statLock sync.Mutex
 
-	ddocs unsafe.Pointer // map[string]*DDoc
+	ddocs unsafe.Pointer // *DDocs, holding the json.Unmarshal'ed design docs.
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {
