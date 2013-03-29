@@ -17,9 +17,13 @@ import (
 	"reflect"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/couchbaselabs/walrus"
 )
+
+// TODO: Make this configurable.
+var viewRefresher = newPeriodically(10*time.Second, 5)
 
 type Form interface {
 	FormValue(key string) string

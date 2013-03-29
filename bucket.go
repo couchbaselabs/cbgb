@@ -74,12 +74,13 @@ type livebucket struct {
 	observer     broadcast.Broadcaster
 
 	bucketItemBytes int64
-	activity        int64
+	activity        int64 // To track passivation opportunities.
 
 	stats    BucketStatsSnapshot
 	statLock sync.Mutex
 
 	ddocs unsafe.Pointer // *DDocs, holding the json.Unmarshal'ed design docs.
+
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {

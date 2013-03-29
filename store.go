@@ -20,6 +20,7 @@ import (
 // actual server is a different package.
 var fileService = NewFileService(32)
 
+// TODO: Make this configurable.
 var persistRunner = newPeriodically(10*time.Second, 5)
 
 const compact_every = 10000
@@ -28,7 +29,7 @@ type bucketstore struct {
 	bsf           unsafe.Pointer // *bucketstorefile
 	bsfMemoryOnly *bucketstorefile
 	endch         chan bool
-	dirtiness     int64
+	dirtiness     int64 // To track when we need flush to storage.
 	partitions    map[uint16]*partitionstore
 	stats         *BucketStoreStats
 

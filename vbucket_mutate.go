@@ -118,6 +118,7 @@ func vbMutate(v *VBucket, w io.Writer,
 	}
 
 	if err == nil {
+		v.markStale()
 		v.observer.Submit(mutation{v.vbid, req.Key, itemCas, false})
 	}
 
@@ -295,6 +296,7 @@ func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 	}
 
 	if err == nil && prevItem != nil {
+		v.markStale()
 		v.observer.Submit(mutation{v.vbid, req.Key, cas, true})
 	}
 
