@@ -512,20 +512,3 @@ func (v *VBucket) Visit(start []byte, visitor func(key []byte, data []byte) bool
 		return visitor(i.key, i.data)
 	})
 }
-
-func (v *VBucket) markStale() {
-	newval := atomic.AddInt64(&v.staleness, 1)
-	if newval == 1 {
-		viewRefresher.Register(v.available, v.mkViewRefreshFun())
-	}
-}
-
-func (v *VBucket) mkViewRefreshFun() func(time.Time) bool {
-	return func(t time.Time) bool {
-		return v.periodicViewRefresh(t)
-	}
-}
-
-func (v *VBucket) periodicViewRefresh(time.Time) bool {
-	return false // TODO.
-}
