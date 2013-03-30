@@ -1,8 +1,14 @@
 package cbgb
 
 import (
+	"fmt"
+	"path"
 	"sync/atomic"
 	"time"
+)
+
+const (
+	VIEWS_FILE_SUFFIX = "views"
 )
 
 // TODO: Make this configurable.
@@ -27,5 +33,25 @@ func (v *VBucket) periodicViewRefresh(time.Time) bool {
 }
 
 func (v *VBucket) viewRefresh() (int64, error) {
-	return 0, nil
+	d := atomic.LoadInt64(&v.staleness)
+	_, err := v.getViewsStore()
+	if err != nil {
+		return 0, err
+	}
+	return atomic.AddInt64(&v.staleness, -d), nil
+}
+
+func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
+	v.Apply(func() {
+		if v.viewsStore == nil {
+			ver := 0
+			settings := v.parent.GetBucketSettings()
+			fileName := fmt.Sprintf("%s_%d-%d.%s",
+				settings.UUID, v.vbid, ver, VIEWS_FILE_SUFFIX)
+			p := path.Join(v.parent.GetBucketDir(), fileName)
+			v.viewsStore, err = newBucketStore(p, *settings)
+		}
+		res = v.viewsStore
+	})
+	return res, err
 }

@@ -40,6 +40,7 @@ type Bucket interface {
 	Subscribe(ch chan<- interface{})
 	Unsubscribe(ch chan<- interface{})
 
+	GetBucketDir() string
 	GetBucketSettings() *BucketSettings
 
 	CreateVBucket(vbid uint16) (*VBucket, error)
@@ -149,6 +150,10 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 	res.vbucketDDoc = vbucketDDoc
 
 	return res, nil
+}
+
+func (b *livebucket) GetBucketDir() string {
+	return b.dir
 }
 
 func (b *livebucket) GetBucketSettings() *BucketSettings {

@@ -56,6 +56,8 @@ type VBucket struct {
 
 	bucketItemBytes *int64
 	staleness       int64 // To track view freshness.
+
+	viewsStore *bucketstore
 }
 
 func (v VBucket) String() string {
