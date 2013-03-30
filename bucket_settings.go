@@ -1,6 +1,7 @@
 package cbgb
 
 import (
+	"bytes"
 	"encoding/json"
 	"io/ioutil"
 	"os"
@@ -26,6 +27,28 @@ type BucketSettings struct {
 	QuotaBytes       int64  `json:"quotaBytes"`
 	MemoryOnly       int    `json:"memoryOnly"`
 	UUID             string `json:"uuid"`
+}
+
+type pwverifier func(salt string, bpass, input []byte) bool
+
+var pwverifiers = map[string]pwverifier{
+	"": func(salt string, bpass, input []byte) bool {
+		if salt != "" {
+			return false
+		}
+		return bytes.Equal([]byte(bpass), input)
+	},
+}
+
+func (bs *BucketSettings) Auth(input []byte) bool {
+	if bs == nil {
+		return false
+	}
+	fun := pwverifiers[bs.PasswordHashFunc]
+	if fun == nil {
+		return false
+	}
+	return fun(bs.PasswordSalt, []byte(bs.PasswordHash), input)
 }
 
 func (bs *BucketSettings) Copy() *BucketSettings {

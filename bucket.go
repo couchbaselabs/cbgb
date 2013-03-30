@@ -1,7 +1,6 @@
 package cbgb
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"path"
@@ -345,16 +344,7 @@ func (b *livebucket) SetVBState(vbid uint16, newState VBState) error {
 }
 
 func (b *livebucket) Auth(passwordClearText []byte) bool {
-	if b.settings == nil {
-		return false
-	}
-	// TODO: Have real password hash functions and salt.
-	if b.settings.PasswordHashFunc == "" &&
-		b.settings.PasswordSalt == "" &&
-		bytes.Equal([]byte(b.settings.PasswordHash), passwordClearText) {
-		return true
-	}
-	return false
+	return b.settings.Auth(passwordClearText)
 }
 
 func (b *livebucket) SnapshotStats() StatsSnapshot {
