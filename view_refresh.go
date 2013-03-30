@@ -44,6 +44,9 @@ func (v *VBucket) viewRefresh() (int64, error) {
 func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 	v.Apply(func() {
 		if v.viewsStore == nil {
+			// TODO: Handle views file versioning / compaction.
+			// TODO: Handle views file memory-only mode.
+			// TODO: Handle views file load.
 			ver := 0
 			settings := v.parent.GetBucketSettings()
 			fileName := fmt.Sprintf("%s_%d-%d.%s",
