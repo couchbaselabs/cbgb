@@ -12,31 +12,47 @@ const (
 )
 
 // TODO: Make this configurable.
-var viewRefresher = newPeriodically(10*time.Second, 5)
+var viewsRefresher = newPeriodically(10*time.Second, 5)
 
 func (v *VBucket) markStale() {
 	newval := atomic.AddInt64(&v.staleness, 1)
 	if newval == 1 {
-		viewRefresher.Register(v.available, v.mkViewRefreshFun())
+		viewsRefresher.Register(v.available, v.mkViewsRefreshFun())
 	}
 }
 
-func (v *VBucket) mkViewRefreshFun() func(time.Time) bool {
+func (v *VBucket) mkViewsRefreshFun() func(time.Time) bool {
 	return func(t time.Time) bool {
-		return v.periodicViewRefresh(t)
+		return v.periodicViewsRefresh(t)
 	}
 }
 
-func (v *VBucket) periodicViewRefresh(time.Time) bool {
-	leftovers, _ := v.viewRefresh()
+func (v *VBucket) periodicViewsRefresh(time.Time) bool {
+	leftovers, _ := v.viewsRefresh()
 	return leftovers > 0
 }
 
-func (v *VBucket) viewRefresh() (int64, error) {
+func (v *VBucket) viewsRefresh() (int64, error) {
 	d := atomic.LoadInt64(&v.staleness)
-	_, err := v.getViewsStore()
-	if err != nil {
-		return 0, err
+	ddocs := v.parent.GetDDocs()
+	if ddocs != nil {
+		vs, err := v.getViewsStore()
+		if err != nil {
+			return 0, err
+		}
+		for ddocId, ddoc := range *ddocs {
+			for viewId, view := range ddoc.Views {
+				if view.Map == "" {
+					continue
+				}
+				// TODO: Switch to a hash of the map function for the
+				// viewCollName in order to share and reuse any view
+				// indexes.
+				viewCollName := ddocId + "/" + viewId
+				// TODO: Use JSON collator instead of bytes.Compare.
+				vs.coll(viewCollName)
+			}
+		}
 	}
 	return atomic.AddInt64(&v.staleness, -d), nil
 }
