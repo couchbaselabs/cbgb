@@ -281,3 +281,24 @@ func TestStaleness(t *testing.T) {
 		t.Errorf("expected 5 staleness after data loading, got: %v", v0.staleness)
 	}
 }
+
+func TestGetViewsStore(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	v0, _ := b0.CreateVBucket(2)
+
+	vs, err := v0.getViewsStore()
+	if err != nil || vs == nil {
+		t.Errorf("expected views store but got err/nil: %v, %v", err, vs)
+	}
+}
