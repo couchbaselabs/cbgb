@@ -116,7 +116,7 @@ func (v *View) GetMapFunction() (mapFunction otto.Value,
 	}
 
 	emits := []*ViewRow{}
-	var emitErr error // TODO: Do something with emitErr.
+	var emitErr error
 
 	o.Set("emit", func(call otto.FunctionCall) otto.Value {
 		if len(call.ArgumentList) <= 0 {
