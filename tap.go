@@ -162,7 +162,7 @@ func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 		}
 	}
 
-	return &gomemcached.MCResponse{Fatal: true} // Unreachable.
+	panic("unreachable")
 }
 
 func doTapBackFill(b Bucket, req *gomemcached.MCRequest, r io.Reader,
