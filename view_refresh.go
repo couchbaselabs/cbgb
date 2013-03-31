@@ -36,25 +36,29 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 	d := atomic.LoadInt64(&v.staleness)
 	ddocs := v.parent.GetDDocs()
 	if ddocs != nil {
-		vs, err := v.getViewsStore()
-		if err != nil {
-			return 0, err
-		}
 		for ddocId, ddoc := range *ddocs {
 			for viewId, view := range ddoc.Views {
-				if view.Map == "" {
-					continue
+				err := v.viewRefresh(ddocId, ddoc, viewId, view)
+				if err != nil {
+					return 0, err
 				}
-				// TODO: Switch to a hash of the map function for the
-				// viewCollName in order to share and reuse any view
-				// indexes.
-				viewCollName := ddocId + "/" + viewId
-				// TODO: Use JSON collator instead of bytes.Compare.
-				vs.coll(viewCollName)
 			}
 		}
 	}
 	return atomic.AddInt64(&v.staleness, -d), nil
+}
+
+func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
+	viewId string, view *View) (error) {
+	viewsStore, err := v.getViewsStore()
+	if err != nil {
+		return err
+	}
+	backIndexStore := viewsStore.getPartitionStore(v.vbid)
+	if backIndexStore == nil {
+		return fmt.Errorf("missing back index store, vbid: %v", v.vbid)
+	}
+	return nil
 }
 
 func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
