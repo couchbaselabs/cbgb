@@ -34,7 +34,8 @@ func TestBucketSettingsAuth(t *testing.T) {
 		if got != test.exp {
 			t.Errorf("auth test fail: hf=%v, salt=%v, "+
 				"hash=%v, input=%v, got %v, expected %v",
-				test.hf, test.salt, test.h, got, test.exp)
+				test.hf, test.salt, test.h, test.input,
+				got, test.exp)
 		}
 	}
 }
