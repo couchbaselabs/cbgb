@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	"github.com/dustin/gomemcached"
+	"github.com/robertkrimen/otto"
 )
 
 type DDocs map[string]*DDoc
@@ -93,4 +94,8 @@ func (b *livebucket) GetDDocs() *DDocs {
 func (b *livebucket) SetDDocs(old, val *DDocs) bool {
 	return atomic.CompareAndSwapPointer(&b.ddocs,
 		unsafe.Pointer(old), unsafe.Pointer(val))
+}
+
+func (v *View) GetMapFunction() (otto.Value, error) {
+	return otto.UndefinedValue(), nil
 }

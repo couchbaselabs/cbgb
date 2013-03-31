@@ -58,6 +58,7 @@ type VBucket struct {
 	staleness       int64 // To track view freshness.
 
 	viewsStore *bucketstore
+	viewsLock  sync.Mutex
 }
 
 func (v VBucket) String() string {

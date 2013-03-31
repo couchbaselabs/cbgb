@@ -33,6 +33,9 @@ func (v *VBucket) periodicViewsRefresh(time.Time) bool {
 }
 
 func (v *VBucket) viewsRefresh() (int64, error) {
+	v.viewsLock.Lock()
+	defer v.viewsLock.Unlock()
+
 	d := atomic.LoadInt64(&v.staleness)
 	ddocs := v.parent.GetDDocs()
 	if ddocs != nil {
@@ -86,6 +89,10 @@ func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
 
 func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
 	viewId string, view *View, i *item) error {
+	_, err := view.GetMapFunction()
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
