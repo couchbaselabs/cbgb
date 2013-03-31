@@ -302,3 +302,37 @@ func TestGetViewsStore(t *testing.T) {
 		t.Errorf("expected views store but got err/nil: %v, %v", err, vs)
 	}
 }
+
+func TestNoDDocViewsRefresh(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	r0 := &reqHandler{currentBucket: b0}
+
+	v0, _ := b0.CreateVBucket(2)
+	n, err := v0.viewsRefresh()
+	if err != nil || n != 0 {
+		t.Errorf("expected ok viewsRefresh when no ddocs, got err/nil: %v, %v", err, n)
+	}
+
+	b0.SetVBState(2, VBActive)
+	n, err = v0.viewsRefresh()
+	if err != nil || n != 0 {
+		t.Errorf("expected ok viewsRefresh when no ddocs, got err/nil: %v, %v", err, n)
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	n, err = v0.viewsRefresh()
+	if err != nil || n != 0 {
+		t.Errorf("expected ok viewsRefresh when no ddocs, got err/nil: %v, %v", err, n)
+	}
+}

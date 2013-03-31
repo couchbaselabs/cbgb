@@ -49,7 +49,7 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 }
 
 func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
-	viewId string, view *View) (error) {
+	viewId string, view *View) error {
 	viewsStore, err := v.getViewsStore()
 	if err != nil {
 		return err
