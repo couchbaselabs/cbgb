@@ -89,7 +89,7 @@ func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
 
 func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
 	viewId string, view *View, i *item) error {
-	_, err := view.GetMapFunction()
+	_, _, err := view.GetMapFunction()
 	if err != nil {
 		return err
 	}
