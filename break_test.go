@@ -198,8 +198,6 @@ func runTest(t *testing.T, buckets *Buckets, name string, items []testItem) {
 			}
 		}
 	}
-
-	t.Logf("PASS: %v", name)
 }
 
 func testRunner(t *testing.T, buckets *Buckets,
