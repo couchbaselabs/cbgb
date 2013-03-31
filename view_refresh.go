@@ -58,6 +58,34 @@ func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
 	if backIndexStore == nil {
 		return fmt.Errorf("missing back index store, vbid: %v", v.vbid)
 	}
+	_, backIndexChanges := backIndexStore.colls()
+	backIndexLastChange, err := backIndexChanges.MaxItem(true)
+	if err != nil {
+		return err
+	}
+	var backIndexLastChangeCasBytes []byte
+	if backIndexLastChange != nil {
+		backIndexLastChangeCasBytes = backIndexLastChange.Key
+	}
+	errVisit := v.ps.visitChanges(backIndexLastChangeCasBytes, true,
+		func(i *item) bool {
+			err = v.viewRefreshItem(ddocId, ddoc, viewId, view, i)
+			if err != nil {
+				return false
+			}
+			return true
+		})
+	if errVisit != nil {
+		return errVisit
+	}
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
+	viewId string, view *View, i *item) error {
 	return nil
 }
 
