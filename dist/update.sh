@@ -5,7 +5,6 @@ top=`go list -f '{{.Dir}}' $project`
 version=`git describe`
 
 cd $top
-./gen_version.sh
 
 DIST=$top/dist
 
@@ -20,16 +19,16 @@ mkversion() {
 
 build() {
     pkg=$project/cbgb
-    goflags="-v -tags has_version"
+    goflags="-v -ldflags '-X github.com/couchbaselabs/cbgb.VERSION $version'"
 
-    env GOARCH=386   GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.lin32 $pkg &
-    env GOARCH=arm   GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.arm $pkg &
-    env GOARCH=arm   GOARM=5 GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.arm5 $pkg &
-    env GOARCH=amd64 GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.lin64 $pkg &
-    env GOARCH=amd64 GOOS=freebsd CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.fbsd $pkg &&
-    env GOARCH=386   GOOS=windows go build $goflags -o $DIST/cbgb.win32.exe $pkg &
-    env GOARCH=amd64 GOOS=windows go build $goflags -o $DIST/cbgb.win64.exe $pkg &
-    env GOARCH=amd64 GOOS=darwin go build $goflags -o $DIST/cbgb.mac $pkg &
+    eval env GOARCH=386   GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.lin32 $pkg &
+    eval env GOARCH=arm   GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.arm $pkg &
+    eval env GOARCH=arm   GOARM=5 GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.arm5 $pkg &
+    eval env GOARCH=amd64 GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.lin64 $pkg &
+    eval env GOARCH=amd64 GOOS=freebsd CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.fbsd $pkg &&
+    eval env GOARCH=386   GOOS=windows go build $goflags -o $DIST/cbgb.win32.exe $pkg &
+    eval env GOARCH=amd64 GOOS=windows go build $goflags -o $DIST/cbgb.win64.exe $pkg &
+    eval env GOARCH=amd64 GOOS=darwin go build $goflags -o $DIST/cbgb.mac $pkg &
 
     wait
 }
