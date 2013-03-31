@@ -68,13 +68,10 @@ func tapFlagBool(tc *gomemcached.TapConnect, flag gomemcached.TapConnectFlag) (
 	if !ok {
 		return nil, false
 	}
-	switch vx := v.(type) {
-	case bool:
+	if vx, ok := v.(bool); ok {
 		return nil, vx
-	default:
-		return &gomemcached.MCResponse{Fatal: true}, false
 	}
-	return nil, false
+	return &gomemcached.MCResponse{Fatal: true}, false
 }
 
 func tapFlagExists(tc *gomemcached.TapConnect, flag gomemcached.TapConnectFlag) bool {
