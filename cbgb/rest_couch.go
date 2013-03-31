@@ -402,7 +402,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o := otto.New()
-	fnv, err := OttoNewFunction(o, view.Map)
+	fnv, err := cbgb.OttoNewFunction(o, view.Map)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
 		return
@@ -459,7 +459,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					docType = "base64"
 				}
 
-				odoc, err := OttoFromGo(o, doc)
+				odoc, err := cbgb.OttoFromGo(o, doc)
 				if err != nil {
 					log.Printf("Error sending object into otto %s: %v",
 						data, err)
@@ -471,7 +471,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					"id":   docId,
 					"type": docType,
 				}
-				ometa, err := OttoFromGo(o, meta)
+				ometa, err := cbgb.OttoFromGo(o, meta)
 				if err != nil {
 					log.Printf("Error sending meta object into otto: %v -> %v",
 						meta, err)
@@ -667,7 +667,7 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	}
 
 	o := newReducer()
-	fnv, err := OttoNewFunction(o, reduceFunction)
+	fnv, err := cbgb.OttoNewFunction(o, reduceFunction)
 	if err != nil {
 		return result, err
 	}
@@ -686,11 +686,11 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		groupValues = groupValues[:0]
 
 		startRow := result.Rows[i]
-		groupKey := arrayPrefix(startRow.Key, groupLevel)
+		groupKey := cbgb.ArrayPrefix(startRow.Key, groupLevel)
 
 		for j = i; j < len(result.Rows); j++ {
 			row := result.Rows[j]
-			rowKey := arrayPrefix(row.Key, groupLevel)
+			rowKey := cbgb.ArrayPrefix(row.Key, groupLevel)
 			if walrus.CollateJSON(groupKey, rowKey) < 0 {
 				break
 			}
@@ -699,11 +699,11 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		}
 		i = j
 
-		okeys, err := OttoFromGoArray(o, groupKeys)
+		okeys, err := cbgb.OttoFromGoArray(o, groupKeys)
 		if err != nil {
 			return result, err
 		}
-		ovalues, err := OttoFromGoArray(o, groupValues)
+		ovalues, err := cbgb.OttoFromGoArray(o, groupValues)
 		if err != nil {
 			return result, err
 		}

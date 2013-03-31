@@ -1,4 +1,4 @@
-package main
+package cbgb
 
 import (
 	"reflect"
@@ -38,10 +38,10 @@ func TestArrayPrefix(t *testing.T) {
 	for _, test := range tests {
 		exp := test.exp
 		plen := test.plen
-		got := arrayPrefix(test.in, plen)
+		got := ArrayPrefix(test.in, plen)
 
 		if !reflect.DeepEqual(exp, got) {
-			t.Errorf("Expected %#v for arrayPrefix(%#v, %v), got %#v",
+			t.Errorf("Expected %#v for ArrayPrefix(%#v, %v), got %#v",
 				exp, test.in, plen, got)
 		}
 	}

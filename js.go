@@ -9,7 +9,7 @@
 //  express or implied. See the License for the specific language
 //  governing permissions and limitations under the License.
 
-package main
+package cbgb
 
 import (
 	"encoding/json"
@@ -96,7 +96,7 @@ func OttoNewFunction(o *otto.Otto, f string) (otto.Value, error) {
 	return fnv, nil
 }
 
-func arrayPrefix(arrayMaybe interface{}, prefixLen int) interface{} {
+func ArrayPrefix(arrayMaybe interface{}, prefixLen int) interface{} {
 	if prefixLen <= 0 {
 		return nil
 	}
