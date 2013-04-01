@@ -13,7 +13,7 @@ import (
 	"github.com/gorilla/mux"
 )
 
-var adminUser = flag.String("adminUser", "admin", "Admin username")
+var adminUser = flag.String("adminUser", "", "Admin username")
 var adminPass = flag.String("adminPass", "", "Admin password (default is random)")
 
 // Generate a random default password instead of having a default.
