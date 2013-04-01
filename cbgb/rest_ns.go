@@ -91,14 +91,17 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 }
 
 func restNSBucketList(w http.ResponseWriter, r *http.Request) {
+	u := currentUser(r)
 	rv := []*couchbase.Bucket{}
 	for _, bn := range buckets.GetNames() {
-		b, err := getNSBucket(r.Host, bn, "")
-		if err != nil {
-			http.Error(w, err.Error(), 404)
-			return
+		if u.canAccess(bn) {
+			b, err := getNSBucket(r.Host, bn, "")
+			if err != nil {
+				http.Error(w, err.Error(), 404)
+				return
+			}
+			rv = append(rv, b)
 		}
-		rv = append(rv, b)
 	}
 	jsonEncode(w, &rv)
 }
