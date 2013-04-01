@@ -15,34 +15,49 @@ import (
 	"github.com/gorilla/mux"
 )
 
+func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
+	log.Printf("Verifying admin at %v -> %v", req.URL, rm)
+	return true
+}
+
+func mkAuthHandler(r *mux.Router, path string,
+	f func(http.ResponseWriter, *http.Request)) *mux.Route {
+	return r.HandleFunc(path, f).MatcherFunc(adminRequired)
+}
+
+func mkAdminHandler(r *mux.Router, path string,
+	f func(http.ResponseWriter, *http.Request)) *mux.Route {
+	return r.HandleFunc(path, f).MatcherFunc(adminRequired)
+}
+
 func restAPI(r *mux.Router, staticPath string) {
-	r.HandleFunc("/_api/buckets",
+	mkAdminHandler(r, "/_api/buckets",
 		restGetBuckets).Methods("GET")
-	r.HandleFunc("/_api/buckets",
+	mkAdminHandler(r, "/_api/buckets",
 		restPostBucket).Methods("POST")
-	r.HandleFunc("/_api/buckets/{bucketName}",
+	mkAdminHandler(r, "/_api/buckets/{bucketName}",
 		restGetBucket).Methods("GET")
-	r.HandleFunc("/_api/buckets/{bucketName}",
+	mkAdminHandler(r, "/_api/buckets/{bucketName}",
 		restDeleteBucket).Methods("DELETE")
-	r.HandleFunc("/_api/buckets/{bucketName}/compact",
+	mkAdminHandler(r, "/_api/buckets/{bucketName}/compact",
 		restPostBucketCompact).Methods("POST")
-	r.HandleFunc("/_api/buckets/{bucketName}/flushDirty",
+	mkAdminHandler(r, "/_api/buckets/{bucketName}/flushDirty",
 		restPostBucketFlushDirty).Methods("POST")
-	r.HandleFunc("/_api/buckets/{bucketName}/stats",
+	mkAdminHandler(r, "/_api/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
-	r.HandleFunc("/_api/bucketsRescan",
+	mkAdminHandler(r, "/_api/bucketsRescan",
 		restPostBucketsRescan).Methods("POST")
-	r.HandleFunc("/_api/profile/cpu",
+	mkAdminHandler(r, "/_api/profile/cpu",
 		restProfileCPU).Methods("POST")
-	r.HandleFunc("/_api/profile/memory",
+	mkAdminHandler(r, "/_api/profile/memory",
 		restProfileMemory).Methods("POST")
-	r.HandleFunc("/_api/runtime",
+	mkAdminHandler(r, "/_api/runtime",
 		restGetRuntime).Methods("GET")
-	r.HandleFunc("/_api/runtime/memStats",
+	mkAdminHandler(r, "/_api/runtime/memStats",
 		restGetRuntimeMemStats).Methods("GET")
-	r.HandleFunc("/_api/runtime/gc",
+	mkAdminHandler(r, "/_api/runtime/gc",
 		restPostRuntimeGC).Methods("POST")
-	r.HandleFunc("/_api/settings",
+	mkAdminHandler(r, "/_api/settings",
 		restGetSettings).Methods("GET")
 
 	initStatic(r, "/_static/", staticPath)
