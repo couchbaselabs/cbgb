@@ -1,6 +1,8 @@
 package cbgb
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
 	"path"
 	"sync/atomic"
@@ -89,9 +91,40 @@ func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
 
 func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
 	viewId string, view *View, i *item) error {
-	_, _, err := view.GetMapFunction()
+	pvmf, err := view.GetViewMapFunction()
 	if err != nil {
 		return err
+	}
+	docId := string(i.key)
+	docType := "json"
+	var doc interface{}
+	err = json.Unmarshal(i.data, &doc)
+	if err != nil {
+		doc = base64.StdEncoding.EncodeToString(i.data)
+		docType = "base64"
+	}
+	odoc, err := OttoFromGo(pvmf.otto, doc)
+	if err != nil {
+		return err
+	}
+	meta := map[string]interface{}{
+		"id":   docId,
+		"type": docType,
+	}
+	ometa, err := OttoFromGo(pvmf.otto, meta)
+	if err != nil {
+		return err
+	}
+	_, err = pvmf.mapf.Call(pvmf.mapf, odoc, ometa)
+	if err != nil {
+		return err
+	}
+	emits, err := pvmf.restartEmits()
+	if err != nil {
+		return err
+	}
+	for _, emit := range emits {
+		emit.Id = docId
 	}
 	return nil
 }

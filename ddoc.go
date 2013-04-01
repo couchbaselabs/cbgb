@@ -28,6 +28,14 @@ type Views map[string]*View
 type View struct {
 	Map    string `json:"map"`
 	Reduce string `json:"reduce,omitempty"`
+
+	preparedViewMapFunction *ViewMapFunction
+}
+
+type ViewMapFunction struct {
+	otto         *otto.Otto
+	mapf         otto.Value
+	restartEmits func() (resEmits []*ViewRow, resEmitErr error)
 }
 
 func (b *livebucket) GetDDocVBucket() *VBucket {
@@ -96,23 +104,19 @@ func (b *livebucket) SetDDocs(old, val *DDocs) bool {
 		unsafe.Pointer(old), unsafe.Pointer(val))
 }
 
-func (v *View) GetMapFunction() (mapFunction otto.Value,
-	restartEmits func() (resEmits []*ViewRow, resEmitErr error),
-	err error) {
-	// TODO: Reuse otto function and interp.
-
-	undef := otto.UndefinedValue()
+func (v *View) GetViewMapFunction() (*ViewMapFunction, error) {
+	if v.preparedViewMapFunction != nil {
+		return v.preparedViewMapFunction, nil
+	}
 
 	if v.Map == "" {
-		return undef, nil,
-			fmt.Errorf("view map function missing")
+		return nil, fmt.Errorf("view map function missing")
 	}
 
 	o := otto.New()
-	fnv, err := OttoNewFunction(o, v.Map)
+	mapf, err := OttoNewFunction(o, v.Map)
 	if err != nil {
-		return undef, nil,
-			fmt.Errorf("view map function error: %v", err)
+		return nil, fmt.Errorf("view map function error: %v", err)
 	}
 
 	emits := []*ViewRow{}
@@ -121,28 +125,33 @@ func (v *View) GetMapFunction() (mapFunction otto.Value,
 	o.Set("emit", func(call otto.FunctionCall) otto.Value {
 		if len(call.ArgumentList) <= 0 {
 			emitErr = fmt.Errorf("emit() invoked with no parameters")
-			return undef
+			return otto.UndefinedValue()
 		}
 		var key, value interface{}
 		key, emitErr = call.ArgumentList[0].Export()
 		if emitErr != nil {
-			return undef
+			return otto.UndefinedValue()
 		}
 		if len(call.ArgumentList) >= 2 {
 			value, emitErr = call.ArgumentList[1].Export()
 			if emitErr != nil {
-				return undef
+				return otto.UndefinedValue()
 			}
 		}
 		emits = append(emits, &ViewRow{Key: key, Value: value})
-		return undef
+		return otto.UndefinedValue()
 	})
 
-	return fnv, func() (resEmits []*ViewRow, resEmitErr error) {
-		resEmits = emits
-		resEmitErr = emitErr
-		emits = []*ViewRow{}
-		emitErr = nil
-		return resEmits, resEmitErr
-	}, nil
+	v.preparedViewMapFunction = &ViewMapFunction{
+		otto: o,
+		mapf: mapf,
+		restartEmits: func() (resEmits []*ViewRow, resEmitErr error) {
+			resEmits = emits
+			resEmitErr = emitErr
+			emits = []*ViewRow{}
+			emitErr = nil
+			return resEmits, resEmitErr
+		},
+	}
+	return v.preparedViewMapFunction, nil
 }
