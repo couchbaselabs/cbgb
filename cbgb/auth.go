@@ -64,7 +64,11 @@ func authenticateUser(u, p string) bool {
 	if u == *adminUser {
 		return p == *adminPass
 	}
-	return p == "correctpassword"
+	b := buckets.Get(u)
+	if b != nil {
+		return b.Auth([]byte(p))
+	}
+	return false
 }
 
 func (a authenticationFilter) ServeHTTP(w http.ResponseWriter, r *http.Request) {
