@@ -87,8 +87,13 @@ func (a authenticationFilter) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
+func currentUser(req *http.Request) httpUser {
 	u, _ := context.Get(req, authInfoKey).(httpUser)
+	return u
+}
+
+func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
+	u := currentUser(req)
 	log.Printf("Verifying admin at %v -> %v (user is %v)", req.URL, rm,
 		u)
 	return u.isAdmin()
@@ -98,7 +103,7 @@ func withBucketAccess(orig func(http.ResponseWriter,
 	*http.Request)) func(http.ResponseWriter, *http.Request) {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		u, _ := context.Get(r, authInfoKey).(httpUser)
+		u := currentUser(r)
 		b := mux.Vars(r)["bucketname"]
 		if u.canAccess(b) {
 			orig(w, r)
