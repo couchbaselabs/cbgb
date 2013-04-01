@@ -274,20 +274,23 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/versions", restNSVersion)
 	r.HandleFunc("/pools", restNSPools)
 	r.HandleFunc("/pools/default", restNSPoolsDefault)
-	r.HandleFunc("/pools/default/buckets/{bucketname}", restNSBucket)
+
+	r.HandleFunc("/pools/default/buckets/{bucketname}",
+		withBucketAccess(restNSBucket))
 	r.HandleFunc("/pools/default/bucketsStreaming/{bucketname}",
-		restNSStreaming(restNSBucket))
+		withBucketAccess(restNSStreaming(restNSBucket)))
 	r.HandleFunc("/pools/default/buckets", restNSBucketList)
 	r.HandleFunc("/pools/default/buckets/{bucketname}/ddocs",
-		restNSBucketDDocs)
+		withBucketAccess(restNSBucketDDocs))
 	r.HandleFunc("/pools/default/buckets/{bucketname}/localRandomKey",
-		restNSLocalRandomKey)
-	r.HandleFunc("/pools/default/tasks",
-		restNSPoolsDefaultTasks)
+		withBucketAccess(restNSLocalRandomKey))
 	r.HandleFunc("/poolsStreaming/default",
 		restNSStreaming(restNSPoolsDefault))
 	r.HandleFunc("/poolsStreaming/default/buckets/{bucketname}",
-		restNSStreaming(restNSBucket))
+		withBucketAccess(restNSStreaming(restNSBucket)))
+
+	r.HandleFunc("/pools/default/tasks",
+		restNSPoolsDefaultTasks)
 	r.HandleFunc("/settings/stats", restNSSettingsStats)
 }
 

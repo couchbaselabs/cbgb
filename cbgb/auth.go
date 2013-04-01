@@ -42,6 +42,10 @@ func (h httpUser) isAdmin() bool {
 	return string(h) == *adminUser
 }
 
+func (h httpUser) canAccess(bucket string) bool {
+	return h.isAdmin() || string(h) == bucket
+}
+
 func parseBasicAuth(ahdr string) (string, string, error) {
 	parts := strings.SplitN(ahdr, " ", 2)
 	if strings.ToLower(parts[0]) != "basic" {
@@ -84,6 +88,20 @@ func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
 	log.Printf("Verifying admin at %v -> %v (user is %v)", req.URL, rm,
 		u)
 	return u.isAdmin()
+}
+
+func withBucketAccess(orig func(http.ResponseWriter,
+	*http.Request)) func(http.ResponseWriter, *http.Request) {
+
+	return func(w http.ResponseWriter, r *http.Request) {
+		u, _ := context.Get(r, authInfoKey).(httpUser)
+		b := mux.Vars(r)["bucketname"]
+		if u.canAccess(b) {
+			orig(w, r)
+		} else {
+			http.Error(w, "Access denied", 403)
+		}
+	}
 }
 
 func authError(w http.ResponseWriter, r *http.Request) {
