@@ -12,7 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/couchbaselabs/cbgb"
 	"github.com/dustin/go-jsonpointer"
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
@@ -21,7 +20,7 @@ import (
 // Don't do any normal logging while running tests.
 func init() {
 	log.SetOutput(ioutil.Discard)
-	*staticPath = "../static"
+	*staticPath = "static"
 	*adminUser = ""
 	bdir := "tmp"
 	if err := os.MkdirAll(bdir, 0777); err != nil {
@@ -29,13 +28,13 @@ func init() {
 	}
 }
 
-func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
+func testSetupBuckets(t *testing.T, numPartitions int) (string, *Buckets) {
 	d, _ := ioutil.TempDir("./tmp", "test")
 	var err error
-	bucketSettings = &cbgb.BucketSettings{
+	bucketSettings = &BucketSettings{
 		NumPartitions: numPartitions,
 	}
-	buckets, err = cbgb.NewBuckets(d, bucketSettings)
+	buckets, err = NewBuckets(d, bucketSettings)
 	if err != nil {
 		t.Fatalf("testSetupBuckets failed: %v", err)
 	}
@@ -46,7 +45,7 @@ func testSetupBuckets(t *testing.T, numPartitions int) (string, *cbgb.Buckets) {
 }
 
 func testSetupDefaultBucket(t *testing.T, numPartitions int,
-	vbid uint16) (string, *cbgb.Buckets, cbgb.Bucket) {
+	vbid uint16) (string, *Buckets, Bucket) {
 	d, buckets := testSetupBuckets(t, numPartitions)
 	bucket, err := buckets.New("default", bucketSettings)
 	if err != nil {
@@ -56,7 +55,7 @@ func testSetupDefaultBucket(t *testing.T, numPartitions int,
 	if err != nil {
 		t.Fatalf("testSetupDefaultBucket CreateVBucket failed: %v", err)
 	}
-	err = bucket.SetVBState(vbid, cbgb.VBActive)
+	err = bucket.SetVBState(vbid, VBActive)
 	if err != nil {
 		t.Fatalf("testSetupDefaultBucket SetVBState failed: %v", err)
 	}
@@ -107,7 +106,7 @@ func TestCouchDocGet(t *testing.T) {
 			rr, rr.Body.String())
 	}
 
-	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"), cbgb.VBActive)
+	res := SetItem(bucket, []byte("hello"), []byte("world"), VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
@@ -165,7 +164,7 @@ func TestCouchDbGet(t *testing.T) {
 	// now create a document, make sure that docuemnt
 	// access is not confused with vbucket access
 
-	res := cbgb.SetItem(bucket, []byte("hello"), []byte("world"), cbgb.VBActive)
+	res := SetItem(bucket, []byte("hello"), []byte("world"), VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
@@ -271,7 +270,7 @@ func TestCouchDbRevsDiff(t *testing.T) {
 
 func TestCouchPutDDoc(t *testing.T) {
 	testCouchPutDDoc(t, 1)
-	testCouchPutDDoc(t, cbgb.MAX_VBUCKETS)
+	testCouchPutDDoc(t, MAX_VBUCKETS)
 }
 
 func testCouchPutDDoc(t *testing.T, numPartitions int) {
@@ -328,7 +327,7 @@ func testCouchPutDDoc(t *testing.T, numPartitions int) {
 	}
 }
 
-func testSetupDDoc(t *testing.T, bucket cbgb.Bucket, ddoc string,
+func testSetupDDoc(t *testing.T, bucket Bucket, ddoc string,
 	docFmt func(i int) string) {
 	if docFmt == nil {
 		docFmt = func(i int) string {
@@ -353,23 +352,23 @@ func testSetupDDoc(t *testing.T, bucket cbgb.Bucket, ddoc string,
 
 	var res *gomemcached.MCResponse
 
-	res = cbgb.SetItem(bucket, []byte("a"), []byte(docFmt(1)),
-		cbgb.VBActive)
+	res = SetItem(bucket, []byte("a"), []byte(docFmt(1)),
+		VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	res = cbgb.SetItem(bucket, []byte("b"), []byte(docFmt(3)),
-		cbgb.VBActive)
+	res = SetItem(bucket, []byte("b"), []byte(docFmt(3)),
+		VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	res = cbgb.SetItem(bucket, []byte("c"), []byte(docFmt(4)),
-		cbgb.VBActive)
+	res = SetItem(bucket, []byte("c"), []byte(docFmt(4)),
+		VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
-	res = cbgb.SetItem(bucket, []byte("d"), []byte(docFmt(2)),
-		cbgb.VBActive)
+	res = SetItem(bucket, []byte("d"), []byte(docFmt(2)),
+		VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		t.Errorf("expected SetItem to work, got: %v", res)
 	}
@@ -424,7 +423,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd := &cbgb.ViewResult{}
+	dd := &ViewResult{}
 	err := json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -455,7 +454,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -483,7 +482,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -511,7 +510,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -539,7 +538,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -558,7 +557,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -586,7 +585,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -614,7 +613,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -643,7 +642,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -672,7 +671,7 @@ func TestCouchViewBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -729,7 +728,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd := &cbgb.ViewResult{}
+	dd := &ViewResult{}
 	err := json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -752,7 +751,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -781,7 +780,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -805,7 +804,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -824,7 +823,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -872,7 +871,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd := &cbgb.ViewResult{}
+	dd := &ViewResult{}
 	err := json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -896,7 +895,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -927,7 +926,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -959,7 +958,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -991,7 +990,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -1023,7 +1022,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -1048,15 +1047,15 @@ func TestCouchViewGroupLevel(t *testing.T) {
 }
 
 func TestReverseViewRows(t *testing.T) {
-	var r cbgb.ViewRows
-	r = []*cbgb.ViewRow{}
+	var r ViewRows
+	r = []*ViewRow{}
 	reverseViewRows(r)
 	if len(r) != 0 {
 		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
 	}
 
-	r = []*cbgb.ViewRow{
-		&cbgb.ViewRow{Id: "a"},
+	r = []*ViewRow{
+		&ViewRow{Id: "a"},
 	}
 	reverseViewRows(r)
 	if len(r) != 1 {
@@ -1066,9 +1065,9 @@ func TestReverseViewRows(t *testing.T) {
 		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
 	}
 
-	r = []*cbgb.ViewRow{
-		&cbgb.ViewRow{Id: "a"},
-		&cbgb.ViewRow{Id: "b"},
+	r = []*ViewRow{
+		&ViewRow{Id: "a"},
+		&ViewRow{Id: "b"},
 	}
 	reverseViewRows(r)
 	if len(r) != 2 {
@@ -1078,10 +1077,10 @@ func TestReverseViewRows(t *testing.T) {
 		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
 	}
 
-	r = []*cbgb.ViewRow{
-		&cbgb.ViewRow{Id: "a"},
-		&cbgb.ViewRow{Id: "b"},
-		&cbgb.ViewRow{Id: "c"},
+	r = []*ViewRow{
+		&ViewRow{Id: "a"},
+		&ViewRow{Id: "b"},
+		&ViewRow{Id: "c"},
 	}
 	reverseViewRows(r)
 	if len(r) != 3 {
@@ -1091,11 +1090,11 @@ func TestReverseViewRows(t *testing.T) {
 		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
 	}
 
-	r = []*cbgb.ViewRow{
-		&cbgb.ViewRow{Id: "a"},
-		&cbgb.ViewRow{Id: "b"},
-		&cbgb.ViewRow{Id: "c"},
-		&cbgb.ViewRow{Id: "d"},
+	r = []*ViewRow{
+		&ViewRow{Id: "a"},
+		&ViewRow{Id: "b"},
+		&ViewRow{Id: "c"},
+		&ViewRow{Id: "d"},
 	}
 	reverseViewRows(r)
 	if len(r) != 4 {
@@ -1118,7 +1117,7 @@ func TestCouchAllDocs(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd := &cbgb.ViewResult{}
+	dd := &ViewResult{}
 	err := json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -1145,7 +1144,7 @@ func TestCouchAllDocs(t *testing.T) {
 		t.Errorf("expected req to 200, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-	dd = &cbgb.ViewResult{}
+	dd = &ViewResult{}
 	err = json.Unmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
@@ -1201,7 +1200,7 @@ func validateSubset(t *testing.T, upath, exname string, got, exemplar []byte) {
 }
 
 func validateJson(t *testing.T, upath, jsonbody, path string) {
-	f, err := os.Open("../testdata/" + path + ".json")
+	f, err := os.Open("testdata/" + path + ".json")
 	if err != nil {
 		t.Fatalf("Error opening exemplar: %v", err)
 	}

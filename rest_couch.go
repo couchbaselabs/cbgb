@@ -23,7 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/walrus"
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
@@ -271,7 +270,7 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 	bulkDocsResponse := make([]map[string]interface{}, 0, len(bulkDocsRequest.Docs))
 	for _, doc := range bulkDocsRequest.Docs {
 		key := []byte(doc.Meta.Id)
-		vbucketId := cbgb.VBucketIdForKey(key, bucket.GetBucketSettings().NumPartitions)
+		vbucketId := VBucketIdForKey(key, bucket.GetBucketSettings().NumPartitions)
 		vbucket, _ := bucket.GetVBucket(vbucketId)
 		if vbucket == nil {
 			http.Error(w, fmt.Sprintf("Invalid vbucket for this key: %v - %v", key, err), 500)
@@ -325,7 +324,7 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || docId == "" {
 		return
 	}
-	res := cbgb.GetItem(bucket, []byte(docId), cbgb.VBActive)
+	res := GetItem(bucket, []byte(docId), VBActive)
 	if res == nil || res.Status != gomemcached.SUCCESS {
 		http.Error(w, `{"error": "not_found", "reason": "missing"}`, 404)
 		return
@@ -366,7 +365,7 @@ func deadlinedHandler(deadline time.Duration, h http.HandlerFunc) http.HandlerFu
 }
 
 func couchDbGetView(w http.ResponseWriter, r *http.Request) {
-	p, err := cbgb.ParseViewParams(r)
+	p, err := ParseViewParams(r)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("view param parsing err: %v", err), 400)
 		return
@@ -402,13 +401,13 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	o := otto.New()
-	fnv, err := cbgb.OttoNewFunction(o, view.Map)
+	fnv, err := OttoNewFunction(o, view.Map)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
 		return
 	}
 
-	emits := []*cbgb.ViewRow{}
+	emits := []*ViewRow{}
 	var emitErr error
 
 	o.Set("emit", func(call otto.FunctionCall) otto.Value {
@@ -433,11 +432,11 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
-		emits = append(emits, &cbgb.ViewRow{Key: key, Value: value})
+		emits = append(emits, &ViewRow{Key: key, Value: value})
 		return otto.UndefinedValue()
 	})
 
-	vr := &cbgb.ViewResult{Rows: make([]*cbgb.ViewRow, 0, 100)}
+	vr := &ViewResult{Rows: make([]*ViewRow, 0, 100)}
 	np := bucket.GetBucketSettings().NumPartitions
 	for vbid := 0; vbid < np; vbid++ {
 		vb, _ := bucket.GetVBucket(uint16(vbid))
@@ -459,7 +458,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					docType = "base64"
 				}
 
-				odoc, err := cbgb.OttoFromGo(o, doc)
+				odoc, err := OttoFromGo(o, doc)
 				if err != nil {
 					log.Printf("Error sending object into otto %s: %v",
 						data, err)
@@ -471,7 +470,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 					"id":   docId,
 					"type": docType,
 				}
-				ometa, err := cbgb.OttoFromGo(o, meta)
+				ometa, err := OttoFromGo(o, meta)
 				if err != nil {
 					log.Printf("Error sending meta object into otto: %v -> %v",
 						meta, err)
@@ -553,7 +552,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 }
 
 func checkDb(w http.ResponseWriter, r *http.Request) (
-	vars map[string]string, bucketName string, bucket cbgb.Bucket) {
+	vars map[string]string, bucketName string, bucket Bucket) {
 
 	vars = mux.Vars(r)
 	bucketName, ok := vars["db"]
@@ -608,7 +607,7 @@ func checkDb(w http.ResponseWriter, r *http.Request) (
 }
 
 func checkDocId(w http.ResponseWriter, r *http.Request) (
-	vars map[string]string, bucketName string, bucket cbgb.Bucket, docId string) {
+	vars map[string]string, bucketName string, bucket Bucket, docId string) {
 	vars, bucketName, bucket = checkDb(w, r)
 	if bucket == nil {
 		return vars, bucketName, bucket, ""
@@ -624,8 +623,8 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 // Originally from github.com/couchbaselabs/walrus, but modified to
 // use ViewParams.
 
-func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
-	p *cbgb.ViewParams) (*cbgb.ViewResult, error) {
+func processViewResult(bucket Bucket, result *ViewResult,
+	p *ViewParams) (*ViewResult, error) {
 	if p.Key != nil {
 		p.StartKey = p.Key
 		p.EndKey = p.Key
@@ -663,8 +662,8 @@ func processViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	return result, nil
 }
 
-func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
-	p *cbgb.ViewParams, reduceFunction string) (*cbgb.ViewResult, error) {
+func reduceViewResult(bucket Bucket, result *ViewResult,
+	p *ViewParams, reduceFunction string) (*ViewResult, error) {
 	groupLevel := 0
 	if p.Group {
 		groupLevel = 0x7fffffff
@@ -674,14 +673,14 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 	}
 
 	o := newReducer()
-	fnv, err := cbgb.OttoNewFunction(o, reduceFunction)
+	fnv, err := OttoNewFunction(o, reduceFunction)
 	if err != nil {
 		return result, err
 	}
 
 	initialCapacity := 200
 
-	results := make([]*cbgb.ViewRow, 0, initialCapacity)
+	results := make([]*ViewRow, 0, initialCapacity)
 	groupKeys := make([]interface{}, 0, initialCapacity)
 	groupValues := make([]interface{}, 0, initialCapacity)
 
@@ -693,11 +692,11 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		groupValues = groupValues[:0]
 
 		startRow := result.Rows[i]
-		groupKey := cbgb.ArrayPrefix(startRow.Key, groupLevel)
+		groupKey := ArrayPrefix(startRow.Key, groupLevel)
 
 		for j = i; j < len(result.Rows); j++ {
 			row := result.Rows[j]
-			rowKey := cbgb.ArrayPrefix(row.Key, groupLevel)
+			rowKey := ArrayPrefix(row.Key, groupLevel)
 			if walrus.CollateJSON(groupKey, rowKey) < 0 {
 				break
 			}
@@ -706,11 +705,11 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 		}
 		i = j
 
-		okeys, err := cbgb.OttoFromGoArray(o, groupKeys)
+		okeys, err := OttoFromGoArray(o, groupKeys)
 		if err != nil {
 			return result, err
 		}
-		ovalues, err := cbgb.OttoFromGoArray(o, groupValues)
+		ovalues, err := OttoFromGoArray(o, groupValues)
 		if err != nil {
 			return result, err
 		}
@@ -725,14 +724,14 @@ func reduceViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult,
 			return result, fmt.Errorf("converting reduce result err: %v", err)
 		}
 
-		results = append(results, &cbgb.ViewRow{Key: groupKey, Value: gres})
+		results = append(results, &ViewRow{Key: groupKey, Value: gres})
 	}
 
 	result.Rows = results
 	return result, nil
 }
 
-func reverseViewRows(r cbgb.ViewRows) {
+func reverseViewRows(r ViewRows) {
 	num := len(r)
 	mid := num / 2
 	for i := 0; i < mid; i++ {
@@ -740,16 +739,16 @@ func reverseViewRows(r cbgb.ViewRows) {
 	}
 }
 
-func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
-	*cbgb.ViewResult, error) {
+func docifyViewResult(bucket Bucket, result *ViewResult) (
+	*ViewResult, error) {
 	for _, row := range result.Rows {
 		if row.Id != "" {
-			res := cbgb.GetItem(bucket, []byte(row.Id), cbgb.VBActive)
+			res := GetItem(bucket, []byte(row.Id), VBActive)
 			if res.Status == gomemcached.SUCCESS {
 				var parsedDoc interface{}
 				err := json.Unmarshal(res.Body, &parsedDoc)
 				if err == nil {
-					row.Doc = &cbgb.ViewDocValue{
+					row.Doc = &ViewDocValue{
 						Meta: map[string]interface{}{
 							"id":  row.Id,
 							"rev": "0",
@@ -759,7 +758,7 @@ func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
 				} else {
 					// TODO: Is this the right encoding for non-json?
 					// no
-					// row.Doc = cbgb.Bytes(res.Body)
+					// row.Doc = Bytes(res.Body)
 				}
 			} // TODO: Handle else-case when no doc.
 		}
@@ -767,7 +766,7 @@ func docifyViewResult(bucket cbgb.Bucket, result *cbgb.ViewResult) (
 	return result, nil
 }
 
-func visitVBucketAllDocs(vb *cbgb.VBucket, ch chan *cbgb.ViewRow) {
+func visitVBucketAllDocs(vb *VBucket, ch chan *ViewRow) {
 	if vb != nil {
 		vb.Visit(nil, func(key []byte, data []byte) bool {
 			docId := string(key)
@@ -779,10 +778,10 @@ func visitVBucketAllDocs(vb *cbgb.VBucket, ch chan *cbgb.ViewRow) {
 				docType = "base64"
 			}
 			// TODO: The couchdb spec emits Value instead of Doc.
-			ch <- &cbgb.ViewRow{
+			ch <- &ViewRow{
 				Id:  docId,
 				Key: docId,
-				Doc: &cbgb.ViewDocValue{
+				Doc: &ViewDocValue{
 					Meta: map[string]interface{}{
 						"id":   docId,
 						"type": docType,
@@ -802,18 +801,18 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	_, err := cbgb.ParseViewParams(r) // TODO: Handle params.
+	_, err := ParseViewParams(r) // TODO: Handle params.
 	if err != nil {
 		http.Error(w, fmt.Sprintf("param parsing err: %v", err), 400)
 		return
 	}
-	out := make(chan *cbgb.ViewRow)
+	out := make(chan *ViewRow)
 	np := bucket.GetBucketSettings().NumPartitions
-	in := make([]chan *cbgb.ViewRow, np)
+	in := make([]chan *ViewRow, np)
 	for vbid := 0; vbid < np; vbid++ {
-		in[vbid] = make(chan *cbgb.ViewRow)
+		in[vbid] = make(chan *ViewRow)
 	}
-	go cbgb.MergeViewRows(in, out)
+	go MergeViewRows(in, out)
 	for vbid := 0; vbid < np; vbid++ {
 		vb, _ := bucket.GetVBucket(uint16(vbid))
 		go visitVBucketAllDocs(vb, in[vbid])

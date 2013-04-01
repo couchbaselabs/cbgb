@@ -10,15 +10,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/couchbaselabs/cbgb"
 	"github.com/couchbaselabs/go-couchbase"
 	"github.com/gorilla/mux"
 )
 
 var toplevelPool = couchbase.Pools{
-	ImplementationVersion: cbgb.VERSION + "-cbgb",
+	ImplementationVersion: VERSION + "-cbgb",
 	IsAdmin:               true, // TODO: Need real auth.
-	UUID:                  cbgb.CreateNewUUID(),
+	UUID:                  CreateNewUUID(),
 	Pools: []couchbase.RestPool{
 		{
 			Name:         "default",
@@ -45,7 +44,7 @@ func notImplemented(w http.ResponseWriter, r *http.Request) {
 
 func restNSVersion(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
-		"implementationVersion": cbgb.VERSION + "-cbgb",
+		"implementationVersion": VERSION + "-cbgb",
 	})
 }
 
@@ -67,7 +66,7 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 			"proxy":  0,
 		},
 		Status:   "healthy",
-		Version:  cbgb.VERSION + "-cbgb",
+		Version:  VERSION + "-cbgb",
 		ThisNode: true,
 	}
 	if *restCouch != "" {

@@ -8,7 +8,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/couchbaselabs/cbgb"
 	"github.com/daaku/go.flagbytes"
 )
 
@@ -27,7 +26,7 @@ var staticPath = flag.String("static-path",
 	"http://cbfs-ext.hq.couchbase.com/cbgb/static.zip",
 	"path to static web UI content")
 var defaultBucketName = flag.String("default-bucket-name",
-	cbgb.DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
+	DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
 var numPartitions = flag.Int("num-partitions",
 	1, "default number of partitions for new buckets")
 var defaultQuotaBytes = flagbytes.Bytes("default-quota",
@@ -35,8 +34,8 @@ var defaultQuotaBytes = flagbytes.Bytes("default-quota",
 var defaultPersistence = flag.Int("default-persistence",
 	2, "persistence level for default bucket")
 
-var buckets *cbgb.Buckets
-var bucketSettings *cbgb.BucketSettings
+var buckets *Buckets
+var bucketSettings *BucketSettings
 
 func init() {
 	flag.Usage = func() {
@@ -61,22 +60,22 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	log.Printf("cbgb - %v", cbgb.VERSION)
+	log.Printf("cbgb - %v", VERSION)
 	flag.VisitAll(func(f *flag.Flag) {
 		log.Printf("  %v=%v", f.Name, f.Value)
 	})
 	log.Printf("  %v", args)
 
-	go cbgb.MutationLogger(mutationLogCh)
+	go MutationLogger(mutationLogCh)
 
 	var err error
 
-	bucketSettings = &cbgb.BucketSettings{
+	bucketSettings = &BucketSettings{
 		NumPartitions: *numPartitions,
 		QuotaBytes:    int64(*defaultQuotaBytes),
-		MemoryOnly:    cbgb.MemoryOnly_LEVEL_PERSIST_NOTHING - *defaultPersistence,
+		MemoryOnly:    MemoryOnly_LEVEL_PERSIST_NOTHING - *defaultPersistence,
 	}
-	buckets, err = cbgb.NewBuckets(*data, bucketSettings)
+	buckets, err = NewBuckets(*data, bucketSettings)
 	if err != nil {
 		log.Fatalf("error: could not make buckets: %v, data directory: %v", err, *data)
 	}
@@ -90,7 +89,7 @@ func main() {
 	mainServer(buckets, *defaultBucketName, *addr, *restCouch, *restNS, *staticPath)
 }
 
-func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
+func mainServer(buckets *Buckets, defaultBucketName string,
 	addr string, restCouch string, restNS string, staticPath string) {
 	if buckets.Get(defaultBucketName) == nil && defaultBucketName != "" {
 		_, err := createBucket(defaultBucketName, bucketSettings)
@@ -102,7 +101,7 @@ func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 	}
 
 	log.Printf("listening data on: %v", addr)
-	if _, err := cbgb.StartServer(addr, buckets, defaultBucketName); err != nil {
+	if _, err := StartServer(addr, buckets, defaultBucketName); err != nil {
 		fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
 		os.Exit(1)
 	}
@@ -118,8 +117,8 @@ func mainServer(buckets *cbgb.Buckets, defaultBucketName string,
 	select {}
 }
 
-func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
-	cbgb.Bucket, error) {
+func createBucket(bucketName string, bucketSettings *BucketSettings) (
+	Bucket, error) {
 	log.Printf("creating bucket: %v, numPartitions: %v",
 		bucketName, bucketSettings.NumPartitions)
 
@@ -132,7 +131,7 @@ func createBucket(bucketName string, bucketSettings *cbgb.BucketSettings) (
 
 	for vbid := 0; vbid < bucketSettings.NumPartitions; vbid++ {
 		bucket.CreateVBucket(uint16(vbid))
-		bucket.SetVBState(uint16(vbid), cbgb.VBActive)
+		bucket.SetVBState(uint16(vbid), VBActive)
 	}
 
 	if err = bucket.Flush(); err != nil {

@@ -1,4 +1,4 @@
-package cbgb
+package main
 
 import (
 	"io"

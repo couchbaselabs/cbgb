@@ -4,6 +4,7 @@
 *.test
 *~
 .#*
+/cbgb
 /dist/cbgb.*.gz
 /dist/static.zip
 /dist/version.json
@@ -12,5 +13,4 @@
 /tools/createbuckets/createbuckets
 /version_git.go
 _*
-cbgb/cbgb
 tmp

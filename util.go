@@ -7,11 +7,10 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/couchbaselabs/cbgb"
 	"github.com/gorilla/mux"
 )
 
-func parseBucketName(w http.ResponseWriter, r *http.Request) (string, cbgb.Bucket) {
+func parseBucketName(w http.ResponseWriter, r *http.Request) (string, Bucket) {
 	bucketName, ok := mux.Vars(r)["bucketName"]
 	if !ok {
 		http.Error(w, "missing bucketName parameter", 400)
