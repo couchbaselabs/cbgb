@@ -34,7 +34,7 @@ func restCouchServe(rest string, staticPath string) {
 	r := mux.NewRouter()
 	restCouchAPI(r)
 	log.Printf("listening rest-couch on: %v", rest)
-	log.Fatal(http.ListenAndServe(rest, r))
+	log.Fatal(http.ListenAndServe(rest, authenticationFilter{r}))
 }
 
 const maxViewErrors = 100
@@ -386,7 +386,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "getDDocs nil", 500)
 		return
 	}
-	ddoc, ok := (*ddocs)["_design/" + ddocId]
+	ddoc, ok := (*ddocs)["_design/"+ddocId]
 	if !ok {
 		http.Error(w, "design doc not found", 404)
 		return
@@ -554,12 +554,19 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 
 func checkDb(w http.ResponseWriter, r *http.Request) (
 	vars map[string]string, bucketName string, bucket cbgb.Bucket) {
+
 	vars = mux.Vars(r)
 	bucketName, ok := vars["db"]
 	if !ok {
 		http.Error(w, "missing db parameter", 400)
 		return vars, "", nil
 	}
+
+	if !currentUser(r).canAccess(bucketName) {
+		http.Error(w, "Access denied", 403)
+		return vars, "", nil
+	}
+
 	bucket = buckets.Get(bucketName)
 	if bucket == nil {
 		http.Error(w, fmt.Sprintf("no db: %v", bucketName), 404)
