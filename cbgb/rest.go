@@ -20,47 +20,36 @@ func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
 	return true
 }
 
-func mkAuthHandler(r *mux.Router, path string,
-	f func(http.ResponseWriter, *http.Request)) *mux.Route {
-	return r.HandleFunc(path, f).MatcherFunc(adminRequired)
-}
-
-func mkAdminHandler(r *mux.Router, path string,
-	f func(http.ResponseWriter, *http.Request)) *mux.Route {
-	return r.HandleFunc(path, f).MatcherFunc(adminRequired)
-}
-
 func restAPI(r *mux.Router) {
-	mkAdminHandler(r, "/_api/buckets",
+	sr := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
+	sr.HandleFunc("/buckets",
 		restGetBuckets).Methods("GET")
-	mkAdminHandler(r, "/_api/buckets",
+	sr.HandleFunc("/buckets",
 		restPostBucket).Methods("POST")
-	mkAdminHandler(r, "/_api/buckets/{bucketName}",
+	sr.HandleFunc("/buckets/{bucketName}",
 		restGetBucket).Methods("GET")
-	mkAdminHandler(r, "/_api/buckets/{bucketName}",
+	sr.HandleFunc("/buckets/{bucketName}",
 		restDeleteBucket).Methods("DELETE")
-	mkAdminHandler(r, "/_api/buckets/{bucketName}/compact",
+	sr.HandleFunc("/buckets/{bucketName}/compact",
 		restPostBucketCompact).Methods("POST")
-	mkAdminHandler(r, "/_api/buckets/{bucketName}/flushDirty",
+	sr.HandleFunc("/buckets/{bucketName}/flushDirty",
 		restPostBucketFlushDirty).Methods("POST")
-	mkAdminHandler(r, "/_api/buckets/{bucketName}/stats",
+	sr.HandleFunc("/buckets/{bucketName}/stats",
 		restGetBucketStats).Methods("GET")
-	mkAdminHandler(r, "/_api/bucketsRescan",
+	sr.HandleFunc("/bucketsRescan",
 		restPostBucketsRescan).Methods("POST")
-	mkAdminHandler(r, "/_api/profile/cpu",
+	sr.HandleFunc("/profile/cpu",
 		restProfileCPU).Methods("POST")
-	mkAdminHandler(r, "/_api/profile/memory",
+	sr.HandleFunc("/profile/memory",
 		restProfileMemory).Methods("POST")
-	mkAdminHandler(r, "/_api/runtime",
+	sr.HandleFunc("/runtime",
 		restGetRuntime).Methods("GET")
-	mkAdminHandler(r, "/_api/runtime/memStats",
+	sr.HandleFunc("/runtime/memStats",
 		restGetRuntimeMemStats).Methods("GET")
-	mkAdminHandler(r, "/_api/runtime/gc",
+	sr.HandleFunc("/runtime/gc",
 		restPostRuntimeGC).Methods("POST")
-	mkAdminHandler(r, "/_api/settings",
+	sr.HandleFunc("/settings",
 		restGetSettings).Methods("GET")
-
-	initStatic(r, "/_static/", staticPath)
 }
 
 func initStatic(r *mux.Router, staticPrefix, staticPath string) {
