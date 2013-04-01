@@ -15,11 +15,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
-	log.Printf("Verifying admin at %v -> %v", req.URL, rm)
-	return true
-}
-
 func restAPI(r *mux.Router) {
 	sr := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
 	sr.HandleFunc("/buckets",
@@ -50,6 +45,8 @@ func restAPI(r *mux.Router) {
 		restPostRuntimeGC).Methods("POST")
 	sr.HandleFunc("/settings",
 		restGetSettings).Methods("GET")
+
+	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
 
 func initStatic(r *mux.Router, staticPrefix, staticPath string) {

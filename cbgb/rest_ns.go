@@ -300,5 +300,5 @@ func restNSServe(restNS string, staticPath string) {
 	restCouchAPI(cbr)
 	r.Handle("/", http.RedirectHandler("/_static/app.html", 302))
 	log.Printf("listening rest-ns on: %v", restNS)
-	log.Fatal(http.ListenAndServe(restNS, r))
+	log.Fatal(http.ListenAndServe(restNS, authenticationFilter{r}))
 }

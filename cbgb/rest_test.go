@@ -22,6 +22,7 @@ import (
 func init() {
 	log.SetOutput(ioutil.Discard)
 	*staticPath = "../static"
+	*adminUser = ""
 	bdir := "tmp"
 	if err := os.MkdirAll(bdir, 0777); err != nil {
 		panic("Can't make tmp dir")
