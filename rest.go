@@ -21,15 +21,15 @@ func restAPI(r *mux.Router) {
 		restGetBuckets).Methods("GET")
 	sr.HandleFunc("/buckets",
 		restPostBucket).Methods("POST")
-	sr.HandleFunc("/buckets/{bucketName}",
+	sr.HandleFunc("/buckets/{bucketname}",
 		restGetBucket).Methods("GET")
-	sr.HandleFunc("/buckets/{bucketName}",
+	sr.HandleFunc("/buckets/{bucketname}",
 		restDeleteBucket).Methods("DELETE")
-	sr.HandleFunc("/buckets/{bucketName}/compact",
+	sr.HandleFunc("/buckets/{bucketname}/compact",
 		restPostBucketCompact).Methods("POST")
-	sr.HandleFunc("/buckets/{bucketName}/flushDirty",
+	sr.HandleFunc("/buckets/{bucketname}/flushDirty",
 		restPostBucketFlushDirty).Methods("POST")
-	sr.HandleFunc("/buckets/{bucketName}/stats",
+	sr.HandleFunc("/buckets/{bucketname}/stats",
 		restGetBucketStats).Methods("GET")
 	sr.HandleFunc("/bucketsRescan",
 		restPostBucketsRescan).Methods("POST")
