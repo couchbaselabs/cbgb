@@ -64,7 +64,7 @@ func testSetupDefaultBucket(t *testing.T, numPartitions int,
 
 func testSetupMux(dir string) *mux.Router {
 	mr := mux.NewRouter()
-	restAPI(mr, dir)
+	restAPI(mr)
 	restNSAPI(mr)
 	restCouchAPI(mr)
 	return mr

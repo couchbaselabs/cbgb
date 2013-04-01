@@ -293,7 +293,8 @@ func restNSAPI(r *mux.Router) {
 
 func restNSServe(restNS string, staticPath string) {
 	r := mux.NewRouter()
-	restAPI(r, staticPath)
+	initStatic(r, "/_static/", staticPath)
+	restAPI(r)
 	restNSAPI(r)
 	cbr := r.PathPrefix("/couchBase/").Subrouter()
 	restCouchAPI(cbr)

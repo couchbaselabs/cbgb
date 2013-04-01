@@ -30,7 +30,7 @@ func mkAdminHandler(r *mux.Router, path string,
 	return r.HandleFunc(path, f).MatcherFunc(adminRequired)
 }
 
-func restAPI(r *mux.Router, staticPath string) {
+func restAPI(r *mux.Router) {
 	mkAdminHandler(r, "/_api/buckets",
 		restGetBuckets).Methods("GET")
 	mkAdminHandler(r, "/_api/buckets",
