@@ -1,0 +1,63 @@
+html, body {
+    background: #000;
+}
+
+div.content {
+    width: 800px;
+    margin: 60px auto;
+}
+
+h1.logotype {
+    font-family: "ff-cocon-web-pro",sans-serif;
+    margin: auto;
+    color: #eee;
+    text-align: center;
+    font-size: 60px;
+}
+
+h1, h2, h3, h4, h5, h6 {
+    font-family: "ff-cocon-web-pro",sans-serif;
+    color: #eee;
+}
+span.catchphrase {
+    font-size: 14px;
+    font-family: sans-serif;
+}
+
+.windows-icon {
+    background: url(icons/windows-icon.png);
+    width: 16px !important;
+    height: 16px;
+    display: inline-block;
+    margin-right: 3px;
+}
+
+.linux-icon {
+    background: url(icons/linux-icon.png);
+    width: 16px !important;
+    height: 16px;
+    display: inline-block;
+    margin-right: 3px;
+}
+
+.apple-icon {
+    background: url(icons/apple-icon.png);
+    width: 16px !important;
+    height: 16px;
+    display: inline-block;
+    margin-right: 3px;
+}
+
+.freebsd-icon {
+    background: url(icons/freebsd-icon.png);
+    width: 16px !important;
+    height: 16px;
+    display: inline-block;
+    margin-right: 3px;
+}
+
+.group-label {
+    width: 100px;
+    background: #555 !important;
+    cursor: default !important;
+}

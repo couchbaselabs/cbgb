@@ -2,23 +2,55 @@
   <head>
     <title>CBGB Downloads</title>
     <script type="text/javascript" src="/monitor/jquery.min.js"></script>
+    <script type="text/javascript" src="//use.typekit.net/xkg1ezl.js"></script>
+    <script type="text/javascript">try{Typekit.load();}catch(e){}</script>
+
+    <link href="bootstrap/css/bootstrap.min.css" media="all" rel="stylesheet" type="text/css" />
+    <link href="font-awesome/css/font-awesome.min.css" media="all" rel="stylesheet" type="text/css" />
+    <link href="dist.css" media="all" rel="stylesheet" type="text/css" />
   </head>
 
   <body>
-    <h1>Download CBGB Server <span class="version"></span></h1>
+    <div class="content">
+        <h1 class="logotype">cbgb<br />
+            <span class="catchphrase">a database for everyone</span><br />
+            <span class="version"></span>
+        </h1>
 
-    <ul>
-      <li><a href="cbgb.mac.gz">MacOS X</a></li>
-      <li><a href="cbgb.win64.exe.gz">Windows</a>
-        (or <a href="cbgb.win32.exec.gz">32-bit</a>)
-      </li>
-      <li><a href="cbgb.lin64.gz">Linux (64-bit)</a></li>
-      <li><a href="cbgb.lin32.gz">Linux (32-bit)</a></li>
-      <li><a href="cbgb.arm.gz">Linux (arm)</a>
-          (or <a href="cbgb.arm5.gz">arm5</a>)
-      </li>
-      <li><a href="cbgb.fbsd.gz">FreeBSD (64-bit)</a></li>
-    </ul>
+        <br clear="all" /><br />
+
+        <h3>Download <span class="version"></span></h3>
+
+        <div class="btn-group">
+          <li class="btn btn-inverse group-label"><div class="apple-icon">&nbsp;</div>&nbsp;<strong>MacOS X</strong></li>
+          <li class="btn"><a href="cbgb.mac.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+        </div>
+
+        <br clear="all" /><br />
+
+        <div class="btn-group">
+            <li class="btn btn-inverse group-label"><div class="windows-icon">&nbsp;</div>&nbsp;<strong>Windows</strong></li>
+            <li class="btn"><a href="cbgb.win64.exe.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+            <li class="btn"><a href="cbgb.win32.exe.gz">32-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+        </div>
+
+        <br clear="all" /><br />
+
+        <div class="btn-group">
+            <li class="btn btn-inverse group-label"><div class="linux-icon">&nbsp;</div>&nbsp;<strong>Linux</strong></li>
+            <li class="btn"><a href="cbgb.lin64.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+            <li class="btn"><a href="cbgb.lin32.gz">32-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+            <li class="btn"><a href="cbgb.arm.exec.gz">arm&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+            <li class="btn"><a href="cbgb.arm5.exec.gz">arm5&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+        </div>
+
+        <br clear="all" /><br />
+
+        <div class="btn-group">
+            <li class="btn btn-inverse group-label"><div class="freebsd-icon">&nbsp;</div>&nbsp;<strong>FreeBSD</strong></li>
+            <li class="btn"><a href="cbgb.fbsd.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+        </div>
+    </div>
 
     <script type="text/javascript">
       $(function() {
