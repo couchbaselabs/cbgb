@@ -22,8 +22,6 @@ const (
 	CHANGES_SINCE        = gomemcached.CommandCode(0x60)
 	GET_VBMETA           = gomemcached.CommandCode(0x61)
 	SET_VBMETA           = gomemcached.CommandCode(0x62)
-	SPLIT_RANGE          = gomemcached.CommandCode(0x63)
-	NOT_MY_RANGE         = gomemcached.Status(0x60)
 	COLL_SUFFIX_KEYS     = ".k" // This suffix sorts before CHANGES suffix.
 	COLL_SUFFIX_CHANGES  = ".s" // The changes is like a "sequence" stream.
 	COLL_VBMETA          = "vbm"
@@ -102,8 +100,6 @@ var dispatchTable = [256]dispatchFun{
 	// TODO: Move new command codes to gomemcached one day.
 	GET_VBMETA: vbGetVBMeta,
 	SET_VBMETA: vbSetVBMeta,
-
-	SPLIT_RANGE: vbSplitRange,
 }
 
 func newVBucket(parent Bucket, vbid uint16, bs *bucketstore,
@@ -278,37 +274,8 @@ func (v *VBucket) AddStatsTo(dest *Stats, key string) {
 	}
 }
 
-func (v *VBucket) checkRange(req *gomemcached.MCRequest) *gomemcached.MCResponse {
-	if len(req.Key) > MAX_ITEM_KEY_LENGTH {
-		return &gomemcached.MCResponse{
-			Status: gomemcached.EINVAL,
-			Body:   []byte(fmt.Sprintf("key length too long: %v", len(req.Key))),
-		}
-	}
-
-	meta := v.Meta()
-	if meta.KeyRange != nil {
-		if len(meta.KeyRange.MinKeyInclusive) > 0 &&
-			bytes.Compare(req.Key, meta.KeyRange.MinKeyInclusive) < 0 {
-			atomic.AddInt64(&v.stats.NotMyRangeErrors, 1)
-			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
-		}
-		if len(meta.KeyRange.MaxKeyExclusive) > 0 &&
-			bytes.Compare(req.Key, meta.KeyRange.MaxKeyExclusive) >= 0 {
-			atomic.AddInt64(&v.stats.NotMyRangeErrors, 1)
-			return &gomemcached.MCResponse{Status: NOT_MY_RANGE}
-		}
-	}
-	return nil
-}
-
 func vbGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Gets, 1)
-
-	res = v.checkRange(req)
-	if res != nil {
-		return res
-	}
 
 	i, err := v.getUnexpired(req.Key, time.Now())
 	if err != nil {

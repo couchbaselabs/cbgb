@@ -328,8 +328,7 @@ func TestStatsSub(t *testing.T) {
 		IncomingValueBytes: 1,
 		OutgoingValueBytes: 1,
 
-		StoreErrors:      1,
-		NotMyRangeErrors: 1,
+		StoreErrors: 1,
 	}
 
 	s2 := &Stats{}

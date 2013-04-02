@@ -15,12 +15,6 @@ func TestVBucketHash(t *testing.T) {
 	}
 }
 
-func TestVBKeyRangeEqual(t *testing.T) {
-	if (&VBKeyRange{}).Equal(nil) {
-		t.Errorf("expected non-nil to not equal nil")
-	}
-}
-
 func TestItemBytesPersists(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)

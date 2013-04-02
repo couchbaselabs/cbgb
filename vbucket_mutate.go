@@ -18,11 +18,6 @@ func vbMutate(v *VBucket, w io.Writer,
 
 	cmd := updateMutationStats(req.Opcode, &v.stats)
 
-	res = v.checkRange(req)
-	if res != nil {
-		return res
-	}
-
 	if len(req.Body) > MAX_ITEM_DATA_LENGTH {
 		return &gomemcached.MCResponse{
 			Status: gomemcached.E2BIG,
@@ -236,11 +231,6 @@ func vbMutateItemNew(v *VBucket, w io.Writer, req *gomemcached.MCRequest,
 
 func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Deletes, 1)
-
-	res = v.checkRange(req)
-	if res != nil {
-		return res
-	}
 
 	var deltaItemBytes int64
 	var prevItem *item
