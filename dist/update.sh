@@ -19,7 +19,7 @@ mkversion() {
 
 build() {
     pkg=$project
-    goflags="-v -ldflags '-X github.com/couchbaselabs/cbgb.VERSION $version'"
+    goflags="-v -ldflags '-X main.VERSION $version'"
 
     eval env GOARCH=386   GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.lin32 $pkg &
     eval env GOARCH=arm   GOOS=linux CGO_ENABLED=0 go build $goflags -o $DIST/cbgb.arm $pkg &
