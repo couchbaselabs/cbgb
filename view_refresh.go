@@ -39,61 +39,58 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 	defer v.viewsLock.Unlock()
 
 	d := atomic.LoadInt64(&v.staleness)
+
 	ddocs := v.parent.GetDDocs()
 	if ddocs != nil {
-		for ddocId, ddoc := range *ddocs {
-			for viewId, view := range ddoc.Views {
-				err := v.viewRefresh(ddocId, ddoc, viewId, view)
-				if err != nil {
-					return 0, err
+		viewsStore, err := v.getViewsStore()
+		if err != nil {
+			return 0, err
+		}
+		backIndexStore := viewsStore.getPartitionStore(v.vbid)
+		if backIndexStore == nil {
+			return 0, fmt.Errorf("missing back index store, vbid: %v", v.vbid)
+		}
+		_, backIndexChanges := backIndexStore.colls()
+		backIndexLastChange, err := backIndexChanges.MaxItem(true)
+		if err != nil {
+			return 0, err
+		}
+		var backIndexLastChangeCasBytes []byte
+		if backIndexLastChange != nil {
+			backIndexLastChangeCasBytes = backIndexLastChange.Key
+		}
+		errVisit := v.ps.visitChanges(backIndexLastChangeCasBytes, true,
+			func(i *item) bool {
+				ddocsEmits := map[string]map[string]ViewRows{}
+				for ddocId, ddoc := range *ddocs {
+					viewsEmits := map[string]ViewRows{}
+					for viewId, view := range ddoc.Views {
+						viewEmits, err := v.viewRefreshItem(ddocId, ddoc, viewId, view, i)
+						if err != nil {
+							return false
+						}
+						viewsEmits[viewId] = viewEmits
+					}
+					ddocsEmits[ddocId] = viewsEmits
 				}
-			}
+				return true
+			})
+		if errVisit != nil {
+			return 0, errVisit
+		}
+		if err != nil {
+			return 0, err
 		}
 	}
+
 	return atomic.AddInt64(&v.staleness, -d), nil
 }
 
-func (v *VBucket) viewRefresh(ddocId string, ddoc *DDoc,
-	viewId string, view *View) error {
-	viewsStore, err := v.getViewsStore()
-	if err != nil {
-		return err
-	}
-	backIndexStore := viewsStore.getPartitionStore(v.vbid)
-	if backIndexStore == nil {
-		return fmt.Errorf("missing back index store, vbid: %v", v.vbid)
-	}
-	_, backIndexChanges := backIndexStore.colls()
-	backIndexLastChange, err := backIndexChanges.MaxItem(true)
-	if err != nil {
-		return err
-	}
-	var backIndexLastChangeCasBytes []byte
-	if backIndexLastChange != nil {
-		backIndexLastChangeCasBytes = backIndexLastChange.Key
-	}
-	errVisit := v.ps.visitChanges(backIndexLastChangeCasBytes, true,
-		func(i *item) bool {
-			err = v.viewRefreshItem(ddocId, ddoc, viewId, view, i)
-			if err != nil {
-				return false
-			}
-			return true
-		})
-	if errVisit != nil {
-		return errVisit
-	}
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
-	viewId string, view *View, i *item) error {
+	viewId string, view *View, i *item) (ViewRows, error) {
 	pvmf, err := view.GetViewMapFunction()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	docId := string(i.key)
 	docType := "json"
@@ -105,7 +102,7 @@ func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
 	}
 	odoc, err := OttoFromGo(pvmf.otto, doc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	meta := map[string]interface{}{
 		"id":   docId,
@@ -113,20 +110,20 @@ func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
 	}
 	ometa, err := OttoFromGo(pvmf.otto, meta)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	_, err = pvmf.mapf.Call(pvmf.mapf, odoc, ometa)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	emits, err := pvmf.restartEmits()
 	if err != nil {
-		return err
+		return nil, err
 	}
 	for _, emit := range emits {
 		emit.Id = docId
 	}
-	return nil
+	return emits, nil
 }
 
 func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
