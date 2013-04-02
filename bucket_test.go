@@ -433,7 +433,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if s.Current == nil {
 		t.Errorf("Expected current stats to be non-nil")
 	}
-	if !s.Current.Equal(&Stats{ItemBytes: 288}) {
+	if !s.Current.Equal(&Stats{ItemBytes: 240}) {
 		t.Errorf("Expected current stats to be zeroed, got: %#v", s.Current)
 	}
 

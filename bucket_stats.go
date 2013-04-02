@@ -81,8 +81,7 @@ type Stats struct {
 	OutgoingValueBytes int64 `json:"outgoingValueBytes"`
 	ItemBytes          int64 `json:"itemBytes"`
 
-	StoreErrors      int64 `json:"storeErrors"`
-	NotMyRangeErrors int64 `json:"notMyRangeErrors"`
+	StoreErrors int64 `json:"storeErrors"`
 }
 
 func (s *Stats) Add(in *Stats) {
@@ -116,7 +115,6 @@ func (s *Stats) Op(in *Stats, op func(int64, int64) int64) {
 	s.OutgoingValueBytes = op(s.OutgoingValueBytes, atomic.LoadInt64(&in.OutgoingValueBytes))
 	s.ItemBytes = int64(op(s.ItemBytes, atomic.LoadInt64(&in.ItemBytes)))
 	s.StoreErrors = op(s.StoreErrors, atomic.LoadInt64(&in.StoreErrors))
-	s.NotMyRangeErrors = op(s.NotMyRangeErrors, atomic.LoadInt64(&in.NotMyRangeErrors))
 }
 
 func (s *Stats) Aggregate(in Aggregatable) {
@@ -148,8 +146,7 @@ func (s *Stats) Equal(in *Stats) bool {
 		s.IncomingValueBytes == atomic.LoadInt64(&in.IncomingValueBytes) &&
 		s.OutgoingValueBytes == atomic.LoadInt64(&in.OutgoingValueBytes) &&
 		s.ItemBytes == atomic.LoadInt64(&in.ItemBytes) &&
-		s.StoreErrors == atomic.LoadInt64(&in.StoreErrors) &&
-		s.NotMyRangeErrors == atomic.LoadInt64(&in.NotMyRangeErrors)
+		s.StoreErrors == atomic.LoadInt64(&in.StoreErrors)
 }
 
 func (s *Stats) Send(ch chan<- statItem) {
@@ -175,7 +172,6 @@ func (s *Stats) Send(ch chan<- statItem) {
 	ch <- statItem{"outgoing_value_bytes", strconv.FormatInt(s.OutgoingValueBytes, 10)}
 	ch <- statItem{"item_bytes", strconv.FormatInt(s.ItemBytes, 10)}
 	ch <- statItem{"store_errors", strconv.FormatInt(s.StoreErrors, 10)}
-	ch <- statItem{"not_my_range_errors", strconv.FormatInt(s.NotMyRangeErrors, 10)}
 }
 
 // This is slightly more complicated than it would generally need to

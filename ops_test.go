@@ -90,7 +90,7 @@ func TestBasicOps(t *testing.T) {
 		Unknowns:           1,
 		IncomingValueBytes: 6,
 		OutgoingValueBytes: 9,
-		ItemBytes:          160,
+		ItemBytes:          144,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -745,154 +745,118 @@ func TestVBMeta(t *testing.T) {
 	}{
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":0,"metaCas":0,"state":"dead","keyRange":null}`),
+			[]byte(`{"id":3,"lastCas":0,"metaCas":0,"state":"dead"}`),
 			nil},
 		{SET_VBMETA, "",
 			gomemcached.EINVAL, empty,
 			nil},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":0,"metaCas":0,"state":"dead","keyRange":null}`),
+			[]byte(`{"id":3,"lastCas":0,"metaCas":0,"state":"dead"}`),
 			nil},
 		{SET_VBMETA, "not-json",
 			gomemcached.EINVAL, empty,
 			nil},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":0,"metaCas":0,"state":"dead","keyRange":null}`),
+			[]byte(`{"id":3,"lastCas":0,"metaCas":0,"state":"dead"}`),
 			nil},
 		{SET_VBMETA, "{}",
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3, LastCas: 1, MetaCas: 1, State: "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":1,"metaCas":1,"state":"dead","keyRange":null}`),
+			[]byte(`{"id":3,"lastCas":1,"metaCas":1,"state":"dead"}`),
 			&VBMeta{Id: 3, LastCas: 1, MetaCas: 1, State: "dead"}},
 		{SET_VBMETA, `{"hi":"world"}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3, LastCas: 2, MetaCas: 2, State: "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":2,"metaCas":2,"state":"dead","keyRange":null}`),
+			[]byte(`{"id":3,"lastCas":2,"metaCas":2,"state":"dead"}`),
 			&VBMeta{Id: 3, LastCas: 2, MetaCas: 2, State: "dead"}},
-		{SET_VBMETA, `{"keyRange":{"minKeyInclusive":""}}`,
+		{SET_VBMETA, `{}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
-				LastCas:  3,
-				MetaCas:  3,
-				State:    "dead",
-				KeyRange: &VBKeyRange{MinKeyInclusive: []byte{}}}},
+				LastCas: 3,
+				MetaCas: 3,
+				State:   "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":3,"metaCas":3,"state":"dead","keyRange":{"minKeyInclusive":"","maxKeyExclusive":""}}`),
+			[]byte(`{"id":3,"lastCas":3,"metaCas":3,"state":"dead"}`),
 			&VBMeta{Id: 3,
-				LastCas:  3,
-				MetaCas:  3,
-				State:    "dead",
-				KeyRange: &VBKeyRange{MinKeyInclusive: []byte{}}}},
-		{SET_VBMETA, `{"keyRange":{"minKeyInclusive":"aaa"}}`,
+				LastCas: 3,
+				MetaCas: 3,
+				State:   "dead"}},
+		{SET_VBMETA, `{}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
-				LastCas:  4,
-				MetaCas:  4,
-				State:    "dead",
-				KeyRange: &VBKeyRange{MinKeyInclusive: []byte("aaa")}}},
+				LastCas: 4,
+				MetaCas: 4,
+				State:   "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":4,"metaCas":4,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":""}}`),
+			[]byte(`{"id":3,"lastCas":4,"metaCas":4,"state":"dead"}`),
 			&VBMeta{Id: 3,
-				LastCas:  4,
-				MetaCas:  4,
-				State:    "dead",
-				KeyRange: &VBKeyRange{MinKeyInclusive: []byte("aaa")}}},
-		{SET_VBMETA,
-			`{"keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}}`,
+				LastCas: 4,
+				MetaCas: 4,
+				State:   "dead",
+			}},
+		{SET_VBMETA, `{}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
 				LastCas: 5,
 				MetaCas: 5,
-				State:   "dead",
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+				State:   "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":5,"metaCas":5,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb"}}`),
+			[]byte(`{"id":3,"lastCas":5,"metaCas":5,"state":"dead"}`),
 			&VBMeta{Id: 3,
 				LastCas: 5,
 				MetaCas: 5,
-				State:   "dead",
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
-		{SET_VBMETA,
-			`{"lastCAS":100,"keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}}`,
+				State:   "dead"}},
+		{SET_VBMETA, `{"lastCAS":100}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
 				LastCas: 100,
 				MetaCas: 6,
-				State:   "dead",
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+				State:   "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":100,"metaCas":6,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb"}}`),
+			[]byte(`{"id":3,"lastCas":100,"metaCas":6,"state":"dead"}`),
 			&VBMeta{Id: 3,
 				LastCas: 100,
 				MetaCas: 6,
-				State:   "dead",
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+				State:   "dead"}},
 		{SET_VBMETA,
-			`{"lastCAS":99,"keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}}`,
+			`{"lastCAS":99}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
 				LastCas: 101,
 				MetaCas: 101,
-				State:   "dead",
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+				State:   "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":101,"metaCas":101,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb"}}`),
+			[]byte(`{"id":3,"lastCas":101,"metaCas":101,"state":"dead"}`),
 			&VBMeta{Id: 3,
 				State:   "dead",
 				LastCas: 101,
-				MetaCas: 101,
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+				MetaCas: 101}},
 		{SET_VBMETA,
-			`{"lastCAS":99,"metaCAS":42,"keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb","x":"X"}}`,
+			`{"lastCAS":99,"metaCAS":42}`,
 			gomemcached.SUCCESS, empty,
 			&VBMeta{Id: 3,
 				LastCas: 102,
 				MetaCas: 102,
-				State:   "dead",
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+				State:   "dead"}},
 		{GET_VBMETA, "",
 			gomemcached.SUCCESS,
-			[]byte(`{"id":3,"lastCas":102,"metaCas":102,"state":"dead","keyRange":{"minKeyInclusive":"aaa","maxKeyExclusive":"bbb"}}`),
+			[]byte(`{"id":3,"lastCas":102,"metaCas":102,"state":"dead"}`),
 			&VBMeta{Id: 3,
 				State:   "dead",
 				LastCas: 102,
 				MetaCas: 102,
-				KeyRange: &VBKeyRange{
-					MinKeyInclusive: []byte("aaa"),
-					MaxKeyExclusive: []byte("bbb"),
-				}}},
+			}},
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -930,90 +894,6 @@ func TestVBMeta(t *testing.T) {
 					i, x.op, x.expVBMeta, vb.Meta())
 			}
 		}
-	}
-}
-
-func TestMinMaxRange(t *testing.T) {
-	empty := []byte{}
-
-	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
-		&BucketSettings{
-			NumPartitions: MAX_VBUCKETS,
-		})
-	defer testBucket.Close()
-	rh := reqHandler{currentBucket: testBucket}
-	vb, _ := testBucket.CreateVBucket(3)
-
-	tests := []struct {
-		op  gomemcached.CommandCode
-		key string
-		val string
-
-		expStatus gomemcached.Status
-		expValue  []byte
-	}{
-		{gomemcached.SET, "ccc", "CCC",
-			gomemcached.SUCCESS, empty},
-		{gomemcached.GET, "ccc", "",
-			gomemcached.SUCCESS, []byte("CCC")},
-		{SET_VBMETA, "", `{"keyRange":{"minKeyInclusive":"b"}}`,
-			gomemcached.SUCCESS, empty},
-		{gomemcached.SET, "aaa", "AAA",
-			NOT_MY_RANGE, empty},
-		{gomemcached.DELETE, "aaa", "AAA",
-			NOT_MY_RANGE, empty},
-		{gomemcached.GET, "aaa", "",
-			NOT_MY_RANGE, empty},
-		{gomemcached.SET, "bbb", "BBB",
-			gomemcached.SUCCESS, empty},
-		{gomemcached.GET, "bbb", "",
-			gomemcached.SUCCESS, []byte("BBB")},
-		{gomemcached.GET, "ccc", "",
-			gomemcached.SUCCESS, []byte("CCC")},
-		{SET_VBMETA, "", `{"keyRange":{"minKeyInclusive":"b","maxKeyExclusive":"c"}}`,
-			gomemcached.SUCCESS, empty},
-		{gomemcached.GET, "aaa", "",
-			NOT_MY_RANGE, empty},
-		{gomemcached.SET, "bbb", "BBB",
-			gomemcached.SUCCESS, empty},
-		{gomemcached.GET, "ccc", "",
-			NOT_MY_RANGE, empty},
-		{gomemcached.DELETE, "aaa", "",
-			NOT_MY_RANGE, empty},
-		{gomemcached.DELETE, "bbb", "",
-			gomemcached.SUCCESS, empty},
-		{gomemcached.GET, "bbb", "",
-			gomemcached.KEY_ENOENT, empty},
-		{gomemcached.DELETE, "ccc", "",
-			NOT_MY_RANGE, empty},
-	}
-
-	for _, x := range tests {
-		req := &gomemcached.MCRequest{
-			Opcode:  x.op,
-			VBucket: 3,
-			Key:     []byte(x.key),
-			Body:    []byte(x.val),
-		}
-
-		res := rh.HandleMessage(nil, nil, req)
-
-		if res.Status != x.expStatus {
-			t.Errorf("Expected %v for %v:%v, got %v",
-				x.expStatus, x.op, x.key, res.Status)
-		}
-
-		if !bytes.Equal(x.expValue, res.Body) {
-			t.Errorf("Expected body of %v:%v to be\n%#v\ngot\n%#v",
-				x.op, x.key, x.expValue, res.Body)
-		}
-	}
-
-	if vb.stats.NotMyRangeErrors != 7 {
-		t.Errorf("Expected stats NotMyRangeErrors %v, got %v",
-			uint64(7), vb.stats.NotMyRangeErrors)
 	}
 }
 
@@ -1363,7 +1243,7 @@ func TestMutationOps(t *testing.T) {
 		Unknowns:           0,
 		IncomingValueBytes: 68,
 		OutgoingValueBytes: 139,
-		ItemBytes:          126,
+		ItemBytes:          110,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
@@ -1500,7 +1380,7 @@ func TestArithOps(t *testing.T) {
 		Unknowns:           0,
 		IncomingValueBytes: 0,
 		OutgoingValueBytes: 12,
-		ItemBytes:          129,
+		ItemBytes:          113,
 	}
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")

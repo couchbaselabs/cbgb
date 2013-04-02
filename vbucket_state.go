@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"sync/atomic"
 )
 
@@ -38,36 +37,18 @@ func parseVBState(s string) VBState {
 	return VBDead
 }
 
-type VBKeyRange struct {
-	MinKeyInclusive Bytes `json:"minKeyInclusive"`
-	MaxKeyExclusive Bytes `json:"maxKeyExclusive"`
-}
-
-func (t *VBKeyRange) Equal(u *VBKeyRange) bool {
-	if t == nil {
-		return u == nil
-	}
-	if u == nil {
-		return false
-	}
-	return bytes.Equal(t.MinKeyInclusive, u.MinKeyInclusive) &&
-		bytes.Equal(t.MaxKeyExclusive, u.MaxKeyExclusive)
-}
-
 type VBMeta struct {
-	Id       uint16      `json:"id"`
-	LastCas  uint64      `json:"lastCas"`
-	MetaCas  uint64      `json:"metaCas"`
-	State    string      `json:"state"`
-	KeyRange *VBKeyRange `json:"keyRange"`
+	Id      uint16 `json:"id"`
+	LastCas uint64 `json:"lastCas"`
+	MetaCas uint64 `json:"metaCas"`
+	State   string `json:"state"`
 }
 
 func (t *VBMeta) Equal(u *VBMeta) bool {
 	return t.Id == u.Id &&
 		t.LastCas == u.LastCas &&
 		t.MetaCas == u.MetaCas &&
-		t.State == u.State &&
-		t.KeyRange.Equal(u.KeyRange)
+		t.State == u.State
 }
 
 func (t *VBMeta) Copy() *VBMeta {
@@ -83,13 +64,6 @@ func (t *VBMeta) update(from *VBMeta) *VBMeta {
 	metaCas := atomic.LoadUint64(&from.MetaCas)
 	if atomic.LoadUint64(&t.MetaCas) < metaCas {
 		atomic.StoreUint64(&t.MetaCas, metaCas)
-	}
-	t.KeyRange = nil
-	if from.KeyRange != nil {
-		t.KeyRange = &VBKeyRange{
-			MinKeyInclusive: from.KeyRange.MinKeyInclusive,
-			MaxKeyExclusive: from.KeyRange.MaxKeyExclusive,
-		}
 	}
 	return t
 }
