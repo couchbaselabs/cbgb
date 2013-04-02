@@ -61,17 +61,9 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 		}
 		errVisit := v.ps.visitChanges(backIndexLastChangeCasBytes, true,
 			func(i *item) bool {
-				ddocsEmits := map[string]map[string]ViewRows{}
-				for ddocId, ddoc := range *ddocs {
-					viewsEmits := map[string]ViewRows{}
-					for viewId, view := range ddoc.Views {
-						viewEmits, err := v.viewRefreshItem(ddocId, ddoc, viewId, view, i)
-						if err != nil {
-							return false
-						}
-						viewsEmits[viewId] = viewEmits
-					}
-					ddocsEmits[ddocId] = viewsEmits
+				err = v.viewsRefreshItem(ddocs, backIndexStore, i)
+				if err != nil {
+					return false
 				}
 				return true
 			})
@@ -86,7 +78,41 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 	return atomic.AddInt64(&v.staleness, -d), nil
 }
 
-func (v *VBucket) viewRefreshItem(ddocId string, ddoc *DDoc,
+func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
+	backIndexStore *partitionstore, i *item) error {
+	oldBackIndexItem, err := backIndexStore.get(i.key)
+	if err != nil {
+		return err
+	}
+	// TODO: One day do view hashing so view indexes are shared.
+	viewEmits := map[string]ViewRows{} // Keyed by "ddocId/viewId".
+	for ddocId, ddoc := range *ddocs {
+		for viewId, view := range ddoc.Views {
+			emits, err := v.execViewMapFunction(ddocId, ddoc, viewId, view, i)
+			if err != nil {
+				return err
+			}
+			viewEmits[ddocId+"/"+viewId] = emits
+		}
+	}
+	j, err := json.Marshal(viewEmits)
+	if err != nil {
+		return err
+	}
+	newBackIndexItem := &item{
+		key:  i.key,
+		cas:  i.cas,
+		data: j,
+	}
+	// TODO: Track size of backIndex as set() returns deltaItemBytes.
+	_, err = backIndexStore.set(newBackIndexItem, oldBackIndexItem)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 	viewId string, view *View, i *item) (ViewRows, error) {
 	pvmf, err := view.GetViewMapFunction()
 	if err != nil {
