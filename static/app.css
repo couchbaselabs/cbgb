@@ -1,0 +1,26 @@
+body {
+    padding-top: 60px;
+    padding-bottom: 40px;
+}
+.main {
+    padding-left: 20px;
+}
+.statTotal {
+    color: #aaa;
+    font-size: 8pt;
+    padding-left: 0.5em;
+}
+.view {
+    width: 40em;
+    font-family: courier;
+}
+.viewMap {
+    height: 8em;
+}
+.viewReduce {
+    height: 4em;
+}
+
+a.view-link {
+ font-size: 12px;
+}

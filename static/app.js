@@ -20,8 +20,10 @@ angular.module('cbgb', []).
            {templateUrl: 'partials/bucket-stats.html',
             controller: BucketStatsCtrl}).
       otherwise({redirectTo: '/server'});
-}]);
-
+}]).run(function($rootScope, $location) {
+        $rootScope.location = $location;
+    });
+// ^^ Had to assign rootScope.location to make $location available, which allows use of location.hostname and location.port TODO: load port config from cbgb since that can vary, defaults to 8092 now
 var restErrorMsg = "error communicating with server; please try again.";
 
 var bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
@@ -434,6 +436,10 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
   $scope.bucketName = $routeParams.bucketName;
   $scope.ddocNameSuffix = $routeParams.ddocNameSuffix;
   $scope.ddocName = "_design/" + $routeParams.ddocNameSuffix;
+
+  // Added in order to compose View Results URL for now, TODO: make it better, with params
+  $scope.viewUrlHost = location.hostname;
+  $scope.viewUrlPort = 8092;
 
   $scope.viewCreate = function() {
     var viewName = $scope.viewName;

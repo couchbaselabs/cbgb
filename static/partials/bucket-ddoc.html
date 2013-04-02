@@ -42,7 +42,7 @@
       <br/>
       <ul>
         <li ng-repeat="(viewName, view) in ddoc.views">
-          <legend>view: {{viewName}}</legend>
+          <legend>view: {{viewName}} <a class="view-link" href="http://{{ viewUrlHost }}:{{ viewUrlPort }}/{{ bucketName }}/_design/{{ ddocNameSuffix }}/_view/{{ viewName }}?include_docs=true" target="_blank">View Results</a></legend>
           <div>
             <label>map:
               <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-map"
