@@ -1,5 +1,5 @@
 <html>
-  <head>
+<head>
     <title>CBGB Downloads</title>
     <script src="http://code.jquery.com/jquery-1.9.1.min.js"></script>
     <script type="text/javascript" src="//use.typekit.net/xkg1ezl.js"></script>
@@ -8,25 +8,24 @@
     <link href="bootstrap/css/bootstrap.min.css" media="all" rel="stylesheet" type="text/css" />
     <link href="font-awesome/css/font-awesome.min.css" media="all" rel="stylesheet" type="text/css" />
     <link href="dist.css" media="all" rel="stylesheet" type="text/css" />
-  </head>
+</head>
 
-  <body>
-    <div class="presenting"><a href="http://www.couchbase.com/" target="_blank"><img src="http://www.couchbase.com/sites/all/themes/nosql/images/global/download_logo.png" /></a> A Couchbase Labs Project <a href="http://github.com/couchbaselabs/" target="_blank"><i class="icon-external-link"></i></a></div>
-    <div class="content">
+<body>
+<div class="presenting"><a href="http://www.couchbase.com/" target="_blank"><img src="http://www.couchbase.com/sites/all/themes/nosql/images/global/download_logo.png" /></a> A Couchbase Labs Project <a href="http://github.com/couchbaselabs/" target="_blank"><i class="icon-external-link"></i></a></div>
+<div class="content">
 
 
 
-        <div class="logotype"><h1 class="logotype">cbgb</h1><div id="superscript-alpha">pre-alpha</div>
-            <div class="catchphrase">a database for everyone</div><br />
-        </div>
+    <div class="logotype"><h1 class="logotype">cbgb</h1><div id="superscript-alpha">pre-alpha</div>
+        <div class="catchphrase">a database for everyone</div><br />
+    </div>
 
-        <br clear="all" /><br />
-
+    <section id="download">
         <h3>Download <span id="current-version" class="version"></span></h3>
 
         <div class="btn-group">
-          <li class="btn btn-inverse btn-group-label"><div class="apple-icon">&nbsp;</div>&nbsp;<strong>MacOS X</strong></li>
-          <li class="btn btn-download"><a href="cbgb.mac.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
+            <li class="btn btn-inverse btn-group-label"><div class="apple-icon">&nbsp;</div>&nbsp;<strong>MacOS X</strong></li>
+            <li class="btn btn-download"><a href="cbgb.mac.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
         </div>
 
         <br clear="all" /><br />
@@ -53,15 +52,66 @@
             <li class="btn btn-inverse btn-group-label"><div class="freebsd-icon">&nbsp;</div>&nbsp;<strong>FreeBSD</strong></li>
             <li class="btn btn-download"><a href="cbgb.fbsd.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
         </div>
+    </section>
 
 
-    </div>
 
-    <script type="text/javascript">
-      $(function() {
+    <section id="usage">
+
+        <h3>Recommended Usage</h3>
+
+        <p>
+            Download. Unzip the binary. On non-windows, make <span class="cbgb">cbgb</span> executable.<br />
+            Check out command line options: <code> $ ./cbgb -h </code>.
+        </p>
+        <p>
+            By default <span class="cbgb">cbgb</span> will make a tmp
+            folder "./tmp" to store data wherever you run it from, I prefer to make an explicit folder somewhere to store the data.
+        </p>
+
+        <p>For Example:</p>
+<pre>
+  $ chmod 755 cbgb
+  $ mkdir ~/cbgb-data
+  $ ./cbgb -data="~/cbgb-data/"
+</pre>
+
+        <strong>Note</strong>: the default ports conflict with memcached, Membase, and Couchbase, so if you want to connect to <span class="cbgb">cbgb</span>, kill those first.
+        You can also run it on other ports, however, we haven't tested our Couchbase SDK's against that scenario yet.
+    </section>
+
+    <section id="reference">
+
+        <h3>SDK's</h3>
+
+        <p><span class="cbgb">cbgb</span> uses Couchbase SDK's for operations.</p>
+
+        <p>
+            You can find them with the <a href="http://www.couchbase.com/develop" target="_blank">Couchbase Develop</a> page.
+            Simply follow the instructions as if you were connecting to Couchbase itself.
+        </p>
+
+        <p>
+            <strong>Note:</strong> The Java SDK automatically reconnects when there is an operation and <span class="cbgb">cbgb</span> has passivated a bucket. Other clients may not, in those cases you have to wrap
+            the SDK with a Couchbase::Error::Network rescue/catch handler (whatever is appropriate for the language) and reconnect before retrying the operation.
+        </p>
+
+
+        <h3>Github Project</h3>
+
+        Feel free to contribute or file issues at the <a href="http://github.com/couchbaselabs/cbgb" target="_blank">github repo</a>.
+
+    </section>
+
+</div>
+
+<script type="text/javascript">
+    $(function() {
         $.ajax("version.json").success(function(d) {
-          $("#current-version").text("v" + d.version);
+            $("#current-version").text("v" + d.version);
         });
-      } );
-    </script>
+    } );
+</script>
+<br /><br /><br />
+</body>
 </html>

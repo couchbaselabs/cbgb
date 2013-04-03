@@ -1,12 +1,23 @@
 html, body {
     background: #000;
+    color: #aaa;
     margin: 0;
     padding: 0;
 }
 
+.cbgb {
+    font-family: "ff-cocon-web-pro",sans-serif;
+    color: #79a;
+}
+
 div.content {
     width: 800px;
-    margin: 60px auto 60px auto;
+    margin: 40px auto 60px auto;
+}
+
+#download, #usage, #reference {
+   margin: 20px 0;
+   color: #aaa;
 }
 
 div.presenting {
@@ -45,7 +56,7 @@ h1.logotype {
 
 h1, h2, h3, h4, h5, h6 {
     font-family: sans-serif;
-    color: #eee;
+    color: #ddd;
 }
 div.catchphrase {
     color: #eee;
@@ -113,3 +124,18 @@ div.catchphrase {
     color: #eee;
 }
 
+pre {
+    background: #222;
+    color: #46a546;
+    border: 1px solid #555;
+}
+
+code {
+    background: #222;
+    color: #46a546;
+    border: 1px solid #555;
+}
+
+a {
+    color: #5cf;
+}
