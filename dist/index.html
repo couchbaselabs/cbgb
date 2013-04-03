@@ -22,7 +22,7 @@
 
         <br clear="all" /><br />
 
-        <h3>Download v<span id="current-version" class="version"></span></h3>
+        <h3>Download <span id="current-version" class="version"></span></h3>
 
         <div class="btn-group">
           <li class="btn btn-group-label"><div class="apple-icon">&nbsp;</div>&nbsp;<strong>MacOS X</strong></li>
@@ -60,7 +60,7 @@
     <script type="text/javascript">
       $(function() {
         $.ajax("version.json").success(function(d) {
-          $("#current-version").text(d.version);
+          $("#current-version").text("v" + d.version);
         });
       } );
     </script>
