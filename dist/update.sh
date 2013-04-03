@@ -44,7 +44,7 @@ compress() {
 }
 
 static() {
-    rm $DIST/static.zip
+    rm -f $DIST/static.zip
     cd $top/static
     zip -r $DIST/static.zip *
 }
