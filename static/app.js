@@ -39,7 +39,7 @@ function ServerCtrl($scope, $http) {
       error(function(data) {
           alert("Server GC failed");
       });
-  }
+  };
 
   $http.get('/_api/settings').
     success(function(data) {
@@ -47,7 +47,7 @@ function ServerCtrl($scope, $http) {
       $scope.err = null;
     }).
     error(function() {
-      $scope.err = restErrorMsg
+        $scope.err = restErrorMsg;
     });
   $http.get('/_api/runtime').
     success(function(data) {
@@ -55,7 +55,7 @@ function ServerCtrl($scope, $http) {
       $scope.err = null;
     }).
     error(function() {
-      $scope.err = restErrorMsg
+        $scope.err = restErrorMsg;
     });
   $http.get('/_api/runtime/memStats').
     success(function(data) {
@@ -63,7 +63,7 @@ function ServerCtrl($scope, $http) {
       $scope.err = null;
     }).
     error(function() {
-      $scope.err = restErrorMsg
+        $scope.err = restErrorMsg;
     });
 }
 
@@ -76,17 +76,17 @@ function BucketsCtrl($scope, $http) {
   $scope.bucketCreate = function() {
     var bucketName = $scope.bucketName;
     if (bucketName.length <= 0) {
-      return
+        return;
     }
     if (!bucketName.match(bucketNamePattern)) {
       $scope.bucketCreateResult =
         "error: please use alphanumerics, dashes, and underscores only";
-      return
+        return;
     }
     if (_.contains($scope.names, bucketName)) {
       $scope.bucketCreateResult =
         "error: bucket " + bucketName + " already exists";
-      return
+        return;
     }
 
     $scope.bucketCreateResult = "creating bucket: " + bucketName + " ...";
@@ -107,7 +107,7 @@ function BucketsCtrl($scope, $http) {
         $scope.bucketCreateResult =
           "error creating bucket: " + bucketName + "; error: " + data;
       });
-  }
+  };
 
   $scope.bucketsRescan = function() {
     $http.post("/_api/bucketsRescan").
@@ -118,16 +118,15 @@ function BucketsCtrl($scope, $http) {
       error(function(data) {
           alert("Buckets rescan directory failed");
       });
-  }
+  };
 
   function retrieveBucketNames() {
     $http.get('/_api/buckets').
       success(function(data) {
         $scope.names = data.sort();
         $scope.err = null;
-      }).
-      error(function() {
-        $scope.err = restErrorMsg
+      }).error(function() {
+          $scope.err = restErrorMsg;
       });
   }
 
@@ -147,7 +146,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
           alert("Dirty items for bucket '" + $scope.bucketName +
                 "' were not flushed to disk; error: " + data);
       });
-  }
+  };
 
   $scope.compactBucket = function() {
     $http.post("/_api/buckets/" + $scope.bucketName + "/compact").
@@ -159,7 +158,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
           alert("Bucket '" + $scope.bucketName +
                 "' was not compacted; error: " + data);
       });
-  }
+  };
 
   $scope.deleteBucket = function() {
     if (confirm("Are you sure you want to permanently delete bucket '" +
@@ -175,7 +174,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
                   "' was not deleted; error: " + data);
         });
     }
-  }
+  };
 
   $http.get('/_api/buckets/' + $scope.bucketName).
     success(function(data) {
@@ -184,7 +183,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
       $scope.err = null;
     }).
     error(function() {
-      $scope.err = restErrorMsg
+        $scope.err = restErrorMsg;
     });
 
   $scope.orderChoice = 'id';
@@ -208,14 +207,14 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
       $timeout.cancel($scope.timeout);
       $scope.timeout = null;
     }
-  }
+  };
 
   $scope.changeLevel = function(i) {
     $scope.stopChart();
     $scope.currLevel = i;
     $scope.paused = false;
     go();
-  }
+  };
 
   $scope.changeStat = function(kind, statName) {
     $scope.stopChart();
@@ -223,7 +222,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
     $scope.currStatName = statName;
     $scope.paused = false;
     go();
-  }
+  };
 
   function go() {
     if ($scope.paused) {
@@ -239,7 +238,7 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
           _.union(_.map(_.without(_.keys(data.totals.bucketStats), "time"),
                         function(x) { return ["bucketStats", x]; }),
                   _.map(_.without(_.keys(data.totals.bucketStoreStats), "time"),
-                        function(x) { return ["bucketStoreStats", x]; }))
+                        function(x) { return ["bucketStoreStats", x]; }));
 
         if (!$scope.drawChart) {
           lastChartId++;
@@ -324,7 +323,7 @@ function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
     var chart = d3.select("#chart" + chartId);
 
     var rect = chart.selectAll("rect")
-      .data(data, function(d) { return d.time; })
+          .data(data, function(d) { return d.time; });
 
     rect.enter()
       .insert("rect")
@@ -348,7 +347,7 @@ function makeChart(containerId, chartId, statName, dataLength, barW, barH) {
       .transition().duration(duration)
       .attr("x", function(d, i) { return -barW - xMargin; })
       .remove();
-  }
+  };
 }
 
 function BucketDDocsCtrl($scope, $routeParams, $http) {
@@ -357,52 +356,52 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
   $scope.suffix = function(s) {
     var a = s.split('/');
     return a[a.length - 1];
-  }
+  };
 
   $scope.ddocCreate = function() {
     var ddocName = $scope.ddocName;
     if (!ddocName || ddocName.length <= 0) {
-      return
+        return;
     }
     if (!ddocName.match(ddocNamePattern)) {
       $scope.ddocCreateResult =
         "error: please use alphanumerics, slashes, dashes, and underscores only" +
         " for design doc name";
-      return
+        return;
     }
     if (ddocName.length <= "_design/".length) {
       $scope.ddocCreateResult = "error: design doc name is too short";
-      return
+        return;
     }
     if (ddocName.search("_design/") != 0) {
       $scope.ddocCreateResult =
         "error: please start your design doc name with _design/";
-      return
+        return;
     }
 
     var viewName = $scope.viewName;
     if (viewName.length <= 0) {
-      return
+        return;
     }
     if (!viewName.match(viewNamePattern)) {
       $scope.ddocCreateResult =
         "error: please use alphanumerics, dashes, and underscores only" +
         " for view name";
-      return
+        return;
     }
     if (viewName.length <= 0) {
       $scope.ddocCreateResult = "error: missing view name";
-      return
+        return;
     }
 
     $scope.ddocCreateResult = "creating design doc: " + ddocName + " ...";
     ddoc = {
       "id": ddocName,
       "views": {}
-    }
+    };
     ddoc.views[viewName] = {
       "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
-    }
+    };
     $http({
         method: 'PUT',
         url: '/couchBase/' + $scope.bucketName + '/' + ddocName,
@@ -416,7 +415,7 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
         $scope.ddocCreateResult =
           "error creating design doc: " + ddocName + "; error: " + data;
       });
-  }
+  };
 
   function retrieveDDocs() {
     $http.get('/pools/default/buckets/' + $scope.bucketName + '/ddocs').
@@ -425,7 +424,7 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
           $scope.err = null;
         }).
       error(function() {
-        $scope.err = restErrorMsg
+          $scope.err = restErrorMsg;
       });
   }
 
@@ -444,40 +443,40 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
   $scope.viewCreate = function() {
     var viewName = $scope.viewName;
     if (!viewName || viewName.length <= 0) {
-      return
+        return;
     }
     if (!viewName.match(viewNamePattern)) {
       $scope.viewCreateResult =
         "error: please use alphanumerics, dashes, and underscores only" +
         " for view name";
-      return
+        return;
     }
     if (viewName.length <= 0) {
       $scope.viewCreateResult = "error: missing view name";
-      return
+        return;
     }
 
     ddoc = $scope.ddoc;
     if (!ddoc) {
       $scope.viewCreateResult = "error: missing existing ddoc";
-      return
+        return;
     }
     if (!ddoc.views) {
       ddoc.views = {};
     }
     if (ddoc.views[viewName]) {
       $scope.viewCreateResult = "error: view of the same name already exists";
-      return
+        return;
     }
     ddoc.views[viewName] = {
       "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
-    }
+    };
 
     $scope.viewCreateResult = "adding view: " + viewName + " ...";
     ddocSaveActual(ddoc, "viewCreateResult",
                    "added view: " + viewName + " to: " + $scope.ddocName,
                    "error saving design doc: " + $scope.ddocName);
-  }
+  };
 
   $scope.ddocSave = function() {
     var dirty = false;
@@ -506,7 +505,7 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
                      "error saving design doc: " + $scope.ddocName);
 
     }
-  }
+  };
 
   function ddocSaveActual(ddoc, msgName, msgSuccess, msgError) {
     $http({
@@ -530,7 +529,7 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
           $scope.err = null;
         }).
       error(function() {
-        $scope.err = restErrorMsg
+          $scope.err = restErrorMsg;
       });
   }
 
