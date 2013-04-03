@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
@@ -33,6 +34,8 @@ func (v *VBucket) periodicViewsRefresh(time.Time) bool {
 	return leftovers > 0
 }
 
+// Refreshes all views with the changes that happened since the last
+// call to viewsRefresh().
 func (v *VBucket) viewsRefresh() (int64, error) {
 	v.viewsLock.Lock()
 	defer v.viewsLock.Unlock()
@@ -60,7 +63,7 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 		}
 		errVisit := v.ps.visitChanges(backIndexLastChangeCasBytes, true,
 			func(i *item) bool {
-				err = v.viewsRefreshItem(ddocs, backIndexStore, i)
+				err = v.viewsRefreshItem(ddocs, viewsStore, backIndexStore, i)
 				if err != nil {
 					return false
 				}
@@ -77,8 +80,9 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 	return atomic.AddInt64(&v.staleness, -d), nil
 }
 
+// Refreshes all views w.r.t. a single item/doc.
 func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
-	backIndexStore *partitionstore, i *item) error {
+	viewsStore *bucketstore, backIndexStore *partitionstore, i *item) error {
 	oldBackIndexItem, err := backIndexStore.get(i.key)
 	if err != nil {
 		return err
@@ -108,9 +112,21 @@ func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
 	if err != nil {
 		return err
 	}
-	return nil
+	if oldBackIndexItem != nil {
+		var viewEmitsOld map[string]ViewRows
+		err = json.Unmarshal(oldBackIndexItem.data, &viewEmitsOld)
+		if err != nil {
+			return err
+		}
+		err = vindexesClear(viewsStore, i.key, viewEmitsOld)
+		if err != nil {
+			return err
+		}
+	}
+	return vindexesSet(viewsStore, i.key, viewEmits)
 }
 
+// Executes the map function on an item.
 func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 	viewId string, view *View, i *item) (ViewRows, error) {
 	pvmf, err := view.GetViewMapFunction()
@@ -167,4 +183,55 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 		res = v.viewsStore
 	})
 	return res, err
+}
+
+// Used to deletes previous emits from the vindexes.
+func vindexesClear(viewsStore *bucketstore, docId []byte,
+	viewEmits map[string]ViewRows) error {
+	for vindexName, emits := range viewEmits {
+		vindex := viewsStore.coll(vindexName)
+		for _, emit := range emits {
+			vk, err := vindexKey(docId, emit.Key)
+			if err != nil {
+				return err
+			}
+			_, err = vindex.Delete(vk)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Used to incorporate emits into the vindexes.
+func vindexesSet(viewsStore *bucketstore, docId []byte,
+	viewEmits map[string]ViewRows) error {
+	for vindexName, emits := range viewEmits {
+		vindex := viewsStore.coll(vindexName)
+		for _, emit := range emits {
+			j, err := json.Marshal(emit.Value)
+			if err != nil {
+				return err
+			}
+			vk, err := vindexKey(docId, emit.Key)
+			if err != nil {
+				return err
+			}
+			err = vindex.Set(vk, j)
+			if err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}
+
+// Returns byte array that looks like "docId/emitKey".
+func vindexKey(docId []byte, emitKey interface{}) ([]byte, error) {
+	emitKeyBytes, err := json.Marshal(emitKey)
+	if err != nil {
+		return nil, err
+	}
+	return bytes.Join([][]byte{docId, emitKeyBytes}, []byte("/")), nil
 }
