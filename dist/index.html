@@ -56,6 +56,10 @@
             <li class="btn btn-inverse btn-group-label"><div class="freebsd-icon">&nbsp;</div>&nbsp;<strong>FreeBSD</strong></li>
             <li class="btn btn-download"><a href="cbgb.fbsd.gz">64-bit&nbsp;&nbsp;<i class="icon-cloud-download"></i></a></li>
         </div>
+
+        <br clear="all" /><br />
+        <strong><span class="note">Note:</span> pre-alpha, is rebuilt often, and is probably not ready for production use, unless you like to live on the edge</strong>
+
     </section>
 
 
@@ -80,7 +84,7 @@
   $ ./cbgb -data="~/cbgb-data/"
 </pre>
 
-        <strong>Note</strong>: the default ports conflict with memcached, Membase, and Couchbase, so if you want to connect to <span class="cbgb">cbgb</span>, kill those first.
+        <span class="note">Note:</span> the default ports conflict with memcached, Membase, and Couchbase, so if you want to connect to <span class="cbgb">cbgb</span>, kill those first.
         You can also run it on other ports, however, we haven't tested our Couchbase SDK's against that scenario yet.
     </section>
 
@@ -102,7 +106,7 @@
         </p>
 
         <p>
-            <strong>Note: </strong> Currently only GET's are implemented (for Documents).
+            <span class="note">Note:</span> Currently only GET's are implemented (for Documents).
         </p>
 
         <table class="table table-bordered">
@@ -147,7 +151,7 @@
         </p>
 
         <p>
-            <strong>Note:</strong> The Java SDK automatically reconnects when there is an operation and <span class="cbgb">cbgb</span> has passivated a bucket. Other clients may not, in those cases you have to wrap
+            <span class="note">Note:</span> The Java SDK automatically reconnects when there is an operation and <span class="cbgb">cbgb</span> has passivated a bucket. Other clients may not, in those cases you have to wrap
             the SDK with a Couchbase::Error::Network rescue/catch handler (whatever is appropriate for the language) and reconnect before retrying the operation.
         </p>
 
@@ -159,6 +163,10 @@
 
         <p>
             We welcome contributions and issue filing at the <a href="http://github.com/couchbaselabs/cbgb" target="_blank">github repo</a>.
+        </p>
+
+        <p>
+            Apache 2 license.
         </p>
 
     </section>
