@@ -20,6 +20,11 @@ div.content {
    color: #aaa;
 }
 
+div.presentation {
+    margin: auto;
+    text-align: center;
+}
+
 div.presenting {
     font-family: "ff-kievit-web","MS UI Gothic","MS PGothic","Osaka","Batang",Georgia,"Times New Roman",Times,sans-serif;
     color: white;
