@@ -107,7 +107,12 @@ func withBucketAccess(orig func(http.ResponseWriter,
 		if u.canAccess(b) {
 			orig(w, r)
 		} else {
-			http.Error(w, "Access denied", 403)
+			log.Printf("%q (admin=%v) can't access %v", u, u.isAdmin(), b)
+			if string(u) == "" {
+				authError(w, r)
+			} else {
+				http.Error(w, "Access denied", 403)
+			}
 		}
 	}
 }
