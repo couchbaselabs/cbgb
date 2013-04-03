@@ -62,7 +62,7 @@
 
     <section id="usage">
 
-        <h3>Recommended Usage</h3>
+        <h3>Start</h3>
 
         <p>
             Download. Unzip the binary. On non-windows, make <span class="cbgb">cbgb</span> executable.<br />
@@ -84,6 +84,57 @@
         You can also run it on other ports, however, we haven't tested our Couchbase SDK's against that scenario yet.
     </section>
 
+    <section id="admin">
+
+        <h3>Admin</h3>
+
+        <p>Connect your browser to <code>http://localhost:8091/</code> to create buckets, design documents and map-reduce views.</p>
+
+    </section>
+
+    <section id="rest">
+
+        <h3>REST</h3>
+
+        <p>
+            While the Couchbase SDK's and binary protocols are faster, <span class="cbgb">cbgb</span> can also use REST for CRUD and Index Querying (Views).
+            REST operations are done on port 8092 by default. View Querying follows the Couchbase syntax.
+        </p>
+
+        <p>
+            <strong>Note: </strong> Currently only GET's are implemented (for Documents).
+        </p>
+
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>VERB</th>
+                    <th>Operation</th>
+                    <th>Example</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td class="verb">GET</td>
+                    <td class="operation">Retrieve Item</td>
+                    <td class="example">
+                        curl -X GET http://localhost:8092/<span class="parameter">{bucket}</span>/<span class="parameter">{key}</span><br />
+                        curl -X GET http://localhost:8092/default/testkey
+                    </td>
+                </tr>
+                <tr>
+                    <td class="verb">GET</td>
+                    <td class="operation">Retrieve All Documents</td>
+                    <td class="example">
+                        curl -X GET http://localhost:8092/<span class="parameter">{bucket}</span>/_add_docs<br />
+                        curl -X GET http://localhost:8092/default/_add_docs
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+
+    </section>
+
     <section id="reference">
 
         <h3>SDK's</h3>
@@ -100,12 +151,20 @@
             the SDK with a Couchbase::Error::Network rescue/catch handler (whatever is appropriate for the language) and reconnect before retrying the operation.
         </p>
 
+    </section>
+
+    <section id="github">
 
         <h3>Github Project</h3>
 
-        Feel free to contribute or file issues at the <a href="http://github.com/couchbaselabs/cbgb" target="_blank">github repo</a>.
+        <p>
+            We welcome contributions and issue filing at the <a href="http://github.com/couchbaselabs/cbgb" target="_blank">github repo</a>.
+        </p>
 
     </section>
+
+
+
 
 </div>
 

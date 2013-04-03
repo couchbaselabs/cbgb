@@ -15,8 +15,8 @@ div.content {
     margin: 40px auto 60px auto;
 }
 
-#download, #usage, #reference {
-   margin: 20px 0;
+#download, #usage, #reference, #admin, #rest, #github {
+   margin: 40px 0;
    color: #aaa;
 }
 
@@ -143,4 +143,14 @@ code {
 
 a {
     color: #5cf;
+}
+
+span.parameter {
+    font-weight: bold;
+    color: #ccc;
+}
+
+td.example, td.operation, td.verb {
+    font-family: Monaco,Menlo,Consolas,"Courier New",monospace;
+    font-size: 12px;
 }
