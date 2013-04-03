@@ -108,7 +108,15 @@ func (v *View) GetViewMapFunction() (*ViewMapFunction, error) {
 	if v.preparedViewMapFunction != nil {
 		return v.preparedViewMapFunction, nil
 	}
+	vmf, err := v.PrepareViewMapFunction()
+	if err != nil {
+		return nil, err
+	}
+	v.preparedViewMapFunction = vmf
+	return vmf, err
+}
 
+func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 	if v.Map == "" {
 		return nil, fmt.Errorf("view map function missing")
 	}
@@ -142,7 +150,7 @@ func (v *View) GetViewMapFunction() (*ViewMapFunction, error) {
 		return otto.UndefinedValue()
 	})
 
-	v.preparedViewMapFunction = &ViewMapFunction{
+	return &ViewMapFunction{
 		otto: o,
 		mapf: mapf,
 		restartEmits: func() (resEmits []*ViewRow, resEmitErr error) {
@@ -152,6 +160,5 @@ func (v *View) GetViewMapFunction() (*ViewMapFunction, error) {
 			emitErr = nil
 			return resEmits, resEmitErr
 		},
-	}
-	return v.preparedViewMapFunction, nil
+	}, nil
 }
