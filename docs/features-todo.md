@@ -94,3 +94,5 @@ trees.
 This project is currently single node.
 
 ## Server-side logic (stored procedures)
+
+## Hardening
