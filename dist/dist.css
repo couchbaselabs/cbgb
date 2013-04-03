@@ -101,13 +101,15 @@ div.catchphrase {
     background: #333 !important;
     cursor: default !important;
     color: #ccc;
+    text-shadow: none;
 }
 
 .btn-download {
     background: #555 !important;
+    text-shadow: 0 3px 2px rgba(40,40,40,0.95);
 }
 
 .btn-download a {
-    color: #ddd;
+    color: #eee;
 }
 
