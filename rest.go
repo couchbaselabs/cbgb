@@ -77,6 +77,10 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
 	u := currentUser(r)
+	if string(u) == "" && !u.isAdmin() {
+		authError(w, r)
+		return
+	}
 	bn := []string{}
 	for _, n := range buckets.GetNames() {
 		if u.canAccess(n) {
