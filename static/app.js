@@ -19,7 +19,7 @@ angular.module('cbgb', []).
       when('/buckets/:bucketName/stats',
            {templateUrl: 'partials/bucket-stats.html',
             controller: BucketStatsCtrl}).
-      otherwise({redirectTo: '/server'});
+      otherwise({redirectTo: '/buckets'});
 }]).run(function($rootScope, $location) {
         $rootScope.location = $location;
     });

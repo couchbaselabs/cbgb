@@ -16,35 +16,32 @@ import (
 )
 
 func restAPI(r *mux.Router) {
-	sr := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
+	sr := r.PathPrefix("/_api/").Subrouter()
 	sr.HandleFunc("/buckets",
 		restGetBuckets).Methods("GET")
-	sr.HandleFunc("/buckets",
-		restPostBucket).Methods("POST")
 	sr.HandleFunc("/buckets/{bucketname}",
-		restGetBucket).Methods("GET")
+		withBucketAccess(restGetBucket)).Methods("GET")
 	sr.HandleFunc("/buckets/{bucketname}",
-		restDeleteBucket).Methods("DELETE")
+		withBucketAccess(restDeleteBucket)).Methods("DELETE")
 	sr.HandleFunc("/buckets/{bucketname}/compact",
-		restPostBucketCompact).Methods("POST")
+		withBucketAccess(restPostBucketCompact)).Methods("POST")
 	sr.HandleFunc("/buckets/{bucketname}/flushDirty",
-		restPostBucketFlushDirty).Methods("POST")
+		withBucketAccess(restPostBucketFlushDirty)).Methods("POST")
 	sr.HandleFunc("/buckets/{bucketname}/stats",
-		restGetBucketStats).Methods("GET")
-	sr.HandleFunc("/bucketsRescan",
-		restPostBucketsRescan).Methods("POST")
-	sr.HandleFunc("/profile/cpu",
-		restProfileCPU).Methods("POST")
-	sr.HandleFunc("/profile/memory",
-		restProfileMemory).Methods("POST")
-	sr.HandleFunc("/runtime",
-		restGetRuntime).Methods("GET")
+		withBucketAccess(restGetBucketStats)).Methods("GET")
+
+	sr = r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
+
+	sr.HandleFunc("/buckets", restPostBucket).Methods("POST")
+
+	sr.HandleFunc("/bucketsRescan", restPostBucketsRescan).Methods("POST")
+	sr.HandleFunc("/profile/cpu", restProfileCPU).Methods("POST")
+	sr.HandleFunc("/profile/memory", restProfileMemory).Methods("POST")
+	sr.HandleFunc("/runtime", restGetRuntime).Methods("GET")
 	sr.HandleFunc("/runtime/memStats",
 		restGetRuntimeMemStats).Methods("GET")
-	sr.HandleFunc("/runtime/gc",
-		restPostRuntimeGC).Methods("POST")
-	sr.HandleFunc("/settings",
-		restGetSettings).Methods("GET")
+	sr.HandleFunc("/runtime/gc", restPostRuntimeGC).Methods("POST")
+	sr.HandleFunc("/settings", restGetSettings).Methods("GET")
 
 	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
@@ -79,7 +76,14 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, buckets.GetNames())
+	u := currentUser(r)
+	bn := []string{}
+	for _, n := range buckets.GetNames() {
+		if u.canAccess(n) {
+			bn = append(bn, n)
+		}
+	}
+	jsonEncode(w, bn)
 }
 
 func restPostBucketsRescan(w http.ResponseWriter, r *http.Request) {
