@@ -3,7 +3,10 @@
 *.pyc
 *.test
 *~
+,*
 .#*
+.idea
+.idea/*
 /cbgb
 /dist/cbgb.*.gz
 /dist/static.zip
@@ -14,6 +17,3 @@
 /version_git.go
 _*
 tmp
-
-.idea
-.idea/*
