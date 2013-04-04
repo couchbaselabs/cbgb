@@ -22,8 +22,7 @@ var restCouch = flag.String("rest-couch",
 	":8092", "rest couch protocol listen address")
 var restNS = flag.String("rest-ns",
 	":8091", "rest NS protocol listen address")
-var staticPath = flag.String("static-path",
-	"http://cbfs-ext.hq.couchbase.com/cbgb/static.zip",
+var staticPath = flag.String("static-path", "http://cbgb.io/static.zip",
 	"path to static web UI content")
 var defaultBucketName = flag.String("default-bucket-name",
 	DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
