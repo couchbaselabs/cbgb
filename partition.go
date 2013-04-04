@@ -94,14 +94,10 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 func (p *partitionstore) getTotals() (numItems uint64, numItemBytes uint64, err error) {
 	keys, changes := p.colls()
 	numItems, _, err = keys.GetTotals()
-	if err != nil {
-		return 0, 0, err
+	if err == nil {
+		_, numItemBytes, err = changes.GetTotals()
 	}
-	_, numChangesBytes, err := changes.GetTotals()
-	if err != nil {
-		return 0, 0, err
-	}
-	return numItems, numChangesBytes, nil
+	return
 }
 
 func (p *partitionstore) visitItems(start []byte, withValue bool,
