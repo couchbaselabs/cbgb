@@ -12,7 +12,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"math/rand"
 	"sync"
@@ -57,10 +56,6 @@ func (p *partitionstore) collsPauseSwap(cb func() (keys, changes *gkvlite.Collec
 
 func (p *partitionstore) get(key []byte) (*item, error) {
 	return p.getItem(key, true)
-}
-
-func (p *partitionstore) getMeta(key []byte) (*item, error) {
-	return p.getItem(key, false)
 }
 
 func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error) {
@@ -255,52 +250,4 @@ func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
 		p.parent.dirty(dirtyForce)
 	})
 	return deltaItemBytes, err
-}
-
-// ------------------------------------------------------------
-
-func rangeCopy(srcColl *gkvlite.Collection, dstColl *gkvlite.Collection,
-	minKeyInclusive []byte, maxKeyExclusive []byte) (hasItems bool, err error) {
-	minItem, err := srcColl.MinItem(false)
-	if err != nil {
-		return false, err
-	}
-	// TODO: What if we flush between the keys update and changes
-	// update?  That could result in an inconsistent db file?
-	// Solution idea #1 is to have load-time fixup, that
-	// incorporates changes into the key-index.
-	if minItem != nil {
-		if err := collRangeCopy(srcColl, dstColl, minItem.Key,
-			minKeyInclusive, maxKeyExclusive); err != nil {
-			return false, err
-		}
-		return true, nil
-	}
-	return false, nil
-}
-
-func collRangeCopy(src *gkvlite.Collection, dst *gkvlite.Collection,
-	minKey []byte,
-	minKeyInclusive []byte,
-	maxKeyExclusive []byte) error {
-	var errVisit error
-	visitor := func(i *gkvlite.Item) bool {
-		if len(minKeyInclusive) > 0 &&
-			bytes.Compare(i.Key, minKeyInclusive) < 0 {
-			return true
-		}
-		if len(maxKeyExclusive) > 0 &&
-			bytes.Compare(i.Key, maxKeyExclusive) >= 0 {
-			return true
-		}
-		errVisit = dst.SetItem(i)
-		if errVisit != nil {
-			return false
-		}
-		return true
-	}
-	if errVisit != nil {
-		return errVisit
-	}
-	return src.VisitItemsAscend(minKey, true, visitor)
 }
