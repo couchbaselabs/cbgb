@@ -25,10 +25,10 @@ var persistRunner *periodically
 const compact_every = 10000
 
 type bucketstore struct {
+	dirtiness     int64          // To track when we need flush to storage.
 	bsf           unsafe.Pointer // *bucketstorefile
 	bsfMemoryOnly *bucketstorefile
 	endch         chan bool
-	dirtiness     int64 // To track when we need flush to storage.
 	partitions    map[uint16]*partitionstore
 	stats         *BucketStoreStats
 

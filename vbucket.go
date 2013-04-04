@@ -42,21 +42,23 @@ func VBucketIdForKey(key []byte, numVBuckets int) uint16 {
 }
 
 type VBucket struct {
-	parent    Bucket
-	vbid      uint16
-	meta      unsafe.Pointer // *VBMeta
-	bs        *bucketstore
-	ps        *partitionstore
-	lock      sync.Mutex
-	stats     Stats
-	available chan bool
-	observer  broadcast.Broadcaster
+	meta     unsafe.Pointer // *VBMeta
+	parent   Bucket
+	bs       *bucketstore
+	ps       *partitionstore
+	lock     sync.Mutex
+	observer broadcast.Broadcaster
 
 	bucketItemBytes *int64
 	staleness       int64 // To track view freshness.
 
+	stats Stats
+
 	viewsStore *bucketstore
 	viewsLock  sync.Mutex
+
+	available chan bool
+	vbid      uint16
 }
 
 func (v VBucket) String() string {

@@ -38,10 +38,10 @@ func parseVBState(s string) VBState {
 }
 
 type VBMeta struct {
-	Id      uint16 `json:"id"`
 	LastCas uint64 `json:"lastCas"`
 	MetaCas uint64 `json:"metaCas"`
 	State   string `json:"state"`
+	Id      uint16 `json:"id"`
 }
 
 func (t *VBMeta) Equal(u *VBMeta) bool {
