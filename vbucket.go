@@ -35,7 +35,7 @@ const (
 
 var ignore = errors.New("not-an-error/sentinel")
 
-var expirerPeriod = newPeriodically(time.Minute*5, 2)
+var expirerPeriod *periodically
 
 func VBucketIdForKey(key []byte, numVBuckets int) uint16 {
 	return uint16((crc32.ChecksumIEEE(key) >> uint32(16)) & uint32(numVBuckets-1))

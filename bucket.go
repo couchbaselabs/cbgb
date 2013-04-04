@@ -25,8 +25,8 @@ const (
 
 var broadcastMux = broadcast.NewMuxObserver(0, 0)
 
-var statAggPeriodic = newPeriodically(time.Second, 10)
-var statAggPassivator = newPeriodically(time.Minute*5, 10)
+var statAggPeriodic *periodically
+var statAggPassivator *periodically
 
 var bucketUnavailable = errors.New("Bucket unavailable")
 

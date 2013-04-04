@@ -33,6 +33,18 @@ var defaultQuotaBytes = flagbytes.Bytes("default-quota",
 	"100MB", "quota for default bucket")
 var defaultPersistence = flag.Int("default-persistence",
 	2, "persistence level for default bucket")
+var quiesceFreq = flag.Duration("quiesce-freq", time.Minute*5,
+	"Bucket quiescence frequency")
+var expireFreq = flag.Duration("expire-freq", time.Minute*5,
+	"Expiration scanner frequency")
+var persistFreq = flag.Duration("persist-freq", time.Second*5,
+	"Persistence frequency")
+var viewRefreshFreq = flag.Duration("view-refresh-freq", time.Second*10,
+	"View refresh frequency")
+var statAggFreq = flag.Duration("stat-agg-freq", time.Second*10,
+	"Stat aggregation frequency")
+var statAggPassFreq = flag.Duration("stat-agg-pass-freq", time.Minute*5,
+	"Stat aggregation passivation frequency")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
@@ -52,9 +64,20 @@ func init() {
 	}
 }
 
+func initPeriodically() {
+	bucketCloser = newPeriodically(*quiesceFreq, 1)
+	expirerPeriod = newPeriodically(*expireFreq, 2)
+	persistRunner = newPeriodically(*persistFreq, 5)
+	viewsRefresher = newPeriodically(*viewRefreshFreq, 5)
+	statAggPeriodic = newPeriodically(*statAggFreq, 10)
+	statAggPassivator = newPeriodically(*statAggPassFreq, 10)
+}
+
 func main() {
 	flag.Parse()
 	args := flag.Args()
+
+	initPeriodically()
 
 	if !*verbose {
 		log.SetOutput(ioutil.Discard)

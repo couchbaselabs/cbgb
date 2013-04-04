@@ -13,8 +13,7 @@ const (
 	VIEWS_FILE_SUFFIX = "views"
 )
 
-// TODO: Make this configurable.
-var viewsRefresher = newPeriodically(10*time.Second, 5)
+var viewsRefresher *periodically
 
 func (v *VBucket) markStale() {
 	newval := atomic.AddInt64(&v.staleness, 1)

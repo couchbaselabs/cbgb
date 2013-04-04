@@ -20,8 +20,7 @@ import (
 // actual server is a different package.
 var fileService = NewFileService(32)
 
-// TODO: Make this configurable.
-var persistRunner = newPeriodically(10*time.Second, 5)
+var persistRunner *periodically
 
 const compact_every = 10000
 

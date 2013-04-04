@@ -5,6 +5,11 @@ import (
 	"time"
 )
 
+// Configure up some default periodicallys for tests
+func init() {
+	initPeriodically()
+}
+
 func periodicNoop(time.Time) {}
 
 func TestPeriodicallyNoPeriod(t *testing.T) {

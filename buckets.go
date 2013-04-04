@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var bucketCloser = newPeriodically(time.Minute*5, 1)
+var bucketCloser *periodically
 
 // Holder of buckets.
 type Buckets struct {
