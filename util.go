@@ -2,12 +2,14 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/steveyen/gkvlite"
 )
 
 func parseBucketName(w http.ResponseWriter, r *http.Request) (string, Bucket) {
@@ -72,4 +74,31 @@ func (w *oneResponder) WriteHeader(i int) {
 	} else {
 		log.Printf("Ignoring duplicate header write %v -> %v", w.status, i)
 	}
+}
+
+func dumpColl(c *gkvlite.Collection, prefix string) (int, error) {
+	n := 0
+	err := c.VisitItemsAscend(nil, true, func(cItem *gkvlite.Item) bool {
+		n++
+		fmt.Printf("%v%#v\n", prefix, cItem)
+		return true
+	})
+	return n, err
+}
+
+func dumpCollAsItems(c *gkvlite.Collection, prefix string) (int, error) {
+	n := 0
+	var vErr error
+	err := c.VisitItemsAscend(nil, true, func(cItem *gkvlite.Item) bool {
+		i := &item{}
+		if vErr = i.fromValueBytes(cItem.Val); vErr != nil {
+			return false
+		}
+		fmt.Printf("%v%#v, data: %v\n", prefix, i, string(i.data))
+		return true
+	})
+	if vErr != nil {
+		return 0, vErr
+	}
+	return n, err
 }
