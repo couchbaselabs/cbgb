@@ -70,3 +70,38 @@ func TestSeqObsPub(t *testing.T) {
 	}
 	assertNoSeqMessage(t, ch2a)
 }
+
+func TestSeqLateRegistration(t *testing.T) {
+	// "I'll be there in five minutes."
+	// Five hours later: "I'll be there in five minutes."
+	s := newSequencePubSub()
+	defer s.Stop()
+	ch1 := s.Sub(seqKey1, 2)
+
+	s.Pub(seqKey1, 3)
+	if got := tseqmesg(t, ch1); got != 3 {
+		t.Fatalf("Expected 3, got %v", got)
+	}
+
+	// This should fire instantly
+	ch2 := s.Sub(seqKey1, 3)
+	if got := tseqmesg(t, ch2); got != 3 {
+		t.Fatalf("Expected 3, got %v", got)
+	}
+}
+
+func Testi64max(t *testing.T) {
+	tests := []struct{ a, b, exp int64 }{
+		{1, 2, 2},
+		{2, 1, 2},
+		{1, 1, 1},
+	}
+
+	for _, test := range tests {
+		got := i64max(test.a, test.b)
+		if got != test.exp {
+			t.Errorf("Expected int64max(%v, %v) == %v, got %v",
+				test.a, test.b, test.exp, got)
+		}
+	}
+}

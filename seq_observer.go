@@ -19,6 +19,7 @@ type sequenceEvent struct {
 
 type sequencePubSub struct {
 	observers map[sequenceId][]sequenceObserver
+	lastSeen  map[sequenceId]int64
 	quit      chan bool
 	reg       chan sequenceReg
 	events    chan sequenceEvent
@@ -28,6 +29,7 @@ type sequencePubSub struct {
 func newSequencePubSub() *sequencePubSub {
 	rv := &sequencePubSub{
 		observers: map[sequenceId][]sequenceObserver{},
+		lastSeen:  map[sequenceId]int64{},
 		quit:      make(chan bool),
 		reg:       make(chan sequenceReg),
 		events:    make(chan sequenceEvent),
@@ -42,7 +44,7 @@ func (s *sequencePubSub) run() {
 		case <-s.quit:
 			return
 		case reg := <-s.reg:
-			s.observers[reg.seq] = append(s.observers[reg.seq], reg.obs)
+			s.register(reg.seq, reg.obs)
 		case ev := <-s.events:
 			s.dist(ev.seq, ev.num)
 		}
@@ -59,6 +61,21 @@ func (s *sequencePubSub) Stop() {
 	}
 }
 
+func (s *sequencePubSub) register(seq sequenceId, obs sequenceObserver) {
+	if s.lastSeen[seq] >= obs.atleast {
+		obs.sub <- s.lastSeen[seq]
+		return
+	}
+	s.observers[seq] = append(s.observers[seq], obs)
+}
+
+func i64max(a, b int64) int64 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func (s *sequencePubSub) dist(seq sequenceId, num int64) {
 	var unprocessed []sequenceObserver
 	prev := s.observers[seq]
@@ -73,6 +90,7 @@ func (s *sequencePubSub) dist(seq sequenceId, num int64) {
 	if unprocessed != nil {
 		s.observers[seq] = unprocessed
 	}
+	s.lastSeen[seq] = i64max(s.lastSeen[seq], num)
 }
 
 // Subscribe to a sequence observer and receive a channel over which
