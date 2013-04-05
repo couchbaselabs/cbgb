@@ -90,6 +90,54 @@ func TestSeqLateRegistration(t *testing.T) {
 	}
 }
 
+func TestSeqRewind(t *testing.T) {
+	// Going backwards shouldn't.
+	s := newSequencePubSub()
+	defer s.Stop()
+	ch1 := s.Sub(seqKey1, 2)
+
+	s.Pub(seqKey1, 3)
+	if got := tseqmesg(t, ch1); got != 3 {
+		t.Fatalf("Expected 3, got %v", got)
+	}
+
+	s.Pub(seqKey1, 2)
+
+	ch2 := s.Sub(seqKey1, 3)
+	if got := tseqmesg(t, ch2); got != 3 {
+		t.Fatalf("Expected 3, got %v", got)
+	}
+}
+
+func TestSeqDelete(t *testing.T) {
+	s := newSequencePubSub()
+	defer s.Stop()
+	ch1 := s.Sub(seqKey1, 2)
+
+	s.Pub(seqKey1, 3)
+	if got := tseqmesg(t, ch1); got != 3 {
+		t.Fatalf("Expected 3, got %v", got)
+	}
+
+	ch2 := s.Sub(seqKey1, 5)
+
+	s.Delete(seqKey1)
+
+	// This should fire immediately:
+	select {
+	case got, ok := <-ch2:
+		if ok {
+			t.Fatalf("Expected closed channel, got %v", got)
+		}
+	case <-time.After(3 * time.Millisecond):
+		t.Fatalf("Timed out waiting for close")
+	}
+
+	// This should not fire
+	ch3 := s.Sub(seqKey1, 3)
+	assertNoSeqMessage(t, ch3)
+}
+
 func Testi64max(t *testing.T) {
 	tests := []struct{ a, b, exp int64 }{
 		{1, 2, 2},

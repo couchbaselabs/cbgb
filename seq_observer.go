@@ -62,7 +62,18 @@ func (s *sequencePubSub) Stop() {
 }
 
 func (s *sequencePubSub) register(seq sequenceId, obs sequenceObserver) {
+	if obs.sub == nil {
+		// This is a destruction request
+		for _, obs := range s.observers[seq] {
+			close(obs.sub)
+		}
+		delete(s.observers, seq)
+		delete(s.lastSeen, seq)
+		return
+	}
+
 	if s.lastSeen[seq] >= obs.atleast {
+		// This one has already fired.
 		obs.sub <- s.lastSeen[seq]
 		return
 	}
@@ -104,4 +115,11 @@ func (s *sequencePubSub) Sub(seq sequenceId, atleast int64) <-chan int64 {
 // Publish a sequence event.
 func (s *sequencePubSub) Pub(seq sequenceId, at int64) {
 	s.events <- sequenceEvent{seq, at}
+}
+
+// Destroy a sequence.
+//
+// This cleans up all outstanding listeners and tracked state.
+func (s *sequencePubSub) Delete(seq sequenceId) {
+	s.reg <- sequenceReg{seq, sequenceObserver{-1, nil}}
 }
