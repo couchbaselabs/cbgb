@@ -27,6 +27,7 @@ import (
 	"github.com/dustin/gomemcached"
 	"github.com/gorilla/mux"
 	"github.com/robertkrimen/otto"
+	"github.com/steveyen/gkvlite"
 )
 
 func restCouchServe(rest string, staticPath string) {
@@ -395,122 +396,22 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "view not found", 404)
 		return
 	}
-	if view.Map == "" {
-		http.Error(w, "view map function missing", 400)
-		return
-	}
 
-	o := otto.New()
-	fnv, err := OttoNewFunction(o, view.Map)
-	if err != nil {
-		http.Error(w, fmt.Sprintf("view map function error: %v", err), 400)
-		return
-	}
-
-	emits := []*ViewRow{}
-	var emitErr error
-
-	o.Set("emit", func(call otto.FunctionCall) otto.Value {
-		var key, value interface{}
-		var err error
-
-		if len(call.ArgumentList) <= 0 {
-			emitErr = fmt.Errorf("emit() invoked with no parameters")
-			return otto.UndefinedValue()
-		}
-		key, err = call.ArgumentList[0].Export()
+	in, out := MakeViewRowMerger(bucket)
+	for vbid := 0; vbid < len(in); vbid++ {
+		vb, err := bucket.GetVBucket(uint16(vbid))
 		if err != nil {
-			emitErr = err
-			return otto.UndefinedValue()
+			// TODO: Cleanup already in-flight merging goroutines?
+			http.Error(w, fmt.Sprintf("GetVBucket err: %v", err), 404)
+			return
 		}
-
-		if len(call.ArgumentList) >= 2 {
-			value, err = call.ArgumentList[1].Export()
-			if err != nil {
-				emitErr = err
-				return otto.UndefinedValue()
-			}
-		}
-
-		emits = append(emits, &ViewRow{Key: key, Value: value})
-		return otto.UndefinedValue()
-	})
+		go visitVIndex(vb, ddocId, viewId, p, in[vbid])
+	}
 
 	vr := &ViewResult{Rows: make([]*ViewRow, 0, 100)}
-	np := bucket.GetBucketSettings().NumPartitions
-	for vbid := 0; vbid < np; vbid++ {
-		vb, _ := bucket.GetVBucket(uint16(vbid))
-		if vb != nil {
-			var errVisit error
-			numErr := 0
-			err = vb.Visit(nil, func(key []byte, data []byte) bool {
-				docId := string(key)
-
-				if numErr > maxViewErrors {
-					return false
-				}
-
-				docType := "json"
-				var doc interface{}
-				err := json.Unmarshal(data, &doc)
-				if err != nil {
-					doc = base64.StdEncoding.EncodeToString(data)
-					docType = "base64"
-				}
-
-				odoc, err := OttoFromGo(o, doc)
-				if err != nil {
-					log.Printf("Error sending object into otto %s: %v",
-						data, err)
-					errVisit = err
-					return false
-				}
-
-				meta := map[string]interface{}{
-					"id":   docId,
-					"type": docType,
-				}
-				ometa, err := OttoFromGo(o, meta)
-				if err != nil {
-					log.Printf("Error sending meta object into otto: %v -> %v",
-						meta, err)
-					errVisit = err
-					return false
-				}
-
-				_, err = fnv.Call(fnv, odoc, ometa)
-				if err != nil {
-					log.Printf("Error executing view function on %s (%s) -> %v",
-						key, data, err)
-					numErr++
-					errVisit = err
-					return true
-				}
-
-				for _, emit := range emits {
-					emit.Id = docId
-				}
-
-				vr.Rows = append(vr.Rows, emits...)
-				emits = emits[:0]
-				return true
-			})
-			if err != nil {
-				http.Error(w, fmt.Sprintf("view visit error: %v",
-					err), 400)
-				return
-			}
-			if numErr > maxViewErrors && errVisit != nil {
-				http.Error(w, fmt.Sprintf("view visit function error: %v",
-					errVisit), 400)
-				return
-			}
-		}
+	for row := range out {
+		vr.Rows = append(vr.Rows, row)
 	}
-	sort.Sort(vr.Rows)
-
-	// TODO: Handle p.Keys.
-
 	vr, err = processViewResult(bucket, vr, p)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("processViewResult error: %v", err), 400)
@@ -622,7 +523,6 @@ func checkDocId(w http.ResponseWriter, r *http.Request) (
 
 // Originally from github.com/couchbaselabs/walrus, but modified to
 // use ViewParams.
-
 func processViewResult(bucket Bucket, result *ViewResult,
 	p *ViewParams) (*ViewResult, error) {
 	if p.Key != nil {
@@ -767,33 +667,86 @@ func docifyViewResult(bucket Bucket, result *ViewResult) (
 }
 
 func visitVBucketAllDocs(vb *VBucket, ch chan *ViewRow) {
-	if vb != nil {
-		vb.Visit(nil, func(key []byte, data []byte) bool {
-			docId := string(key)
-			docType := "json"
-			var doc interface{}
-			err := json.Unmarshal(data, &doc)
-			if err != nil {
-				doc = base64.StdEncoding.EncodeToString(data)
-				docType = "base64"
-			}
-			// TODO: The couchdb spec emits Value instead of Doc.
-			ch <- &ViewRow{
-				Id:  docId,
-				Key: docId,
-				Doc: &ViewDocValue{
-					Meta: map[string]interface{}{
-						"id":   docId,
-						"type": docType,
-						// TODO: rev.
-					},
-					Json: doc,
-				},
-			}
-			return true
-		})
+	defer close(ch)
+
+	if vb == nil {
+		return
 	}
-	close(ch)
+	vb.Visit(nil, func(key []byte, data []byte) bool {
+		docId := string(key)
+		docType := "json"
+		var doc interface{}
+		err := json.Unmarshal(data, &doc)
+		if err != nil {
+			doc = base64.StdEncoding.EncodeToString(data)
+			docType = "base64"
+		}
+		// TODO: The couchdb spec emits Value instead of Doc.
+		ch <- &ViewRow{
+			Id:  docId,
+			Key: docId,
+			Doc: &ViewDocValue{
+				Meta: map[string]interface{}{
+					"id":   docId,
+					"type": docType,
+					// TODO: rev.
+				},
+				Json: doc,
+			},
+		}
+		return true
+	})
+}
+
+func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
+	ch chan *ViewRow) error {
+	defer close(ch)
+
+	if vb == nil {
+		return fmt.Errorf("no vbucket during visitVIndex(), ddocId: %v, viewId: %v",
+			ddocId, viewId)
+	}
+	if p.Stale != "ok" {
+		// TODO: Consistent views by default isn't couchbase compatible yet.
+		_, err := vb.viewsRefresh()
+		if err != nil {
+			return err
+		}
+	}
+	viewsStore, err := vb.getViewsStore()
+	if err != nil {
+		return err
+	}
+	vindex := viewsStore.coll("_design/" + ddocId + "/" + viewId)
+	if vindex == nil {
+		return fmt.Errorf("no vindex during visitVIndex(), ddocId: %v, viewId: %v",
+			ddocId, viewId)
+	}
+
+	// TODO: Handle p.Keys.
+
+	errVisit := vindex.VisitItemsAscend(nil, true, func(i *gkvlite.Item) bool {
+		docId, emitKey, err := vindexKeyParse(i.Key)
+		if err != nil {
+			return false
+		}
+
+		var emitValue interface{}
+		err = json.Unmarshal(i.Val, &emitValue)
+		if err != nil {
+			return false
+		}
+		ch <- &ViewRow{
+			Id:    string(docId),
+			Key:   emitKey,
+			Value: emitValue,
+		}
+		return true
+	})
+	if errVisit != nil {
+		return errVisit
+	}
+	return err
 }
 
 func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
@@ -806,14 +759,8 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("param parsing err: %v", err), 400)
 		return
 	}
-	out := make(chan *ViewRow)
-	np := bucket.GetBucketSettings().NumPartitions
-	in := make([]chan *ViewRow, np)
-	for vbid := 0; vbid < np; vbid++ {
-		in[vbid] = make(chan *ViewRow)
-	}
-	go MergeViewRows(in, out)
-	for vbid := 0; vbid < np; vbid++ {
+	in, out := MakeViewRowMerger(bucket)
+	for vbid := 0; vbid < len(in); vbid++ {
 		vb, _ := bucket.GetVBucket(uint16(vbid))
 		go visitVBucketAllDocs(vb, in[vbid])
 	}
@@ -832,4 +779,15 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 		} // TODO: else, json marshalling and Write error handling.
 	}
 	w.Write([]byte(fmt.Sprintf(`],"total_rows":%v}`, i)))
+}
+
+func MakeViewRowMerger(bucket Bucket) ([]chan *ViewRow, chan *ViewRow) {
+	out := make(chan *ViewRow)
+	np := bucket.GetBucketSettings().NumPartitions
+	in := make([]chan *ViewRow, np)
+	for vbid := 0; vbid < np; vbid++ {
+		in[vbid] = make(chan *ViewRow)
+	}
+	go MergeViewRows(in, out)
+	return in, out
 }

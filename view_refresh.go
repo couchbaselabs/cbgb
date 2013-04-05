@@ -48,22 +48,33 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 		if err != nil {
 			return 0, err
 		}
-		backIndexStore := viewsStore.getPartitionStore(v.vbid)
-		if backIndexStore == nil {
+		backIndex := viewsStore.getPartitionStore(v.vbid)
+		if backIndex == nil {
 			return 0, fmt.Errorf("missing back index store, vbid: %v", v.vbid)
 		}
-		_, backIndexChanges := backIndexStore.colls()
+		_, backIndexChanges := backIndex.colls()
 		backIndexLastChange, err := backIndexChanges.MaxItem(true)
 		if err != nil {
 			return 0, err
 		}
-		var backIndexLastChangeCasBytes []byte
-		if backIndexLastChange != nil {
-			backIndexLastChangeCasBytes = backIndexLastChange.Key
+		var backIndexLastChangeBytes []byte
+		var backIndexLastChangeNum uint64
+		if backIndexLastChange != nil && len(backIndexLastChange.Key) > 0 {
+			backIndexLastChangeBytes = backIndexLastChange.Key
+			backIndexLastChangeNum, err = casBytesParse(backIndexLastChangeBytes)
+			if err != nil {
+				return 0, err
+			}
 		}
-		errVisit := v.ps.visitChanges(backIndexLastChangeCasBytes, true,
+		errVisit := v.ps.visitChanges(backIndexLastChangeBytes, true,
 			func(i *item) bool {
-				err = v.viewsRefreshItem(ddocs, viewsStore, backIndexStore, i)
+				if len(i.key) == 0 { // An empty key == metadata change.
+					return true
+				}
+				if i.cas <= backIndexLastChangeNum {
+					return true
+				}
+				err = v.viewsRefreshItem(ddocs, viewsStore, backIndex, i)
 				if err != nil {
 					return false
 				}
@@ -82,8 +93,8 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 
 // Refreshes all views w.r.t. a single item/doc.
 func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
-	viewsStore *bucketstore, backIndexStore *partitionstore, i *item) error {
-	oldBackIndexItem, err := backIndexStore.get(i.key)
+	viewsStore *bucketstore, backIndex *partitionstore, i *item) error {
+	oldBackIndexItem, err := backIndex.get(i.key)
 	if err != nil {
 		return err
 	}
@@ -108,7 +119,7 @@ func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
 		data: j,
 	}
 	// TODO: Track size of backIndex as set() returns deltaItemBytes.
-	_, err = backIndexStore.set(newBackIndexItem, oldBackIndexItem)
+	_, err = backIndex.set(newBackIndexItem, oldBackIndexItem)
 	if err != nil {
 		return err
 	}
@@ -233,5 +244,17 @@ func vindexKey(docId []byte, emitKey interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bytes.Join([][]byte{docId, emitKeyBytes}, []byte("/")), nil
+	return bytes.Join([][]byte{emitKeyBytes, docId}, []byte("/")), nil
+}
+
+func vindexKeyParse(k []byte) (docId []byte, emitKey interface{}, err error) {
+	parts := bytes.Split(k, []byte("/"))
+	if len(parts) != 2 {
+		return nil, nil, fmt.Errorf("vindexKeyParse didn't get 2 parts, got: %v",
+			len(parts))
+	}
+	if err = json.Unmarshal(parts[0], &emitKey); err != nil {
+		return nil, nil, err
+	}
+	return parts[1], emitKey, nil
 }
