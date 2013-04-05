@@ -42,6 +42,11 @@ func (s *sequencePubSub) run() {
 	for {
 		select {
 		case <-s.quit:
+			for _, obses := range s.observers {
+				for _, obs := range obses {
+					close(obs.sub)
+				}
+			}
 			return
 		case reg := <-s.reg:
 			s.register(reg.seq, reg.obs)
@@ -54,11 +59,6 @@ func (s *sequencePubSub) run() {
 // Stop (shut down) a sequence pubsub runner.
 func (s *sequencePubSub) Stop() {
 	close(s.quit)
-	for _, obses := range s.observers {
-		for _, obs := range obses {
-			close(obs.sub)
-		}
-	}
 }
 
 func (s *sequencePubSub) register(seq sequenceId, obs sequenceObserver) {
