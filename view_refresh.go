@@ -244,14 +244,13 @@ func vindexKey(docId []byte, emitKey interface{}) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return bytes.Join([][]byte{emitKeyBytes, docId}, []byte("/")), nil
+	return bytes.Join([][]byte{emitKeyBytes, docId}, []byte{0}), nil
 }
 
 func vindexKeyParse(k []byte) (docId []byte, emitKey interface{}, err error) {
-	parts := bytes.Split(k, []byte("/"))
+	parts := bytes.Split(k, []byte{0})
 	if len(parts) != 2 {
-		return nil, nil, fmt.Errorf("vindexKeyParse didn't get 2 parts, got: %v",
-			len(parts))
+		return nil, nil, fmt.Errorf("vindexKeyParse failed split: %v", k)
 	}
 	if err = json.Unmarshal(parts[0], &emitKey); err != nil {
 		return nil, nil, err

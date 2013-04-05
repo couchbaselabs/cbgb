@@ -336,3 +336,41 @@ func TestNoDDocViewsRefresh(t *testing.T) {
 		t.Errorf("expected ok viewsRefresh when no ddocs, got err/nil: %v, %v", err, n)
 	}
 }
+
+func TestVIndexKeyParse(t *testing.T) {
+	tests := []struct {
+		docId   string
+		emitKey string
+		expErr  bool
+	}{
+		{"a", "b", false},
+		{"a", "", false},
+		{"", "", false},
+		{"", "b", false},
+		{"a/b/c", "d", false},
+		{"a", "b/c/d", false},
+	}
+	for i, test := range tests {
+		k, err := vindexKey([]byte(test.docId), test.emitKey)
+		if err != nil {
+			t.Errorf("expected vindexKey to work: %v, %v, %v, err: %v",
+				i, test.docId, test.emitKey, err)
+		}
+		docId, emitKey, err := vindexKeyParse(k)
+		if test.expErr {
+			if err == nil {
+				t.Errorf("expected vindexKeyParse error: %v, %v, %v",
+					i, test.docId, test.emitKey)
+			}
+		} else {
+			if err != nil {
+				t.Errorf("expected vindexKeyParse to work: %v, %v, %v, err: %v, %v, %v",
+					i, test.docId, test.emitKey, err, docId, emitKey)
+			}
+			if string(docId) != test.docId || emitKey.(string) != string(test.emitKey) {
+				t.Errorf("expected vindexKeyParse to match: %v, %v, %v, err: %v, %v, %v",
+					i, test.docId, test.emitKey, err, docId, emitKey)
+			}
+		}
+	}
+}
