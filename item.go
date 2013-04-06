@@ -90,23 +90,13 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 			len(b), itemHdrLen)
 	}
 	buf := bytes.NewBuffer(b)
-	if err = binary.Read(buf, binary.BigEndian, &i.exp); err != nil {
-		return err
-	}
-	if err = binary.Read(buf, binary.BigEndian, &i.flag); err != nil {
-		return err
-	}
-	if err = binary.Read(buf, binary.BigEndian, &i.cas); err != nil {
-		return err
-	}
+	must(binary.Read(buf, binary.BigEndian, &i.exp))
+	must(binary.Read(buf, binary.BigEndian, &i.flag))
+	must(binary.Read(buf, binary.BigEndian, &i.cas))
 	var keylen uint16
-	if err = binary.Read(buf, binary.BigEndian, &keylen); err != nil {
-		return err
-	}
+	must(binary.Read(buf, binary.BigEndian, &keylen))
 	var datalen uint32
-	if err = binary.Read(buf, binary.BigEndian, &datalen); err != nil {
-		return err
-	}
+	must(binary.Read(buf, binary.BigEndian, &datalen))
 	if len(b) < itemHdrLen+int(keylen)+int(datalen) {
 		return fmt.Errorf("item.fromValueBytes(): arr too short: %v, wanted: %v",
 			len(b), itemHdrLen+int(keylen)+int(datalen))
