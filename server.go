@@ -128,11 +128,7 @@ func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) error {
 	if !res.Fatal {
 		res.Opcode = req.Opcode
 		res.Opaque = req.Opaque
-		err = res.Transmit(w)
-		if err != nil {
-			return err
-		}
-		return nil
+		return res.Transmit(w)
 	}
 	return io.EOF
 }
