@@ -20,9 +20,7 @@ var adminPass = flag.String("adminPass", "", "Admin password (default is random)
 func init() {
 	d := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	_, err := rand.Read(d)
-	if err != nil {
-		panic(err)
-	}
+	must(err)
 	*adminPass = base64.StdEncoding.EncodeToString(d)
 }
 

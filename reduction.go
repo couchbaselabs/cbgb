@@ -28,9 +28,7 @@ func zeroate(i interface{}) float64 {
 }
 
 func ottoMust(v otto.Value, err error) otto.Value {
-	if err != nil {
-		panic(err)
-	}
+	must(err)
 	return v
 }
 
