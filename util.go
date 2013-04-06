@@ -71,6 +71,7 @@ func (w *oneResponder) Write(b []byte) (int, error) {
 
 func (w *oneResponder) WriteHeader(i int) {
 	if w.status == 0 {
+		w.status = i
 		w.w.WriteHeader(i)
 	} else {
 		log.Printf("Ignoring duplicate header write %v -> %v", w.status, i)
