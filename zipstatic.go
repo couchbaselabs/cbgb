@@ -44,7 +44,6 @@ func parseHTTPTime(text string) (t time.Time, err error) {
 	return
 }
 
-// XXX:  This code has no tests.  :(
 func zipStatic(path string) (*zipHandler, error) {
 	log.Printf("Loading static content from %v", path)
 	res, err := http.Get(path)
