@@ -278,8 +278,7 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		r := base64.NewDecoder(base64.StdEncoding, strings.NewReader(doc.Base64))
-		val, err := ioutil.ReadAll(r)
+		val, err := base64.StdEncoding.DecodeString(doc.Base64)
 		if err != nil {
 			http.Error(w, fmt.Sprintf("Error decoding base64 data _bulk_docs body as JSON for key: %v - %v", key, err), 500)
 			return
