@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 
 	"github.com/gorilla/mux"
@@ -26,8 +27,8 @@ func parseBucketName(w http.ResponseWriter, r *http.Request) (string, Bucket) {
 	return bucketName, bucket
 }
 
-func getIntValue(r *http.Request, name string, def int64) int64 {
-	valstr := r.FormValue(name)
+func getIntValue(f url.Values, name string, def int64) int64 {
+	valstr := f.Get(name)
 	if valstr == "" {
 		return def
 	}

@@ -118,9 +118,9 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 	if bucketPassword != "" {
 		bSettings.PasswordHash = bucketPassword
 	}
-	bSettings.QuotaBytes = getIntValue(r, "quotaBytes",
+	bSettings.QuotaBytes = getIntValue(r.Form, "quotaBytes",
 		bucketSettings.QuotaBytes)
-	bSettings.MemoryOnly = int(getIntValue(r, "memoryOnly",
+	bSettings.MemoryOnly = int(getIntValue(r.Form, "memoryOnly",
 		int64(bucketSettings.MemoryOnly)))
 
 	_, err = createBucket(bucketName, bSettings)
