@@ -89,6 +89,36 @@ func TestItemSerialization(t *testing.T) {
 	}
 }
 
+func TestItemLongKeySerialization(t *testing.T) {
+	longkey := make([]byte, MAX_ITEM_KEY_LENGTH+10)
+	i := &item{
+		key:  longkey,
+		exp:  0x81234321,
+		flag: 0xffffffff,
+		cas:  0xfedcba9876432100,
+		data: []byte("b"),
+	}
+	ib := i.toValueBytes()
+	if ib != nil {
+		t.Errorf("expected item.toValueBytes() to fail on long key")
+	}
+}
+
+func TestItemLongValueSerialization(t *testing.T) {
+	longval := make([]byte, MAX_ITEM_DATA_LENGTH+10)
+	i := &item{
+		key:  []byte{'a'},
+		exp:  0x81234321,
+		flag: 0xffffffff,
+		cas:  0xfedcba9876432100,
+		data: longval,
+	}
+	ib := i.toValueBytes()
+	if ib != nil {
+		t.Errorf("expected item.toValueBytes() to fail on long value")
+	}
+}
+
 func TestItemNilSerialization(t *testing.T) {
 	i := &item{
 		key:  nil,
