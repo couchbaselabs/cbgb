@@ -49,6 +49,12 @@ func TestItemSerialization(t *testing.T) {
 		cas:  0xfedcba9876432100,
 		data: []byte("b"),
 	}
+
+	s := i.String()
+	if s != "{item key=a}" {
+		t.Errorf("String() failed, got %v", s)
+	}
+
 	ib := i.toValueBytes()
 	if ib == nil {
 		t.Errorf("expected item.toValueBytes() to work")
