@@ -264,7 +264,8 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 	d := json.NewDecoder(r.Body)
 	err := d.Decode(&bulkDocsRequest)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Unable to parse _bulk_docs body as JSON: %v", err), 500)
+		http.Error(w, fmt.Sprintf("Unable to parse _bulk_docs body as JSON: %v",
+			err), 500)
 		return
 	}
 
@@ -274,13 +275,16 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 		vbucketId := VBucketIdForKey(key, bucket.GetBucketSettings().NumPartitions)
 		vbucket, _ := bucket.GetVBucket(vbucketId)
 		if vbucket == nil {
-			http.Error(w, fmt.Sprintf("Invalid vbucket for this key: %v - %v", key, err), 500)
+			http.Error(w, fmt.Sprintf("Invalid vbucket for this key: %v - %v",
+				key, err), 500)
 			return
 		}
 
 		val, err := base64.StdEncoding.DecodeString(doc.Base64)
 		if err != nil {
-			http.Error(w, fmt.Sprintf("Error decoding base64 data _bulk_docs body as JSON for key: %v - %v", key, err), 500)
+			http.Error(w, fmt.Sprintf("Error decoding base64 data "+
+				"_bulk_docs body as JSON for key: %v - %v",
+				key, err), 500)
 			return
 		}
 
@@ -294,13 +298,18 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 		// TODO proper error handling
 		// for now we just bail if anything ever goes wrong
 		if response.Status != gomemcached.SUCCESS {
-			log.Printf("Got error writing data: %v - %v", string(key), string(response.Body))
+			log.Printf("Got error writing data: %v - %v",
+				string(key), string(response.Body))
 			http.Error(w, "Internal Error", 500)
 			return
 		} else {
-			// TODO return actual revision created
-			// here we just lie and pretend to have created the requested revsion (we did not)
-			bulkDocsResponse = append(bulkDocsResponse, map[string]interface{}{"id": doc.Meta.Id, "rev": doc.Meta.Rev})
+			// TODO return actual revision created here we
+			// just lie and pretend to have created the
+			// requested revsion (we did not)
+			bulkDocsResponse = append(bulkDocsResponse,
+				map[string]interface{}{
+					"id":  doc.Meta.Id,
+					"rev": doc.Meta.Rev})
 		}
 	}
 	w.WriteHeader(201)
