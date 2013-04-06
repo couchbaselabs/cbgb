@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/url"
 	"testing"
 
@@ -42,5 +43,21 @@ func TestGetHTTPInt(t *testing.T) {
 			t.Errorf("Expected %v for %v (%q) got %v",
 				v, k, k[v], got)
 		}
+	}
+}
+
+func TestMust(t *testing.T) {
+	must(nil) // no problem
+
+	exp := errors.New("the spanish inquisition")
+
+	var err interface{}
+	func() {
+		defer func() { err = recover() }()
+		must(exp)
+	}()
+
+	if err != exp {
+		t.Errorf("Expected %v, got %v", exp, err)
 	}
 }
