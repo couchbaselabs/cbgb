@@ -16,11 +16,6 @@ Database-as-a-service requires cost effectiveness of scaling the
 number of accounts per host, allowing hosting operators to squeeze as
 many tenants as they can onto a single host.
 
-Can we reach 1M buckets per server?
-
-(2013/02/14 performance - 101 buckets of 1024 vbuckets each requires
-20% cpu utilization.)
-
 # Done features
 
 ## Append-only, recovery-oriented file format
@@ -42,6 +37,22 @@ multi-tenancy.
 ## Time interval compaction and flushing
 
 Flushing and compaction every N seconds.
+
+## Compaction is guaranteed to complete.
+
+Compaction proceeds in two phases.  First a snapshot is taken of the
+current item collections and that item data is copied into a new file.
+Meanwhile, there might have been additional concurrent mutations
+during that snapshot copying.  When the snapshot copying is done, new
+incoming mutations are paused and the "delta" of recent mutations is
+copied over and the compacted file is swapped into usage.  Finally,
+incoming mutations are unpaused.  This design favors compaction that
+will definitely complete, even in the face of heavy mutations, by
+having a small window of pausing mutations.
+
+## Compaction does not block readers.
+
+During compaction, readers are not blocked.
 
 ## Item metadata is evictable from memory
 
@@ -175,6 +186,10 @@ library dependencies.
 ## Integrated javascript evaluation
 
 Map/reduce functions, etc. likely by using Otto.
+
+Map function emit()'s are memoized.
+
+Reduce computations currently are not memoized.
 
 ## Expirations
 
