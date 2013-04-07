@@ -1335,3 +1335,24 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 		}
 	}
 }
+
+func TestBindAddress(t *testing.T) {
+	defer func(a string) { *addr = a }(*addr)
+
+	tests := []struct {
+		ba, host, exp string
+	}{
+		{":8091", "127.0.0.1:8091", "127.0.0.1:8091"},
+		{":8091", ":8091", ":8091"},
+		{"127.0.0.1:8091", ":8091", "127.0.0.1:8091"},
+	}
+
+	for _, test := range tests {
+		*addr = test.ba
+		got := getBindAddress(test.host)
+		if got != test.exp {
+			t.Errorf("Expected %v %v -> %v, got %v",
+				test.ba, test.host, test.exp, got)
+		}
+	}
+}
