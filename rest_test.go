@@ -1359,6 +1359,14 @@ func TestBindAddress(t *testing.T) {
 }
 
 func TestRestGetRuntime(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/_api/runtime")
+	m := j.(map[string]interface{})
+	if m["arch"] != runtime.GOARCH {
+		t.Errorf("expected rest runtime to have the same GOARCH, got: %#v", m)
+	}
+}
+
+func testRestGetJson(t *testing.T, url string) interface{} {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
@@ -1373,8 +1381,5 @@ func TestRestGetRuntime(t *testing.T) {
 	if err != nil {
 		t.Errorf("expected rest runtime to give json, got: %#v", rr.Body.String())
 	}
-	m := j.(map[string]interface{})
-	if m["arch"] != runtime.GOARCH {
-		t.Errorf("expected rest runtime to have the same GOARCH, got: %#v", m)
-	}
+	return j
 }
