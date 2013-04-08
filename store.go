@@ -201,10 +201,6 @@ func (s *bucketstore) coll(collName string) *gkvlite.Collection {
 	return c
 }
 
-func (s *bucketstore) collNames() []string {
-	return s.BSF().store.GetCollectionNames()
-}
-
 func (s *bucketstore) apply(f func()) {
 	s.diskLock.Lock()
 	defer s.diskLock.Unlock()
