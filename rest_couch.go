@@ -714,8 +714,7 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 		return fmt.Errorf("no vbucket during visitVIndex(), ddocId: %v, viewId: %v",
 			ddocId, viewId)
 	}
-	if p.Stale != "ok" {
-		// TODO: Consistent views by default isn't couchbase compatible yet.
+	if p.Stale == "false" {
 		_, err := vb.viewsRefresh()
 		if err != nil {
 			return err
@@ -773,6 +772,9 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 		}
 		return true
 	})
+	if p.Stale == "update_after" {
+		vb.markStale()
+	}
 	if errVisit != nil {
 		return errVisit
 	}

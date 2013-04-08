@@ -392,7 +392,7 @@ func TestViewQuerySmoke(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=1&endkey=3", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=1&endkey=3&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -420,7 +420,7 @@ func TestViewQuerySmoke(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -472,7 +472,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/not-a-design-doc/_view/v0", nil)
+		"http://127.0.0.1/default/_design/not-a-design-doc/_view/v0?stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 404 {
 		t.Errorf("expected req to 404, got: %#v, %v",
@@ -481,7 +481,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/not-a-view", nil)
+		"http://127.0.0.1/default/_design/d0/_view/not-a-view?stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 404 {
 		t.Errorf("expected req to 404, got: %#v, %v",
@@ -490,7 +490,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -521,7 +521,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -549,7 +549,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2&endkey=3", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2&endkey=3&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -577,7 +577,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=1&endkey=3&key=2", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=1&endkey=3&key=2&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -605,7 +605,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=3&endkey=1", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=3&endkey=1&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -624,7 +624,7 @@ func TestCouchViewBasic(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0"+
-			"?startkey=1&endkey=3&inclusive_end=false", nil)
+			"?startkey=1&endkey=3&inclusive_end=false&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -652,7 +652,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2&endkey=4&limit=1", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?startkey=2&endkey=4&limit=1&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -680,7 +680,7 @@ func TestCouchViewBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?descending=true", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?descending=true&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -709,7 +709,7 @@ func TestCouchViewBasic(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"startkey=3&descending=true", nil)
+			"startkey=3&descending=true&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -738,7 +738,7 @@ func TestCouchViewBasic(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"include_docs=true", nil)
+			"include_docs=true&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -795,7 +795,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -818,7 +818,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0?reduce=false", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?reduce=false&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -847,7 +847,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"reduce=true&startkey=2&endkey=3", nil)
+			"reduce=true&startkey=2&endkey=3&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -871,7 +871,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"reduce=true&startkey=2&endkey=3&skip=100", nil)
+			"reduce=true&startkey=2&endkey=3&skip=100&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -890,7 +890,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"reduce=true&descending=true", nil)
+			"reduce=true&descending=true&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -938,7 +938,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET",
-		"http://127.0.0.1/default/_design/d0/_view/v0", nil)
+		"http://127.0.0.1/default/_design/d0/_view/v0?stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -962,7 +962,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"reduce=false&limit=1000", nil)
+			"reduce=false&limit=1000&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -993,7 +993,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"group_level=1", nil)
+			"group_level=1&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -1025,7 +1025,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"group_level=2", nil)
+			"group_level=2&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -1057,7 +1057,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"group_level=2&skip=1&limit=2", nil)
+			"group_level=2&skip=1&limit=2&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
@@ -1089,7 +1089,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 	rr = httptest.NewRecorder()
 	r, _ = http.NewRequest("GET",
 		"http://127.0.0.1/default/_design/d0/_view/v0?"+
-			"group=true", nil)
+			"group=true&stale=false", nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected req to 200, got: %#v, %v",
