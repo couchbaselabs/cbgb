@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -1354,5 +1355,26 @@ func TestBindAddress(t *testing.T) {
 			t.Errorf("Expected %v %v -> %v, got %v",
 				test.ba, test.host, test.exp, got)
 		}
+	}
+}
+
+func TestRestGetRuntime(t *testing.T) {
+	d, _ := testSetupBuckets(t, 1)
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET", "http://127.0.0.1/_api/runtime", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected rest runtime to work, got: %#v", rr)
+	}
+	var j interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &j)
+	if err != nil {
+		t.Errorf("expected rest runtime to give json, got: %#v", rr.Body.String())
+	}
+	m := j.(map[string]interface{})
+	if m["arch"] != runtime.GOARCH {
+		t.Errorf("expected rest runtime to have the same GOARCH, got: %#v", m)
 	}
 }
