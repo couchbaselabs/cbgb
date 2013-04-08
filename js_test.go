@@ -56,3 +56,15 @@ func TestOttoFromGoArray(t *testing.T) {
 		t.Errorf("expected err for nil array to OttoFromGoArray")
 	}
 }
+
+func TestBadOttoNewFunction(t *testing.T) {
+	o := otto.New()
+	_, err := OttoNewFunction(o, ".")
+	if err == nil {
+		t.Errorf("expected err for bad input to OttoNewFunction")
+	}
+	_, err = OttoNewFunction(o, "123")
+	if err == nil {
+		t.Errorf("expected err for non-func to OttoNewFunction")
+	}
+}
