@@ -3,6 +3,8 @@ package main
 import (
 	"reflect"
 	"testing"
+
+	"github.com/robertkrimen/otto"
 )
 
 func TestArrayPrefix(t *testing.T) {
@@ -44,5 +46,13 @@ func TestArrayPrefix(t *testing.T) {
 			t.Errorf("Expected %#v for ArrayPrefix(%#v, %v), got %#v",
 				exp, test.in, plen, got)
 		}
+	}
+}
+
+func TestOttoFromGoArray(t *testing.T) {
+	o := otto.New()
+	_, err := OttoFromGoArray(o, nil)
+	if err == nil {
+		t.Errorf("expected err for nil array to OttoFromGoArray")
 	}
 }
