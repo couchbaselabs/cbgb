@@ -1374,6 +1374,14 @@ func TestRestGetRuntime(t *testing.T) {
 	}
 }
 
+func TestRestGetSettings(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/_api/settings")
+	m := j.(map[string]interface{})
+	if m["addr"] != *addr {
+		t.Errorf("expected rest runtime to have the same addr, got: %#v", m)
+	}
+}
+
 func testRestGetJson(t *testing.T, url string) interface{} {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
