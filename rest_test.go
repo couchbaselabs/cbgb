@@ -1382,12 +1382,30 @@ func testRestGetJson(t *testing.T, url string) interface{} {
 	r, _ := http.NewRequest("GET", url, nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
-		t.Errorf("expected rest runtime to work, got: %#v", rr)
+		t.Errorf("expected rest GET %v to work, got: %#v", url, rr)
 	}
 	var j interface{}
 	err := json.Unmarshal(rr.Body.Bytes(), &j)
 	if err != nil {
-		t.Errorf("expected rest runtime to give json, got: %#v", rr.Body.String())
+		t.Errorf("expected rest GET %v to give json, got: %#v",
+			url, rr.Body.String())
 	}
 	return j
+}
+
+func TestRestPostRuntimeGC(t *testing.T) {
+	rr := testRestPost(t, "http://127.0.0.1/_api/runtime/gc")
+	if len(rr.Body.Bytes()) != 0 {
+		t.Errorf("expected no body, got: %#v", rr)
+	}
+}
+
+func testRestPost(t *testing.T, url string) *httptest.ResponseRecorder  {
+	d, _ := testSetupBuckets(t, 1)
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("POST", url, nil)
+	mr.ServeHTTP(rr, r)
+	return rr
 }
