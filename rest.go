@@ -15,6 +15,9 @@ import (
 	"github.com/gorilla/mux"
 )
 
+var bucketStatsSnapshotStart time.Duration = time.Second * 30
+var bucketStatsSnapshotDelay time.Duration = time.Millisecond * 2100
+
 func restAPI(r *mux.Router) {
 	sr := r.PathPrefix("/_api/").Subrouter()
 	sr.HandleFunc("/buckets",
@@ -199,11 +202,11 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	st := bucket.SnapshotStats()
-	if time.Since(st.LatestUpdateTime()) > time.Second*30 {
+	if time.Since(st.LatestUpdateTime()) > bucketStatsSnapshotStart {
 		bucket.StartStats(time.Second)
 		// Go ahead and let this delay slightly to catch up
 		// the stats.
-		time.Sleep(time.Millisecond * 2100)
+		time.Sleep(bucketStatsSnapshotDelay)
 		st = bucket.SnapshotStats()
 	}
 	jsonEncode(w, st.ToMap())

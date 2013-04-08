@@ -1398,9 +1398,22 @@ func TestRestGetSettings(t *testing.T) {
 	}
 }
 
+func TestRestGetBucketStats(t *testing.T) {
+	o := bucketStatsSnapshotDelay
+	bucketStatsSnapshotDelay = 0
+	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo/stats")
+	m := j.(map[string]interface{})
+	if len(m) == 0 {
+		t.Errorf("expected rest buckets/foo/stats to be data-full, got: %#v", m)
+	}
+	bucketStatsSnapshotDelay = o
+}
+
 func testRestGetJson(t *testing.T, url string) interface{} {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
+	b, _ := buckets.New("foo", bucketSettings)
+	defer b.Close()
 	mr := testSetupMux(d)
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", url, nil)
@@ -1424,7 +1437,7 @@ func TestRestPostRuntimeGC(t *testing.T) {
 	}
 }
 
-func testRestPost(t *testing.T, url string) *httptest.ResponseRecorder  {
+func testRestPost(t *testing.T, url string) *httptest.ResponseRecorder {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
