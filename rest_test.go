@@ -1382,6 +1382,14 @@ func TestRestGetRuntime(t *testing.T) {
 	}
 }
 
+func TestRestGetRuntimeMemStats(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/_api/runtime/memStats")
+	m := j.(map[string]interface{})
+	if len(m) == 0 {
+		t.Errorf("expected rest runtime/memStats to be data-full, got: %#v", m)
+	}
+}
+
 func TestRestGetSettings(t *testing.T) {
 	j := testRestGetJson(t, "http://127.0.0.1/_api/settings")
 	m := j.(map[string]interface{})
