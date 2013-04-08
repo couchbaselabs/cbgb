@@ -356,36 +356,44 @@ func (bss *BucketStoreStats) Equal(in *BucketStoreStats) bool {
 
 // Find the highest version-numbered store files in a bucket directory.
 func latestStoreFileNames(dirForBucket string, storesPerBucket int,
-	storeFileSuffix string) ([]string, error) {
-	fileInfos, err := ioutil.ReadDir(dirForBucket)
-	if err != nil {
-		return nil, err
-	}
-	res := make([]string, storesPerBucket)
+	suffix string) (res []string, err error) {
+	res = make([]string, storesPerBucket)
 	for i := 0; i < storesPerBucket; i++ {
 		prefix := strconv.FormatInt(int64(i), 10)
-		latestVer := 0
-		latestName := makeStoreFileName(prefix, latestVer, storeFileSuffix)
-		for _, fileInfo := range fileInfos {
-			if fileInfo.IsDir() {
-				continue
-			}
-			prefixCur, ver, err :=
-				parseStoreFileName(fileInfo.Name(), storeFileSuffix)
-			if err != nil {
-				continue
-			}
-			if prefixCur != prefix {
-				continue
-			}
-			if latestVer < ver {
-				latestVer = ver
-				latestName = fileInfo.Name()
-			}
+		res[i], err = latestStoreFileName(dirForBucket, prefix, suffix)
+		if err != nil {
+			return nil, err
 		}
-		res[i] = latestName
 	}
 	return res, err
+}
+
+func latestStoreFileName(dirForBucket string, prefix string, suffix string) (
+	string, error) {
+	fileInfos, err := ioutil.ReadDir(dirForBucket)
+	if err != nil {
+		return "", err
+	}
+	latestVer := 0
+	latestName := makeStoreFileName(prefix, latestVer, suffix)
+	for _, fileInfo := range fileInfos {
+		if fileInfo.IsDir() {
+			continue
+		}
+		prefixCur, ver, err :=
+			parseStoreFileName(fileInfo.Name(), suffix)
+		if err != nil {
+			continue
+		}
+		if prefixCur != prefix {
+			continue
+		}
+		if latestVer < ver {
+			latestVer = ver
+			latestName = fileInfo.Name()
+		}
+	}
+	return latestName, nil
 }
 
 // The store files follow a "PREFIX-VER.SUFFIX" naming pattern,
