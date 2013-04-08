@@ -14,7 +14,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"strconv"
 
 	"github.com/robertkrimen/otto"
 )

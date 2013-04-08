@@ -1398,6 +1398,14 @@ func TestRestGetSettings(t *testing.T) {
 	}
 }
 
+func TestRestGetBucket(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo")
+	m := j.(map[string]interface{})
+	if m["name"] != "foo" {
+		t.Errorf("expected rest buckets/foo to have the foo name, got: %#v", m)
+	}
+}
+
 func TestRestGetBucketStats(t *testing.T) {
 	o := bucketStatsSnapshotDelay
 	bucketStatsSnapshotDelay = 0
