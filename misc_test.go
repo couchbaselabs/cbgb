@@ -185,3 +185,9 @@ func TestBytesDecoder(t *testing.T) {
 		}
 	}
 }
+
+func TestDirIsDir(t *testing.T) {
+	if !isDir(".") {
+		t.Errorf("expected . to be a dir")
+	}
+}
