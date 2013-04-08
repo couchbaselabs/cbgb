@@ -521,30 +521,30 @@ func TestLatestStoreFiles(t *testing.T) {
 }
 
 func TestStoreFiles(t *testing.T) {
-	f := makeStoreFileName(0, 0, STORE_FILE_SUFFIX)
+	f := makeStoreFileName("0", 0, STORE_FILE_SUFFIX)
 	if f != "0-0.store" {
 		t.Errorf("expected 0-0.store, got %v", f)
 	}
 
-	idx, ver, err := parseStoreFileName("0-0.store", STORE_FILE_SUFFIX)
+	prefix, ver, err := parseStoreFileName("0-0.store", STORE_FILE_SUFFIX)
 	if err != nil {
 		t.Errorf("expected no err, got %v", err)
 	}
-	if idx != 0 || ver != 0 {
-		t.Errorf("expected 0-0, got %v-%v", idx, ver)
+	if prefix != "0" || ver != 0 {
+		t.Errorf("expected 0-0, got %v-%v", prefix, ver)
 	}
 
-	idx, ver, err = parseStoreFileName("0-0.store.bak", STORE_FILE_SUFFIX)
+	prefix, ver, err = parseStoreFileName("0-0.store.bak", STORE_FILE_SUFFIX)
 	if err == nil {
 		t.Errorf("expected err")
 	}
 
-	idx, ver, err = parseStoreFileName("-.store", STORE_FILE_SUFFIX)
+	prefix, ver, err = parseStoreFileName("-.store", STORE_FILE_SUFFIX)
 	if err == nil {
 		t.Errorf("expected err")
 	}
 
-	idx, ver, err = parseStoreFileName("0-0-.store", STORE_FILE_SUFFIX)
+	prefix, ver, err = parseStoreFileName("0-0-.store", STORE_FILE_SUFFIX)
 	if err == nil {
 		t.Errorf("expected err")
 	}

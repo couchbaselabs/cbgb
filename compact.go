@@ -100,12 +100,13 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 }
 
 func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) error {
-	idx, ver, err := parseStoreFileName(filepath.Base(bsf.path), STORE_FILE_SUFFIX)
+	prefix, ver, err :=
+		parseStoreFileName(filepath.Base(bsf.path), STORE_FILE_SUFFIX)
 	if err != nil {
 		return err
 	}
 
-	nextName := makeStoreFileName(idx, ver+1, STORE_FILE_SUFFIX)
+	nextName := makeStoreFileName(prefix, ver+1, STORE_FILE_SUFFIX)
 	nextPath := path.Join(filepath.Dir(bsf.path), nextName)
 
 	if err = os.Rename(compactPath, nextPath); err != nil {

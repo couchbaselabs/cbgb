@@ -95,7 +95,8 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 	} else {
 		fileNames = make([]string, STORES_PER_BUCKET)
 		for i := 0; i < STORES_PER_BUCKET; i++ {
-			fileNames[i] = makeStoreFileName(i, 0, STORE_FILE_SUFFIX)
+			fileNames[i] = makeStoreFileName(strconv.FormatInt(int64(i), 10),
+				0, STORE_FILE_SUFFIX)
 		}
 	}
 

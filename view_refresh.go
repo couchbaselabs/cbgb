@@ -181,6 +181,8 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 	v.Apply(func() {
 		if v.viewsStore == nil {
+			dirForBucket := v.parent.GetBucketDir()
+
 			// TODO: Handle views file versioning / compaction.
 			// TODO: Handle views file memory-only mode.
 			// TODO: Handle views file load.
@@ -188,7 +190,7 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 			settings := v.parent.GetBucketSettings()
 			fileName := fmt.Sprintf("%s_%d-%d.%s",
 				settings.UUID, v.vbid, ver, VIEWS_FILE_SUFFIX)
-			p := path.Join(v.parent.GetBucketDir(), fileName)
+			p := path.Join(dirForBucket, fileName)
 			v.viewsStore, err = newBucketStore(p, *settings)
 		}
 		res = v.viewsStore

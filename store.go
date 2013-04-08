@@ -363,17 +363,19 @@ func latestStoreFileNames(dirForBucket string, storesPerBucket int,
 	}
 	res := make([]string, storesPerBucket)
 	for i := 0; i < storesPerBucket; i++ {
+		prefix := strconv.FormatInt(int64(i), 10)
 		latestVer := 0
-		latestName := makeStoreFileName(i, latestVer, storeFileSuffix)
+		latestName := makeStoreFileName(prefix, latestVer, storeFileSuffix)
 		for _, fileInfo := range fileInfos {
 			if fileInfo.IsDir() {
 				continue
 			}
-			idx, ver, err := parseStoreFileName(fileInfo.Name(), storeFileSuffix)
+			prefixCur, ver, err :=
+				parseStoreFileName(fileInfo.Name(), storeFileSuffix)
 			if err != nil {
 				continue
 			}
-			if idx != i {
+			if prefixCur != prefix {
 				continue
 			}
 			if latestVer < ver {
@@ -386,30 +388,26 @@ func latestStoreFileNames(dirForBucket string, storesPerBucket int,
 	return res, err
 }
 
-// The store files follow a "IDX-VER.SUFFIX" naming pattern,
+// The store files follow a "PREFIX-VER.SUFFIX" naming pattern,
 // such as "0-0.store".
-func makeStoreFileName(idx int, ver int, storeFileSuffix string) string {
-	return fmt.Sprintf("%v-%v.%v", idx, ver, storeFileSuffix)
+func makeStoreFileName(prefix string, ver int, suffix string) string {
+	return fmt.Sprintf("%v-%v.%v", prefix, ver, suffix)
 }
 
-func parseStoreFileName(fileName string, storeFileSuffix string) (idx int, ver int,
-	err error) {
-	if !strings.HasSuffix(fileName, "."+storeFileSuffix) {
-		return -1, -1, fmt.Errorf("missing suffix: %v in filename: %v",
-			storeFileSuffix, fileName)
+func parseStoreFileName(fileName string, suffix string) (
+	prefix string, ver int, err error) {
+	if !strings.HasSuffix(fileName, "."+suffix) {
+		return "", -1, fmt.Errorf("missing suffix: %v in filename: %v",
+			suffix, fileName)
 	}
-	base := fileName[0 : len(fileName)-(1+len(storeFileSuffix))]
+	base := fileName[0 : len(fileName)-(1+len(suffix))]
 	parts := strings.Split(base, "-")
 	if len(parts) != 2 || len(parts[0]) == 0 || len(parts[1]) == 0 {
-		return -1, -1, fmt.Errorf("not a store filename: %v", fileName)
-	}
-	idx, err = strconv.Atoi(parts[0])
-	if err != nil {
-		return -1, -1, err
+		return "", -1, fmt.Errorf("not a store filename: %v", fileName)
 	}
 	ver, err = strconv.Atoi(parts[1])
 	if err != nil {
-		return -1, -1, err
+		return "", -1, err
 	}
-	return idx, ver, nil
+	return parts[0], ver, nil
 }
