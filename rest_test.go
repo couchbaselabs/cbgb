@@ -1358,6 +1358,14 @@ func TestBindAddress(t *testing.T) {
 	}
 }
 
+func TestRestNSSettingsStats(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/settings/stats")
+	m := j.(map[string]interface{})
+	if v, ok := m["sendStats"]; !ok || v != false {
+		t.Errorf("expected rest runtime to have sendStats, got: %#v", m)
+	}
+}
+
 func TestRestGetRuntime(t *testing.T) {
 	j := testRestGetJson(t, "http://127.0.0.1/_api/runtime")
 	m := j.(map[string]interface{})
@@ -1371,7 +1379,7 @@ func testRestGetJson(t *testing.T, url string) interface{} {
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
 	rr := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", "http://127.0.0.1/_api/runtime", nil)
+	r, _ := http.NewRequest("GET", url, nil)
 	mr.ServeHTTP(rr, r)
 	if rr.Code != 200 {
 		t.Errorf("expected rest runtime to work, got: %#v", rr)
