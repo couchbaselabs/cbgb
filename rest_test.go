@@ -1366,6 +1366,14 @@ func TestRestNSSettingsStats(t *testing.T) {
 	}
 }
 
+func TestRestNSPoolsDefaultTasks(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/pools/default/tasks")
+	m := j.(map[string]interface{})
+	if len(m) != 0 {
+		t.Errorf("expected empty pools/default/tasks, got: %#v", m)
+	}
+}
+
 func TestRestGetRuntime(t *testing.T) {
 	j := testRestGetJson(t, "http://127.0.0.1/_api/runtime")
 	m := j.(map[string]interface{})
