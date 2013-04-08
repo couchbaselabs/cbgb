@@ -3,7 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"os"
-
+	"strings"
 	"testing"
 	"time"
 )
@@ -123,5 +123,25 @@ func TestExpirationComputin(t *testing.T) {
 		if got != out {
 			t.Errorf("Expected %v for %v, got %v", out, in, got)
 		}
+	}
+}
+
+func TestVBucketString(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	vb0, _ := b0.CreateVBucket(123)
+	s := vb0.String()
+	if strings.Index(s, "123") < 0 {
+		t.Errorf("expected String() to emit vbid, got: %v", s)
 	}
 }
