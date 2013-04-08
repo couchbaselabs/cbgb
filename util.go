@@ -9,12 +9,11 @@ import (
 	"net/url"
 	"strconv"
 
-	"github.com/gorilla/mux"
 	"github.com/steveyen/gkvlite"
 )
 
-func parseBucketName(w http.ResponseWriter, r *http.Request) (string, Bucket) {
-	bucketName, ok := mux.Vars(r)["bucketname"]
+func parseBucketName(w http.ResponseWriter, vars map[string]string) (string, Bucket) {
+	bucketName, ok := vars["bucketname"]
 	if !ok {
 		http.Error(w, "missing bucketName parameter", 400)
 		return "", nil

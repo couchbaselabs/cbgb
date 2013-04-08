@@ -133,7 +133,7 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetBucket(w http.ResponseWriter, r *http.Request) {
-	bucketName, bucket := parseBucketName(w, r)
+	bucketName, bucket := parseBucketName(w, mux.Vars(r))
 	if bucket == nil {
 		return
 	}
@@ -164,7 +164,7 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
-	bucketName, bucket := parseBucketName(w, r)
+	bucketName, bucket := parseBucketName(w, mux.Vars(r))
 	if bucket == nil {
 		return
 	}
@@ -172,7 +172,7 @@ func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
 }
 
 func restPostBucketCompact(w http.ResponseWriter, r *http.Request) {
-	bucketName, bucket := parseBucketName(w, r)
+	bucketName, bucket := parseBucketName(w, mux.Vars(r))
 	if bucket == nil {
 		return
 	}
@@ -183,7 +183,7 @@ func restPostBucketCompact(w http.ResponseWriter, r *http.Request) {
 }
 
 func restPostBucketFlushDirty(w http.ResponseWriter, r *http.Request) {
-	bucketName, bucket := parseBucketName(w, r)
+	bucketName, bucket := parseBucketName(w, mux.Vars(r))
 	if bucket == nil {
 		return
 	}
@@ -194,7 +194,7 @@ func restPostBucketFlushDirty(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
-	_, bucket := parseBucketName(w, r)
+	_, bucket := parseBucketName(w, mux.Vars(r))
 	if bucket == nil {
 		return
 	}
