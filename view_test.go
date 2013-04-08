@@ -374,3 +374,18 @@ func TestVIndexKeyParse(t *testing.T) {
 		}
 	}
 }
+
+func TestVIndexKeyParseBad(t *testing.T) {
+	b := make([]byte, 5)
+	_, _, err := vindexKeyParse(b)
+	if err == nil {
+		t.Errorf("expected err on too many NUL's to vindexKeyParse()")
+	}
+
+	corrupt, _ := vindexKey([]byte("hello"), "emit")
+	corrupt[0] = 1
+	_, _, err = vindexKeyParse(corrupt)
+	if err == nil {
+		t.Errorf("expected err corrupt input to vindexKeyParse()")
+	}
+}
