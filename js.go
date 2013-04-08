@@ -19,32 +19,6 @@ import (
 	"github.com/robertkrimen/otto"
 )
 
-// Originally from github.com/couchbaselabs/walrus, but capitalized.
-// TODO: Push this back to walrus.
-func OttoToGoArray(array *otto.Object) ([]interface{}, error) {
-	lengthVal, err := array.Get("length")
-	if err != nil {
-		return nil, err
-	}
-	length, err := lengthVal.ToInteger()
-	if err != nil {
-		return nil, err
-	}
-
-	result := make([]interface{}, length)
-	for i := 0; i < int(length); i++ {
-		item, err := array.Get(strconv.Itoa(i))
-		if err != nil {
-			return nil, err
-		}
-		result[i], err = item.Export()
-		if err != nil {
-			return nil, err
-		}
-	}
-	return result, nil
-}
-
 func OttoFromGoArray(o *otto.Otto, arr []interface{}) (otto.Value, error) {
 	ovarr, err := OttoFromGo(o, arr)
 	if err != nil {
