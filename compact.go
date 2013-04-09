@@ -84,7 +84,7 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 
 	return s.copyBucketStoreDeltas(bsf, compactStore,
 		vbids, 0, lastChanges, writeEvery, func() (err error) {
-			// Copy any remaining (simple) collections (lifke COLL_VBMETA).
+			// Copy any remaining (simple) collections (like COLL_VBMETA).
 			err = s.copyRemainingColls(bsf, collRest, compactStore, writeEvery)
 			if err != nil {
 				return err
