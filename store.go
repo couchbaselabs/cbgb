@@ -194,9 +194,14 @@ func (s *bucketstore) collMeta(collName string) *gkvlite.Collection {
 }
 
 func (s *bucketstore) coll(collName string) *gkvlite.Collection {
+	return s.collWithKeyCompare(collName, nil)
+}
+
+func (s *bucketstore) collWithKeyCompare(collName string,
+	compare gkvlite.KeyCompare) *gkvlite.Collection {
 	c := s.BSFData().store.GetCollection(collName)
 	if c == nil {
-		c = s.BSFData().store.SetCollection(collName, nil)
+		c = s.BSFData().store.SetCollection(collName, compare)
 	}
 	return c
 }
