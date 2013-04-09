@@ -166,6 +166,8 @@ func MergeViewRows(inSorted []chan *ViewRow, out chan *ViewRow) {
 
 	pickLeast := func() (int, *ViewRow) {
 		// TODO: Inefficient to iterate over array every time.
+		// [probably more inefficient to have this be a
+		// closure, but should measure to be certain]
 		ileast := -1
 		vleast := end
 		for i, v := range arr {
