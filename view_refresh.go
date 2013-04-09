@@ -187,7 +187,6 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 			settings := v.parent.GetBucketSettings()
 			vfprefix := fmt.Sprintf("%s_%d", settings.UUID, v.vbid)
 			var vfn string
-			var err error
 			if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
 				vfn, err = latestStoreFileName(dirForBucket, vfprefix, VIEWS_FILE_SUFFIX)
 				if err != nil {
