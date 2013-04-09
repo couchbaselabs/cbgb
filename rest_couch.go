@@ -730,36 +730,14 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 			ddocId, viewId)
 	}
 
-	var begKey interface{}
-	var begKeyBytes []byte
-	var endKey interface{}
+	// TODO: Handle p.Keys.
 
-	if p.Key != nil {
-		p.StartKey = p.Key
-		p.EndKey = p.Key
-	}
-	if p.Descending {
-		begKey = p.EndKey
-		endKey = p.StartKey
-	} else {
-		begKey = p.StartKey
-		endKey = p.EndKey
-	}
-	if begKey != nil {
-		begKeyBytes, err = json.Marshal(begKey)
-		if err != nil {
-			return err
-		}
-	}
-
-	errVisit := vindex.VisitItemsAscend(begKeyBytes, true, func(i *gkvlite.Item) bool {
+	errVisit := vindex.VisitItemsAscend(nil, true, func(i *gkvlite.Item) bool {
 		docId, emitKey, err := vindexKeyParse(i.Key)
 		if err != nil {
 			return false
 		}
-		if endKey != nil && walrus.CollateJSON(emitKey, endKey) > 0 {
-			return false
-		}
+
 		var emitValue interface{}
 		err = json.Unmarshal(i.Val, &emitValue)
 		if err != nil {
