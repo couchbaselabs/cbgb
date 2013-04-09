@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/couchbaselabs/walrus"
+	"github.com/steveyen/gkvlite"
 )
 
 const (
@@ -43,54 +44,61 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 	defer v.viewsLock.Unlock()
 
 	d := atomic.LoadInt64(&v.staleness)
+	err := v.viewsRefresh_unlocked()
+	if err != nil {
+		return 0, err
+	}
+	return atomic.AddInt64(&v.staleness, -d), nil
+}
 
+func (v *VBucket) viewsRefresh_unlocked() error {
 	ddocs := v.parent.GetDDocs()
-	if ddocs != nil {
-		viewsStore, err := v.getViewsStore()
+	if ddocs == nil {
+		return nil
+	}
+	viewsStore, err := v.getViewsStore()
+	if err != nil {
+		return err
+	}
+	backIndex := viewsStore.getPartitionStore(v.vbid)
+	if backIndex == nil {
+		return fmt.Errorf("missing back index store, vbid: %v", v.vbid)
+	}
+	_, backIndexChanges := backIndex.colls()
+
+	// Need mutate() to be sync'ed with any compaction activity.
+	var backIndexLastChange *gkvlite.Item
+	backIndexLastChange, err = backIndexChanges.MaxItem(true)
+	if err != nil {
+		return err
+	}
+	var backIndexLastChangeBytes []byte
+	var backIndexLastChangeNum uint64
+	if backIndexLastChange != nil && len(backIndexLastChange.Key) > 0 {
+		backIndexLastChangeBytes = backIndexLastChange.Key
+		backIndexLastChangeNum, err = casBytesParse(backIndexLastChangeBytes)
 		if err != nil {
-			return 0, err
-		}
-		backIndex := viewsStore.getPartitionStore(v.vbid)
-		if backIndex == nil {
-			return 0, fmt.Errorf("missing back index store, vbid: %v", v.vbid)
-		}
-		_, backIndexChanges := backIndex.colls()
-		backIndexLastChange, err := backIndexChanges.MaxItem(true)
-		if err != nil {
-			return 0, err
-		}
-		var backIndexLastChangeBytes []byte
-		var backIndexLastChangeNum uint64
-		if backIndexLastChange != nil && len(backIndexLastChange.Key) > 0 {
-			backIndexLastChangeBytes = backIndexLastChange.Key
-			backIndexLastChangeNum, err = casBytesParse(backIndexLastChangeBytes)
-			if err != nil {
-				return 0, err
-			}
-		}
-		errVisit := v.ps.visitChanges(backIndexLastChangeBytes, true,
-			func(i *item) bool {
-				if len(i.key) == 0 { // An empty key == metadata change.
-					return true
-				}
-				if i.cas <= backIndexLastChangeNum {
-					return true
-				}
-				err = v.viewsRefreshItem(ddocs, viewsStore, backIndex, i)
-				if err != nil {
-					return false
-				}
-				return true
-			})
-		if errVisit != nil {
-			return 0, errVisit
-		}
-		if err != nil {
-			return 0, err
+			return err
 		}
 	}
-
-	return atomic.AddInt64(&v.staleness, -d), nil
+	errVisit := v.ps.visitChanges(backIndexLastChangeBytes, true,
+		func(i *item) bool {
+			if len(i.key) == 0 { // An empty key == metadata change.
+				return true
+			}
+			if i.cas <= backIndexLastChangeNum {
+				return true
+			}
+			err = v.viewsRefreshItem(ddocs, viewsStore, backIndex, i)
+			if err != nil {
+				return false
+			}
+			return true
+		})
+	if errVisit != nil {
+		return errVisit
+	}
+	return err
 }
 
 // Refreshes all views w.r.t. a single item/doc.
@@ -121,22 +129,25 @@ func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
 		data: j,
 	}
 	// TODO: Track size of backIndex as set() returns deltaItemBytes.
-	_, err = backIndex.set(newBackIndexItem, oldBackIndexItem)
-	if err != nil {
-		return err
+	_, errSet := backIndex.setWithCallback(newBackIndexItem, oldBackIndexItem,
+		func() {
+			if oldBackIndexItem != nil {
+				var viewEmitsOld map[string]ViewRows
+				err = json.Unmarshal(oldBackIndexItem.data, &viewEmitsOld)
+				if err != nil {
+					return
+				}
+				err = vindexesClear(viewsStore, i.key, viewEmitsOld)
+				if err != nil {
+					return
+				}
+			}
+			err = vindexesSet(viewsStore, i.key, viewEmits)
+		})
+	if errSet != nil {
+		return errSet
 	}
-	if oldBackIndexItem != nil {
-		var viewEmitsOld map[string]ViewRows
-		err = json.Unmarshal(oldBackIndexItem.data, &viewEmitsOld)
-		if err != nil {
-			return err
-		}
-		err = vindexesClear(viewsStore, i.key, viewEmitsOld)
-		if err != nil {
-			return err
-		}
-	}
-	return vindexesSet(viewsStore, i.key, viewEmits)
+	return err
 }
 
 // Executes the map function on an item.

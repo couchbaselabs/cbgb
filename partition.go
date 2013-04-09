@@ -165,6 +165,13 @@ func (p *partitionstore) visit(coll *gkvlite.Collection,
 
 func (p *partitionstore) set(newItem *item, oldItem *item) (
 	deltaItemBytes int64, err error) {
+	return p.setWithCallback(newItem, oldItem, nil)
+}
+
+// Callback is invoked while holding the mutate() lock, allowing
+// the caller to do more atomic things.
+func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
+	cb func()) (deltaItemBytes int64, err error) {
 	vBytes := newItem.toValueBytes()
 	cBytes := casBytes(newItem.cas)
 
@@ -205,6 +212,10 @@ func (p *partitionstore) set(newItem *item, oldItem *item) (
 		}
 
 		p.parent.dirty(dirtyForce)
+
+		if cb != nil {
+			cb()
+		}
 	})
 	return deltaItemBytes, err
 }
