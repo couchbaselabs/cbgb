@@ -425,3 +425,25 @@ func TestVIndexKeyCompare(t *testing.T) {
 		}
 	}
 }
+
+func TestMemoryOnlyViewsStore(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	vb0, _ := b0.CreateVBucket(2)
+	vs, err := vb0.getViewsStore()
+	if err != nil {
+		t.Errorf("expected getViewsStoreToWork")
+	}
+	if vs.bsfMemoryOnly == nil {
+		t.Errorf("expected memory-only viewsStore to have a memory-only BSF")
+	}
+}

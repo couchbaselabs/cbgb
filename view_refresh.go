@@ -183,13 +183,18 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 	v.Apply(func() {
 		if v.viewsStore == nil {
-			// TODO: Handle views file memory-only mode.
 			dirForBucket := v.parent.GetBucketDir()
 			settings := v.parent.GetBucketSettings()
 			vfprefix := fmt.Sprintf("%s_%d", settings.UUID, v.vbid)
-			vfn, err := latestStoreFileName(dirForBucket, vfprefix, VIEWS_FILE_SUFFIX)
-			if err != nil {
-				return
+			var vfn string
+			var err error
+			if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+				vfn, err = latestStoreFileName(dirForBucket, vfprefix, VIEWS_FILE_SUFFIX)
+				if err != nil {
+					return
+				}
+			} else {
+				vfn = makeStoreFileName(vfprefix, 0, VIEWS_FILE_SUFFIX)
 			}
 			p := path.Join(dirForBucket, vfn)
 			v.viewsStore, err = newBucketStore(p, *settings)
