@@ -8,6 +8,8 @@ import (
 	"path"
 	"sync/atomic"
 	"time"
+
+	"github.com/couchbaselabs/walrus"
 )
 
 const (
@@ -201,7 +203,7 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 func vindexesClear(viewsStore *bucketstore, docId []byte,
 	viewEmits map[string]ViewRows) error {
 	for vindexName, emits := range viewEmits {
-		vindex := viewsStore.coll(vindexName)
+		vindex := viewsStore.collWithKeyCompare(vindexName, vindexKeyCompare)
 		for _, emit := range emits {
 			vk, err := vindexKey(docId, emit.Key)
 			if err != nil {
@@ -220,7 +222,7 @@ func vindexesClear(viewsStore *bucketstore, docId []byte,
 func vindexesSet(viewsStore *bucketstore, docId []byte,
 	viewEmits map[string]ViewRows) error {
 	for vindexName, emits := range viewEmits {
-		vindex := viewsStore.coll(vindexName)
+		vindex := viewsStore.collWithKeyCompare(vindexName, vindexKeyCompare)
 		for _, emit := range emits {
 			j, err := json.Marshal(emit.Value)
 			if err != nil {
@@ -237,6 +239,22 @@ func vindexesSet(viewsStore *bucketstore, docId []byte,
 		}
 	}
 	return nil
+}
+
+func vindexKeyCompare(a, b []byte) int {
+	docIdA, emitKeyA, err := vindexKeyParse(a)
+	if err != nil {
+		return bytes.Compare(a, b)
+	}
+	docIdB, emitKeyB, err := vindexKeyParse(b)
+	if err != nil {
+		return bytes.Compare(a, b)
+	}
+	c := walrus.CollateJSON(emitKeyA, emitKeyB)
+	if c == 0 {
+		return bytes.Compare(docIdA, docIdB)
+	}
+	return c
 }
 
 // Returns byte array that looks like "docId/emitKey".

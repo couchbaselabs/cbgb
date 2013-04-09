@@ -389,3 +389,39 @@ func TestVIndexKeyParseBad(t *testing.T) {
 		t.Errorf("expected err corrupt input to vindexKeyParse()")
 	}
 }
+
+func TestVIndexKeyCompare(t *testing.T) {
+	tests := []struct {
+		docIdA   string
+		emitKeyA interface{}
+		docIdB   string
+		emitKeyB interface{}
+		exp      int
+	}{
+		{"a", 0, "a", 0, 0},
+		{"a", 0, "a", 1, -1},
+		{"a", 1, "a", 0, 1},
+		{"a", 9, "a", 0, 1},
+		{"a", 9, "a", 10, -1},
+		{"a", []int{0, 1}, "a", []int{0, 1}, 0},
+		{"b", []int{0, 1}, "a", []int{0, 1}, 1},
+		{"b", []int{0, 1}, "a", []int{0, 10}, -1},
+		{"b", []int{0, 9}, "a", []int{0, 10}, -1},
+		{"b", []interface{}{0, "x"}, "a", []interface{}{0, "b"}, 1},
+	}
+	for i, test := range tests {
+		ka, err := vindexKey([]byte(test.docIdA), test.emitKeyA)
+		if err != nil {
+			t.Errorf("expected no err, got: %v", err)
+		}
+		kb, err := vindexKey([]byte(test.docIdB), test.emitKeyB)
+		if err != nil {
+			t.Errorf("expected no err, got: %v", err)
+		}
+		c := vindexKeyCompare(ka, kb)
+		if c != test.exp {
+			t.Errorf("expected %v, got %v for vindexKeyCompare(%#v, %#v), i: %v",
+				test.exp, c, string(ka), string(kb), i)
+		}
+	}
+}
