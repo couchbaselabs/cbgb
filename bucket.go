@@ -129,7 +129,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 
 	for i, fileName := range fileNames {
 		p := path.Join(dirForBucket, fileName)
-		bs, err := newBucketStore(p, *settings)
+		bs, err := newBucketStore(p, *settings, nil)
 		if err != nil {
 			res.Close()
 			return nil, err

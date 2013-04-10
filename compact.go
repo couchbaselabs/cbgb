@@ -46,7 +46,10 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 			os.Remove(compactPath)
 		}
 	}()
-	compactStore, err := gkvlite.NewStore(compactFile)
+
+	sc := gkvlite.StoreCallbacks{KeyCompareForCollection: s.keyCompareForCollection}
+
+	compactStore, err := gkvlite.NewStoreEx(compactFile, sc)
 	if err != nil {
 		return err
 	}
@@ -118,8 +121,10 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 		return err
 	}
 
+	sc := gkvlite.StoreCallbacks{KeyCompareForCollection: s.keyCompareForCollection}
+
 	nextBSF := NewBucketStoreFile(nextPath, nextFile, bsf.stats)
-	nextStore, err := gkvlite.NewStore(nextBSF)
+	nextStore, err := gkvlite.NewStoreEx(nextBSF, sc)
 	if err != nil {
 		// TODO: Rollback the previous *.orig rename.
 		return err

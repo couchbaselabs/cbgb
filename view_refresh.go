@@ -207,7 +207,7 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 				vfn = makeStoreFileName(vfprefix, 0, VIEWS_FILE_SUFFIX)
 			}
 			p := path.Join(dirForBucket, vfn)
-			v.viewsStore, err = newBucketStore(p, *settings)
+			v.viewsStore, err = newBucketStore(p, *settings, nil)
 		}
 		res = v.viewsStore
 	})

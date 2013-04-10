@@ -32,6 +32,8 @@ type bucketstore struct {
 	partitions    map[uint16]*partitionstore
 	stats         *BucketStoreStats
 
+	keyCompareForCollection func(collName string) gkvlite.KeyCompare
+
 	diskLock sync.Mutex
 }
 
@@ -58,7 +60,9 @@ type BucketStoreStats struct {
 	NodeAllocs int64 `json:"nodeAllocs"`
 }
 
-func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err error) {
+func newBucketStore(path string, settings BucketSettings,
+	keyCompareForCollection func(collName string) gkvlite.KeyCompare) (
+	res *bucketstore, err error) {
 	var file FileLike
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
 		file, err = fileService.OpenFile(path, os.O_RDWR|os.O_CREATE)
@@ -74,7 +78,9 @@ func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err
 		bsfForGKVLite = nil
 	}
 
-	store, err := gkvlite.NewStore(bsfForGKVLite)
+	sc := gkvlite.StoreCallbacks{KeyCompareForCollection: keyCompareForCollection}
+
+	store, err := gkvlite.NewStoreEx(bsfForGKVLite, sc)
 	if err != nil {
 		return nil, err
 	}
@@ -83,7 +89,7 @@ func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err
 	var bsfMemoryOnly *bucketstorefile
 	if settings.MemoryOnly > MemoryOnly_LEVEL_PERSIST_EVERYTHING {
 		bsfMemoryOnly = NewBucketStoreFile(path, file, bsf.stats)
-		bsfMemoryOnly.store, err = gkvlite.NewStore(nil)
+		bsfMemoryOnly.store, err = gkvlite.NewStoreEx(nil, sc)
 		if err != nil {
 			return nil, err
 		}
@@ -95,6 +101,7 @@ func newBucketStore(path string, settings BucketSettings) (res *bucketstore, err
 		endch:         make(chan bool),
 		partitions:    make(map[uint16]*partitionstore),
 		stats:         bsf.stats,
+		keyCompareForCollection: keyCompareForCollection,
 	}, nil
 }
 
