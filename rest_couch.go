@@ -816,6 +816,9 @@ func couchDbAllDocs(w http.ResponseWriter, r *http.Request) {
 func MakeViewRowMerger(bucket Bucket) ([]chan *ViewRow, chan *ViewRow) {
 	out := make(chan *ViewRow)
 	np := bucket.GetBucketSettings().NumPartitions
+	if np == 1 {
+		return []chan *ViewRow{out}, out
+	}
 	in := make([]chan *ViewRow, np)
 	for vbid := 0; vbid < np; vbid++ {
 		in[vbid] = make(chan *ViewRow)
