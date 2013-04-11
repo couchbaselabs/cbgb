@@ -41,7 +41,7 @@ func TestBasicAuthParsing(t *testing.T) {
 
 func TestAuthenticateUser(t *testing.T) {
 	origUser, origPass := adminUser, adminPass
-	defer  func() {
+	defer func() {
 		adminUser, adminPass = origUser, origPass
 	}()
 	u, p := "tom", ""
