@@ -84,20 +84,9 @@ type livebucket struct {
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {
-	var fileNames []string
-
-	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
-		fileNames, err = latestStoreFileNames(dirForBucket,
-			STORES_PER_BUCKET, STORE_FILE_SUFFIX)
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		fileNames = make([]string, STORES_PER_BUCKET)
-		for i := 0; i < STORES_PER_BUCKET; i++ {
-			fileNames[i] = makeStoreFileName(strconv.FormatInt(int64(i), 10),
-				0, STORE_FILE_SUFFIX)
-		}
+	fileNames, err := bucketFileNames(dirForBucket, settings)
+	if err != nil {
+		return nil, err
 	}
 
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
@@ -151,6 +140,24 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 	res.vbucketDDoc = vbucketDDoc
 
 	return res, nil
+}
+
+func bucketFileNames(dirForBucket string, settings *BucketSettings) (
+	fileNames []string, err error) {
+	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		fileNames, err = latestStoreFileNames(dirForBucket,
+			STORES_PER_BUCKET, STORE_FILE_SUFFIX)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		fileNames = make([]string, STORES_PER_BUCKET)
+		for i := 0; i < STORES_PER_BUCKET; i++ {
+			fileNames[i] = makeStoreFileName(strconv.FormatInt(int64(i), 10),
+				0, STORE_FILE_SUFFIX)
+		}
+	}
+	return fileNames, nil
 }
 
 func (b *livebucket) GetBucketDir() string {
