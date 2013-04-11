@@ -14,7 +14,8 @@ import (
 )
 
 const (
-	VIEWS_FILE_SUFFIX = "views"
+	VIEWS_FILE_SUFFIX  = "views"
+	VINDEX_COLL_SUFFIX = ".v"
 )
 
 var viewsRefresher *periodically
@@ -218,7 +219,8 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 func vindexesClear(viewsStore *bucketstore, docId []byte,
 	viewEmits map[string]ViewRows) error {
 	for vindexName, emits := range viewEmits {
-		vindex := viewsStore.collWithKeyCompare(vindexName, vindexKeyCompare)
+		vindex := viewsStore.collWithKeyCompare(vindexName+VINDEX_COLL_SUFFIX,
+			vindexKeyCompare)
 		for _, emit := range emits {
 			vk, err := vindexKey(docId, emit.Key)
 			if err != nil {
@@ -237,7 +239,8 @@ func vindexesClear(viewsStore *bucketstore, docId []byte,
 func vindexesSet(viewsStore *bucketstore, docId []byte,
 	viewEmits map[string]ViewRows) error {
 	for vindexName, emits := range viewEmits {
-		vindex := viewsStore.collWithKeyCompare(vindexName, vindexKeyCompare)
+		vindex := viewsStore.collWithKeyCompare(vindexName+VINDEX_COLL_SUFFIX,
+			vindexKeyCompare)
 		for _, emit := range emits {
 			j, err := json.Marshal(emit.Value)
 			if err != nil {

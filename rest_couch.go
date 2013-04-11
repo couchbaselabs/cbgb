@@ -724,7 +724,7 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 	if err != nil {
 		return err
 	}
-	vindex := viewsStore.coll("_design/" + ddocId + "/" + viewId)
+	vindex := viewsStore.coll("_design/" + ddocId + "/" + viewId + VINDEX_COLL_SUFFIX)
 	if vindex == nil {
 		return fmt.Errorf("no vindex during visitVIndex(), ddocId: %v, viewId: %v",
 			ddocId, viewId)
