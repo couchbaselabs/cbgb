@@ -7,6 +7,7 @@ import (
 	"os"
 	"sort"
 	"testing"
+	"time"
 )
 
 func TestViewRows(t *testing.T) {
@@ -445,5 +446,9 @@ func TestMemoryOnlyViewsStore(t *testing.T) {
 	}
 	if vs.bsfMemoryOnly == nil {
 		t.Errorf("expected memory-only viewsStore to have a memory-only BSF")
+	}
+	pvr := vb0.periodicViewsRefresh(time.Now())
+	if pvr {
+		t.Errorf("expected periodicViewsRefresh() on a clean db return false")
 	}
 }
