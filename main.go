@@ -15,23 +15,26 @@ var mutationLogCh = make(chan interface{}, 1024)
 
 var startTime = time.Now()
 
-var verbose = flag.Bool("v", true, "amount of logging")
-var addr = flag.String("addr", ":11211", "data protocol listen address")
-var data = flag.String("data", "./tmp", "data directory")
-var restCouch = flag.String("rest-couch",
-	":8092", "rest couch protocol listen address")
-var restNS = flag.String("rest-ns",
-	":8091", "rest NS protocol listen address")
+var verbose = flag.Bool("v", true,
+	"Amount of logging")
+var addr = flag.String("addr", ":11211",
+	"Data protocol listen address")
+var data = flag.String("data", "./tmp",
+	"Data directory")
+var restCouch = flag.String("rest-couch", ":8092",
+	"REST couch protocol listen address")
+var restNS = flag.String("rest-ns", ":8091",
+	"REST NS protocol listen address")
 var staticPath = flag.String("static-path", "http://cbgb.io/static.zip",
-	"path to static web UI content")
-var defaultBucketName = flag.String("default-bucket-name",
-	DEFAULT_BUCKET_NAME, `name of the default bucket ("" disables)`)
-var numPartitions = flag.Int("num-partitions",
-	1, "default number of partitions for new buckets")
+	"Path to static web UI content")
+var defaultBucketName = flag.String("default-bucket-name", DEFAULT_BUCKET_NAME,
+	`Name of the default bucket ("" disables)`)
+var numPartitions = flag.Int("num-partitions", 1,
+	"Default number of partitions for new buckets")
 var defaultQuotaBytes = flagbytes.Bytes("default-quota",
-	"100MB", "quota for default bucket")
-var defaultPersistence = flag.Int("default-persistence",
-	2, "persistence level for default bucket")
+	"100MB", "Quota for default bucket")
+var defaultPersistence = flag.Int("default-persistence", 2,
+	"Persistence level for default bucket")
 var quiesceFreq = flag.Duration("quiesce-freq", time.Minute*5,
 	"Bucket quiescence frequency")
 var expireFreq = flag.Duration("expire-freq", time.Minute*5,
