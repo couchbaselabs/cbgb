@@ -1445,9 +1445,18 @@ func TestRestPostRuntimeGC(t *testing.T) {
 	}
 }
 
+func TestRestPostBucketCompact(t *testing.T) {
+	rr := testRestPost(t, "http://127.0.0.1/_api/buckets/foo/compact")
+	if len(rr.Body.Bytes()) != 0 {
+		t.Errorf("expected no body, got: %#v, %v", rr, rr.Body.String())
+	}
+}
+
 func testRestPost(t *testing.T, url string) *httptest.ResponseRecorder {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
+	b, _ := buckets.New("foo", bucketSettings)
+	defer b.Close()
 	mr := testSetupMux(d)
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("POST", url, nil)
