@@ -316,14 +316,17 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, bulkDocsResponse)
 }
 
-// TODO wait for writes to this vbucket to be persisted
-// for now, lie
 func couchDbEnsureFullCommit(w http.ResponseWriter, r *http.Request) {
 	_, _, bucket := checkDb(w, r)
 	if bucket == nil {
 		return
 	}
-
+	err := bucket.Flush()
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("_ensure_full_commit bucket.Flush() err: %v", err), 500)
+		return
+	}
 	w.WriteHeader(201)
 	jsonEncode(w, map[string]interface{}{"ok": true})
 }
