@@ -452,3 +452,14 @@ func TestMemoryOnlyViewsStore(t *testing.T) {
 		t.Errorf("expected periodicViewsRefresh() on a clean db return false")
 	}
 }
+
+func TestViewKeyCompareForCollection(t *testing.T) {
+	c := viewKeyCompareForCollection("a" + VINDEX_COLL_SUFFIX + "b")
+	if c([]byte("10\x00DocId"), []byte("9\x00DocId")) != -1 {
+		t.Errorf("expected a bytes.Compare comparison")
+	}
+	c = viewKeyCompareForCollection("a" + VINDEX_COLL_SUFFIX)
+	if c([]byte("10\x00DocId"), []byte("9\x00DocId")) != 1 {
+		t.Errorf("expected a JSON comparison")
+	}
+}
