@@ -52,7 +52,6 @@ func (b *Buckets) New(name string,
 
 func (b *Buckets) newUnlocked(name string,
 	defaultSettings *BucketSettings) (rv Bucket, err error) {
-
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already exists: %v", name)
 	}
