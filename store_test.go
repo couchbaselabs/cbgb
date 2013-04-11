@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -164,6 +165,12 @@ func TestSaveLoadBasic(t *testing.T) {
 		t.Errorf("expected Load to work, err: %v", err)
 	}
 	testExpectInts(t, r1, 2, []int{0, 1, 2, 3, 4}, "reload")
+
+	bs := b1.GetBucketStore(0)
+	pp := bs.periodicPersist(time.Now())
+	if pp == true {
+		t.Errorf("expected periodicPersist to be clean")
+	}
 }
 
 func TestSaveLoadMutations(t *testing.T) {
