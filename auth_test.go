@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"testing"
 )
 
@@ -35,5 +36,41 @@ func TestBasicAuthParsing(t *testing.T) {
 					test.input, gu, gp)
 			}
 		}
+	}
+}
+
+func TestAuthenticateUser(t *testing.T) {
+	origUser, origPass := adminUser, adminPass
+	defer  func() {
+		adminUser, adminPass = origUser, origPass
+	}()
+	u, p := "tom", ""
+	adminUser, adminPass = &u, &p
+	if authenticateUser("tom", "fullery") {
+		t.Errorf("expected authhenticateUser to work")
+	}
+	if !authenticateUser("tom", "") {
+		t.Errorf("expected authhenticateUser to not work")
+	}
+	d, _ := testSetupBuckets(t, 1)
+	defer os.RemoveAll(d)
+	b, _ := buckets.New("foo", &BucketSettings{
+		PasswordHash: "bar",
+	})
+	defer b.Close()
+	if !authenticateUser("foo", "bar") {
+		t.Errorf("expected authhenticateUser to work")
+	}
+	if authenticateUser("foo", "") {
+		t.Errorf("expected authhenticateUser to not work")
+	}
+	if authenticateUser("foo", "baz") {
+		t.Errorf("expected authhenticateUser to not work")
+	}
+	if authenticateUser("not-a-bucket", "bar") {
+		t.Errorf("expected authhenticateUser to not work")
+	}
+	if authenticateUser("not-a-bucket", "") {
+		t.Errorf("expected authhenticateUser to not work")
 	}
 }
