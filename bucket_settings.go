@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 )
 
 const (
@@ -67,7 +67,7 @@ func (bs *BucketSettings) SafeView() map[string]interface{} {
 }
 
 func (bs *BucketSettings) load(bucketDir string) (exists bool, err error) {
-	b, err := ioutil.ReadFile(path.Join(bucketDir, "settings.json"))
+	b, err := ioutil.ReadFile(filepath.Join(bucketDir, "settings.json"))
 	if err != nil {
 		if os.IsNotExist(err) {
 			return false, nil
@@ -82,9 +82,9 @@ func (bs *BucketSettings) save(bucketDir string) error {
 	if err != nil {
 		return err
 	}
-	fname := path.Join(bucketDir, "settings.json")
-	fnameNew := path.Join(bucketDir, "settings.json.new")
-	fnameOld := path.Join(bucketDir, "settings.json.old")
+	fname := filepath.Join(bucketDir, "settings.json")
+	fnameNew := filepath.Join(bucketDir, "settings.json.new")
+	fnameOld := filepath.Join(bucketDir, "settings.json.old")
 	if err = ioutil.WriteFile(fnameNew, j, 0600); err != nil {
 		return err
 	}

@@ -6,7 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
@@ -162,7 +162,7 @@ func (b *Buckets) Path(name string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return path.Join(b.dir, bp), nil
+	return filepath.Join(b.dir, bp), nil
 }
 
 func BucketPath(bucketName string) (string, error) {
@@ -177,7 +177,7 @@ func BucketPath(bucketName string) (string, error) {
 	lo := fmt.Sprintf("%02x", c&0xff)
 	hi := fmt.Sprintf("%02x", c>>8)
 	// Example result for "default" bucket: "$BUCKETS_DIR/00/df/default-bucket".
-	return path.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX), nil
+	return filepath.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX), nil
 }
 
 // Reads the buckets directory and returns list of bucket names.
@@ -191,7 +191,7 @@ func (b *Buckets) LoadNames() ([]string, error) {
 		if !entryHi.IsDir() {
 			continue
 		}
-		pathHi := path.Join(b.dir, entryHi.Name())
+		pathHi := filepath.Join(b.dir, entryHi.Name())
 		listLo, err := ioutil.ReadDir(pathHi)
 		if err != nil {
 			return nil, err
@@ -200,7 +200,7 @@ func (b *Buckets) LoadNames() ([]string, error) {
 			if !entryLo.IsDir() {
 				continue
 			}
-			pathLo := path.Join(pathHi, entryLo.Name())
+			pathLo := filepath.Join(pathHi, entryLo.Name())
 			list, err := ioutil.ReadDir(pathLo)
 			if err != nil {
 				return nil, err

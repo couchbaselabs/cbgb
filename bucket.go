@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"path"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"sync/atomic"
@@ -117,7 +117,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 	}
 
 	for i, fileName := range fileNames {
-		p := path.Join(dirForBucket, fileName)
+		p := filepath.Join(dirForBucket, fileName)
 		bs, err := newBucketStore(p, *settings, nil)
 		if err != nil {
 			res.Close()

@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-	"path"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -110,7 +109,7 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 	}
 
 	nextName := makeStoreFileName(prefix, ver+1, STORE_FILE_SUFFIX)
-	nextPath := path.Join(filepath.Dir(bsf.path), nextName)
+	nextPath := filepath.Join(filepath.Dir(bsf.path), nextName)
 
 	if err = os.Rename(compactPath, nextPath); err != nil {
 		return err

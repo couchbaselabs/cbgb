@@ -5,7 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
-	"path"
+	"path/filepath"
 	"strings"
 	"sync/atomic"
 	"time"
@@ -209,7 +209,7 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 			} else {
 				vfn = makeStoreFileName(vfprefix, 0, VIEWS_FILE_SUFFIX)
 			}
-			p := path.Join(dirForBucket, vfn)
+			p := filepath.Join(dirForBucket, vfn)
 			v.viewsStore, err = newBucketStore(p, *settings,
 				viewKeyCompareForCollection)
 		}
