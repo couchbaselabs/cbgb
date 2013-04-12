@@ -1418,10 +1418,18 @@ func TestRestGetBucketStats(t *testing.T) {
 }
 
 func testRestGetJson(t *testing.T, url string) interface{} {
+	return testRestGetJsonEx(t, url, nil)
+}
+
+func testRestGetJsonEx(t *testing.T, url string,
+	moreInit func(Bucket)) interface{} {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	b, _ := buckets.New("foo", bucketSettings)
 	defer b.Close()
+	if moreInit != nil {
+		moreInit(b)
+	}
 	mr := testSetupMux(d)
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", url, nil)
