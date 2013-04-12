@@ -53,7 +53,7 @@ var bucketSettings *BucketSettings
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "cbgb - %s\n", VERSION)
+		fmt.Fprintf(os.Stderr, "cbgb - version %s\n", VERSION)
 		fmt.Fprintf(os.Stderr, "\nusage: %s <flags>\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nflags:\n")
 		flag.PrintDefaults()
@@ -84,7 +84,7 @@ func main() {
 		log.SetOutput(ioutil.Discard)
 	}
 
-	log.Printf("cbgb - %v", VERSION)
+	log.Printf("cbgb - version %v", VERSION)
 	flag.VisitAll(func(f *flag.Flag) {
 		log.Printf("  %v=%v", f.Name, f.Value)
 	})
