@@ -350,6 +350,7 @@ func (v *VBucket) getUnexpired(key []byte, now time.Time) (*item, error) {
 // check here in case some concurrent race has mutated the item.
 func (v *VBucket) expire(key []byte, now time.Time) (err error) {
 	var deltaItemBytes int64
+	var expireCas uint64
 
 	v.Apply(func() {
 		var i *item
@@ -358,13 +359,18 @@ func (v *VBucket) expire(key []byte, now time.Time) (err error) {
 			return
 		}
 		if i.isExpired(now) {
-			expireCas := atomic.AddUint64(&v.Meta().LastCas, 1)
+			expireCas = atomic.AddUint64(&v.Meta().LastCas, 1)
 			deltaItemBytes, err = v.ps.del(key, expireCas, i)
 		}
 	})
 
 	atomic.AddInt64(&v.stats.ItemBytes, deltaItemBytes)
 	atomic.AddInt64(v.bucketItemBytes, deltaItemBytes)
+
+	if err == nil && expireCas != 0 {
+		v.markStale()
+		v.observer.Submit(mutation{v.vbid, key, expireCas, true})
+	}
 
 	return err
 }
