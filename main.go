@@ -29,8 +29,8 @@ var staticPath = flag.String("static-path", "http://cbgb.io/static.zip",
 	"Path to static web UI content")
 var defaultBucketName = flag.String("default-bucket-name", DEFAULT_BUCKET_NAME,
 	`Name of the default bucket ("" disables)`)
-var numPartitions = flag.Int("num-partitions", 1,
-	"Default number of partitions for new buckets")
+var defaultNumPartitions = flag.Int("default-num-partitions", 1,
+	"Number of partitions for default bucket")
 var defaultQuotaBytes = flagbytes.Bytes("default-quota", "100MB",
 	"Quota for default bucket")
 var defaultPersistence = flag.Int("default-persistence", 2,
@@ -95,7 +95,7 @@ func main() {
 	var err error
 
 	bucketSettings = &BucketSettings{
-		NumPartitions: *numPartitions,
+		NumPartitions: *defaultNumPartitions,
 		QuotaBytes:    int64(*defaultQuotaBytes),
 		MemoryOnly:    MemoryOnly_LEVEL_PERSIST_NOTHING - *defaultPersistence,
 	}

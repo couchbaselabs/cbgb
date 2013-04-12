@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"log"
 	"net/http"
@@ -63,16 +64,13 @@ func initStatic(r *mux.Router, staticPrefix, staticPath string) {
 
 // For settings that are constant throughout server process lifetime.
 func restGetSettings(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{
-		"addr":              *addr,
-		"data":              *data,
-		"rest-couch":        *restCouch,
-		"rest-ns":           *restNS,
-		"static-path":       *staticPath,
-		"defaultBucketName": *defaultBucketName,
-		"bucketSettings":    bucketSettings,
-		"verbose":           *verbose,
+	m := map[string]interface{}{}
+	flag.VisitAll(func(f *flag.Flag) {
+		if f.Name != "adminUser" && f.Name != "adminPass" {
+			m[f.Name] = f.Value
+		}
 	})
+	jsonEncode(w, m)
 }
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
