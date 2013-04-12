@@ -53,9 +53,8 @@ var bucketSettings *BucketSettings
 
 func init() {
 	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr,
-			"usage: %s <flags>\n",
-			os.Args[0])
+		fmt.Fprintf(os.Stderr, "cbgb - %s\n", VERSION)
+		fmt.Fprintf(os.Stderr, "\nusage: %s <flags>\n", os.Args[0])
 		fmt.Fprintf(os.Stderr, "\nflags:\n")
 		flag.PrintDefaults()
 		fmt.Fprintf(os.Stderr, "\npersistence levels:\n")
