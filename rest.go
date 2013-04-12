@@ -33,18 +33,15 @@ func restAPI(r *mux.Router) {
 	sr.HandleFunc("/buckets/{bucketname}/stats",
 		withBucketAccess(restGetBucketStats)).Methods("GET")
 
-	sr = r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
-
-	sr.HandleFunc("/buckets", restPostBucket).Methods("POST")
-
-	sr.HandleFunc("/bucketsRescan", restPostBucketsRescan).Methods("POST")
-	sr.HandleFunc("/profile/cpu", restProfileCPU).Methods("POST")
-	sr.HandleFunc("/profile/memory", restProfileMemory).Methods("POST")
-	sr.HandleFunc("/runtime", restGetRuntime).Methods("GET")
-	sr.HandleFunc("/runtime/memStats",
-		restGetRuntimeMemStats).Methods("GET")
-	sr.HandleFunc("/runtime/gc", restPostRuntimeGC).Methods("POST")
-	sr.HandleFunc("/settings", restGetSettings).Methods("GET")
+	sra := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
+	sra.HandleFunc("/buckets", restPostBucket).Methods("POST")
+	sra.HandleFunc("/bucketsRescan", restPostBucketsRescan).Methods("POST")
+	sra.HandleFunc("/profile/cpu", restProfileCPU).Methods("POST")
+	sra.HandleFunc("/profile/memory", restProfileMemory).Methods("POST")
+	sra.HandleFunc("/runtime", restGetRuntime).Methods("GET")
+	sra.HandleFunc("/runtime/memStats", restGetRuntimeMemStats).Methods("GET")
+	sra.HandleFunc("/runtime/gc", restPostRuntimeGC).Methods("POST")
+	sra.HandleFunc("/settings", restGetSettings).Methods("GET")
 
 	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
