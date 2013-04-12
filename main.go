@@ -31,8 +31,8 @@ var defaultBucketName = flag.String("default-bucket-name", DEFAULT_BUCKET_NAME,
 	`Name of the default bucket ("" disables)`)
 var numPartitions = flag.Int("num-partitions", 1,
 	"Default number of partitions for new buckets")
-var defaultQuotaBytes = flagbytes.Bytes("default-quota",
-	"100MB", "Quota for default bucket")
+var defaultQuotaBytes = flagbytes.Bytes("default-quota", "100MB",
+	"Quota for default bucket")
 var defaultPersistence = flag.Int("default-persistence", 2,
 	"Persistence level for default bucket")
 var quiesceFreq = flag.Duration("quiesce-freq", time.Minute*5,
