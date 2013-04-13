@@ -919,3 +919,20 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 		t.Errorf("expected bucket foo to be bucket foo")
 	}
 }
+
+func TestBucketMakeCloser(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	buckets, _ := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+
+	c := buckets.makeCloser("not-a-bucket")
+	if c == nil {
+		t.Errorf("expected makeCloser() to work")
+	}
+	x := c(time.Now())
+	if x {
+		t.Errorf("expected closer to be false")
+	}
+}
