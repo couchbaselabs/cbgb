@@ -29,6 +29,14 @@ func init() {
 	}
 }
 
+func TestInitStatic(t *testing.T) {
+	mr := mux.NewRouter()
+	err := initStatic(mr, "/_static/", "static")
+	if err != nil {
+		t.Errorf("expected initStatic to work, err: %v", err)
+	}
+}
+
 func testSetupBuckets(t *testing.T, numPartitions int) (string, *Buckets) {
 	d, _ := ioutil.TempDir("./tmp", "test")
 	var err error
