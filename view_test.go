@@ -496,7 +496,7 @@ func TestCouchViewWithMutations(t *testing.T) {
 		dd := &ViewResult{}
 		err := json.Unmarshal(rr.Body.Bytes(), dd)
 		if err != nil {
-		t.Errorf("expected good view result, err: %v", err)
+			t.Errorf("expected good view result, err: %v", err)
 		}
 		k := []string{"a", "d", "b", "c"}
 		a := []int{1, 2, 3, 4}
