@@ -145,3 +145,35 @@ func TestVBucketString(t *testing.T) {
 		t.Errorf("expected String() to emit vbid, got: %v", s)
 	}
 }
+
+func TestMkVBucketSweeper(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	r0 := &reqHandler{currentBucket: b0}
+	vb0, _ := b0.CreateVBucket(2)
+
+	vbs := vb0.mkVBucketSweeper()
+	if vbs == nil {
+		t.Errorf("expected vbucket sweeper, got nil")
+	}
+	keepSweeping := vbs(time.Now())
+	if keepSweeping {
+		t.Errorf("expected vbucket sweeper to stop on an empty vbucket.")
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	keepSweeping = vbs(time.Now())
+	if keepSweeping {
+		t.Errorf("expected vbucket sweeper to stop on a clean vbucket.")
+	}
+}
