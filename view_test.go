@@ -3,11 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"sort"
 	"testing"
 	"time"
+
+	"github.com/dustin/gomemcached"
 )
 
 func TestViewRows(t *testing.T) {
@@ -462,4 +467,75 @@ func TestViewKeyCompareForCollection(t *testing.T) {
 	if c([]byte("10\x00DocId"), []byte("9\x00DocId")) != 1 {
 		t.Errorf("expected a JSON comparison")
 	}
+}
+
+func TestCouchViewWithMutations(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`, nil)
+
+	testExpectations := func() {
+		rr := httptest.NewRecorder()
+		r, _ := http.NewRequest("GET",
+			"http://127.0.0.1/default/_design/d0/_view/v0?stale=false", nil)
+		mr.ServeHTTP(rr, r)
+		if rr.Code != 200 {
+			t.Errorf("expected req to 200, got: %#v, %v",
+				rr, rr.Body.String())
+		}
+		dd := &ViewResult{}
+		err := json.Unmarshal(rr.Body.Bytes(), dd)
+		if err != nil {
+		t.Errorf("expected good view result, err: %v", err)
+		}
+		k := []string{"a", "d", "b", "c"}
+		a := []int{1, 2, 3, 4}
+		if dd.TotalRows != len(k) {
+			t.Errorf("expected %v rows, got: %v, %v, %v",
+				len(k), dd.TotalRows, dd, rr.Body.String())
+		}
+		for i, row := range dd.Rows {
+			if k[i] != row.Id {
+				t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+			}
+			if a[i] != int(row.Key.(float64)) {
+				t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+			}
+			if row.Doc != nil {
+				t.Errorf("expected no doc since it's not include_docs, got: %#v", row)
+			}
+		}
+	}
+
+	testExpectations()
+
+	// Modify some items.
+	docFmt := func(i int) string {
+		return fmt.Sprintf(`{"amount":%d}`, i)
+	}
+
+	var res *gomemcached.MCResponse
+
+	res = SetItem(bucket, []byte("a"), []byte(docFmt(1)),
+		VBActive)
+	if res == nil || res.Status != gomemcached.SUCCESS {
+		t.Errorf("expected SetItem to work, got: %v", res)
+	}
+	res = SetItem(bucket, []byte("b"), []byte(docFmt(3)),
+		VBActive)
+	if res == nil || res.Status != gomemcached.SUCCESS {
+		t.Errorf("expected SetItem to work, got: %v", res)
+	}
+
+	testExpectations() // Re-test the expectations.
 }
