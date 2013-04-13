@@ -3,7 +3,6 @@ package main
 import (
 	"flag"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -47,11 +46,11 @@ func restAPI(r *mux.Router) {
 	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
 
-func initStatic(r *mux.Router, staticPrefix, staticPath string) {
+func initStatic(r *mux.Router, staticPrefix, staticPath string) error {
 	if strings.HasPrefix(staticPath, "http://") {
 		zs, err := zipStatic(staticPath)
 		if err != nil {
-			log.Fatalf("Error initializing zip static: %v", err)
+			return err
 		}
 		r.PathPrefix(staticPrefix).Handler(
 			http.StripPrefix(staticPrefix, zs))
@@ -60,6 +59,7 @@ func initStatic(r *mux.Router, staticPrefix, staticPath string) {
 			http.StripPrefix(staticPrefix,
 				http.FileServer(http.Dir(staticPath))))
 	}
+	return nil
 }
 
 // For settings that are constant throughout server process lifetime.

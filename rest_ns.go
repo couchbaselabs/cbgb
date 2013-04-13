@@ -298,7 +298,9 @@ func restNSAPI(r *mux.Router) {
 
 func restNSServe(restNS string, staticPath string) {
 	r := mux.NewRouter()
-	initStatic(r, "/_static/", staticPath)
+	if err := initStatic(r, "/_static/", staticPath); err != nil {
+		log.Fatalf("Error initializing static resources: %v", err)
+	}
 	restAPI(r)
 	restNSAPI(r)
 	cbr := r.PathPrefix("/couchBase/").Subrouter()
