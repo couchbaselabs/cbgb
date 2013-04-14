@@ -36,6 +36,7 @@ func restAPI(r *mux.Router) {
 	sra := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
 	sra.HandleFunc("/buckets", restPostBucket).Methods("POST")
 	sra.HandleFunc("/bucketsRescan", restPostBucketsRescan).Methods("POST")
+	sra.HandleFunc("/bucketPath", restPostBucketPath).Methods("POST")
 	sra.HandleFunc("/profile/cpu", restProfileCPU).Methods("POST")
 	sra.HandleFunc("/profile/memory", restProfileMemory).Methods("POST")
 	sra.HandleFunc("/runtime", restGetRuntime).Methods("GET")
@@ -96,6 +97,24 @@ func restPostBucketsRescan(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/_api/buckets", 303)
+}
+
+// Computes/hashes the bucket's subdir given a bucket name...
+//    curl -X POST http://127.0.0.1:8091/_api/bucketPath -d name=5
+func restPostBucketPath(w http.ResponseWriter, r *http.Request) {
+	bucketName := r.FormValue("name")
+	if len(bucketName) < 1 {
+		http.Error(w, "bucket name is too short or is missing", 400)
+		return
+	}
+	path, err := BucketPath(bucketName)
+	if err != nil {
+		http.Error(w,
+			fmt.Sprintf("could not compute BucketPath for name: %v, err: %v",
+				bucketName, err), 500)
+		return
+	}
+	w.Write([]byte(path))
 }
 
 func restPostBucket(w http.ResponseWriter, r *http.Request) {
@@ -208,7 +227,7 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 }
 
 // To start a cpu profiling...
-//    curl -X POST http://127.0.0.1:8077/_api/profile/cpu -d secs=5
+//    curl -X POST http://127.0.0.1:8091/_api/profile/cpu -d secs=5
 // To analyze a profiling...
 //    go tool pprof ./cbgb/cbgb run-cpu.pprof
 func restProfileCPU(w http.ResponseWriter, r *http.Request) {
@@ -235,7 +254,7 @@ func restProfileCPU(w http.ResponseWriter, r *http.Request) {
 }
 
 // To grab a memory profiling...
-//    curl -X POST http://127.0.0.1:8077/_api/profile/memory
+//    curl -X POST http://127.0.0.1:8091/_api/profile/memory
 // To analyze a profiling...
 //    go tool pprof ./cbgb/cbgb run-memory.pprof
 func restProfileMemory(w http.ResponseWriter, r *http.Request) {
