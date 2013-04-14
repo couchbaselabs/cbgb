@@ -63,6 +63,12 @@ Provides file access virtualization, so that higher layers can "open"
 high numbers of FileLike objects, but the actual os.File usage at any
 time is much lower with a fixed count of open os.File's.
 
+periodic task service
+---------------------
+
+The 'periodically' service allows scheduled, asynchronous tasks to be
+completed by pools of worker goroutines.
+
 Lock ordering
 =============
 
