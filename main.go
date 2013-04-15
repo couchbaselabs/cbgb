@@ -61,7 +61,6 @@ func init() {
 		fmt.Fprintf(os.Stderr, "  2: metadata persisted and ops persisted\n")
 		fmt.Fprintf(os.Stderr, "  1: metadata persisted and ops not persisted\n")
 		fmt.Fprintf(os.Stderr, "  0: nothing persisted\n")
-		os.Exit(1)
 	}
 }
 
