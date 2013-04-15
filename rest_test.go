@@ -1511,6 +1511,11 @@ func testRestGetJsonEx(t *testing.T, url string,
 
 func testRestGet(t *testing.T, url string,
 	moreInit func(Bucket)) *httptest.ResponseRecorder {
+	return testRestMethod(t, url, "GET", moreInit)
+}
+
+func testRestMethod(t *testing.T, url string, method string,
+	moreInit func(Bucket)) *httptest.ResponseRecorder {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	b, _ := buckets.New("foo", bucketSettings)
@@ -1520,7 +1525,7 @@ func testRestGet(t *testing.T, url string,
 	}
 	mr := testSetupMux(d)
 	rr := httptest.NewRecorder()
-	r, _ := http.NewRequest("GET", url, nil)
+	r, _ := http.NewRequest(method, url, nil)
 	mr.ServeHTTP(rr, r)
 	return rr
 }
