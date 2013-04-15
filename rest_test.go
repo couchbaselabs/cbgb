@@ -1242,6 +1242,56 @@ func TestCouchAllDocs(t *testing.T) {
 	}
 }
 
+func TestCouchGetDesignDoc(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	ddoc := `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`
+	testSetupDDoc(t, bucket, ddoc, nil)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/notADDoc", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code == 200 {
+		t.Errorf("expected ddoc get to err, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected ddoc get to work, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	var o interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &o)
+	if err != nil {
+		t.Errorf("expected ddoc to parse, err: %v", err)
+	}
+	gotDDoc, _ := json.Marshal(o)
+	err = json.Unmarshal([]byte(ddoc), &o)
+	if err != nil {
+		t.Errorf("expected ddoc to parse, err: %v", err)
+	}
+	expDDoc, _ := json.Marshal(o)
+	if string(gotDDoc) != string(expDDoc) {
+		t.Errorf("expected ddoc to match, got: %v, exp: %v",
+			string(expDDoc), string(gotDDoc))
+	}
+}
+
 func TestCouchDelDesignDoc(t *testing.T) {
 	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
 	defer os.RemoveAll(d)
