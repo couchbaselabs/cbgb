@@ -1565,6 +1565,20 @@ func TestRestPostRuntimeGC(t *testing.T) {
 	}
 }
 
+func TestRestPostBucket(t *testing.T) {
+	rr := testRestPost(t, "http://127.0.0.1/_api/buckets")
+	if rr.Code != 400 {
+		t.Errorf("expected missing name err, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = testRestPost(t, "http://127.0.0.1/_api/buckets?name=hi")
+	if rr.Code != 303 {
+		t.Errorf("expected bucket creating to work, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+}
+
 func TestRestPostBucketCompact(t *testing.T) {
 	rr := testRestPost(t, "http://127.0.0.1/_api/buckets/foo/compact")
 	if len(rr.Body.Bytes()) != 0 {
