@@ -66,7 +66,7 @@ func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
 }
 
 func (b *livebucket) DelDDoc(ddocId string) error {
-	res := vbMutate(b.vbucketDDoc, nil, &gomemcached.MCRequest{
+	res := vbDelete(b.vbucketDDoc, nil, &gomemcached.MCRequest{
 		Opcode: gomemcached.DELETE,
 		Key:    []byte(ddocId),
 	})

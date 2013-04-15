@@ -187,7 +187,7 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err = bucket.SetDDoc("_design/"+ddocId, body); err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
+		http.Error(w, fmt.Sprintf("SetDDoc err: %v", err), 400)
 		return
 	}
 	w.WriteHeader(201)
@@ -199,7 +199,7 @@ func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := bucket.DelDDoc("_design/"+ddocId); err != nil {
-		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
+		http.Error(w, fmt.Sprintf("DelDDoc err: %v", err), 400)
 		return
 	}
 }

@@ -1242,6 +1242,49 @@ func TestCouchAllDocs(t *testing.T) {
 	}
 }
 
+func TestCouchDelDesignDoc(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`, nil)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("DELETE",
+		"http://127.0.0.1/default/_design/notADDoc", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 400 {
+		t.Errorf("expected ddoc delete to 400, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("DELETE",
+		"http://127.0.0.1/default/_design/d0", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code == 400 {
+		t.Errorf("expected ddoc delete to work, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("DELETE",
+		"http://127.0.0.1/default/_design/d0", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 400 {
+		t.Errorf("expected second ddoc delete to 400, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+}
+
 func jsonFindParse(t *testing.T, b []byte, path string) (interface{}, error) {
 	d, err := jsonpointer.Find(b, path)
 	if err != nil {
@@ -1433,17 +1476,17 @@ func TestRestGetBucketPath(t *testing.T) {
 	rr = testRestGet(t, "http://127.0.0.1/_api/bucketPath?name", nil)
 	if rr.Code != 400 {
 		t.Errorf("expected err on short bucket param, got: %#v, %v",
-		rr, rr.Body.String())
+			rr, rr.Body.String())
 	}
 	rr = testRestGet(t, "http://127.0.0.1/_api/bucketPath?name=..", nil)
 	if rr.Code != 400 {
 		t.Errorf("expected err on bad bucket param, got: %#v, %v",
-		rr, rr.Body.String())
+			rr, rr.Body.String())
 	}
 	rr = testRestGet(t, "http://127.0.0.1/_api/bucketPath?name=default", nil)
 	if rr.Body.String() != "00/df/default-bucket" {
 		t.Errorf("expected default bucket hash, got: %#v, %v",
-		rr, rr.Body.String())
+			rr, rr.Body.String())
 	}
 }
 
