@@ -1425,12 +1425,49 @@ func TestRestGetBucketStats(t *testing.T) {
 	bucketStatsSnapshotDelay = o
 }
 
+func TestRestGetBucketPath(t *testing.T) {
+	rr := testRestGet(t, "http://127.0.0.1/_api/bucketPath", nil)
+	if rr.Code != 400 {
+		t.Errorf("expected err on missing bucket param, got: %#v", rr)
+	}
+	rr = testRestGet(t, "http://127.0.0.1/_api/bucketPath?name", nil)
+	if rr.Code != 400 {
+		t.Errorf("expected err on short bucket param, got: %#v, %v",
+		rr, rr.Body.String())
+	}
+	rr = testRestGet(t, "http://127.0.0.1/_api/bucketPath?name=..", nil)
+	if rr.Code != 400 {
+		t.Errorf("expected err on bad bucket param, got: %#v, %v",
+		rr, rr.Body.String())
+	}
+	rr = testRestGet(t, "http://127.0.0.1/_api/bucketPath?name=default", nil)
+	if rr.Body.String() != "00/df/default-bucket" {
+		t.Errorf("expected default bucket hash, got: %#v, %v",
+		rr, rr.Body.String())
+	}
+}
+
 func testRestGetJson(t *testing.T, url string) interface{} {
 	return testRestGetJsonEx(t, url, nil)
 }
 
 func testRestGetJsonEx(t *testing.T, url string,
 	moreInit func(Bucket)) interface{} {
+	rr := testRestGet(t, url, moreInit)
+	if rr.Code != 200 {
+		t.Errorf("expected rest GET %v to work, got: %#v", url, rr)
+	}
+	var j interface{}
+	err := json.Unmarshal(rr.Body.Bytes(), &j)
+	if err != nil {
+		t.Errorf("expected rest GET %v to give json, got: %#v",
+			url, rr.Body.String())
+	}
+	return j
+}
+
+func testRestGet(t *testing.T, url string,
+	moreInit func(Bucket)) *httptest.ResponseRecorder {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
 	b, _ := buckets.New("foo", bucketSettings)
@@ -1442,16 +1479,7 @@ func testRestGetJsonEx(t *testing.T, url string,
 	rr := httptest.NewRecorder()
 	r, _ := http.NewRequest("GET", url, nil)
 	mr.ServeHTTP(rr, r)
-	if rr.Code != 200 {
-		t.Errorf("expected rest GET %v to work, got: %#v", url, rr)
-	}
-	var j interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &j)
-	if err != nil {
-		t.Errorf("expected rest GET %v to give json, got: %#v",
-			url, rr.Body.String())
-	}
-	return j
+	return rr
 }
 
 func TestRestPostRuntimeGC(t *testing.T) {

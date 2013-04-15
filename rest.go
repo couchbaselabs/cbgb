@@ -111,7 +111,7 @@ func restGetBucketPath(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w,
 			fmt.Sprintf("could not compute BucketPath for name: %v, err: %v",
-				bucketName, err), 500)
+				bucketName, err), 400)
 		return
 	}
 	w.Write([]byte(path))
