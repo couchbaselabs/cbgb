@@ -36,7 +36,7 @@ func restAPI(r *mux.Router) {
 	sra := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
 	sra.HandleFunc("/buckets", restPostBucket).Methods("POST")
 	sra.HandleFunc("/bucketsRescan", restPostBucketsRescan).Methods("POST")
-	sra.HandleFunc("/bucketPath", restPostBucketPath).Methods("POST")
+	sra.HandleFunc("/bucketPath", restGetBucketPath).Methods("GET")
 	sra.HandleFunc("/profile/cpu", restProfileCPU).Methods("POST")
 	sra.HandleFunc("/profile/memory", restProfileMemory).Methods("POST")
 	sra.HandleFunc("/runtime", restGetRuntime).Methods("GET")
@@ -100,8 +100,8 @@ func restPostBucketsRescan(w http.ResponseWriter, r *http.Request) {
 }
 
 // Computes/hashes the bucket's subdir given a bucket name...
-//    curl -X POST http://127.0.0.1:8091/_api/bucketPath -d name=5
-func restPostBucketPath(w http.ResponseWriter, r *http.Request) {
+//    curl http://127.0.0.1:8091/_api/bucketPath?name=default
+func restGetBucketPath(w http.ResponseWriter, r *http.Request) {
 	bucketName := r.FormValue("name")
 	if len(bucketName) < 1 {
 		http.Error(w, "bucket name is too short or is missing", 400)
