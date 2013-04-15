@@ -185,7 +185,11 @@ func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	buckets.Close(bucketName, true)
+	err := buckets.Close(bucketName, true)
+	if err != nil {
+		http.Error(w, fmt.Sprintf("error deleting bucket: %v, err: %v",
+			bucketName, err), 400)
+	}
 }
 
 func restPostBucketCompact(w http.ResponseWriter, r *http.Request) {

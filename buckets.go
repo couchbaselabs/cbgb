@@ -127,22 +127,26 @@ func (b *Buckets) Get(name string) Bucket {
 }
 
 // Close the named bucket, optionally purging all its files.
-func (b *Buckets) Close(name string, purgeFiles bool) {
+func (b *Buckets) Close(name string, purgeFiles bool) error {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	if bucket := b.buckets[name]; bucket != nil {
-		bucket.Close()
-		delete(b.buckets, name)
+	bucket, ok := b.buckets[name]
+	if !ok {
+		return fmt.Errorf("not a bucket: %v", name)
 	}
-
+	if bucket != nil {
+		bucket.Close()
+	}
+	delete(b.buckets, name)
 	if purgeFiles {
-		// Permanent destroy
+		// Permanent destroy.
 		bp, err := b.Path(name)
 		if err == nil {
 			os.RemoveAll(bp)
 		}
 	}
+	return nil
 }
 
 func (b *Buckets) CloseAll() {

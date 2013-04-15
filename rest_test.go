@@ -1530,6 +1530,34 @@ func testRestMethod(t *testing.T, url string, method string,
 	return rr
 }
 
+func TestRestDeleteBucket(t *testing.T) {
+	rr := testRestMethod(t, "http://127.0.0.1/_api/buckets/notABucket", "DELETE", nil)
+	if rr.Code != 404 {
+		t.Errorf("expected err on notABucket, got: %#v, $v",
+			rr, rr.Body.String())
+	}
+
+	d, _ := testSetupBuckets(t, 1)
+	defer os.RemoveAll(d)
+	b, _ := buckets.New("foo", bucketSettings)
+	defer b.Close()
+	mr := testSetupMux(d)
+
+	rr = httptest.NewRecorder()
+	r, _ := http.NewRequest("DELETE", "http://127.0.0.1/_api/buckets/foo", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code == 404 {
+		t.Errorf("expected foo deleted, got: %#v", rr)
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("DELETE", "http://127.0.0.1/_api/buckets/foo", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 404 {
+		t.Errorf("expected 2nd foo delete to fail, got: %#v", rr)
+	}
+}
+
 func TestRestPostRuntimeGC(t *testing.T) {
 	rr := testRestPost(t, "http://127.0.0.1/_api/runtime/gc")
 	if len(rr.Body.Bytes()) != 0 {
