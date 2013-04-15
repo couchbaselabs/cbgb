@@ -276,6 +276,7 @@ func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 
 func restGetRuntime(w http.ResponseWriter, r *http.Request) {
 	jsonEncode(w, map[string]interface{}{
+		"version":   VERSION,
 		"startTime": startTime,
 		"arch":      runtime.GOARCH,
 		"os":        runtime.GOOS,
