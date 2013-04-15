@@ -1533,7 +1533,7 @@ func testRestMethod(t *testing.T, url string, method string,
 func TestRestDeleteBucket(t *testing.T) {
 	rr := testRestMethod(t, "http://127.0.0.1/_api/buckets/notABucket", "DELETE", nil)
 	if rr.Code != 404 {
-		t.Errorf("expected err on notABucket, got: %#v, $v",
+		t.Errorf("expected err on notABucket, got: %#v, %v",
 			rr, rr.Body.String())
 	}
 
