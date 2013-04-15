@@ -194,7 +194,14 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 }
 
 func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "unimplemented", 501)
+	_, _, bucket, ddocId := checkDocId(w, r)
+	if bucket == nil || ddocId == "" {
+		return
+	}
+	if err := bucket.DelDDoc("_design/"+ddocId); err != nil {
+		http.Error(w, fmt.Sprintf("Internal Server Error, err: %v", err), 500)
+		return
+	}
 }
 
 func couchDbGetDb(w http.ResponseWriter, r *http.Request) {

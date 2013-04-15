@@ -57,6 +57,7 @@ type Bucket interface {
 	GetDDocVBucket() *VBucket
 	GetDDoc(ddocId string) ([]byte, error)
 	SetDDoc(ddocId string, body []byte) error
+	DelDDoc(ddocId string) error
 	VisitDDocs(start []byte, visitor func(key []byte, data []byte) bool) error
 	GetDDocs() *DDocs
 	SetDDocs(old, val *DDocs) bool
