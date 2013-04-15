@@ -198,7 +198,7 @@ func couchDbDelDesignDoc(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil || ddocId == "" {
 		return
 	}
-	if err := bucket.DelDDoc("_design/"+ddocId); err != nil {
+	if err := bucket.DelDDoc("_design/" + ddocId); err != nil {
 		http.Error(w, fmt.Sprintf("DelDDoc err: %v", err), 400)
 		return
 	}
