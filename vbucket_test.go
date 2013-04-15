@@ -177,3 +177,31 @@ func TestMkVBucketSweeper(t *testing.T) {
 		t.Errorf("expected vbucket sweeper to stop on a clean vbucket.")
 	}
 }
+
+func TestVBucketExpire(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	r0 := &reqHandler{currentBucket: b0}
+	vb0, _ := b0.CreateVBucket(2)
+
+	err = vb0.expire([]byte("not-an-item"), time.Now())
+	if err != nil {
+		t.Errorf("expected expire on a missing item to work, err: %v", err)
+	}
+
+	testLoadInts(t, r0, 2, 5)
+	err = vb0.expire([]byte("0"), time.Now())
+	if err != nil {
+		t.Errorf("expected expire on a unexpired item to work, err: %v", err)
+	}
+}
