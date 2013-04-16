@@ -22,6 +22,10 @@ import (
 
 var VERSION = "0.0.0"
 
+type Form interface {
+	FormValue(key string) string
+}
+
 func addInt64(x, y int64) int64 {
 	return x + y
 }

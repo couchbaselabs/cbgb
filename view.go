@@ -19,10 +19,22 @@ import (
 	"strings"
 
 	"github.com/couchbaselabs/walrus"
+	"github.com/robertkrimen/otto"
 )
 
-type Form interface {
-	FormValue(key string) string
+type Views map[string]*View
+
+type View struct {
+	Map    string `json:"map"`
+	Reduce string `json:"reduce,omitempty"`
+
+	preparedViewMapFunction *ViewMapFunction
+}
+
+type ViewMapFunction struct {
+	otto         *otto.Otto
+	mapf         otto.Value
+	restartEmits func() (resEmits []*ViewRow, resEmitErr error)
 }
 
 // Originally from github.com/couchbaselabs/walrus, but using
@@ -193,4 +205,63 @@ func MergeViewRows(inSorted []chan *ViewRow, out chan *ViewRow) {
 		out <- v
 		receiveViewRow(i, inSorted[i])
 	}
+}
+
+func (v *View) GetViewMapFunction() (*ViewMapFunction, error) {
+	if v.preparedViewMapFunction != nil {
+		return v.preparedViewMapFunction, nil
+	}
+	vmf, err := v.PrepareViewMapFunction()
+	if err != nil {
+		return nil, err
+	}
+	v.preparedViewMapFunction = vmf
+	return vmf, err
+}
+
+func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
+	if v.Map == "" {
+		return nil, fmt.Errorf("view map function missing")
+	}
+
+	o := otto.New()
+	mapf, err := OttoNewFunction(o, v.Map)
+	if err != nil {
+		return nil, fmt.Errorf("view map function error: %v", err)
+	}
+
+	emits := []*ViewRow{}
+	var emitErr error
+
+	o.Set("emit", func(call otto.FunctionCall) otto.Value {
+		if len(call.ArgumentList) <= 0 {
+			emitErr = fmt.Errorf("emit() invoked with no parameters")
+			return otto.UndefinedValue()
+		}
+		var key, value interface{}
+		key, emitErr = call.ArgumentList[0].Export()
+		if emitErr != nil {
+			return otto.UndefinedValue()
+		}
+		if len(call.ArgumentList) >= 2 {
+			value, emitErr = call.ArgumentList[1].Export()
+			if emitErr != nil {
+				return otto.UndefinedValue()
+			}
+		}
+		emits = append(emits, &ViewRow{Key: key, Value: value})
+		return otto.UndefinedValue()
+	})
+
+	return &ViewMapFunction{
+		otto: o,
+		mapf: mapf,
+		restartEmits: func() (resEmits []*ViewRow, resEmitErr error) {
+			resEmits = emits
+			resEmitErr = emitErr
+			emits = []*ViewRow{}
+			emitErr = nil
+			return resEmits, resEmitErr
+		},
+	}, nil
 }
