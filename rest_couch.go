@@ -30,7 +30,6 @@ import (
 func restCouchServe(rest string, staticPath string) {
 	r := mux.NewRouter()
 	restCouchAPI(r)
-	log.Printf("listening rest-couch on: %v", rest)
 	log.Fatal(http.ListenAndServe(rest, authenticationFilter{r}))
 }
 

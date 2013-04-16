@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/daaku/go.flagbytes"
@@ -75,7 +76,6 @@ func initPeriodically() {
 
 func main() {
 	flag.Parse()
-	args := flag.Args()
 
 	initPeriodically()
 
@@ -84,10 +84,6 @@ func main() {
 	}
 
 	log.Printf("cbgb - version %v", VERSION)
-	flag.VisitAll(func(f *flag.Flag) {
-		log.Printf("  %v=%v", f.Name, f.Value)
-	})
-	log.Printf("  %v", args)
 
 	go MutationLogger(mutationLogCh)
 
@@ -123,18 +119,26 @@ func mainServer(buckets *Buckets, defaultBucketName string,
 		}
 	}
 
-	log.Printf("listening data on: %v", addr)
 	if _, err := StartServer(addr, buckets, defaultBucketName); err != nil {
 		fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
 		os.Exit(1)
 	}
 
-	if restCouch != "" {
-		go restCouchServe(restCouch, staticPath)
-	}
+	log.Printf("primary connections...")
 	if restNS != "" {
 		go restNSServe(restNS, staticPath)
+		hp := strings.Split(restNS, ":")
+		log.Printf("  connect your couchbase client to: http://HOST:%s/pools/default",
+			hp[len(hp)-1])
+		log.Printf("  web admin U/I available on: http://HOST:%s",
+			hp[len(hp)-1])
 	}
+	log.Printf("secondary connections...")
+	if restCouch != "" {
+		go restCouchServe(restCouch, staticPath)
+		log.Printf("  view listening: %s", restCouch)
+	}
+	log.Printf("  data listening: %s", addr)
 
 	// Let goroutines do their work.
 	select {}
