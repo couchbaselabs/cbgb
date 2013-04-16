@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"sync/atomic"
 )
 
@@ -66,4 +67,22 @@ func (t *VBMeta) update(from *VBMeta) *VBMeta {
 		atomic.StoreUint64(&t.MetaCas, metaCas)
 	}
 	return t
+}
+
+type vbucketChange struct {
+	bucket             Bucket
+	vbid               uint16
+	oldState, newState VBState
+}
+
+func (c vbucketChange) getVBucket() *VBucket {
+	if c.bucket == nil {
+		return nil
+	}
+	vb, _ := c.bucket.GetVBucket(c.vbid)
+	return vb
+}
+
+func (c vbucketChange) String() string {
+	return fmt.Sprintf("vbucket %v %v -> %v", c.vbid, c.oldState, c.newState)
 }

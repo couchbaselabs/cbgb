@@ -448,21 +448,3 @@ func (b *livebucket) StatAge() time.Duration {
 func (b *livebucket) GetItemBytes() int64 {
 	return atomic.LoadInt64(&b.bucketItemBytes)
 }
-
-type vbucketChange struct {
-	bucket             Bucket
-	vbid               uint16
-	oldState, newState VBState
-}
-
-func (c vbucketChange) getVBucket() *VBucket {
-	if c.bucket == nil {
-		return nil
-	}
-	vb, _ := c.bucket.GetVBucket(c.vbid)
-	return vb
-}
-
-func (c vbucketChange) String() string {
-	return fmt.Sprintf("vbucket %v %v -> %v", c.vbid, c.oldState, c.newState)
-}
