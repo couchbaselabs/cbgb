@@ -15,9 +15,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/rand"
+	"net/http"
 	"net/url"
 	"os"
+	"time"
 )
 
 var VERSION = "0.0.0"
@@ -113,4 +116,26 @@ func CreateNewUUID() string {
 	val2 := rand.Int63()
 	uuid := fmt.Sprintf("%x%x", val1, val2)
 	return uuid
+}
+
+func deadlinedHandler(deadline time.Duration, h http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
+		q := ""
+		if r.URL.RawQuery != "" {
+			q = "?" + r.URL.RawQuery
+		}
+
+		wd := time.AfterFunc(deadline, func() {
+			log.Printf("%v:%v%v is taking longer than %v",
+				r.Method, r.URL.Path, q, deadline)
+		})
+
+		h(w, r)
+
+		if !wd.Stop() {
+			log.Printf("%v:%v%v eventually finished in %v",
+				r.Method, r.URL.Path, q, time.Since(start))
+		}
+	}
 }
