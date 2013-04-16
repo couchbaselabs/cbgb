@@ -45,7 +45,7 @@ func parseHTTPTime(text string) (t time.Time, err error) {
 }
 
 func zipStatic(path string) (*zipHandler, error) {
-	log.Printf("Loading static content from %v", path)
+	log.Printf("loading static content from %v", path)
 	res, err := http.Get(path)
 	if err != nil {
 		return nil, err

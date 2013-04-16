@@ -295,7 +295,7 @@ func (b *Buckets) maybeClose(name string) bool {
 		return false
 	}
 
-	log.Printf("Passivating bucket %v", name)
+	log.Printf("passivating bucket: %v", name)
 	lb.Close()
 	b.buckets[name] = nil
 	return true
