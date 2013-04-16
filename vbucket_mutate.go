@@ -295,15 +295,14 @@ func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 
 func (v *VBucket) mkVBucketSweeper() func(time.Time) bool {
 	return func(time.Time) bool {
-		return v.expScan()
+		return v.expirationScan()
 	}
 }
 
-func (v *VBucket) expScan() bool {
+func (v *VBucket) expirationScan() bool {
 	now := time.Now()
-	// expired := atomic.LoadUint64(&v.stats.Expirable)
 	var cleaned int64
-	err := v.ps.visitItems(casBytes(0), false, func(i *item) bool {
+	err := v.ps.visitItems(nil, false, func(i *item) bool {
 		if i.isExpired(now) {
 			err := v.expire(i.key, now)
 			if err != nil {
@@ -315,8 +314,8 @@ func (v *VBucket) expScan() bool {
 	})
 
 	remaining := atomic.AddInt64(&v.stats.Expirable, -cleaned)
-	log.Printf("Scan complete, cleaned up %v items with %v, %v remaining",
-		cleaned, err, remaining)
+	log.Printf("expirationScan complete, cleaned %v items, %v remaining, err: %v",
+		cleaned, remaining, err)
 	return remaining > 0
 }
 
@@ -324,7 +323,7 @@ func computeExp(exp uint32, tsrc func() time.Time) uint32 {
 	var rv uint32
 	switch {
 	case exp == 0, exp > 30*86400:
-		// Absolute time in seconds since epoch
+		// Absolute time in seconds since epoch.
 		rv = exp
 	default:
 		// Relative time from now.
