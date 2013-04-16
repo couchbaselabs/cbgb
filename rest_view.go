@@ -12,6 +12,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -301,6 +302,9 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 		if err != nil {
 			return err
 		}
+	}
+	if bytes.Equal(begKeyBytes, []byte("null")) {
+		begKeyBytes = nil
 	}
 
 	errVisit := vindex.VisitItemsAscend(begKeyBytes, true, func(i *gkvlite.Item) bool {

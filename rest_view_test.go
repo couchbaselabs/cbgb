@@ -811,3 +811,75 @@ func TestReverseViewRows(t *testing.T) {
 		t.Errorf("reversing empty ViewRows should work, got: %#v", r)
 	}
 }
+
+func TestCouchViewEmitArray(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit([doc.amount], null) }"
+			}
+		}
+    }`, nil)
+
+	rr := httptest.NewRecorder()
+	r, _ := http.NewRequest("GET",
+		"http://127.0.0.1/default/_design/d0/_view/v0?stale=false", nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd := &ViewResult{}
+	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, err: %v", err)
+	}
+	k := []string{"a", "d", "b", "c"}
+	a := []int{1, 2, 3, 4}
+	if dd.TotalRows != len(k) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(k), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
+	}
+
+	rr = httptest.NewRecorder()
+	r, _ = http.NewRequest("GET",
+		`http://127.0.0.1/default/_design/d0/_view/v0?startkey=[]&stale=false`, nil)
+	mr.ServeHTTP(rr, r)
+	if rr.Code != 200 {
+		t.Errorf("expected req to 200, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+	dd = &ViewResult{}
+	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	if err != nil {
+		t.Errorf("expected good view result, err: %v", err)
+	}
+	k = []string{"a", "d", "b", "c"}
+	a = []int{1, 2, 3, 4}
+	if dd.TotalRows != len(k) {
+		t.Errorf("expected %v rows, got: %v, %v, %v",
+			len(k), dd.TotalRows, dd, rr.Body.String())
+	}
+	for i, row := range dd.Rows {
+		if k[i] != row.Id {
+			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+		}
+		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+		}
+	}
+}
