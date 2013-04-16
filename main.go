@@ -18,7 +18,7 @@ var startTime = time.Now()
 
 var verbose = flag.Bool("v", true,
 	"Amount of logging")
-var addr = flag.String("addr", ":11211",
+var addr = flag.String("addr", ":11210",
 	"Data protocol listen address")
 var data = flag.String("data", "./tmp",
 	"Data directory")
