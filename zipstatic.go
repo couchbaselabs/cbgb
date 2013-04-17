@@ -45,36 +45,42 @@ func parseHTTPTime(text string) (t time.Time, err error) {
 }
 
 func zipStatic(path, cachePath string) (*zipHandler, error) {
-	log.Printf("loading static content from %v", path)
+	log.Printf("loading static content from: %v", path)
+	lastTs := time.Now()
+
 	res, err := http.Get(path)
-	if err != nil {
-		return nil, err
-	}
-	defer res.Body.Close()
-	if res.StatusCode != 200 {
-		return nil, fmt.Errorf("HTTP error getting %v: %v", path, res.Status)
-	}
-
-	f, err := ioutil.TempFile("", "staticzip")
-	if err != nil {
-		return nil, err
-	}
-	fn := f.Name()
-	defer os.Remove(fn)
-
-	_, err = io.Copy(f, res.Body)
-	if err != nil {
-		f.Close()
-		return nil, err
-	}
-	f.Close()
-
-	lastTs, err := parseHTTPTime(res.Header.Get("Last-Modified"))
-	if err != nil {
-		lastTs = time.Now()
+	if err == nil {
+		defer res.Body.Close()
+		if res.StatusCode == 200 {
+			var f *os.File
+			cachePath, f, err = mkCacheFile(cachePath, "zipstatic")
+			if err != nil {
+				return nil, err
+			}
+			_, err = io.Copy(f, res.Body)
+			f.Close()
+			if err != nil {
+				os.Remove(cachePath)
+				return nil, err
+			}
+			t, parseErr := parseHTTPTime(res.Header.Get("Last-Modified"))
+			if parseErr == nil {
+				lastTs = t
+			}
+		} else {
+			err = fmt.Errorf("HTTP error getting %v: %v", path, res.Status)
+		}
 	}
 
-	return zipStaticServe(fn, lastTs)
+	zf, zerr := zipStaticServe(cachePath, lastTs)
+	if zerr != nil {
+		// If we couldn't serve from cache, errors from http take precendence.
+		if err != nil {
+			return nil, err
+		}
+		return nil, zerr
+	}
+	return zf, nil
 }
 
 func zipStaticServe(fn string, lastTs time.Time) (*zipHandler, error) {

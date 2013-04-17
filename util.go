@@ -4,9 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 
 	"github.com/steveyen/gkvlite"
@@ -75,6 +77,24 @@ func (w *oneResponder) WriteHeader(i int) {
 	} else {
 		log.Printf("Ignoring duplicate header write %v -> %v", w.status, i)
 	}
+}
+
+func mkCacheFile(fname string, tempPrefix string) (
+	fnameActual string, f *os.File, err error) {
+	if fname == "" {
+		f, err = ioutil.TempFile("", tempPrefix)
+		if err != nil {
+			return "", nil, err
+		}
+		fname = f.Name()
+	} else {
+		os.Remove(fname) // Ignore error as fname might not exist.
+		f, err = os.OpenFile(fname, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+		if err != nil {
+			return "", nil, err
+		}
+	}
+	return fname, f, err
 }
 
 func dumpColl(c *gkvlite.Collection, prefix string) (int, error) {
