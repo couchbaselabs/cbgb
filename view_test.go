@@ -396,6 +396,13 @@ func TestVIndexKeyParseBad(t *testing.T) {
 	}
 }
 
+func TestVIndexKeyBad(t *testing.T) {
+	_, err := vindexKey(nil, vindexKey)
+	if err == nil {
+		t.Errorf("expected err on non-json'able input")
+	}
+}
+
 func TestVIndexKeyCompare(t *testing.T) {
 	tests := []struct {
 		docIdA   string
