@@ -13,15 +13,32 @@ import (
 )
 
 func TestDumpColls(t *testing.T) {
+	x := 0
+	printf := func(format string, a ...interface{}) (n int, err error) {
+		x++
+		return 0, nil
+	}
+
 	store, _ := gkvlite.NewStore(nil)
 	c := store.SetCollection("test", nil)
-	n, err := dumpColl(c, "")
-	if err != nil || n != 0 {
+	n, err := dumpColl(printf, c, "")
+	if err != nil || n != 0 || x != 0 {
 		t.Errorf("expected dumpColl on empty coll to work, got: %v, %v", n, err)
 	}
-	n, err = dumpCollAsItems(c, "")
-	if err != nil || n != 0 {
+	n, err = dumpCollAsItems(printf, c, "")
+	if err != nil || n != 0 || x != 0 {
 		t.Errorf("expected dumpCollAsItems on empty coll to work, got: %v, %v", n, err)
+	}
+	c.Set([]byte("test-key"), (&item{}).toValueBytes())
+	x = 0
+	n, err = dumpColl(printf, c, "")
+	if err != nil || n != 1 || x != 1 {
+		t.Errorf("expected dumpColl on 1-item coll to work, got: %v, %v", n, err)
+	}
+	x = 0
+	n, err = dumpCollAsItems(printf, c, "")
+	if err != nil || n != 1 || x != 1 {
+		t.Errorf("expected dumpCollAsItems on 1-item coll to work, got: %v, %v", n, err)
 	}
 }
 

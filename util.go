@@ -2,7 +2,6 @@ package main
 
 import (
 	"encoding/json"
-	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -97,17 +96,21 @@ func mkCacheFile(fname string, tempPrefix string) (
 	return fname, f, err
 }
 
-func dumpColl(c *gkvlite.Collection, prefix string) (int, error) {
+// You can use fmt.Printf() for the printf param.
+func dumpColl(printf func(format string, a ...interface{}) (n int, err error),
+	c *gkvlite.Collection, prefix string) (int, error) {
 	n := 0
 	err := c.VisitItemsAscend(nil, true, func(cItem *gkvlite.Item) bool {
 		n++
-		fmt.Printf("%v%s %#v\n", prefix, string(cItem.Key), cItem)
+		printf("%v%s %#v\n", prefix, string(cItem.Key), cItem)
 		return true
 	})
 	return n, err
 }
 
-func dumpCollAsItems(c *gkvlite.Collection, prefix string) (int, error) {
+// You can use fmt.Printf() for the printf param.
+func dumpCollAsItems(printf func(format string, a ...interface{}) (n int, err error),
+	c *gkvlite.Collection, prefix string) (int, error) {
 	n := 0
 	var vErr error
 	err := c.VisitItemsAscend(nil, true, func(cItem *gkvlite.Item) bool {
@@ -115,7 +118,8 @@ func dumpCollAsItems(c *gkvlite.Collection, prefix string) (int, error) {
 		if vErr = i.fromValueBytes(cItem.Val); vErr != nil {
 			return false
 		}
-		fmt.Printf("%v%#v, data: %v\n", prefix, i, string(i.data))
+		n++
+		printf("%v%#v, data: %v\n", prefix, i, string(i.data))
 		return true
 	})
 	if vErr != nil {
