@@ -21,5 +21,10 @@ body {
     height: 4em;
 }
 a.viewResults {
+    padding-left: 20px;
     font-size: 12px;
+}
+.viewMutate {
+    padding-right: 30px;
+    float: right;
 }
