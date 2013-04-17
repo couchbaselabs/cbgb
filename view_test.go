@@ -432,6 +432,37 @@ func TestVIndexKeyCompare(t *testing.T) {
 	}
 }
 
+func TestVIndexKeyNil(t *testing.T) {
+	b, err := vindexKey(nil, 123)
+	if err != nil {
+		t.Errorf("expected no failures, err: %v", err)
+	}
+	if !bytes.Equal(b, []byte("123\x00")) {
+		t.Errorf("didn't get expected bytes, got: %#v", string(b))
+	}
+	b, err = vindexKey(nil, nil)
+	if err != nil {
+		t.Errorf("expected no failures, err: %v", err)
+	}
+	if !bytes.Equal(b, []byte("null\x00")) {
+		t.Errorf("didn't get expected bytes, got: %#v", string(b))
+	}
+	b, err = vindexKey(nil, []int{})
+	if err != nil {
+		t.Errorf("expected no failures, err: %v", err)
+	}
+	if !bytes.Equal(b, []byte("[]\x00")) {
+		t.Errorf("didn't get expected bytes, got: %#v", string(b))
+	}
+	b, err = vindexKey(nil, []interface{}(nil))
+	if err != nil {
+		t.Errorf("expected no failures, err: %v", err)
+	}
+	if !bytes.Equal(b, []byte("null\x00")) {
+		t.Errorf("didn't get expected bytes, got: %#v", string(b))
+	}
+}
+
 func TestMemoryOnlyViewsStore(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)

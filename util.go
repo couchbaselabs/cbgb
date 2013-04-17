@@ -81,7 +81,7 @@ func dumpColl(c *gkvlite.Collection, prefix string) (int, error) {
 	n := 0
 	err := c.VisitItemsAscend(nil, true, func(cItem *gkvlite.Item) bool {
 		n++
-		fmt.Printf("%v%#v\n", prefix, cItem)
+		fmt.Printf("%v%s %#v\n", prefix, string(cItem.Key), cItem)
 		return true
 	})
 	return n, err

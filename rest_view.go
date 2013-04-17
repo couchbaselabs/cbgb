@@ -298,12 +298,12 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 		endKey = p.EndKey
 	}
 	if begKey != nil {
-		begKeyBytes, err = json.Marshal(begKey)
+		begKeyBytes, err = vindexKey(nil, begKey)
 		if err != nil {
 			return err
 		}
 	}
-	if bytes.Equal(begKeyBytes, []byte("null")) {
+	if bytes.Equal(begKeyBytes, []byte("null\x00")) {
 		begKeyBytes = nil
 	}
 
