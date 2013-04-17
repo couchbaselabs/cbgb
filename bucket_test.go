@@ -936,3 +936,28 @@ func TestBucketMakeCloser(t *testing.T) {
 		t.Errorf("expected closer to be false")
 	}
 }
+
+func TestBucketMaybeClose(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	buckets, _ := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	b0, _ := buckets.New("foo", &BucketSettings{NumPartitions: MAX_VBUCKETS})
+
+	lb := b0.(*livebucket)
+	lb.activity = int64(1234)
+
+	x := buckets.maybeClose("foo")
+	if x {
+		t.Errorf("expected active foo to not be closed")
+	}
+	x = buckets.maybeClose("foo")
+	if !x {
+		t.Errorf("expected foo to be closed")
+	}
+	x = buckets.maybeClose("foo")
+	if !x {
+		t.Errorf("expected foo to still be closed")
+	}
+}
