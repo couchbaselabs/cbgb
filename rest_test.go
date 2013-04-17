@@ -840,6 +840,22 @@ func TestRestPostBucketFlushDirty(t *testing.T) {
 	}
 }
 
+func TestRestPostProfileCPU(t *testing.T) {
+	rr := testRestPost(t, "http://127.0.0.1/_api/profile/cpu")
+	if rr.Code != 400 {
+		t.Errorf("expected err on missing secs, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+}
+
+func TestRestPostProfileMemory(t *testing.T) {
+	rr := testRestPost(t, "http://127.0.0.1/_api/profile/memory")
+	if len(rr.Body.Bytes()) != 0 {
+		t.Errorf("expected no body, got: %#v, %v",
+			rr, rr.Body.String())
+	}
+}
+
 func testRestPost(t *testing.T, url string) *httptest.ResponseRecorder {
 	d, _ := testSetupBuckets(t, 1)
 	defer os.RemoveAll(d)
