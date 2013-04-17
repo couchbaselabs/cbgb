@@ -432,7 +432,7 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
   retrieveDDocs();
 }
 
-function BucketDDocCtrl($scope, $routeParams, $http) {
+function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   $scope.bucketName = $routeParams.bucketName;
   $scope.ddocNameSuffix = $routeParams.ddocNameSuffix;
   $scope.ddocName = "_design/" + $routeParams.ddocNameSuffix;
@@ -522,6 +522,25 @@ function BucketDDocCtrl($scope, $routeParams, $http) {
         $scope[msgName] = msgError + "; error: " + data;
       });
   }
+
+  $scope.ddocDelete = function() {
+    if (confirm("Are you sure you want to permanently delete design doc '" +
+                $scope.ddocName + "' from bucket '" + $scope.bucketName +
+                "', including all its views?")) {
+      $http({
+        method: 'DELETE',
+        url: '/couchBase/' + $scope.bucketName + '/' + $scope.ddocName
+      }).
+        success(function(data) {
+          $location.path("/buckets/" + $scope.bucketName + "/ddocs")
+          $scope.$apply();
+        }).
+        error(function(data) {
+          alert("Design doc '" + $scope.ddocName +
+                "' was not deleted; error: " + data);
+        });
+    }
+  };
 
   function retrieveDDoc() {
     $http.get('/couchBase/' + $scope.bucketName + '/' + $scope.ddocName).
