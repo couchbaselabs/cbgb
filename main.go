@@ -53,17 +53,15 @@ var statAggPassFreq = flag.Duration("stat-agg-pass-freq", time.Minute*5,
 var buckets *Buckets
 var bucketSettings *BucketSettings
 
-func init() {
-	flag.Usage = func() {
-		fmt.Fprintf(os.Stderr, "cbgb - version %s\n", VERSION)
-		fmt.Fprintf(os.Stderr, "\nusage: %s <flags>\n", os.Args[0])
-		fmt.Fprintf(os.Stderr, "\nflags:\n")
-		flag.PrintDefaults()
-		fmt.Fprintf(os.Stderr, "\npersistence levels:\n")
-		fmt.Fprintf(os.Stderr, "  2: metadata persisted and ops persisted\n")
-		fmt.Fprintf(os.Stderr, "  1: metadata persisted and ops not persisted\n")
-		fmt.Fprintf(os.Stderr, "  0: nothing persisted\n")
-	}
+func usage() {
+	fmt.Fprintf(os.Stderr, "cbgb - version %s\n", VERSION)
+	fmt.Fprintf(os.Stderr, "\nusage: %s <flags>\n", os.Args[0])
+	fmt.Fprintf(os.Stderr, "\nflags:\n")
+	flag.PrintDefaults()
+	fmt.Fprintf(os.Stderr, "\npersistence levels:\n")
+	fmt.Fprintf(os.Stderr, "  2: metadata persisted and ops persisted\n")
+	fmt.Fprintf(os.Stderr, "  1: metadata persisted and ops not persisted\n")
+	fmt.Fprintf(os.Stderr, "  0: nothing persisted\n")
 }
 
 func initPeriodically() {
@@ -76,6 +74,7 @@ func initPeriodically() {
 }
 
 func main() {
+	flag.Usage = usage
 	flag.Parse()
 
 	initPeriodically()

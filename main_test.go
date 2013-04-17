@@ -26,3 +26,16 @@ func TestCreateBucket(t *testing.T) {
 		t.Errorf("2nd createBucket surprisingly worked")
 	}
 }
+
+func TestUsage(t *testing.T) {
+	s := os.Stderr
+	defer func() { os.Stderr = s }()
+	f, _ := ioutil.TempFile("", "test-main-init")
+	defer f.Close()
+	os.Stderr = f
+	usage()
+	fi, _ := f.Stat()
+	if fi.Size() <= 0 {
+		t.Errorf("expected some usage, got none")
+	}
+}
