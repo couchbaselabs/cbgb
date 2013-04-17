@@ -42,7 +42,7 @@
       <br/>
       <ul>
         <li ng-repeat="(viewName, view) in ddoc.views">
-          <legend>view: {{viewName}} <a class="view-link" href="http://{{ viewUrlHost }}:{{ viewUrlPort }}/{{ bucketName }}/_design/{{ ddocNameSuffix }}/_view/{{ viewName }}?include_docs=false" target="_blank">View Results</a></legend>
+          <legend>view: {{viewName}}</legend>
           <div>
             <label>map:
               <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-map"
@@ -54,6 +54,12 @@
               <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-reduce"
               class="view viewReduce">{{view.reduce}}</textarea>
             </label>
+          </div>
+          <div>
+            <a class="viewResults"
+              href="http://{{ viewUrlHost }}:{{ viewUrlPort }}/{{ bucketName }}/_design/{{ ddocNameSuffix }}/_view/{{ viewName }}?include_docs=false">
+              View Results
+            </a>
           </div>
         </li>
       </ul>

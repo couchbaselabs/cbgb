@@ -20,7 +20,6 @@ body {
 .viewReduce {
     height: 4em;
 }
-
-a.view-link {
- font-size: 12px;
+a.viewResults {
+    font-size: 12px;
 }
