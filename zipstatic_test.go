@@ -92,7 +92,7 @@ func TestZipStatic(t *testing.T) {
 	// First, I get an expected error with a broken transport.
 	http.DefaultClient = &http.Client{Transport: &brokenTransport{}}
 
-	_, err := zipStatic("/whatever")
+	_, err := zipStatic("/whatever", "")
 	if err.Error() != "Get /whatever: broken" {
 		t.Fatalf("This is not the error I was looking for: %v", err)
 	}
@@ -106,12 +106,12 @@ func TestZipStatic(t *testing.T) {
 		Transport: &fixedTransport{"/sample.zip", data},
 	}
 
-	_, err = zipStatic("/missing.zip")
+	_, err = zipStatic("/missing.zip", "")
 	if err.Error() != "HTTP error getting /missing.zip: Not Found" {
 		t.Fatalf("This is not the error I was looking for: %v", err)
 	}
 
-	zh, err := zipStatic("/sample.zip")
+	zh, err := zipStatic("/sample.zip", "")
 	if err != nil {
 		t.Fatalf("Error getting zip thing: %v", err)
 	}

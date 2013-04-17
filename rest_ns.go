@@ -296,9 +296,9 @@ func restNSAPI(r *mux.Router) {
 	r.HandleFunc("/settings/stats", restNSSettingsStats)
 }
 
-func restNSServe(restNS string, staticPath string) {
+func restNSServe(restNS string, staticPath string, staticCachePath string) {
 	r := mux.NewRouter()
-	if err := initStatic(r, "/_static/", staticPath); err != nil {
+	if err := initStatic(r, "/_static/", staticPath, staticCachePath); err != nil {
 		log.Fatalf("Error initializing static resources: %v", err)
 	}
 	restAPI(r)

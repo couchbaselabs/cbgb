@@ -31,7 +31,7 @@ func init() {
 
 func TestInitStatic(t *testing.T) {
 	mr := mux.NewRouter()
-	err := initStatic(mr, "/_static/", "static")
+	err := initStatic(mr, "/_static/", "static", "")
 	if err != nil {
 		t.Errorf("expected initStatic to work, err: %v", err)
 	}

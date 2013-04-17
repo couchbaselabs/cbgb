@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"path/filepath"
 	"os"
 	"strings"
 	"time"
@@ -105,11 +106,13 @@ func main() {
 		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
 
-	mainServer(buckets, *defaultBucketName, *addr, *restCouch, *restNS, *staticPath)
+	mainServer(buckets, *defaultBucketName, *addr, *restCouch, *restNS,
+		*staticPath, filepath.Join(*data, ".staticCache"))
 }
 
 func mainServer(buckets *Buckets, defaultBucketName string,
-	addr string, restCouch string, restNS string, staticPath string) {
+	addr string, restCouch string, restNS string,
+	staticPath string, staticCachePath string) {
 	if buckets.Get(defaultBucketName) == nil && defaultBucketName != "" {
 		_, err := createBucket(defaultBucketName, bucketSettings)
 		if err != nil {
@@ -126,7 +129,7 @@ func mainServer(buckets *Buckets, defaultBucketName string,
 
 	log.Printf("primary connections...")
 	if restNS != "" {
-		go restNSServe(restNS, staticPath)
+		go restNSServe(restNS, staticPath, staticCachePath)
 		hp := strings.Split(restNS, ":")
 		log.Printf("  connect your couchbase client to: http://HOST:%s/pools/default",
 			hp[len(hp)-1])

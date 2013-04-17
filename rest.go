@@ -47,9 +47,9 @@ func restAPI(r *mux.Router) {
 	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
 
-func initStatic(r *mux.Router, staticPrefix, staticPath string) error {
+func initStatic(r *mux.Router, staticPrefix, staticPath, staticCachePath string) error {
 	if strings.HasPrefix(staticPath, "http://") {
-		zs, err := zipStatic(staticPath)
+		zs, err := zipStatic(staticPath, staticCachePath)
 		if err != nil {
 			return err
 		}

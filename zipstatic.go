@@ -44,7 +44,7 @@ func parseHTTPTime(text string) (t time.Time, err error) {
 	return
 }
 
-func zipStatic(path string) (*zipHandler, error) {
+func zipStatic(path, cachePath string) (*zipHandler, error) {
 	log.Printf("loading static content from %v", path)
 	res, err := http.Get(path)
 	if err != nil {
@@ -69,16 +69,20 @@ func zipStatic(path string) (*zipHandler, error) {
 	}
 	f.Close()
 
+	lastTs, err := parseHTTPTime(res.Header.Get("Last-Modified"))
+	if err != nil {
+		lastTs = time.Now()
+	}
+
+	return zipStaticServe(fn, lastTs)
+}
+
+func zipStaticServe(fn string, lastTs time.Time) (*zipHandler, error) {
 	zr, err := zip.OpenReader(fn)
 	if err != nil {
 		return nil, err
 	}
 	defer zr.Close()
-
-	lastTs, err := parseHTTPTime(res.Header.Get("Last-Modified"))
-	if err != nil {
-		lastTs = time.Now()
-	}
 
 	zf := &zipHandler{
 		ts:   lastTs,
