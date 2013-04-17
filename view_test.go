@@ -288,6 +288,28 @@ func TestStaleness(t *testing.T) {
 	}
 }
 
+func TestMkViewsRefreshFun(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	b0, err := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+	defer b0.Close()
+
+	v0, _ := b0.CreateVBucket(2)
+
+	f := v0.mkViewsRefreshFun()
+	x := f(time.Now())
+	if x {
+		t.Errorf("expected freshness after a refresh")
+	}
+}
+
 func TestGetViewsStore(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
