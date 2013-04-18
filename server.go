@@ -133,7 +133,8 @@ func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) error {
 	return io.EOF
 }
 
-func waitForConnections(ls net.Listener, buckets *Buckets, defaultBucketName string) {
+func waitForConnections(ls net.Listener, buckets *Buckets,
+	defaultBucketName string) {
 	for {
 		s, e := ls.Accept()
 		if e == nil {
@@ -152,7 +153,8 @@ func waitForConnections(ls net.Listener, buckets *Buckets, defaultBucketName str
 	}
 }
 
-func StartServer(addr string, buckets *Buckets, defaultBucketName string) (net.Listener, error) {
+func StartServer(addr string, buckets *Buckets,
+	defaultBucketName string) (net.Listener, error) {
 	ls, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
@@ -163,7 +165,8 @@ func StartServer(addr string, buckets *Buckets, defaultBucketName string) (net.L
 }
 
 func GetVBucketForKey(b Bucket, key []byte) (*VBucket, error) {
-	return b.GetVBucket(VBucketIdForKey(key, b.GetBucketSettings().NumPartitions))
+	return b.GetVBucket(VBucketIdForKey(key,
+		b.GetBucketSettings().NumPartitions))
 }
 
 func GetVBucket(b Bucket, key []byte, vbs VBState) (*VBucket, error) {
@@ -174,7 +177,8 @@ func GetVBucket(b Bucket, key []byte, vbs VBState) (*VBucket, error) {
 	return vb, err
 }
 
-func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
+func GetItem(b Bucket, key []byte,
+	vbs VBState) *gomemcached.MCResponse {
 	vb, _ := GetVBucket(b, key, vbs) // let the lower level error
 	if vb == nil {
 		return nil
@@ -187,7 +191,8 @@ func GetItem(b Bucket, key []byte, vbs VBState) *gomemcached.MCResponse {
 	})
 }
 
-func SetItem(b Bucket, key []byte, val []byte, vbs VBState) *gomemcached.MCResponse {
+func SetItem(b Bucket, key []byte, val []byte,
+	vbs VBState) *gomemcached.MCResponse {
 	vb, _ := GetVBucket(b, key, vbs) // let the lower level error
 	if vb == nil {
 		return nil
