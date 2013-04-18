@@ -26,7 +26,7 @@ const (
 var broadcastMux = broadcast.NewMuxObserver(0, 0)
 
 var statAggPeriodic *periodically
-var statAggPassivator *periodically
+var statAggPassPeriodic *periodically
 
 var bucketUnavailable = errors.New("Bucket unavailable")
 
@@ -425,7 +425,7 @@ func (b *livebucket) StartStats(d time.Duration) {
 	defer b.statLock.Unlock()
 
 	statAggPeriodic.Register(b.availablech, b.mkSampleStats())
-	statAggPassivator.Register(b.availablech, b.mkQuiesceStats())
+	statAggPassPeriodic.Register(b.availablech, b.mkQuiesceStats())
 }
 
 func (b *livebucket) StopStats() {
@@ -433,7 +433,7 @@ func (b *livebucket) StopStats() {
 	defer b.statLock.Unlock()
 
 	statAggPeriodic.Unregister(b.availablech)
-	statAggPassivator.Unregister(b.availablech)
+	statAggPassPeriodic.Unregister(b.availablech)
 }
 
 func (b *livebucket) StatAge() time.Duration {

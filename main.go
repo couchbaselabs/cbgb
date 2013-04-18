@@ -70,7 +70,7 @@ func initPeriodically() {
 	persistPeriodic = newPeriodically(*persistFreq, 5)
 	viewRefreshPeriodic = newPeriodically(*viewRefreshFreq, 5)
 	statAggPeriodic = newPeriodically(*statAggFreq, 10)
-	statAggPassivator = newPeriodically(*statAggPassFreq, 10)
+	statAggPassPeriodic = newPeriodically(*statAggPassFreq, 10)
 }
 
 func main() {
