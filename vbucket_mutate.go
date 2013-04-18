@@ -12,6 +12,8 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+var expirePeriodic *periodically
+
 func vbMutate(v *VBucket, w io.Writer,
 	req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Mutations, 1)
@@ -222,7 +224,7 @@ func vbMutateItemNew(v *VBucket, w io.Writer, req *gomemcached.MCRequest,
 	if itemNew.exp != 0 {
 		expirable := atomic.AddInt64(&v.stats.Expirable, 1)
 		if expirable == 1 {
-			expirerPeriod.Register(v.available, v.mkVBucketSweeper())
+			expirePeriodic.Register(v.available, v.mkVBucketSweeper())
 		}
 	}
 
