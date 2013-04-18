@@ -127,7 +127,7 @@ function BucketsCtrl($scope, $http) {
         $scope.names = data.sort();
         $scope.err = null;
       }).error(function() {
-          $scope.err = restErrorMsg;
+        $scope.err = restErrorMsg;
       });
   }
 
@@ -554,10 +554,10 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   function retrieveDDoc() {
     $http.get('/couchBase/' + $scope.bucketName + '/' + $scope.ddocName).
       success(function(data) {
-          $scope.ddoc = data;
-          $scope.dirty = false;
-          $scope.err = null;
-        }).
+        $scope.ddoc = data;
+        $scope.dirty = false;
+        $scope.err = null;
+      }).
       error(function() {
           $scope.err = restErrorMsg;
       });
