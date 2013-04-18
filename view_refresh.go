@@ -19,12 +19,12 @@ const (
 	VINDEX_COLL_SUFFIX = ".v"
 )
 
-var viewsRefresher *periodically
+var viewRefreshPeriodic *periodically
 
 func (v *VBucket) markStale() {
 	newval := atomic.AddInt64(&v.staleness, 1)
 	if newval == 1 {
-		viewsRefresher.Register(v.available, v.mkViewsRefreshFun())
+		viewRefreshPeriodic.Register(v.available, v.mkViewsRefreshFun())
 	}
 }
 
