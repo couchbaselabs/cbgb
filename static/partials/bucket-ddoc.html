@@ -34,7 +34,7 @@
   <div class="row main">
     <div class="span8">
       <legend>
-        Design doc: {{ddocNameSuffix}}
+        Design doc <span class="name">{{ddocNameSuffix}}</span>
       </legend>
       <button class="btn" ng-click="ddocSave()">
         Save Design Doc
@@ -51,7 +51,7 @@
                 Delete View
               </button>
             </div>
-            View: {{viewName}}
+            View <span class="name">{{viewName}}</span>
             <a class="viewResults"
               href="http://{{viewUrlHost}}:{{viewUrlPort}}/{{bucketName}}/_design/{{ddocNameSuffix}}/_view/{{viewName}}?include_docs=false">
               View Results

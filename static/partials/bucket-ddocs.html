@@ -27,7 +27,9 @@
 
   <div class="row main">
     <div class="span8">
-      <legend>Design docs for bucket: {{bucketName}}</legend>
+      <legend>
+        Design docs for bucket <span class="name">{{bucketName}}</span>
+      </legend>
       <ul>
         <li ng-repeat="ddoc in ddocs.rows">
           <a href="#/buckets/{{bucketName}}/{{ddoc.doc.meta.id}}">

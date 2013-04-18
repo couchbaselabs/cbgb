@@ -21,7 +21,7 @@
 
   <div class="row main">
    <div class="span10">
-    <legend>Bucket: {{bucketName}}</legend>
+    <legend>Bucket <span class="name">{{bucketName}}</span></legend>
     <ul>
       <li>
         <a href="#/buckets/{{bucketName}}/ddocs">
@@ -34,20 +34,20 @@
         </a>
       </li>
       <li>
-        <i class="icon-tasks"></i> settings:
+        <i class="icon-tasks"></i> settings
         <pre>{{bucket.settings | json}}</pre>
       </li>
       <li>
-        <i class="icon-tasks"></i> itemBytes:
+        <i class="icon-tasks"></i> itemBytes
         <pre>{{bucket.itemBytes | json}}</pre>
       </li>
       <li>
-        <i class="icon-tasks"></i> partitions:
+        <i class="icon-tasks"></i> partitions
         <ul>
           <li>
             <div>
-              filter: <input ng-model="filterChoice">
-              order by:
+              Filter <input ng-model="filterChoice">
+              order by
               <select ng-model="orderChoice">
                 <option value="id">id</option>
                 <option value="lastCas">lastCas</option>

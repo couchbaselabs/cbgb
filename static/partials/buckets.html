@@ -18,7 +18,7 @@
       <legend>Buckets ({{names.length}})</legend>
       <ul>
         <li>
-          filter: <input ng-model="filterChoice">
+          Filter <input ng-model="filterChoice">
         </li>
         <li ng-repeat="name in names | filter:filterChoice">
           <a href="#/buckets/{{name}}"><i class="icon-folder-open"></i> {{name}}</a>

@@ -5,6 +5,9 @@ body {
 .main {
     padding-left: 20px;
 }
+.name {
+    color: #888;
+}
 .statTotal {
     color: #aaa;
     font-size: 8pt;
