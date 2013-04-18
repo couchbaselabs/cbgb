@@ -920,16 +920,16 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 	}
 }
 
-func TestBucketMakeCloser(t *testing.T) {
+func TestBucketMakeQuiescer(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
 	buckets, _ := NewBuckets(testBucketDir,
 		&BucketSettings{NumPartitions: MAX_VBUCKETS})
 
-	c := buckets.makeCloser("not-a-bucket")
+	c := buckets.makeQuiescer("not-a-bucket")
 	if c == nil {
-		t.Errorf("expected makeCloser() to work")
+		t.Errorf("expected makeQuiescer() to work")
 	}
 	x := c(time.Now())
 	if x {
@@ -937,7 +937,7 @@ func TestBucketMakeCloser(t *testing.T) {
 	}
 }
 
-func TestBucketMaybeClose(t *testing.T) {
+func TestBucketMaybeQuiesce(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
@@ -948,15 +948,15 @@ func TestBucketMaybeClose(t *testing.T) {
 	lb := b0.(*livebucket)
 	lb.activity = int64(1234)
 
-	x := buckets.maybeClose("foo")
+	x := buckets.maybeQuiesce("foo")
 	if x {
 		t.Errorf("expected active foo to not be closed")
 	}
-	x = buckets.maybeClose("foo")
+	x = buckets.maybeQuiesce("foo")
 	if !x {
 		t.Errorf("expected foo to be closed")
 	}
-	x = buckets.maybeClose("foo")
+	x = buckets.maybeQuiesce("foo")
 	if !x {
 		t.Errorf("expected foo to still be closed")
 	}

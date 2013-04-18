@@ -75,7 +75,7 @@ type livebucket struct {
 	observer     broadcast.Broadcaster
 
 	bucketItemBytes int64
-	activity        int64 // To track passivation opportunities.
+	activity        int64 // To track quiescence opportunities.
 
 	stats    BucketStatsSnapshot
 	statLock sync.Mutex

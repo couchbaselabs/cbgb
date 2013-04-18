@@ -87,7 +87,7 @@ func (b *Buckets) newUnlocked(name string,
 	if lb, ok := rv.(*livebucket); ok {
 		ch = lb.availablech
 	}
-	quiescePeriodic.Register(ch, b.makeCloser(name))
+	quiescePeriodic.Register(ch, b.makeQuiescer(name))
 
 	b.buckets[name] = rv
 	return rv, nil
@@ -266,15 +266,15 @@ func (b *Buckets) loadBucketUnlocked(name string) (Bucket, error) {
 	return bucket, bucket.Load()
 }
 
-func (b *Buckets) makeCloser(name string) func(time.Time) bool {
+func (b *Buckets) makeQuiescer(name string) func(time.Time) bool {
 	return func(t time.Time) bool {
-		nrv := b.maybeClose(name)
+		nrv := b.maybeQuiesce(name)
 		return !nrv
 	}
 }
 
-// Returns true if the bucket is closed
-func (b *Buckets) maybeClose(name string) bool {
+// Returns true if the bucket is closed.
+func (b *Buckets) maybeQuiesce(name string) bool {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
@@ -295,7 +295,7 @@ func (b *Buckets) maybeClose(name string) bool {
 		return false
 	}
 
-	log.Printf("passivating bucket: %v", name)
+	log.Printf("quiescing bucket: %v", name)
 	lb.Close()
 	b.buckets[name] = nil
 	return true
