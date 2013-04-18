@@ -55,7 +55,16 @@ func (b *Buckets) newUnlocked(name string,
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already exists: %v", name)
 	}
+	rv, err = b.allocUnlocked(name, defaultSettings)
+	if err != nil {
+		return nil, err
+	}
+	b.registerUnlocked(name, rv)
+	return rv, nil
+}
 
+func (b *Buckets) allocUnlocked(name string,
+	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	settings := &BucketSettings{}
 	if defaultSettings != nil {
 		settings = defaultSettings.Copy()
@@ -66,31 +75,26 @@ func (b *Buckets) newUnlocked(name string,
 	if err != nil {
 		return nil, err
 	}
-
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
 		// If an accessible bdir directory exists already, it's ok.
 		if err = os.MkdirAll(bdir, 0777); err != nil && !isDir(bdir) {
 			return nil, fmt.Errorf("could not access bucket dir: %v", bdir)
 		}
 	}
-
 	_, err = settings.load(bdir)
 	if err != nil {
 		return nil, err
 	}
+	return NewBucket(bdir, settings)
+}
 
-	if rv, err = NewBucket(bdir, settings); err != nil {
-		return nil, err
-	}
-
+func (b *Buckets) registerUnlocked(name string, bucket Bucket) {
 	var ch chan bool
-	if lb, ok := rv.(*livebucket); ok {
+	if lb, ok := bucket.(*livebucket); ok {
 		ch = lb.availablech
 	}
 	quiescePeriodic.Register(ch, b.makeQuiescer(name))
-
-	b.buckets[name] = rv
-	return rv, nil
+	b.buckets[name] = bucket
 }
 
 func (b *Buckets) GetNames() []string {
