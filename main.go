@@ -122,11 +122,12 @@ func mainServer(defaultBucketName string, addr string,
 			os.Exit(1)
 		}
 	}
-	if _, err := StartServer(addr, buckets, defaultBucketName); err != nil {
-		fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
-		os.Exit(1)
+	if addr != "" {
+		if _, err := StartServer(addr, buckets, defaultBucketName); err != nil {
+			fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
+			os.Exit(1)
+		}
 	}
-
 	log.Printf("primary connections...")
 	if restNS != "" {
 		go restNSServe(restNS, staticPath, staticCachePath)
