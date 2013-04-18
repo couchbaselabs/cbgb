@@ -396,7 +396,7 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
     }
 
     $scope.ddocCreateResult = "creating design doc: " + ddocName + " ...";
-    ddoc = {
+    var ddoc = {
       "id": ddocName,
       "views": {}
     };
@@ -441,6 +441,8 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   $scope.viewUrlHost = location.hostname;
   $scope.viewUrlPort = 8092; // TODO: Hardcoded 8092.
 
+  $scope.dirty = false;
+
   $scope.viewCreate = function() {
     var viewName = $scope.viewName;
     if (!viewName || viewName.length <= 0) {
@@ -457,7 +459,7 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
       return;
     }
 
-    ddoc = $scope.ddoc;
+    var ddoc = $scope.ddoc;
     if (!ddoc) {
       $scope.viewCreateResult = "error: missing existing ddoc";
       return;
@@ -480,9 +482,7 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   };
 
   $scope.ddocSave = function() {
-    var dirty = false;
-
-    ddoc = $scope.ddoc;
+    var ddoc = $scope.ddoc;
     if (!ddoc.views) {
       ddoc.views = {};
     }
@@ -494,12 +494,12 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
           var curr = document.getElementById(tid + "-" + kind).value;
           if (curr != prev) {
             ddoc.views[viewName][kind] = curr;
-            dirty = true;
+            $scope.dirty = true;
           }
       });
     }
 
-    if (dirty) {
+    if ($scope.dirty) {
       $scope.ddocSaveResult = "saving design doc: " + $scope.ddocName + " ...";
       ddocSaveActual(ddoc, "ddocSaveResult",
                      "saved design doc: " + $scope.ddocName,
@@ -543,13 +543,20 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   };
 
   $scope.viewDelete = function(viewName) {
-    alert("deleting view: " + viewName);
+    var ddoc = $scope.ddoc;
+    if (ddoc && ddoc.views && ddoc.views[viewName]) {
+      delete ddoc.views[viewName];
+      $scope.dirty = true;
+      alert("This change (deleting view: " + viewName + ") is not yet saved; " +
+            "please use Save Design Doc to save your changes.");
+    }
   };
 
   function retrieveDDoc() {
     $http.get('/couchBase/' + $scope.bucketName + '/' + $scope.ddocName).
       success(function(data) {
           $scope.ddoc = data;
+          $scope.dirty = false;
           $scope.err = null;
         }).
       error(function() {

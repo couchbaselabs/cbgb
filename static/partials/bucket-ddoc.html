@@ -46,24 +46,25 @@
         <li ng-repeat="(viewName, view) in ddoc.views">
           <legend>
             <div class="viewMutate">
-              <button class="btn btn-mini btn-danger" ng-click="viewDelete('{{viewName}}')">
+              <button class="btn btn-mini btn-danger"
+                    ng-click="viewDelete(viewName)">
                 Delete View
               </button>
             </div>
-            view: {{viewName}}
+            View: {{viewName}}
             <a class="viewResults"
-              href="http://{{ viewUrlHost }}:{{ viewUrlPort }}/{{ bucketName }}/_design/{{ ddocNameSuffix }}/_view/{{ viewName }}?include_docs=false">
+              href="http://{{viewUrlHost}}:{{viewUrlPort}}/{{bucketName}}/_design/{{ddocNameSuffix}}/_view/{{viewName}}?include_docs=false">
               View Results
             </a>
           </legend>
           <div>
-            <label>map:
+            <label>Map
               <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-map"
               class="view viewMap">{{view.map}}</textarea>
             </label>
           </div>
           <div>
-            <label>reduce:
+            <label>Reduce
               <textarea id="{{bucketName}}/{{ddocName}}/{{viewName}}-reduce"
               class="view viewReduce">{{view.reduce}}</textarea>
             </label>
