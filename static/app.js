@@ -442,6 +442,7 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   $scope.viewUrlPort = 8092; // TODO: Hardcoded 8092.
 
   $scope.dirty = false;
+  $scope.ddocSaveMsg = "";
 
   $scope.viewCreate = function() {
     var viewName = $scope.viewName;
@@ -475,10 +476,9 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
       "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
     };
 
-    $scope.viewCreateResult = "adding view: " + viewName + " ...";
-    ddocSaveActual(ddoc, "viewCreateResult",
-                   "added view: " + viewName + " to: " + $scope.ddocName,
-                   "error saving design doc: " + $scope.ddocName);
+    $scope.dirty = true;
+    $scope.ddocSaveMsg = "(there are unsaved changes)";
+    $scope.viewCreateResult = "added view: " + viewName + " ...";
   };
 
   $scope.ddocSave = function() {
@@ -500,8 +500,8 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
     }
 
     if ($scope.dirty) {
-      $scope.ddocSaveResult = "saving design doc: " + $scope.ddocName + " ...";
-      ddocSaveActual(ddoc, "ddocSaveResult",
+      $scope.ddocSaveMsg = "saving design doc: " + $scope.ddocName + " ...";
+      ddocSaveActual(ddoc, "ddocSaveMsg",
                      "saved design doc: " + $scope.ddocName,
                      "error saving design doc: " + $scope.ddocName);
 
@@ -547,8 +547,7 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
     if (ddoc && ddoc.views && ddoc.views[viewName]) {
       delete ddoc.views[viewName];
       $scope.dirty = true;
-      alert("This change (deleting view: " + viewName + ") is not yet saved; " +
-            "please use Save Design Doc to save your changes.");
+      $scope.ddocSaveMsg = "(there are unsaved changes)";
     }
   };
 
