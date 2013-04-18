@@ -87,21 +87,18 @@ func main() {
 
 	go MutationLogger(mutationLogCh)
 
-	var err error
-
 	bucketSettings = &BucketSettings{
 		NumPartitions: *defaultNumPartitions,
 		QuotaBytes:    int64(*defaultQuotaBytes),
 		MemoryOnly:    MemoryOnly_LEVEL_PERSIST_NOTHING - *defaultPersistence,
 	}
-	buckets, err = NewBuckets(*data, bucketSettings)
+	buckets, err := NewBuckets(*data, bucketSettings)
 	if err != nil {
 		log.Fatalf("error: could not make buckets: %v, data directory: %v", err, *data)
 	}
 
 	log.Printf("loading buckets from: %v", *data)
-	err = buckets.Load(false)
-	if err != nil {
+	if err = buckets.Load(false); err != nil {
 		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
 	}
 
