@@ -55,7 +55,6 @@ func parseBasicAuth(ahdr string) (string, string, error) {
 	}
 	parts = strings.SplitN(string(d), ":", 2)
 	return parts[0], parts[1], nil
-
 }
 
 func authenticateUser(u, p string) bool {
@@ -75,12 +74,12 @@ func (a authenticationFilter) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if ahdr != "" {
 		u, p, err := parseBasicAuth(ahdr)
 		if err != nil {
-			log.Printf("Error reading auth data: %v", err)
+			log.Printf("error reading auth data: %v", err)
 		}
 		if authenticateUser(u, p) {
 			context.Set(r, authInfoKey, httpUser(u))
 		} else {
-			log.Printf("Incorrect password for %v", u)
+			log.Printf("incorrect password for %v", u)
 		}
 	}
 }
@@ -92,7 +91,7 @@ func currentUser(req *http.Request) httpUser {
 
 func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
 	u := currentUser(req)
-	log.Printf("Verifying admin at %v (user is %v)", req.URL, u)
+	log.Printf("verifying admin at %v (user is %v)", req.URL, u)
 	return u.isAdmin()
 }
 
