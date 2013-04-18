@@ -96,6 +96,12 @@ func mkCacheFile(fname string, tempPrefix string) (
 	return fname, f, err
 }
 
+func must(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
 // You can use fmt.Printf() for the printf param.
 func dumpColl(printf func(format string, a ...interface{}) (n int, err error),
 	c *gkvlite.Collection, prefix string) (int, error) {

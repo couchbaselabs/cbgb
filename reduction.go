@@ -27,11 +27,6 @@ func zeroate(i interface{}) float64 {
 	return f
 }
 
-func ottoMust(v otto.Value, err error) otto.Value {
-	must(err)
-	return v
-}
-
 func javascriptReduceSum(call otto.FunctionCall) otto.Value {
 	ob, err := call.Argument(1).Export()
 	if err != nil {
@@ -163,10 +158,4 @@ func javascriptReduceStats(call otto.FunctionCall) otto.Value {
 	}
 
 	return rv.toOtto()
-}
-
-func must(err error) {
-	if err != nil {
-		panic(err)
-	}
 }

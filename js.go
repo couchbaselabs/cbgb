@@ -86,3 +86,8 @@ func ArrayPrefix(arrayMaybe interface{}, prefixLen int) interface{} {
 	}
 	return nil
 }
+
+func ottoMust(v otto.Value, err error) otto.Value {
+	must(err)
+	return v
+}
