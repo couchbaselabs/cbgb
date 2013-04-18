@@ -87,27 +87,32 @@ func main() {
 
 	go MutationLogger(mutationLogCh)
 
-	bucketSettings = &BucketSettings{
+	bss := &BucketSettings{
 		NumPartitions: *defaultNumPartitions,
 		QuotaBytes:    int64(*defaultQuotaBytes),
 		MemoryOnly:    MemoryOnly_LEVEL_PERSIST_NOTHING - *defaultPersistence,
 	}
-	buckets, err := NewBuckets(*data, bucketSettings)
+	bs, err := NewBuckets(*data, bss)
 	if err != nil {
-		log.Fatalf("error: could not make buckets: %v, data directory: %v", err, *data)
+		log.Fatalf("error: could not make buckets: %v, data dir: %v", err, *data)
 	}
-
 	log.Printf("loading buckets from: %v", *data)
-	if err = buckets.Load(false); err != nil {
-		log.Fatalf("error: could not load buckets: %v, data directory: %v", err, *data)
+	if err = bs.Load(false); err != nil {
+		log.Fatalf("error: could not load buckets: %v, data dir: %v", err, *data)
 	}
 
-	mainServer(buckets, *defaultBucketName, *addr, *restCouch, *restNS,
+	buckets = bs
+	bucketSettings = bss
+
+	mainServer(*defaultBucketName, *addr, *restCouch, *restNS,
 		*staticPath, filepath.Join(*data, ".staticCache"))
+
+	// Let goroutines do their work.
+	select {}
 }
 
-func mainServer(buckets *Buckets, defaultBucketName string,
-	addr string, restCouch string, restNS string,
+func mainServer(defaultBucketName string, addr string,
+	restCouch string, restNS string,
 	staticPath string, staticCachePath string) {
 	if buckets.Get(defaultBucketName) == nil && defaultBucketName != "" {
 		_, err := createBucket(defaultBucketName, bucketSettings)
@@ -117,7 +122,6 @@ func mainServer(buckets *Buckets, defaultBucketName string,
 			os.Exit(1)
 		}
 	}
-
 	if _, err := StartServer(addr, buckets, defaultBucketName); err != nil {
 		fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
 		os.Exit(1)
@@ -138,9 +142,6 @@ func mainServer(buckets *Buckets, defaultBucketName string,
 		log.Printf("  view listening: %s", restCouch)
 	}
 	log.Printf("  data listening: %s", addr)
-
-	// Let goroutines do their work.
-	select {}
 }
 
 func createBucket(bucketName string, bucketSettings *BucketSettings) (
