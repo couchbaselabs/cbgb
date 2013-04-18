@@ -77,6 +77,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	initAdmin()
 	initPeriodically()
 
 	if !*verbose {
@@ -84,6 +85,13 @@ func main() {
 	}
 
 	log.Printf("cbgb - version %v", VERSION)
+
+	if *adminUser == "" && *adminPass == "" {
+		log.Printf("-------------------------------------------------------")
+		log.Printf("warning: running openly without any adminUser/adminPass")
+		log.Printf("warning: please don't run this way in production usage")
+		log.Printf("-------------------------------------------------------")
+	}
 
 	go MutationLogger(mutationLogCh)
 

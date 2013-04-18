@@ -1,12 +1,12 @@
 package main
 
 import (
-	"crypto/rand"
 	"encoding/base64"
 	"flag"
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 
 	"github.com/gorilla/context"
@@ -14,14 +14,21 @@ import (
 )
 
 var adminUser = flag.String("adminUser", "", "Admin username")
-var adminPass = flag.String("adminPass", "", "Admin password (default is random)")
+var adminPass = flag.String("adminPass", "", "Admin password")
 
-// Generate a random default password instead of having a default.
-func init() {
-	d := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
-	_, err := rand.Read(d)
-	must(err)
-	*adminPass = base64.StdEncoding.EncodeToString(d)
+func initAdmin() {
+	if *adminUser == "" {
+		*adminUser = os.Getenv("CBGB_ADMIN_USER")
+	}
+	if *adminPass == "" {
+		*adminPass = os.Getenv("CBGB_ADMIN_PASS")
+	}
+	if *adminUser != "" && *adminPass == "" {
+		log.Fatalf("error: adminUser was supplied, but missing adminPass param")
+	}
+	if *adminUser == "" && *adminPass != "" {
+		log.Fatalf("error: adminPass was supplied, but missing adminUser param")
+	}
 }
 
 type contextKey int
