@@ -121,10 +121,9 @@ func (b *Buckets) Get(name string) Bucket {
 		return nil
 	}
 
-	// Doesn't exist, try to load it.
+	// The entry is nil (previously quiesced), so try to re-load it.
 	rv, err := b.loadBucketUnlocked(name)
 	if err != nil {
-		// XXX: bug-508: Clean up...
 		return nil
 	}
 	return rv
@@ -243,7 +242,6 @@ func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
 			log.Printf("loading bucket: %v, already loaded", bucketName)
 			continue
 		}
-
 		_, err = b.LoadBucket(bucketName)
 		if err != nil {
 			return err
@@ -262,12 +260,19 @@ func (b *Buckets) LoadBucket(name string) (Bucket, error) {
 
 func (b *Buckets) loadBucketUnlocked(name string) (Bucket, error) {
 	log.Printf("loading bucket: %v", name)
-	bucket, err := b.newUnlocked(name, b.settings)
+	if b.buckets[name] != nil {
+		return nil, fmt.Errorf("bucket already registered: %v", name)
+	}
+	bucket, err := b.allocUnlocked(name, b.settings)
 	if err != nil {
-		// XXX: bug-508: clean up
 		return nil, err
 	}
-	return bucket, bucket.Load()
+	err = bucket.Load()
+	if err != nil {
+		return nil, err
+	}
+	b.registerUnlocked(name, bucket)
+	return bucket, nil
 }
 
 func (b *Buckets) makeQuiescer(name string) func(time.Time) bool {
@@ -301,6 +306,8 @@ func (b *Buckets) maybeQuiesce(name string) bool {
 
 	log.Printf("quiescing bucket: %v", name)
 	lb.Close()
+
+	// Using nil, not delete, to mark quiescence.
 	b.buckets[name] = nil
 	return true
 }
