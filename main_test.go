@@ -39,3 +39,13 @@ func TestUsage(t *testing.T) {
 		t.Errorf("expected some usage, got none")
 	}
 }
+
+func TestMainServer(t *testing.T) {
+	d, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(d)
+
+	bucketSettings = &BucketSettings{NumPartitions: 1}
+	buckets, _ = NewBuckets(d, bucketSettings)
+
+	mainServer("default", "", "", "", "static", "")
+}
