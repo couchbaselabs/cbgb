@@ -35,10 +35,10 @@ function ServerCtrl($scope, $http) {
   $scope.serverGC = function() {
     $http.post("/_api/runtime/gc").
       success(function() {
-        alert("Server GC succeeded");
+        alert("Server GC succeeded.");
       }).
       error(function(data) {
-        alert("Server GC failed");
+        alert("Server GC failed.");
       });
   };
 
@@ -113,11 +113,11 @@ function BucketsCtrl($scope, $http) {
   $scope.bucketsRescan = function() {
     $http.post("/_api/bucketsRescan").
       success(function() {
-        alert("Buckets rescan directory succeeded");
+        alert("Rescan buckets directory succeeded.");
         retrieveBucketNames();
       }).
       error(function(data) {
-        alert("Buckets rescan directory failed");
+        alert("Rescan buckets directory failed.");
       });
   };
 
