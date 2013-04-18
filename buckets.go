@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var bucketCloser *periodically
+var quiescePeriodic *periodically
 
 // Holder of buckets.
 type Buckets struct {
@@ -87,7 +87,7 @@ func (b *Buckets) newUnlocked(name string,
 	if lb, ok := rv.(*livebucket); ok {
 		ch = lb.availablech
 	}
-	bucketCloser.Register(ch, b.makeCloser(name))
+	quiescePeriodic.Register(ch, b.makeCloser(name))
 
 	b.buckets[name] = rv
 	return rv, nil
