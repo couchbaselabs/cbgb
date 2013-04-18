@@ -46,7 +46,8 @@
         <li ng-repeat="(viewName, view) in ddoc.views">
           <legend>
             <div class="viewMutate">
-              <button type="submit" class="btn btn-mini btn-danger">
+              <button type="submit" class="btn btn-mini btn-danger"
+                    ng-click="viewDelete('{{viewName}}')">
                 Delete View
               </button>
             </div>

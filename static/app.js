@@ -35,10 +35,10 @@ function ServerCtrl($scope, $http) {
   $scope.serverGC = function() {
     $http.post("/_api/runtime/gc").
       success(function() {
-          alert("Server GC succeeded");
+        alert("Server GC succeeded");
       }).
       error(function(data) {
-          alert("Server GC failed");
+        alert("Server GC failed");
       });
   };
 
@@ -48,7 +48,7 @@ function ServerCtrl($scope, $http) {
       $scope.err = null;
     }).
     error(function() {
-        $scope.err = restErrorMsg;
+      $scope.err = restErrorMsg;
     });
   $http.get('/_api/runtime').
     success(function(data) {
@@ -56,7 +56,7 @@ function ServerCtrl($scope, $http) {
       $scope.err = null;
     }).
     error(function() {
-        $scope.err = restErrorMsg;
+      $scope.err = restErrorMsg;
     });
   $http.get('/_api/runtime/memStats').
     success(function(data) {
@@ -64,7 +64,7 @@ function ServerCtrl($scope, $http) {
       $scope.err = null;
     }).
     error(function() {
-        $scope.err = restErrorMsg;
+      $scope.err = restErrorMsg;
     });
 }
 
@@ -77,17 +77,17 @@ function BucketsCtrl($scope, $http) {
   $scope.bucketCreate = function() {
     var bucketName = $scope.bucketName;
     if (bucketName.length <= 0) {
-        return;
+      return;
     }
     if (!bucketName.match(bucketNamePattern)) {
       $scope.bucketCreateResult =
         "error: please use alphanumerics, dashes, and underscores only";
-        return;
+      return;
     }
     if (_.contains($scope.names, bucketName)) {
       $scope.bucketCreateResult =
         "error: bucket " + bucketName + " already exists";
-        return;
+      return;
     }
 
     $scope.bucketCreateResult = "creating bucket: " + bucketName + " ...";
@@ -113,11 +113,11 @@ function BucketsCtrl($scope, $http) {
   $scope.bucketsRescan = function() {
     $http.post("/_api/bucketsRescan").
       success(function() {
-          alert("Buckets rescan directory succeeded");
-          retrieveBucketNames();
+        alert("Buckets rescan directory succeeded");
+        retrieveBucketNames();
       }).
       error(function(data) {
-          alert("Buckets rescan directory failed");
+        alert("Buckets rescan directory failed");
       });
   };
 
@@ -140,24 +140,24 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
   $scope.flushBucketDirtyItems = function() {
     $http.post("/_api/buckets/" + $scope.bucketName + "/flushDirty").
       success(function() {
-          alert("Dirty items for bucket '" + $scope.bucketName +
-                "' were flushed to disk.");
+        alert("Dirty items for bucket '" + $scope.bucketName +
+              "' were flushed to disk.");
       }).
       error(function(data) {
-          alert("Dirty items for bucket '" + $scope.bucketName +
-                "' were not flushed to disk; error: " + data);
+        alert("Dirty items for bucket '" + $scope.bucketName +
+              "' were not flushed to disk; error: " + data);
       });
   };
 
   $scope.compactBucket = function() {
     $http.post("/_api/buckets/" + $scope.bucketName + "/compact").
       success(function() {
-          alert("Bucket '" + $scope.bucketName +
-                "' was compacted.");
+        alert("Bucket '" + $scope.bucketName +
+              "' was compacted.");
       }).
       error(function(data) {
-          alert("Bucket '" + $scope.bucketName +
-                "' was not compacted; error: " + data);
+        alert("Bucket '" + $scope.bucketName +
+              "' was not compacted; error: " + data);
       });
   };
 
@@ -167,12 +167,12 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
                 "', including erasing all its data items?")) {
       $http.delete("/_api/buckets/" + $scope.bucketName).
         success(function() {
-            $location.path("/buckets");
-            $scope.$apply();
+          $location.path("/buckets");
+          $scope.$apply();
         }).
         error(function(data) {
-            alert("Bucket '" + $scope.bucketName +
-                  "' was not deleted; error: " + data);
+          alert("Bucket '" + $scope.bucketName +
+                "' was not deleted; error: " + data);
         });
     }
   };
@@ -184,7 +184,7 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
       $scope.err = null;
     }).
     error(function() {
-        $scope.err = restErrorMsg;
+      $scope.err = restErrorMsg;
     });
 
   $scope.orderChoice = 'id';
@@ -227,8 +227,8 @@ function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
 
   function go() {
     if ($scope.paused) {
-        $scope.timeout = $timeout(go, 1000);
-        return;
+      $scope.timeout = $timeout(go, 1000);
+      return;
     }
 
     $http.get('/_api/buckets/' + $scope.bucketName + '/stats').
@@ -368,31 +368,31 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
       $scope.ddocCreateResult =
         "error: please use alphanumerics, slashes, dashes, and underscores only" +
         " for design doc name";
-        return;
+      return;
     }
     if (ddocName.length <= "_design/".length) {
       $scope.ddocCreateResult = "error: design doc name is too short";
-        return;
+      return;
     }
     if (ddocName.search("_design/") != 0) {
       $scope.ddocCreateResult =
         "error: please start your design doc name with _design/";
-        return;
+      return;
     }
 
     var viewName = $scope.viewName;
     if (viewName.length <= 0) {
-        return;
+      return;
     }
     if (!viewName.match(viewNamePattern)) {
       $scope.ddocCreateResult =
         "error: please use alphanumerics, dashes, and underscores only" +
         " for view name";
-        return;
+      return;
     }
     if (viewName.length <= 0) {
       $scope.ddocCreateResult = "error: missing view name";
-        return;
+      return;
     }
 
     $scope.ddocCreateResult = "creating design doc: " + ddocName + " ...";
@@ -421,11 +421,11 @@ function BucketDDocsCtrl($scope, $routeParams, $http) {
   function retrieveDDocs() {
     $http.get('/pools/default/buckets/' + $scope.bucketName + '/ddocs').
       success(function(data) {
-          $scope.ddocs = data;
-          $scope.err = null;
-        }).
+        $scope.ddocs = data;
+        $scope.err = null;
+      }).
       error(function() {
-          $scope.err = restErrorMsg;
+        $scope.err = restErrorMsg;
       });
   }
 
@@ -444,30 +444,30 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
   $scope.viewCreate = function() {
     var viewName = $scope.viewName;
     if (!viewName || viewName.length <= 0) {
-        return;
+      return;
     }
     if (!viewName.match(viewNamePattern)) {
       $scope.viewCreateResult =
         "error: please use alphanumerics, dashes, and underscores only" +
         " for view name";
-        return;
+      return;
     }
     if (viewName.length <= 0) {
       $scope.viewCreateResult = "error: missing view name";
-        return;
+      return;
     }
 
     ddoc = $scope.ddoc;
     if (!ddoc) {
       $scope.viewCreateResult = "error: missing existing ddoc";
-        return;
+      return;
     }
     if (!ddoc.views) {
       ddoc.views = {};
     }
     if (ddoc.views[viewName]) {
       $scope.viewCreateResult = "error: view of the same name already exists";
-        return;
+      return;
     }
     ddoc.views[viewName] = {
       "map": "function (doc, meta) {\n  emit(meta.id, null);\n}"
@@ -531,15 +531,19 @@ function BucketDDocCtrl($scope, $routeParams, $http, $location) {
         method: 'DELETE',
         url: '/couchBase/' + $scope.bucketName + '/' + $scope.ddocName
       }).
-        success(function(data) {
-          $location.path("/buckets/" + $scope.bucketName + "/ddocs")
-          $scope.$apply();
-        }).
-        error(function(data) {
-          alert("Design doc '" + $scope.ddocName +
-                "' was not deleted; error: " + data);
-        });
+      success(function(data) {
+        $location.path("/buckets/" + $scope.bucketName + "/ddocs")
+        $scope.$apply();
+      }).
+      error(function(data) {
+        alert("Design doc '" + $scope.ddocName +
+              "' was not deleted; error: " + data);
+      });
     }
+  };
+
+  $scope.viewDelete = function(viewName) {
+    alert("deleting view: " + viewName);
   };
 
   function retrieveDDoc() {
