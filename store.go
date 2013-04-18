@@ -20,7 +20,7 @@ import (
 // actual server is a different package.
 var fileService = NewFileService(32)
 
-var persistRunner *periodically
+var persistPeriodic *periodically
 
 const compact_every = 10000
 
@@ -187,7 +187,7 @@ func (s *bucketstore) dirty(force bool) {
 		if newval == 1 {
 			// TODO: Might want to kick off a persistence right now
 			// rather than only schedule a periodic persistence.
-			persistRunner.Register(s.endch, s.mkPersistFun())
+			persistPeriodic.Register(s.endch, s.mkPersistFun())
 		}
 	}
 }

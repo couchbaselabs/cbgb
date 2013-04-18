@@ -67,7 +67,7 @@ func usage() {
 func initPeriodically() {
 	quiescePeriodic = newPeriodically(*quiesceFreq, 1)
 	expirePeriodic = newPeriodically(*expireFreq, 2)
-	persistRunner = newPeriodically(*persistFreq, 5)
+	persistPeriodic = newPeriodically(*persistFreq, 5)
 	viewsRefresher = newPeriodically(*viewRefreshFreq, 5)
 	statAggPeriodic = newPeriodically(*statAggFreq, 10)
 	statAggPassivator = newPeriodically(*statAggPassFreq, 10)
