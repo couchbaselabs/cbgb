@@ -32,9 +32,9 @@ type View struct {
 }
 
 type ViewMapFunction struct {
-	otto         *otto.Otto
-	mapf         otto.Value
-	restartEmits func() (resEmits []*ViewRow, resEmitErr error)
+	otto    *otto.Otto
+	mapf    otto.Value
+	restart func() (emits []*ViewRow, logs []string, err []error)
 }
 
 // Originally from github.com/couchbaselabs/walrus, but using
@@ -230,22 +230,25 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		return nil, fmt.Errorf("view map function error: %v", err)
 	}
 
+	errs := []error{}
+	logs := []string{}
 	emits := []*ViewRow{}
-	var emitErr error
 
 	o.Set("emit", func(call otto.FunctionCall) otto.Value {
 		if len(call.ArgumentList) <= 0 {
-			emitErr = fmt.Errorf("emit() invoked with no parameters")
+			errs = append(errs, fmt.Errorf("emit() needs an emit key argument"))
 			return otto.UndefinedValue()
 		}
-		var key, value interface{}
-		key, emitErr = call.ArgumentList[0].Export()
-		if emitErr != nil {
+		key, err := call.ArgumentList[0].Export()
+		if err != nil {
+			errs = append(errs, err)
 			return otto.UndefinedValue()
 		}
+		var value interface{}
 		if len(call.ArgumentList) >= 2 {
-			value, emitErr = call.ArgumentList[1].Export()
-			if emitErr != nil {
+			value, err = call.ArgumentList[1].Export()
+			if err != nil {
+				errs = append(errs, err)
 				return otto.UndefinedValue()
 			}
 		}
@@ -253,15 +256,35 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		return otto.UndefinedValue()
 	})
 
+	o.Set("log", func(call otto.FunctionCall) otto.Value {
+		if len(call.ArgumentList) <= 0 {
+			return otto.UndefinedValue()
+		}
+		v, err := call.ArgumentList[0].Export()
+		if err != nil {
+			errs = append(errs, err)
+			return otto.UndefinedValue()
+		}
+		j, err := json.Marshal(v)
+		if err != nil {
+			errs = append(errs, err)
+			return otto.UndefinedValue()
+		}
+		logs = append(logs, string(j))
+		return otto.UndefinedValue()
+	})
+
 	return &ViewMapFunction{
 		otto: o,
 		mapf: mapf,
-		restartEmits: func() (resEmits []*ViewRow, resEmitErr error) {
-			resEmits = emits
-			resEmitErr = emitErr
+ 	 	restart: func() ([]*ViewRow, []string, []error) {
+			resEmits := emits
+			resLogs := logs
+			resErrs := errs
 			emits = []*ViewRow{}
-			emitErr = nil
-			return resEmits, resEmitErr
+			logs = []string{}
+			errs = []error{}
+			return resEmits, resLogs, resErrs
 		},
 	}, nil
 }

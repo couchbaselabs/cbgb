@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"path/filepath"
 	"strings"
 	"sync/atomic"
@@ -183,9 +184,17 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 	if err != nil {
 		return nil, err
 	}
-	emits, err := pvmf.restartEmits()
-	if err != nil {
-		return nil, err
+	emits, logs, errs := pvmf.restart()
+	if len(errs) > 0 {
+		for _, err := range errs {
+			log.Printf("map function err, ddocId: %v, viewId: %v, docId: %v, err: %s",
+				ddocId, viewId, docId, err)
+		}
+		return nil, errs[0]
+	}
+	for _, msg := range logs {
+		log.Printf("map function log, ddocId: %v, viewId: %v, docId: %v, log: %s",
+			ddocId, viewId, docId, msg)
 	}
 	for _, emit := range emits {
 		emit.Id = docId
