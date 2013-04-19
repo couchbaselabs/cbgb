@@ -50,7 +50,7 @@ var statAggFreq = flag.Duration("stat-agg-freq", time.Second*10,
 var statAggPassFreq = flag.Duration("stat-agg-pass-freq", time.Minute*5,
 	"Stat aggregation passivation frequency")
 var maxConns = flag.Int("max-conns", 800,
-	"Max number of connections.")
+	"Max number of connections")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
