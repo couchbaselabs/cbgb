@@ -17,8 +17,9 @@ var serverStart = time.Now()
 var dropConnection = &gomemcached.MCResponse{Fatal: true}
 
 type reqHandler struct {
-	buckets       *Buckets
-	currentBucket Bucket
+	buckets           *Buckets
+	currentBucket     Bucket
+	currentBucketName string
 }
 
 func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
@@ -64,7 +65,8 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 				Body:   []byte("invalid SASL auth body"),
 			}
 		}
-		targetBucket := rh.buckets.Get(string(targetUserPswd[1]))
+		targetBucketName := string(targetUserPswd[1])
+		targetBucket := rh.buckets.Get(targetBucketName)
 		if targetBucket == nil {
 			return &gomemcached.MCResponse{
 				Status: gomemcached.EINVAL,
@@ -78,7 +80,28 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 			}
 		}
 		rh.currentBucket = targetBucket
+		rh.currentBucketName = targetBucketName
 		return &gomemcached.MCResponse{}
+	}
+
+	if rh.currentBucket == nil {
+		return &gomemcached.MCResponse{
+			Status: gomemcached.EINVAL,
+			Body:   []byte("no bucket, please SASL auth"),
+		}
+	}
+
+	for !rh.currentBucket.Available() {
+		b := rh.buckets.Get(rh.currentBucketName)
+		if b == nil {
+			return &gomemcached.MCResponse{
+				Fatal: true,
+			}
+		}
+		rh.currentBucket = b
+	}
+
+	switch req.Opcode {
 	case gomemcached.TAP_CONNECT:
 		chpkt, cherr := transmitPackets(w)
 		return doTap(rh.currentBucket, req, r, chpkt, cherr)
@@ -140,8 +163,9 @@ func waitForConnections(ls net.Listener, buckets *Buckets,
 		if e == nil {
 			bucket := buckets.Get(defaultBucketName)
 			handler := &reqHandler{
-				buckets:       buckets,
-				currentBucket: bucket,
+				buckets:           buckets,
+				currentBucket:     bucket,
+				currentBucketName: defaultBucketName,
 			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler)
 		} else {
