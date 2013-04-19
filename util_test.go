@@ -1,14 +1,18 @@
 package main
 
 import (
+	"bytes"
+	"encoding/json"
 	"errors"
 	"io/ioutil"
+	"net"
 	"net/http/httptest"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
 
+	"github.com/dustin/gomemcached"
 	"github.com/steveyen/gkvlite"
 )
 
@@ -163,5 +167,131 @@ func TestMkCacheFile(t *testing.T) {
 	_, _, err = mkCacheFile(filepath.Join(testDir, "not-a-dir", "tmcf"), "")
 	if err == nil {
 		t.Errorf("expected failed mkCacheFile on bad dir")
+	}
+}
+
+// Run through the sessionLoop code with a quit command.
+//
+// This test doesn't do much other than confirm that the session loop
+// actually would terminate the real session goroutine on quit (by
+// completing).
+func TestSessionLoop(t *testing.T) {
+	req := &gomemcached.MCRequest{
+		Opcode: gomemcached.QUIT,
+	}
+
+	rh := &reqHandler{}
+
+	sessionLoop(rwCloser{bytes.NewBuffer(req.Bytes())}, "test", rh,
+		func() {})
+}
+
+func TestListener(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBuckets(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer b.CloseAll()
+	if err != nil {
+		t.Fatalf("Error with NewBuckets: %v", err)
+	}
+	l, err := StartServer("0.0.0.0:0", 100, b, DEFAULT_BUCKET_NAME)
+	if err != nil {
+		t.Fatalf("Error starting listener: %v", err)
+	}
+
+	// Just to be extra ridiculous, dial it.
+	c, err := net.Dial("tcp", l.Addr().String())
+	if err != nil {
+		t.Fatalf("Error connecting: %v", err)
+	}
+	req := &gomemcached.MCRequest{Opcode: gomemcached.QUIT}
+	_, err = c.Write(req.Bytes())
+	if err != nil {
+		t.Fatalf("Error sending hangup request.")
+	}
+
+	l.Close()
+}
+
+func TestListenerFail(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, err := NewBuckets(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer b.CloseAll()
+	if err != nil {
+		t.Fatalf("Error with NewBuckets: %v", err)
+	}
+	l, err := StartServer("1.1.1.1:22", 100, b, DEFAULT_BUCKET_NAME)
+	if err == nil {
+		t.Fatalf("Error failing to listen: %v", l.Addr())
+	}
+}
+
+func TestBytesEncoder(t *testing.T) {
+	tests := map[string]string{
+		"simple": `"simple"`,
+		"O'Hair": `"O%27Hair"`,
+	}
+
+	for in, out := range tests {
+		b := Bytes(in)
+		got, err := json.Marshal(&b)
+		if err != nil {
+			t.Errorf("Error marshaling %v", in)
+		}
+		if string(got) != out {
+			t.Errorf("Expected %s, got %s", out, got)
+		}
+	}
+}
+
+func TestBytesDecoder(t *testing.T) {
+	pos := map[string]string{
+		`"simple"`:   "simple",
+		`"O%27Hair"`: "O'Hair",
+	}
+
+	for in, out := range pos {
+		b := Bytes{}
+		err := json.Unmarshal([]byte(in), &b)
+		if err != nil {
+			t.Errorf("Error unmarshaling %v", in)
+		}
+		if out != b.String() {
+			t.Errorf("Expected %v for %v, got %v", out, in, b)
+		}
+	}
+
+	neg := []string{"xxx no quotes", `"invalid esc %2x"`}
+
+	for _, in := range neg {
+		b := Bytes{}
+		err := json.Unmarshal([]byte(in), &b)
+		if err == nil {
+			t.Errorf("Expected error unmarshaling %v, got %v", in, b)
+		}
+	}
+
+	// This is odd looking, but I use the internal decoder
+	// directly since the interior error is just about impossible
+	// to encounter otherwise.
+	for _, in := range neg {
+		b := Bytes{}
+		err := b.UnmarshalJSON([]byte(in))
+		if err == nil {
+			t.Errorf("Expected error unmarshaling %v, got %v", in, b)
+		}
+	}
+}
+
+func TestDirIsDir(t *testing.T) {
+	if !isDir(".") {
+		t.Errorf("expected . to be a dir")
 	}
 }

@@ -47,7 +47,8 @@ func restAPI(r *mux.Router) {
 	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
 
-func initStatic(r *mux.Router, staticPrefix, staticPath, staticCachePath string) error {
+func initStatic(r *mux.Router,
+	staticPrefix, staticPath, staticCachePath string) error {
 	if strings.HasPrefix(staticPath, "http://") {
 		zs, err := zipStatic(staticPath, staticCachePath)
 		if err != nil {
@@ -61,6 +62,21 @@ func initStatic(r *mux.Router, staticPrefix, staticPath, staticCachePath string)
 				http.FileServer(http.Dir(staticPath))))
 	}
 	return nil
+}
+
+func parseBucketName(w http.ResponseWriter, vars map[string]string) (
+	string, Bucket) {
+	bucketName, ok := vars["bucketname"]
+	if !ok {
+		http.Error(w, "missing bucketName parameter", 400)
+		return "", nil
+	}
+	bucket := buckets.Get(bucketName)
+	if bucket == nil {
+		http.Error(w, "no bucket with that bucketName", 404)
+		return bucketName, nil
+	}
+	return bucketName, bucket
 }
 
 // For settings that are constant throughout server process lifetime.

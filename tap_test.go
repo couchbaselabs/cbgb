@@ -12,6 +12,62 @@ import (
 	"github.com/dustin/gomemcached"
 )
 
+// Exercise the mutation logger code. Output is not examined.
+func TestMutationLogger(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	b.CreateVBucket(0)
+
+	ch := make(chan interface{}, 10)
+	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBDead, newState: VBActive}
+	ch <- mutation{deleted: false, key: []byte("a"), cas: 0}
+	ch <- mutation{deleted: true, key: []byte("a"), cas: 0}
+	ch <- mutation{deleted: false, key: []byte("a"), cas: 2}
+	ch <- vbucketChange{oldState: VBDead, newState: VBActive} // invalid bucket
+	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBActive, newState: VBDead}
+	close(ch)
+
+	MutationLogger(ch)
+
+	// Should've eaten all the things
+	if len(ch) != 0 {
+		t.Fatalf("Failed to consume all the messages")
+	}
+}
+
+func TestMutationInvalid(t *testing.T) {
+	defer func() {
+		if x := recover(); x == nil {
+			t.Fatalf("Expected panic, didn't get it")
+		}
+	}()
+
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	b, _ := NewBucket(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	b.CreateVBucket(0)
+
+	ch := make(chan interface{}, 5)
+	// Notification of a non-existence bucket is a null lookup.
+	ch <- vbucketChange{bucket: b, vbid: 0, oldState: VBDead, newState: VBActive}
+	// But this is crazy stupid and will crash the logger.
+	ch <- 19
+
+	MutationLogger(ch)
+
+	// Should've eaten all the things
+	if len(ch) != 0 {
+		t.Fatalf("Failed to consume all the messages")
+	}
+}
+
 func TestTapSetup(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
