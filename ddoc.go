@@ -46,6 +46,7 @@ func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
 	if res.Status != gomemcached.SUCCESS {
 		return fmt.Errorf("set ddoc failed: %v, status: %v", ddocId, res.Status)
 	}
+	b.SetDDocs(b.GetDDocs(), nil) // Clear all our cached ddocs.
 	return nil
 }
 
