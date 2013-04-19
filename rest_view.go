@@ -47,14 +47,17 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "getDDocs nil", 500)
 		return
 	}
-	ddoc, ok := (*ddocs)["_design/"+ddocId]
+	ddocIdFull := "_design/"+ddocId
+	ddoc, ok := (*ddocs)[ddocIdFull]
 	if !ok {
-		http.Error(w, "design doc not found", 404)
+		http.Error(w, fmt.Sprintf("design doc not found, ddocId: %v",
+			ddocIdFull), 404)
 		return
 	}
 	view, ok := ddoc.Views[viewId]
 	if !ok {
-		http.Error(w, "view not found", 404)
+		http.Error(w, fmt.Sprintf("view not found, viewId: %v, ddocId: %v",
+			viewId, ddocIdFull), 404)
 		return
 	}
 
