@@ -13,7 +13,7 @@ import (
 	"github.com/daaku/go.flagbytes"
 )
 
-var mutationLogCh = make(chan interface{}, 1024)
+var VERSION = "0.0.0"
 
 var startTime = time.Now()
 
@@ -54,6 +54,7 @@ var maxConns = flag.Int("max-conns", 800,
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
+var mutationLogCh = make(chan interface{}, 1024)
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "cbgb - version %s\n", VERSION)

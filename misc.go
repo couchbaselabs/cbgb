@@ -23,8 +23,6 @@ import (
 	"time"
 )
 
-var VERSION = "0.0.0"
-
 type Form interface {
 	FormValue(key string) string
 }
