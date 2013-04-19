@@ -47,5 +47,5 @@ func TestMainServer(t *testing.T) {
 	bucketSettings = &BucketSettings{NumPartitions: 1}
 	buckets, _ = NewBuckets(d, bucketSettings)
 
-	mainServer("default", "", "", "", "static", "")
+	mainServer("default", "", 100, "", "", "static", "")
 }

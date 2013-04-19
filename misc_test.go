@@ -79,7 +79,8 @@ func TestSessionLoop(t *testing.T) {
 
 	rh := &reqHandler{}
 
-	sessionLoop(rwCloser{bytes.NewBuffer(req.Bytes())}, "test", rh)
+	sessionLoop(rwCloser{bytes.NewBuffer(req.Bytes())}, "test", rh,
+		func() {})
 }
 
 func TestListener(t *testing.T) {
@@ -93,7 +94,7 @@ func TestListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}
-	l, err := StartServer("0.0.0.0:0", b, DEFAULT_BUCKET_NAME)
+	l, err := StartServer("0.0.0.0:0", 100, b, DEFAULT_BUCKET_NAME)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
 	}
@@ -123,7 +124,7 @@ func TestListenerFail(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}
-	l, err := StartServer("1.1.1.1:22", b, DEFAULT_BUCKET_NAME)
+	l, err := StartServer("1.1.1.1:22", 100, b, DEFAULT_BUCKET_NAME)
 	if err == nil {
 		t.Fatalf("Error failing to listen: %v", l.Addr())
 	}

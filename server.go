@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"github.com/dustin/gomemcached"
@@ -127,8 +128,10 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 	return vb.Dispatch(w, req)
 }
 
-func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
+func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler,
+	doneFun func()) {
 	defer s.Close()
+	defer doneFun()
 
 	var err error
 	for err == nil {
@@ -156,17 +159,32 @@ func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) error {
 	return io.EOF
 }
 
-func waitForConnections(ls net.Listener, buckets *Buckets,
+func waitForConnections(ls net.Listener, maxConns int, buckets *Buckets,
 	defaultBucketName string) {
+	closech := make(chan bool)
+	var open int64
+
 	for {
+		for atomic.LoadInt64(&open) >= int64(maxConns) {
+			log.Printf("waitForConnections: reached maxConns: %v", maxConns)
+			<-closech
+		}
+
 		s, e := ls.Accept()
 		if e == nil {
+			atomic.AddInt64(&open, 1)
 			handler := &reqHandler{
 				buckets:           buckets,
 				currentBucket:     buckets.Get(defaultBucketName),
 				currentBucketName: defaultBucketName,
 			}
-			go sessionLoop(s, s.RemoteAddr().String(), handler)
+			go sessionLoop(s, s.RemoteAddr().String(), handler,
+				func() {
+					if atomic.AddInt64(&open, -1) >= int64(maxConns)-1 {
+						log.Printf("waitForConnections: under maxConns: %v", maxConns)
+						closech <- true
+					}
+				})
 		} else {
 			log.Printf("error accepting from %s: %v", ls, e)
 			// TODO:  Figure out if this is recoverable.
@@ -176,14 +194,14 @@ func waitForConnections(ls net.Listener, buckets *Buckets,
 	}
 }
 
-func StartServer(addr string, buckets *Buckets,
+func StartServer(addr string, maxConns int, buckets *Buckets,
 	defaultBucketName string) (net.Listener, error) {
 	ls, err := net.Listen("tcp", addr)
 	if err != nil {
 		return nil, err
 	}
 
-	go waitForConnections(ls, buckets, defaultBucketName)
+	go waitForConnections(ls, maxConns, buckets, defaultBucketName)
 	return ls, nil
 }
 

@@ -49,6 +49,8 @@ var statAggFreq = flag.Duration("stat-agg-freq", time.Second*10,
 	"Stat aggregation frequency")
 var statAggPassFreq = flag.Duration("stat-agg-pass-freq", time.Minute*5,
 	"Stat aggregation passivation frequency")
+var maxConns = flag.Int("max-conns", 800,
+	"Max number of connections.")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
@@ -112,14 +114,14 @@ func main() {
 	buckets = bs
 	bucketSettings = bss
 
-	mainServer(*defaultBucketName, *addr, *restCouch, *restNS,
+	mainServer(*defaultBucketName, *addr, *maxConns, *restCouch, *restNS,
 		*staticPath, filepath.Join(*data, ".staticCache"))
 
 	// Let goroutines do their work.
 	select {}
 }
 
-func mainServer(defaultBucketName string, addr string,
+func mainServer(defaultBucketName string, addr string, maxConns int,
 	restCouch string, restNS string,
 	staticPath string, staticCachePath string) {
 	if buckets.Get(defaultBucketName) == nil && defaultBucketName != "" {
@@ -131,7 +133,8 @@ func mainServer(defaultBucketName string, addr string,
 		}
 	}
 	if addr != "" {
-		if _, err := StartServer(addr, buckets, defaultBucketName); err != nil {
+		_, err := StartServer(addr, maxConns, buckets, defaultBucketName)
+		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: could not start server: %v\n", err)
 			os.Exit(1)
 		}
