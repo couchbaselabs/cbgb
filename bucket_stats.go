@@ -196,8 +196,6 @@ func transmitStats(w io.Writer) (chan<- statItem, <-chan error) {
 }
 
 func doStats(b Bucket, w io.Writer, key string) error {
-	log.Printf("Doing stats for %#v", key)
-
 	ch, errs := transmitStats(w)
 	ch <- statItem{"uptime", time.Since(serverStart).String()}
 	ch <- statItem{"version", VERSION}
@@ -206,7 +204,7 @@ func doStats(b Bucket, w io.Writer, key string) error {
 	ch <- statItem{"stateAge", statAge.String()}
 
 	if statAge > time.Second*30 {
-		log.Printf("Stats are too old.  Starting them up.")
+		log.Printf("stats are too old; starting them up")
 		b.StartStats(time.Second)
 	} else {
 		agg := AggregateStats(b, key)

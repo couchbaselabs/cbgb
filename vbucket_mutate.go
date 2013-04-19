@@ -316,7 +316,7 @@ func (v *VBucket) expirationScan() bool {
 	})
 
 	remaining := atomic.AddInt64(&v.stats.Expirable, -cleaned)
-	log.Printf("expirationScan complete, cleaned %v items, %v remaining, err: %v",
+	log.Printf("expirationScan complete, items cleaned: %v, remaining: %v, err: %v",
 		cleaned, remaining, err)
 	return remaining > 0
 }

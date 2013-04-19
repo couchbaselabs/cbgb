@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"hash/crc32"
 	"io"
-	"log"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -348,7 +347,6 @@ func vbChangesSince(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *g
 		err = <-errs
 	}
 	if err != nil {
-		log.Printf("Error sending changes-since: %v", err)
 		return &gomemcached.MCResponse{Fatal: true}
 	}
 

@@ -108,7 +108,7 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 	case gomemcached.STAT:
 		err := doStats(rh.currentBucket, w, string(req.Key))
 		if err != nil {
-			log.Printf("Error sending stats: %v", err)
+			log.Printf("error: doStats, err: %v", err)
 			return &gomemcached.MCResponse{Fatal: true}
 		}
 		return nil
@@ -135,7 +135,7 @@ func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler) {
 		err = handleMessage(s, s, handler)
 	}
 	if err != io.EOF {
-		log.Printf("Error on session, addr: %v, err: %v", addr, err)
+		log.Printf("error: sessionLoop, addr: %v, err: %v", addr, err)
 	}
 }
 
@@ -161,15 +161,14 @@ func waitForConnections(ls net.Listener, buckets *Buckets,
 	for {
 		s, e := ls.Accept()
 		if e == nil {
-			bucket := buckets.Get(defaultBucketName)
 			handler := &reqHandler{
 				buckets:           buckets,
-				currentBucket:     bucket,
+				currentBucket:     buckets.Get(defaultBucketName),
 				currentBucketName: defaultBucketName,
 			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler)
 		} else {
-			log.Printf("Error accepting from %s: %v", ls, e)
+			log.Printf("error accepting from %s: %v", ls, e)
 			// TODO:  Figure out if this is recoverable.
 			// It probably is most of the time, but not during tests.
 			return

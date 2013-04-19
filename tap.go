@@ -137,13 +137,13 @@ func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 					// or may not be what we want.
 					res := vb.get(m.key)
 					if res.Status != gomemcached.SUCCESS {
-						log.Printf("Tapped a missing item, skipping: %s",
+						log.Printf("tapped a missing item, skipping key: %s",
 							m.key)
 						continue
 					}
 					pkt.Body = res.Body
 				} else {
-					log.Printf("Change on missing partition? %v", m.vb)
+					log.Printf("tapping a missing partition: %v", m.vb)
 					continue
 				}
 			}
@@ -238,9 +238,9 @@ func MutationLogger(ch chan interface{}) {
 	for i := range ch {
 		switch o := i.(type) {
 		case mutation:
-			log.Printf("mutation: %v", o)
+			log.Printf("tap mutation: %v", o)
 		case vbucketChange:
-			log.Printf("partition change: %v", o)
+			log.Printf("tap partition change: %v", o)
 			if o.newState == VBActive {
 				if vb := o.getVBucket(); vb != nil {
 					// Watch state changes
@@ -248,7 +248,7 @@ func MutationLogger(ch chan interface{}) {
 				}
 			}
 		default:
-			panic(fmt.Sprintf("Unhandled item to log %T: %v", i, i))
+			panic(fmt.Sprintf("unhandled mutation logger type %T: %v", i, i))
 		}
 	}
 }

@@ -74,7 +74,7 @@ func (w *oneResponder) WriteHeader(i int) {
 		w.status = i
 		w.w.WriteHeader(i)
 	} else {
-		log.Printf("Ignoring duplicate header write %v -> %v", w.status, i)
+		log.Printf("ignoring duplicate header write %v -> %v", w.status, i)
 	}
 }
 

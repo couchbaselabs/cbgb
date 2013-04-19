@@ -81,12 +81,12 @@ func (a authenticationFilter) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 	if ahdr != "" {
 		u, p, err := parseBasicAuth(ahdr)
 		if err != nil {
-			log.Printf("error reading auth data: %v", err)
+			log.Printf("error: parseBasicAuth, err: %v", err)
 		}
 		if authenticateUser(u, p) {
 			context.Set(r, authInfoKey, httpUser(u))
 		} else {
-			log.Printf("incorrect password for %v", u)
+			log.Printf("error: incorrect password, user: %v", u)
 		}
 	}
 }
@@ -98,20 +98,19 @@ func currentUser(req *http.Request) httpUser {
 
 func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
 	u := currentUser(req)
-	log.Printf("verifying admin at %v (user is %v)", req.URL, u)
+	log.Printf("verifying admin for url: %v, user: %v", req.URL, u)
 	return u.isAdmin()
 }
 
 func withBucketAccess(orig func(http.ResponseWriter,
 	*http.Request)) func(http.ResponseWriter, *http.Request) {
-
 	return func(w http.ResponseWriter, r *http.Request) {
 		u := currentUser(r)
 		b := mux.Vars(r)["bucketname"]
 		if u.canAccess(b) {
 			orig(w, r)
 		} else {
-			log.Printf("%q (admin=%v) can't access %v", u, u.isAdmin(), b)
+			log.Printf("%q (isAdmin=%v) can't access bucket: %v", u, u.isAdmin(), b)
 			if string(u) == "" {
 				authError(w, r)
 			} else {
