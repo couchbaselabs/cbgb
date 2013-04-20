@@ -45,7 +45,7 @@ var persistFreq = flag.Duration("persist-freq", time.Second*5,
 	"Persistence frequency")
 var viewRefreshFreq = flag.Duration("view-refresh-freq", time.Second*10,
 	"View refresh frequency")
-var statAggFreq = flag.Duration("stat-agg-freq", time.Second*10,
+var statAggFreq = flag.Duration("stat-agg-freq", time.Second*1,
 	"Stat aggregation frequency")
 var statAggPassFreq = flag.Duration("stat-agg-pass-freq", time.Minute*5,
 	"Stat aggregation passivation frequency")
