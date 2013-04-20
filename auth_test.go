@@ -1,6 +1,8 @@
 package main
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"testing"
 )
@@ -72,5 +74,18 @@ func TestAuthenticateUser(t *testing.T) {
 	}
 	if authenticateUser("not-a-bucket", "") {
 		t.Errorf("expected authhenticateUser to not work")
+	}
+}
+
+func TestAuthError401(t *testing.T) {
+	w := httptest.NewRecorder()
+	req := &http.Request{}
+	authError(w, req)
+	if w.Code != 401 {
+		t.Errorf("Expected status 401, got %v", w.Code)
+	}
+	got := w.Header().Get("WWW-Authenticate")
+	if got != `Basic realm="cbgb"` {
+		t.Errorf("Expected cbgb realm, got %v", got)
 	}
 }
