@@ -14,6 +14,7 @@ import (
 )
 
 var serverStart = time.Now()
+var serverStats = &ServerStats{}
 
 var dropConnection = &gomemcached.MCResponse{Fatal: true}
 
@@ -162,17 +163,18 @@ func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) error {
 func waitForConnections(ls net.Listener, maxConns int, buckets *Buckets,
 	defaultBucketName string) {
 	closech := make(chan bool)
-	var open int64
 
 	for {
-		for atomic.LoadInt64(&open) >= int64(maxConns) {
+		for atomic.LoadInt64(&serverStats.OpenConns) >= int64(maxConns) {
 			log.Printf("waitForConnections: reached maxConns: %v", maxConns)
 			<-closech
 		}
 
 		s, e := ls.Accept()
 		if e == nil {
-			atomic.AddInt64(&open, 1)
+			atomic.AddInt64(&serverStats.OpenConns, 1)
+			atomic.AddInt64(&serverStats.AcceptedConns, 1)
+
 			handler := &reqHandler{
 				buckets:           buckets,
 				currentBucket:     buckets.Get(defaultBucketName),
@@ -180,7 +182,9 @@ func waitForConnections(ls net.Listener, maxConns int, buckets *Buckets,
 			}
 			go sessionLoop(s, s.RemoteAddr().String(), handler,
 				func() {
-					if atomic.AddInt64(&open, -1) >= int64(maxConns)-1 {
+					atomic.AddInt64(&serverStats.ClosedConns, 1)
+					open := atomic.AddInt64(&serverStats.OpenConns, -1)
+					if open >= int64(maxConns)-1 {
 						log.Printf("waitForConnections: under maxConns: %v", maxConns)
 						closech <- true
 					}
