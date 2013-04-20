@@ -205,26 +205,33 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 	v.Apply(func() {
 		if v.viewsStore == nil {
-			dirForBucket := v.parent.GetBucketDir()
-			settings := v.parent.GetBucketSettings()
-			vfprefix := fmt.Sprintf("%s_%d", settings.UUID, v.vbid)
-			var vfn string
-			if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
-				vfn, err = latestStoreFileName(dirForBucket, vfprefix,
-					VIEWS_FILE_SUFFIX)
-				if err != nil {
-					return
-				}
-			} else {
-				vfn = makeStoreFileName(vfprefix, 0, VIEWS_FILE_SUFFIX)
+			var vsp string
+			vsp, err = v.getViewsStorePath()
+			if err != nil {
+				return
 			}
-			p := filepath.Join(dirForBucket, vfn)
-			v.viewsStore, err = newBucketStore(p, *settings,
+			v.viewsStore, err = newBucketStore(vsp,
+				*v.parent.GetBucketSettings(),
 				viewKeyCompareForCollection)
 		}
 		res = v.viewsStore
 	})
 	return res, err
+}
+
+func (v *VBucket) getViewsStorePath() (path string, err error) {
+	dirForBucket := v.parent.GetBucketDir()
+	settings := v.parent.GetBucketSettings()
+	vfprefix := fmt.Sprintf("%s_%d", settings.UUID, v.vbid)
+	vfn := makeStoreFileName(vfprefix, 0, VIEWS_FILE_SUFFIX)
+	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
+		vfn, err = latestStoreFileName(dirForBucket, vfprefix,
+			VIEWS_FILE_SUFFIX)
+		if err != nil {
+			return "", err
+		}
+	}
+	return filepath.Join(dirForBucket, vfn), nil
 }
 
 func viewKeyCompareForCollection(collName string) gkvlite.KeyCompare {
