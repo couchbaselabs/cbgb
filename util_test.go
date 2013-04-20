@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"io/ioutil"
-	"net"
 	"net/http/httptest"
 	"net/url"
 	"os"
@@ -184,53 +183,6 @@ func TestSessionLoop(t *testing.T) {
 
 	sessionLoop(rwCloser{bytes.NewBuffer(req.Bytes())}, "test", rh,
 		func() {})
-}
-
-func TestListener(t *testing.T) {
-	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
-	b, err := NewBuckets(testBucketDir,
-		&BucketSettings{
-			NumPartitions: MAX_VBUCKETS,
-		})
-	defer b.CloseAll()
-	if err != nil {
-		t.Fatalf("Error with NewBuckets: %v", err)
-	}
-	l, err := StartServer("127.0.0.1:0", 100, b, DEFAULT_BUCKET_NAME)
-	if err != nil {
-		t.Fatalf("Error starting listener: %v", err)
-	}
-
-	// Just to be extra ridiculous, dial it.
-	c, err := net.Dial("tcp", l.Addr().String())
-	if err != nil {
-		t.Fatalf("Error connecting to %v: %v", l.Addr(), err)
-	}
-	req := &gomemcached.MCRequest{Opcode: gomemcached.QUIT}
-	_, err = c.Write(req.Bytes())
-	if err != nil {
-		t.Fatalf("Error sending hangup request.")
-	}
-
-	l.Close()
-}
-
-func TestListenerFail(t *testing.T) {
-	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testBucketDir)
-	b, err := NewBuckets(testBucketDir,
-		&BucketSettings{
-			NumPartitions: MAX_VBUCKETS,
-		})
-	defer b.CloseAll()
-	if err != nil {
-		t.Fatalf("Error with NewBuckets: %v", err)
-	}
-	l, err := StartServer("1.1.1.1:22", 100, b, DEFAULT_BUCKET_NAME)
-	if err == nil {
-		t.Fatalf("Error failing to listen: %v", l.Addr())
-	}
 }
 
 func TestBytesEncoder(t *testing.T) {
