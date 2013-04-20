@@ -277,7 +277,7 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 	return &ViewMapFunction{
 		otto: o,
 		mapf: mapf,
- 	 	restart: func() ([]*ViewRow, []string, []error) {
+		restart: func() ([]*ViewRow, []string, []error) {
 			resEmits := emits
 			resLogs := logs
 			resErrs := errs
