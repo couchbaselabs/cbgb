@@ -144,7 +144,7 @@ func TestBasicOps(t *testing.T) {
 		close(expStatItems)
 	}()
 	go func() {
-		AggregateStats(testBucket, "").Send(actStatItems)
+		AggregateBucketStats(testBucket, "").Send(actStatItems)
 		close(actStatItems)
 	}()
 
@@ -1304,7 +1304,7 @@ func TestMutationOps(t *testing.T) {
 		close(expStatItems)
 	}()
 	go func() {
-		AggregateStats(testBucket, "").Send(actStatItems)
+		AggregateBucketStats(testBucket, "").Send(actStatItems)
 		close(actStatItems)
 	}()
 
@@ -1447,7 +1447,7 @@ func TestArithOps(t *testing.T) {
 		close(expStatItems)
 	}()
 	go func() {
-		AggregateStats(testBucket, "").Send(actStatItems)
+		AggregateBucketStats(testBucket, "").Send(actStatItems)
 		close(actStatItems)
 	}()
 

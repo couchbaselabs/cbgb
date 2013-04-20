@@ -110,9 +110,9 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 		bucketstores: make(map[int]*bucketstore),
 		observer:     broadcastMux.Sub(),
 		stats: BucketStatsSnapshot{
-			Current:        &BucketStats{},
-			BucketStore:    &BucketStoreStats{},
-			Agg:            aggStats,
+			CurBucket:      &BucketStats{},
+			CurBucketStore: &BucketStoreStats{},
+			AggBucket:      aggStats,
 			AggBucketStore: aggBucketStoreStats,
 		},
 	}
@@ -374,21 +374,22 @@ func (b *livebucket) sampleStats(t time.Time) {
 	b.statLock.Lock()
 	defer b.statLock.Unlock()
 
-	currStats := AggregateStats(b, "")
-	diffStats := &BucketStats{}
-	diffStats.Add(currStats)
-	diffStats.Sub(b.stats.Current)
-	diffStats.Time = t.Unix()
-	b.stats.Agg.AddSample(diffStats)
-	b.stats.Current = currStats
+	currBucketStats := AggregateBucketStats(b, "")
+	diffBucketStats := &BucketStats{}
+	diffBucketStats.Add(currBucketStats)
+	diffBucketStats.Sub(b.stats.CurBucket)
+	diffBucketStats.Time = t.Unix()
+	b.stats.AggBucket.AddSample(diffBucketStats)
+	b.stats.CurBucket = currBucketStats
 
 	currBucketStoreStats := AggregateBucketStoreStats(b, "")
 	diffBucketStoreStats := &BucketStoreStats{}
 	diffBucketStoreStats.Add(currBucketStoreStats)
-	diffBucketStoreStats.Sub(b.stats.BucketStore)
+	diffBucketStoreStats.Sub(b.stats.CurBucketStore)
 	diffBucketStoreStats.Time = t.Unix()
 	b.stats.AggBucketStore.AddSample(diffBucketStoreStats)
-	b.stats.BucketStore = currBucketStoreStats
+	b.stats.CurBucketStore = currBucketStoreStats
+
 	b.stats.LatestUpdate = t
 }
 

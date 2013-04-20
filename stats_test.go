@@ -142,7 +142,7 @@ func TestNewBucketAggregateStats(t *testing.T) {
 			NumPartitions: MAX_VBUCKETS,
 		})
 
-	s := AggregateStats(b0, "")
+	s := AggregateBucketStats(b0, "")
 	if s == nil {
 		t.Errorf("Expected non-nil aggregatestats()")
 	}

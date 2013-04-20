@@ -11,9 +11,9 @@ import (
 )
 
 type BucketStatsSnapshot struct {
-	Current        *BucketStats
-	BucketStore    *BucketStoreStats
-	Agg            *AggStats
+	CurBucket      *BucketStats
+	CurBucketStore *BucketStoreStats
+	AggBucket      *AggStats
 	AggBucketStore *AggStats
 	LatestUpdate   time.Time
 
@@ -27,11 +27,11 @@ func (bss *BucketStatsSnapshot) LatestUpdateTime() time.Time {
 func (bss *BucketStatsSnapshot) ToMap() map[string]interface{} {
 	return map[string]interface{}{
 		"totals": map[string]interface{}{
-			"bucketStats":      bss.Current,
-			"bucketStoreStats": bss.BucketStore,
+			"bucketStats":      bss.CurBucket,
+			"bucketStoreStats": bss.CurBucketStore,
 		},
 		"diffs": map[string]interface{}{
-			"bucketStats":      bss.Agg,
+			"bucketStats":      bss.AggBucket,
 			"bucketStoreStats": bss.AggBucketStore,
 		},
 		"levels": AggStatsLevels,
@@ -40,9 +40,9 @@ func (bss *BucketStatsSnapshot) ToMap() map[string]interface{} {
 
 func (b *BucketStatsSnapshot) Copy() *BucketStatsSnapshot {
 	return &BucketStatsSnapshot{
-		&(*b.Current),
-		&(*b.BucketStore),
-		&(*b.Agg),
+		&(*b.CurBucket),
+		&(*b.CurBucketStore),
+		&(*b.AggBucket),
 		&(*b.AggBucketStore),
 		b.LatestUpdate,
 		0,
@@ -207,7 +207,7 @@ func doStats(b Bucket, w io.Writer, key string) error {
 		log.Printf("stats are too old; starting them up")
 		b.StartStats(time.Second)
 	} else {
-		agg := AggregateStats(b, key)
+		agg := AggregateBucketStats(b, key)
 		agg.Send(ch)
 	}
 
@@ -263,7 +263,7 @@ func updateMutationStats(cmdIn gomemcached.CommandCode, stats *BucketStats) (cmd
 	return cmd // Return the non-quiet CommandCode equivalent.
 }
 
-func AggregateStats(b Bucket, key string) (agg *BucketStats) {
+func AggregateBucketStats(b Bucket, key string) (agg *BucketStats) {
 	agg = &BucketStats{}
 	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
 		vb, _ := b.GetVBucket(i)

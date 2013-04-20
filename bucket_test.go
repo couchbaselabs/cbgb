@@ -398,17 +398,17 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	b.(*livebucket).sampleStats(time.Now()) // Should be zeroes.
 
 	s := b.SnapshotStats().(*BucketStatsSnapshot)
-	if s.Current == nil {
-		t.Errorf("Expected stats.current to be non-nil")
+	if s.CurBucket == nil {
+		t.Errorf("Expected stats.CurBucket to be non-nil")
 	}
 	sInitial := &BucketStats{}
-	if !s.Current.Equal(sInitial) {
+	if !s.CurBucket.Equal(sInitial) {
 		t.Errorf("Expected initial to be zeroed, got: %#v", s)
 	}
 
-	bss := s.BucketStore
+	bss := s.CurBucketStore
 	if bss == nil {
-		t.Errorf("Expected stats.bucketStore to be non-nil")
+		t.Errorf("Expected stats.CurBucketStore to be non-nil")
 	}
 	bssInitial := &BucketStoreStats{
 		Stats:      STORES_PER_BUCKET,
@@ -430,14 +430,14 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	b.(*livebucket).sampleStats(time.Now()) // Should still be zeroes.
 
 	s = b.SnapshotStats().(*BucketStatsSnapshot)
-	if s.Current == nil {
+	if s.CurBucket == nil {
 		t.Errorf("Expected current stats to be non-nil")
 	}
-	if !s.Current.Equal(&BucketStats{ItemBytes: 240}) {
-		t.Errorf("Expected current stats to be zeroed, got: %#v", s.Current)
+	if !s.CurBucket.Equal(&BucketStats{ItemBytes: 240}) {
+		t.Errorf("Expected current stats to be zeroed, got: %#v", s.CurBucket)
 	}
 
-	bss = s.BucketStore
+	bss = s.CurBucketStore
 	if bss == nil {
 		t.Errorf("Expected bucket store stats to be non-nil")
 	}
@@ -450,7 +450,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 			bssNext, bss)
 	}
 
-	as := s.Agg
+	as := s.AggBucket
 	if as == nil {
 		t.Errorf("Expected agg stats to be non-nil")
 	}
