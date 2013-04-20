@@ -47,6 +47,13 @@ func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
 		return fmt.Errorf("set ddoc failed: %v, status: %v", ddocId, res.Status)
 	}
 	b.SetDDocs(b.GetDDocs(), nil) // Clear all our cached ddocs.
+	np := b.GetBucketSettings().NumPartitions
+	for vbid := 0; vbid < np; vbid++ {
+		vb, _ := b.GetVBucket(uint16(vbid))
+		if vb != nil {
+			vb.clearViewsStore()
+		}
+	}
 	return nil
 }
 
