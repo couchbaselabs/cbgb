@@ -49,7 +49,7 @@ type VBucket struct {
 	bucketItemBytes *int64
 	staleness       int64 // To track view freshness.
 
-	stats Stats
+	stats BucketStats
 
 	viewsStore *bucketstore
 	viewsLock  sync.Mutex
@@ -267,7 +267,7 @@ func (v *VBucket) load() (err error) {
 	return err
 }
 
-func (v *VBucket) AddStatsTo(dest *Stats, key string) {
+func (v *VBucket) AddStatsTo(dest *BucketStats, key string) {
 	if parseVBState(v.Meta().State) == VBActive { // TODO: handle stats sub-key.
 		dest.Add(&v.stats)
 	}

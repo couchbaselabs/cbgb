@@ -146,7 +146,7 @@ func TestNewBucketAggregateStats(t *testing.T) {
 	if s == nil {
 		t.Errorf("Expected non-nil aggregatestats()")
 	}
-	if !s.Equal(&Stats{}) {
+	if !s.Equal(&BucketStats{}) {
 		t.Errorf("Expected stats to be empty.")
 	}
 
@@ -166,7 +166,7 @@ func TestNewBucketAggregateStats(t *testing.T) {
 
 func TestBasicAggStats(t *testing.T) {
 	a := NewAggStats(func() Aggregatable {
-		return &Stats{}
+		return &BucketStats{}
 	})
 	if a == nil {
 		t.Errorf("Expected NewAggStats() to work")
@@ -177,7 +177,7 @@ func TestBasicAggStats(t *testing.T) {
 	}
 
 	for i := 0; i < 59; i++ {
-		a.AddSample(&Stats{Ops: int64(i)})
+		a.AddSample(&BucketStats{Ops: int64(i)})
 	}
 	if a.Counts[0] != 59 {
 		t.Errorf("Expected 59 level-0 samples, got %v",
@@ -192,25 +192,25 @@ func TestBasicAggStats(t *testing.T) {
 			a.Counts[2])
 	}
 
-	var s *Stats
+	var s *BucketStats
 
-	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[0]).(*BucketStats)
 	if s.Ops != 1711 {
 		t.Errorf("Expected level[0] s.ops 1711, got %v",
 			s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[1]).(*BucketStats)
 	if s.Ops != 0 {
 		t.Errorf("Expected level[1] s.ops 0, got %v",
 			s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[2]).(*BucketStats)
 	if s.Ops != 0 {
 		t.Errorf("Expected level[2] s.ops 0, got %v",
 			s.Ops)
 	}
 
-	a.AddSample(&Stats{Ops: 60})
+	a.AddSample(&BucketStats{Ops: 60})
 	if a.Counts[0] != 60 {
 		t.Errorf("Expected 60 level-0 samples, got %v",
 			a.Counts[0])
@@ -224,17 +224,17 @@ func TestBasicAggStats(t *testing.T) {
 			a.Counts[2])
 	}
 
-	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[0]).(*BucketStats)
 	if s.Ops != 1771 {
 		t.Errorf("Expected level[0] s.ops 1771, got %v",
 			s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[1]).(*BucketStats)
 	if s.Ops != 1771 {
 		t.Errorf("Expected level[1] s.ops 1771, got %v",
 			s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[2]).(*BucketStats)
 	if s.Ops != 0 {
 		t.Errorf("Expected level[2] s.ops 0, got %v",
 			s.Ops)
@@ -243,35 +243,35 @@ func TestBasicAggStats(t *testing.T) {
 
 func TestMultiDayAggStats(t *testing.T) {
 	a := NewAggStats(func() Aggregatable {
-		return &Stats{}
+		return &BucketStats{}
 	})
 	if a == nil {
 		t.Errorf("Expected NewAggStats() to work")
 	}
 
-	s := &Stats{Ops: 10}
+	s := &BucketStats{Ops: 10}
 	n := 60 * 60 * 24 * 10 // 10 days worth
 
 	for i := 0; i < n; i++ {
 		a.AddSample(s)
 	}
 
-	s = AggregateSamples(&Stats{}, a.Levels[0]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[0]).(*BucketStats)
 	if s.Ops != 60*10 {
 		t.Errorf("Expected level[0] s.ops %v, got %v",
 			60*10, s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[1]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[1]).(*BucketStats)
 	if s.Ops != 60*60*10 {
 		t.Errorf("Expected level[1] s.ops %v, got %v",
 			60*60*10, s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[2]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[2]).(*BucketStats)
 	if s.Ops != 24*60*60*10 {
 		t.Errorf("Expected level[2] s.ops %v, got %v",
 			24*60*60*10, s.Ops)
 	}
-	s = AggregateSamples(&Stats{}, a.Levels[3]).(*Stats)
+	s = AggregateSamples(&BucketStats{}, a.Levels[3]).(*BucketStats)
 	if s.Ops != 24*60*60*10 {
 		t.Errorf("Expected level[3] s.ops %v, got %v",
 			24*60*60*10, s.Ops)
@@ -280,13 +280,13 @@ func TestMultiDayAggStats(t *testing.T) {
 
 func TestAggStatsSampleJSON(t *testing.T) {
 	a := NewAggStats(func() Aggregatable {
-		return &Stats{}
+		return &BucketStats{}
 	})
 	if a == nil {
 		t.Errorf("Expected NewAggStats() to work")
 	}
 
-	s := &Stats{Ops: 10}
+	s := &BucketStats{Ops: 10}
 	for i := 0; i < 5; i++ {
 		a.AddSample(s)
 	}
@@ -307,7 +307,7 @@ func TestAggStatsSampleJSON(t *testing.T) {
 }
 
 func TestStatsSub(t *testing.T) {
-	s1 := &Stats{
+	s1 := &BucketStats{
 		Items:       1,
 		Ops:         1,
 		Gets:        1,
@@ -331,7 +331,7 @@ func TestStatsSub(t *testing.T) {
 		StoreErrors: 1,
 	}
 
-	s2 := &Stats{}
+	s2 := &BucketStats{}
 	s2.Add(s1)
 	s2.Add(s1)
 	s2.Sub(s1)

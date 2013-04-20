@@ -97,7 +97,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 	}
 
 	aggStats := NewAggStats(func() Aggregatable {
-		return &Stats{Time: int64(time.Now().Unix())}
+		return &BucketStats{Time: int64(time.Now().Unix())}
 	})
 	aggBucketStoreStats := NewAggStats(func() Aggregatable {
 		return &BucketStoreStats{Time: int64(time.Now().Unix())}
@@ -110,7 +110,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 		bucketstores: make(map[int]*bucketstore),
 		observer:     broadcastMux.Sub(),
 		stats: BucketStatsSnapshot{
-			Current:        &Stats{},
+			Current:        &BucketStats{},
 			BucketStore:    &BucketStoreStats{},
 			Agg:            aggStats,
 			AggBucketStore: aggBucketStoreStats,
@@ -375,7 +375,7 @@ func (b *livebucket) sampleStats(t time.Time) {
 	defer b.statLock.Unlock()
 
 	currStats := AggregateStats(b, "")
-	diffStats := &Stats{}
+	diffStats := &BucketStats{}
 	diffStats.Add(currStats)
 	diffStats.Sub(b.stats.Current)
 	diffStats.Time = t.Unix()

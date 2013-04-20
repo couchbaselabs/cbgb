@@ -78,7 +78,7 @@ func TestBasicOps(t *testing.T) {
 			gomemcached.SUCCESS, []byte("aye")},
 	}
 
-	expStats := Stats{
+	expStats := BucketStats{
 		Items:              1,
 		Ops:                int64(len(tests)) - 1, // Don't count the NOT_MY_VBUCKET.
 		Gets:               6,
@@ -1226,7 +1226,7 @@ func TestMutationOps(t *testing.T) {
 			gomemcached.KEY_ENOENT, notempty},
 	}
 
-	expStats := Stats{
+	expStats := BucketStats{
 		Items:              0,
 		Ops:                int64(len(tests)),
 		Gets:               9,
@@ -1361,7 +1361,7 @@ func TestArithOps(t *testing.T) {
 			gomemcached.SUCCESS, []byte("123")},
 	}
 
-	expStats := Stats{
+	expStats := BucketStats{
 		Items:              1,
 		Ops:                int64(len(tests)),
 		Gets:               4,

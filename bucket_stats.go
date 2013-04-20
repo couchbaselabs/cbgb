@@ -11,7 +11,7 @@ import (
 )
 
 type BucketStatsSnapshot struct {
-	Current        *Stats
+	Current        *BucketStats
 	BucketStore    *BucketStoreStats
 	Agg            *AggStats
 	AggBucketStore *AggStats
@@ -53,7 +53,7 @@ type statItem struct {
 	key, val string
 }
 
-type Stats struct {
+type BucketStats struct {
 	Time int64 `json:"time"`
 
 	Items int64 `json:"items"`
@@ -84,15 +84,15 @@ type Stats struct {
 	StoreErrors int64 `json:"storeErrors"`
 }
 
-func (s *Stats) Add(in *Stats) {
+func (s *BucketStats) Add(in *BucketStats) {
 	s.Op(in, addInt64)
 }
 
-func (s *Stats) Sub(in *Stats) {
+func (s *BucketStats) Sub(in *BucketStats) {
 	s.Op(in, subInt64)
 }
 
-func (s *Stats) Op(in *Stats, op func(int64, int64) int64) {
+func (s *BucketStats) Op(in *BucketStats, op func(int64, int64) int64) {
 	s.Items = op(s.Items, atomic.LoadInt64(&in.Items))
 	s.Ops = op(s.Ops, atomic.LoadInt64(&in.Ops))
 	s.Gets = op(s.Gets, atomic.LoadInt64(&in.Gets))
@@ -117,14 +117,14 @@ func (s *Stats) Op(in *Stats, op func(int64, int64) int64) {
 	s.StoreErrors = op(s.StoreErrors, atomic.LoadInt64(&in.StoreErrors))
 }
 
-func (s *Stats) Aggregate(in Aggregatable) {
+func (s *BucketStats) Aggregate(in Aggregatable) {
 	if in == nil {
 		return
 	}
-	s.Add(in.(*Stats))
+	s.Add(in.(*BucketStats))
 }
 
-func (s *Stats) Equal(in *Stats) bool {
+func (s *BucketStats) Equal(in *BucketStats) bool {
 	return s.Items == atomic.LoadInt64(&in.Items) &&
 		s.Ops == atomic.LoadInt64(&in.Ops) &&
 		s.Gets == atomic.LoadInt64(&in.Gets) &&
@@ -149,7 +149,7 @@ func (s *Stats) Equal(in *Stats) bool {
 		s.StoreErrors == atomic.LoadInt64(&in.StoreErrors)
 }
 
-func (s *Stats) Send(ch chan<- statItem) {
+func (s *BucketStats) Send(ch chan<- statItem) {
 	ch <- statItem{"items", strconv.FormatInt(s.Items, 10)}
 	ch <- statItem{"ops", strconv.FormatInt(s.Ops, 10)}
 	ch <- statItem{"gets", strconv.FormatInt(s.Gets, 10)}
@@ -215,7 +215,7 @@ func doStats(b Bucket, w io.Writer, key string) error {
 	return <-errs
 }
 
-func updateMutationStats(cmdIn gomemcached.CommandCode, stats *Stats) (cmd gomemcached.CommandCode) {
+func updateMutationStats(cmdIn gomemcached.CommandCode, stats *BucketStats) (cmd gomemcached.CommandCode) {
 	switch cmdIn {
 	case gomemcached.SET:
 		cmd = gomemcached.SET
@@ -263,8 +263,8 @@ func updateMutationStats(cmdIn gomemcached.CommandCode, stats *Stats) (cmd gomem
 	return cmd // Return the non-quiet CommandCode equivalent.
 }
 
-func AggregateStats(b Bucket, key string) (agg *Stats) {
-	agg = &Stats{}
+func AggregateStats(b Bucket, key string) (agg *BucketStats) {
+	agg = &BucketStats{}
 	for i := uint16(0); i < uint16(MAX_VBUCKETS); i++ {
 		vb, _ := b.GetVBucket(i)
 		if vb != nil {

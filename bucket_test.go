@@ -401,7 +401,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if s.Current == nil {
 		t.Errorf("Expected stats.current to be non-nil")
 	}
-	sInitial := &Stats{}
+	sInitial := &BucketStats{}
 	if !s.Current.Equal(sInitial) {
 		t.Errorf("Expected initial to be zeroed, got: %#v", s)
 	}
@@ -433,7 +433,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 	if s.Current == nil {
 		t.Errorf("Expected current stats to be non-nil")
 	}
-	if !s.Current.Equal(&Stats{ItemBytes: 240}) {
+	if !s.Current.Equal(&BucketStats{ItemBytes: 240}) {
 		t.Errorf("Expected current stats to be zeroed, got: %#v", s.Current)
 	}
 
@@ -455,7 +455,7 @@ func TestEmptyBucketSampleStats(t *testing.T) {
 		t.Errorf("Expected agg stats to be non-nil")
 	}
 	for _, level := range as.Levels {
-		if level.Stats != nil && !level.Stats.(*Stats).Equal(sInitial) {
+		if level.Stats != nil && !level.Stats.(*BucketStats).Equal(sInitial) {
 			t.Errorf("Expected GetAggStats()[0] to be zeroed, got: %#v",
 				level.Stats)
 		}
