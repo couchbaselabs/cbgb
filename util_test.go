@@ -197,7 +197,7 @@ func TestListener(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Error with NewBuckets: %v", err)
 	}
-	l, err := StartServer("0.0.0.0:0", 100, b, DEFAULT_BUCKET_NAME)
+	l, err := StartServer("127.0.0.1:0", 100, b, DEFAULT_BUCKET_NAME)
 	if err != nil {
 		t.Fatalf("Error starting listener: %v", err)
 	}
@@ -205,7 +205,7 @@ func TestListener(t *testing.T) {
 	// Just to be extra ridiculous, dial it.
 	c, err := net.Dial("tcp", l.Addr().String())
 	if err != nil {
-		t.Fatalf("Error connecting: %v", err)
+		t.Fatalf("Error connecting to %v: %v", l.Addr(), err)
 	}
 	req := &gomemcached.MCRequest{Opcode: gomemcached.QUIT}
 	_, err = c.Write(req.Bytes())
