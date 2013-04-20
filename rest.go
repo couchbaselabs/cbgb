@@ -43,6 +43,7 @@ func restAPI(r *mux.Router) {
 	sra.HandleFunc("/runtime/memStats", restGetRuntimeMemStats).Methods("GET")
 	sra.HandleFunc("/runtime/gc", restPostRuntimeGC).Methods("POST")
 	sra.HandleFunc("/settings", restGetSettings).Methods("GET")
+	sra.HandleFunc("/stats", restGetStats).Methods("GET")
 
 	r.PathPrefix("/_api/").HandlerFunc(authError)
 }
@@ -88,6 +89,12 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 		}
 	})
 	jsonEncode(w, m)
+}
+
+func restGetStats(w http.ResponseWriter, r *http.Request) {
+	sx := &ServerStats{}
+	sx.Add(serverStats)
+	jsonEncode(w, sx)
 }
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
