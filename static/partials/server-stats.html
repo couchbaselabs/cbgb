@@ -1,0 +1,70 @@
+<div ng-controller="ServerStatsCtrl">
+  <div ng-show="err" class="alert alert-error">
+    <i class="icon-flag"></i> {{err}}
+  </div>
+
+  <ul class="breadcrumb">
+    <li>
+      <a href="#/server">
+        <i class="icon-home"></i> server
+      </a>
+      <span class="divider">/</span>
+    </li>
+    <li class="active"><i class="icon-align-left"></i> stats</li>
+  </ul>
+
+  <div class="main">
+    <div>
+      <i class="icon-align-left"></i> stats
+      <ul class="nav nav-pills"
+          style="padding: 15px 0 15px 0; border-bottom: 1px solid #ddd;">
+        <li ng-repeat="level in stats.levels"
+           ng-class="{active: $index == currLevel}">
+          <a ng-click="changeLevel($index)">{{level.name}}</a>
+        </li>
+        <li ng-class="{active: paused}">
+          <a ng-click="paused = !paused"><i class="icon-pause"></i> pause chart</a>
+        </li>
+      </ul>
+    </div>
+
+    <div class="row">
+      <div class="span3"
+           style="padding-left: 10px">
+        <ul class="nav nav-tabs nav-stacked">
+          <li ng-repeat="statName in statNames"
+             ng-class="{active: statName[0] == currStatKind && statName[1] == currStatName}">
+            <a ng-click="changeStat(statName[0], statName[1])">
+              {{statName[1]}}
+              <span class="statTotal">
+                {{stats.totals[statName[0]][statName[1]]}}
+              </span>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="span6">
+        <div id="serverCharts">
+        </div>
+        <style>
+          .chart {
+            border: 1px solid #ddd;
+          }
+          .chart rect {
+            stroke: white;
+            fill: steelblue;
+          }
+        </style>
+      </div>
+    </div>
+
+    <hr/>
+
+    <div class="row" style="padding-left: 10px;">
+      <div class="span12">
+        <i class="icon-align-left"></i> raw stats
+        <pre>{{stats | json}}</pre>
+      </div>
+    </div>
+  </div
+</div>

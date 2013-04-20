@@ -4,6 +4,9 @@ angular.module('cbgb', []).
       when('/server',
            {templateUrl: 'partials/server.html',
             controller: ServerCtrl}).
+      when('/server/stats',
+           {templateUrl: 'partials/server-stats.html',
+            controller: ServerStatsCtrl}).
       when('/buckets',
            {templateUrl: 'partials/buckets.html',
             controller: BucketsCtrl}).
@@ -30,6 +33,8 @@ var restErrorMsg = "error communicating with server; please try again.";
 var bucketNamePattern = /^[A-Za-z0-9\-_]+$/;
 var ddocNamePattern = /^[A-Za-z0-9\-_\/]+$/;
 var viewNamePattern = /^[A-Za-z0-9\-_]+$/;
+
+var lastChartId = (new Date()).getTime();
 
 function ServerCtrl($scope, $http) {
   $scope.serverGC = function() {
@@ -66,6 +71,9 @@ function ServerCtrl($scope, $http) {
     error(function() {
       $scope.err = restErrorMsg;
     });
+}
+
+function ServerStatsCtrl($scope, $http) {
 }
 
 function BucketsCtrl($scope, $http) {
@@ -189,8 +197,6 @@ function BucketCtrl($scope, $routeParams, $http, $location) {
 
   $scope.orderChoice = 'id';
 }
-
-var lastChartId = (new Date()).getTime();
 
 function BucketStatsCtrl($scope, $routeParams, $http, $timeout) {
   $scope.bucketName = $routeParams.bucketName;
