@@ -5,6 +5,10 @@ import (
 	"time"
 )
 
+type statItem struct {
+	key, val string
+}
+
 // Interface for things that interact with stats.
 type Statish interface {
 	SnapshotStats() StatsSnapshot

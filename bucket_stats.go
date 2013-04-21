@@ -49,10 +49,6 @@ func (b *BucketStatsSnapshot) Copy() *BucketStatsSnapshot {
 	}
 }
 
-type statItem struct {
-	key, val string
-}
-
 type BucketStats struct {
 	Time int64 `json:"time"`
 

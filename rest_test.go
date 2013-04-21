@@ -705,14 +705,14 @@ func TestRestGetBucket(t *testing.T) {
 }
 
 func TestRestGetBucketStats(t *testing.T) {
-	o := bucketStatsSnapshotDelay
-	bucketStatsSnapshotDelay = 0
+	o := statsSnapshotDelay
+	statsSnapshotDelay = 0
 	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo/stats")
 	m := j.(map[string]interface{})
 	if len(m) == 0 {
 		t.Errorf("expected rest buckets/foo/stats to be data-full, got: %#v", m)
 	}
-	bucketStatsSnapshotDelay = o
+	statsSnapshotDelay = o
 }
 
 func TestRestGetBucketPath(t *testing.T) {

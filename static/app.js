@@ -73,7 +73,70 @@ function ServerCtrl($scope, $http) {
     });
 }
 
-function ServerStatsCtrl($scope, $http) {
+function ServerStatsCtrl($scope, $http, $timeout) {
+  $scope.currLevel = 0;
+  $scope.currStatKind = "serverStats";
+  $scope.currStatName = "openConns";
+  $scope.paused = false;
+
+  $scope.stopChart = function() {
+    if ($scope.drawChart) {
+      $scope.drawChart(null);
+      $scope.drawChart = null;
+    }
+    if ($scope.timeout) {
+      $timeout.cancel($scope.timeout);
+      $scope.timeout = null;
+    }
+  };
+
+  $scope.changeLevel = function(i) {
+    $scope.stopChart();
+    $scope.currLevel = i;
+    $scope.paused = false;
+    go();
+  };
+
+  $scope.changeStat = function(kind, statName) {
+    $scope.stopChart();
+    $scope.currStatKind = kind;
+    $scope.currStatName = statName;
+    $scope.paused = false;
+    go();
+  };
+
+  function go() {
+    if ($scope.paused) {
+      $scope.timeout = $timeout(go, 1000);
+      return;
+    }
+
+    $http.get('/_api/stats').
+      success(function(data) {
+        $scope.err = null;
+        $scope.stats = data;
+        $scope.statNames =
+          _.map(_.without(_.keys(data.totals.serverStats), "time"),
+                function(x) { return ["serverStats", x]; });
+
+        if (!$scope.drawChart) {
+          lastChartId++;
+          $scope.drawChart =
+            makeChart("serverCharts", lastChartId,
+                      $scope.currStatName,
+                      data.levels[$scope.currLevel].numSamples,
+                      10, 400);
+        }
+        $scope.drawChart(data.diffs[$scope.currStatKind].levels[$scope.currLevel]);
+        $scope.timeout = $timeout(go, 1000);
+      }).
+      error(function() {
+        $scope.err = restErrorMsg;
+        $scope.timeout = $timeout(go, 1000);
+      });
+  }
+
+  go();
 }
 
 function BucketsCtrl($scope, $http) {

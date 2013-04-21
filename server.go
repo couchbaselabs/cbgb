@@ -14,7 +14,6 @@ import (
 )
 
 var serverStart = time.Now()
-var serverStats = &ServerStats{}
 
 var dropConnection = &gomemcached.MCResponse{Fatal: true}
 
