@@ -7,7 +7,74 @@ import (
 	"net/http/httptest"
 	"os"
 	"testing"
+	"time"
 )
+
+func TestViewQueryUpdateAfter(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`, nil)
+
+	rowCount := func() (int, string) {
+		rr := httptest.NewRecorder()
+		r, _ := http.NewRequest("GET",
+			"http://127.0.0.1/default/_design/d0/_view/v0?startkey=1"+
+				"&endkey=3&stale=update_after", nil)
+		mr.ServeHTTP(rr, r)
+		if rr.Code != 200 {
+			t.Errorf("expected req to 200, got: %#v, %v",
+				rr, rr.Body.String())
+		}
+		dd := &ViewResult{}
+		err := json.Unmarshal(rr.Body.Bytes(), dd)
+		if err != nil {
+			t.Errorf("expected good view result, got: %v", err)
+		}
+		return dd.TotalRows, rr.Body.String()
+	}
+
+	// No index work is done at this point, so we are guaranteed
+	// to have no results returned.
+	rows, body := rowCount()
+	if rows != 0 {
+		t.Fatalf("expected no rows due to update_after, got: %v, %v",
+			rows, body)
+	}
+
+	// And this is where the test gets a little ugly...  We have
+	// no positive confirmation of view updates, so I'm just going
+	// to look around a bit.  Anything related to time is a really
+	// awful code smell.
+
+	ticker := time.NewTicker(time.Millisecond * 5)
+	defer ticker.Stop()
+
+	var latestCount int
+	var latestBody string
+	const expectedRows = 3
+	// Keep retrying persistently up to about a second.
+	for i := 0; i < 200; i++ {
+		<-ticker.C
+		latestCount, latestBody = rowCount()
+
+		if latestCount == expectedRows {
+			return
+		}
+	}
+
+	t.Errorf("Never saw correct updates, latestCount=%v, latestBody=%v",
+		latestCount, latestBody)
+}
 
 func TestViewQuerySmoke(t *testing.T) {
 	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))

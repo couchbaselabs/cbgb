@@ -269,11 +269,16 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 		return fmt.Errorf("no vbucket during visitVIndex(), ddocId: %v, viewId: %v",
 			ddocId, viewId)
 	}
-	if p.Stale == "false" {
+	switch p.Stale {
+	case "false":
 		_, err := vb.viewsRefresh()
 		if err != nil {
 			return err
 		}
+	case "update_after":
+		// Asynchronously start view updates after finishing
+		// this request.
+		defer func() { go vb.viewsRefresh() }()
 	}
 	viewsStore, err := vb.getViewsStore()
 	if err != nil {
