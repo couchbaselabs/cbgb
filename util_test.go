@@ -247,3 +247,52 @@ func TestDirIsDir(t *testing.T) {
 		t.Errorf("expected . to be a dir")
 	}
 }
+
+func TestRing(t *testing.T) {
+	r := NewRing(1)
+	r.Push(0)
+
+	exp := []int{0}
+	cur := 0
+	r.Visit(func(v interface{}) {
+		if v != exp[cur] {
+			t.Errorf("ring visit expected %v, got: %v", exp[cur], v)
+		}
+		cur++
+	})
+	if cur != len(exp) {
+		t.Errorf("expected to see: %#v, but got one more", exp)
+	}
+
+	r.Push(1)
+
+	exp = []int{1}
+	cur = 0
+	r.Visit(func(v interface{}) {
+		if v != exp[cur] {
+			t.Errorf("ring visit expected %v, got: %v", exp[cur], v)
+		}
+		cur++
+	})
+	if cur != len(exp) {
+		t.Errorf("expected to see: %#v, but got one more", exp)
+	}
+
+	r = NewRing(2)
+	r.Push(0)
+	r.Push(1)
+	r.Push(2)
+	r.Push(3)
+
+	exp = []int{2, 3}
+	cur = 0
+	r.Visit(func(v interface{}) {
+		if v != exp[cur] {
+			t.Errorf("ring visit expected %v, got: %v", exp[cur], v)
+		}
+		cur++
+	})
+	if cur != len(exp) {
+		t.Errorf("expected to see: %#v, but got one more", exp)
+	}
+}

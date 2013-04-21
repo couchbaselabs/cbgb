@@ -237,3 +237,38 @@ func deadlinedHandler(deadline time.Duration, h http.HandlerFunc) http.HandlerFu
 		}
 	}
 }
+
+// Simple array-based ring.
+type Ring struct {
+	Items []interface{}
+	Last int
+}
+
+func NewRing(size int) *Ring {
+	return &Ring{
+		Items: make([]interface{}, size),
+		Last:  size-1,
+	}
+}
+
+func (r *Ring) Push(v interface{}) {
+	r.Last++
+	if r.Last >= len(r.Items) {
+		r.Last = 0
+	}
+	r.Items[r.Last] = v
+}
+
+func (r *Ring) Visit(f func(interface{})) {
+	i := r.Last
+	for {
+		i++
+		if i >= len(r.Items) {
+			i = 0
+		}
+		f(r.Items[i])
+		if i == r.Last {
+			break
+		}
+	}
+}
