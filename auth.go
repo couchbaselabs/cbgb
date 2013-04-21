@@ -98,7 +98,9 @@ func currentUser(req *http.Request) httpUser {
 
 func adminRequired(req *http.Request, rm *mux.RouteMatch) bool {
 	u := currentUser(req)
-	log.Printf("verifying admin for url: %v, user: %v", req.URL, u)
+	if !strings.HasSuffix(req.URL.Path, "/stats") {
+		log.Printf("verifying admin for url: %v, user: %v", req.URL, u)
+	}
 	return u.isAdmin()
 }
 
