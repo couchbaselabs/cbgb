@@ -637,6 +637,7 @@ func TestRestAPIPoolsDefault(t *testing.T) {
 
 func TestBindAddress(t *testing.T) {
 	defer func(a string) { *addr = a }(*addr)
+	defer func(a string) { guessAddress = a }(guessAddress)
 
 	tests := []struct {
 		ga, ba, host, exp string
