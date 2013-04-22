@@ -719,6 +719,22 @@ func TestRestGetBucketStats(t *testing.T) {
 	statsSnapshotDelay = o
 }
 
+func TestRestGetBucketErrsEmpty(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo/errs")
+	a := j.([]interface{})
+	if len(a) != 0 {
+		t.Errorf("expected no errs, got: %#v", j)
+	}
+}
+
+func TestRestGetBucketLogsEmpty(t *testing.T) {
+	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo/logs")
+	a := j.([]interface{})
+	if len(a) != 0 {
+		t.Errorf("expected no logs, got: %#v", j)
+	}
+}
+
 func TestRestGetBucketPath(t *testing.T) {
 	rr := testRestGet(t, "http://127.0.0.1/_api/bucketPath", nil)
 	if rr.Code != 400 {
