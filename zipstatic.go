@@ -72,7 +72,7 @@ func updateStatic(path, cachePath string) (time.Time, error) {
 	if err != nil {
 		return lastTs, err
 	}
-	h := `"` + hex.EncodeToString(hash.Sum(nil)) + `x"`
+	h := `"` + hex.EncodeToString(hash.Sum(nil)) + `"`
 	et := res.Header.Get("Etag")
 	if et != "" && h != et {
 		err := fmt.Errorf("invalid download: etag=%v, computed=%v",
