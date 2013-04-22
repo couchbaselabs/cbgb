@@ -37,33 +37,29 @@ func NewBuckets(bdir string, settings *BucketSettings) (*Buckets, error) {
 	return buckets, nil
 }
 
-// Create a new named bucket.
-// Return the new bucket, or nil if the bucket already exists.
-//
-// TODO: Need clearer names around New vs Create vs Open vs Destroy,
-// especially now that there's persistence.
+// Allocates and registers a new, named bucket, or error if it exists.
 func (b *Buckets) New(name string,
 	defaultSettings *BucketSettings) (Bucket, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	return b.newUnlocked(name, defaultSettings)
+	return b.new_unlocked(name, defaultSettings)
 }
 
-func (b *Buckets) newUnlocked(name string,
+func (b *Buckets) new_unlocked(name string,
 	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already exists: %v", name)
 	}
-	rv, err = b.allocUnlocked(name, defaultSettings)
+	rv, err = b.alloc_unlocked(name, defaultSettings)
 	if err != nil {
 		return nil, err
 	}
-	b.registerUnlocked(name, rv)
+	b.register_unlocked(name, rv)
 	return rv, nil
 }
 
-func (b *Buckets) allocUnlocked(name string,
+func (b *Buckets) alloc_unlocked(name string,
 	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	settings := &BucketSettings{}
 	if defaultSettings != nil {
@@ -88,7 +84,7 @@ func (b *Buckets) allocUnlocked(name string,
 	return NewBucket(bdir, settings)
 }
 
-func (b *Buckets) registerUnlocked(name string, bucket Bucket) {
+func (b *Buckets) register_unlocked(name string, bucket Bucket) {
 	var ch chan bool
 	if lb, ok := bucket.(*livebucket); ok {
 		ch = lb.availablech
@@ -122,7 +118,7 @@ func (b *Buckets) Get(name string) Bucket {
 	}
 
 	// The entry is nil (previously quiesced), so try to re-load it.
-	rv, err := b.loadBucketUnlocked(name)
+	rv, err := b.loadBucket_unlocked(name)
 	if err != nil {
 		return nil
 	}
@@ -255,15 +251,15 @@ func (b *Buckets) LoadBucket(name string) (Bucket, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	return b.loadBucketUnlocked(name)
+	return b.loadBucket_unlocked(name)
 }
 
-func (b *Buckets) loadBucketUnlocked(name string) (Bucket, error) {
+func (b *Buckets) loadBucket_unlocked(name string) (Bucket, error) {
 	log.Printf("loading bucket: %v", name)
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already registered: %v", name)
 	}
-	bucket, err := b.allocUnlocked(name, b.settings)
+	bucket, err := b.alloc_unlocked(name, b.settings)
 	if err != nil {
 		return nil, err
 	}
@@ -271,7 +267,7 @@ func (b *Buckets) loadBucketUnlocked(name string) (Bucket, error) {
 	if err != nil {
 		return nil, err
 	}
-	b.registerUnlocked(name, bucket)
+	b.register_unlocked(name, bucket)
 	return bucket, nil
 }
 
