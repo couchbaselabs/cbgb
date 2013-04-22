@@ -18,7 +18,6 @@ import (
 )
 
 const (
-	CHANGES_SINCE        = gomemcached.CommandCode(0x60)
 	GET_VBMETA           = gomemcached.CommandCode(0x61)
 	SET_VBMETA           = gomemcached.CommandCode(0x62)
 	COLL_SUFFIX_KEYS     = ".k" // This suffix sorts before CHANGES suffix.
@@ -93,9 +92,6 @@ var dispatchTable = [256]dispatchFun{
 
 	gomemcached.RGET: vbRGet,
 
-	// TODO: Replace CHANGES_SINCE with enhanced TAP.
-	CHANGES_SINCE: vbChangesSince,
-
 	// TODO: Move new command codes to gomemcached one day.
 	GET_VBMETA: vbGetVBMeta,
 	SET_VBMETA: vbSetVBMeta,
@@ -129,7 +125,8 @@ func (v *VBucket) Close() error {
 	return v.observer.Close()
 }
 
-func (v *VBucket) Dispatch(w io.Writer, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+func (v *VBucket) Dispatch(w io.Writer,
+	req *gomemcached.MCRequest) *gomemcached.MCResponse {
 	atomic.AddInt64(&v.stats.Ops, 1)
 	f := dispatchTable[req.Opcode]
 	if f == nil {
@@ -273,7 +270,8 @@ func (v *VBucket) AddStatsTo(dest *BucketStats, key string) {
 	}
 }
 
-func vbGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
+	res *gomemcached.MCResponse) {
 	atomic.AddInt64(&v.stats.Gets, 1)
 
 	i, err := v.getUnexpired(req.Key, time.Now())
@@ -307,55 +305,8 @@ func vbGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcache
 	return res
 }
 
-// Responds with the changes since the req.Cas, with the last response
-// in the response stream having no key.
-// TODO: Support a limit on changes-since, perhaps in the req.Extras.
-func vbChangesSince(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
-	res = &gomemcached.MCResponse{Opcode: req.Opcode, Cas: req.Cas}
-
-	var err error
-
-	ch, errs := transmitPackets(w)
-
-	visitor := func(i *item) bool {
-		if i.cas > req.Cas {
-			ch <- &gomemcached.MCResponse{
-				Opcode: req.Opcode,
-				Key:    i.key,
-				Cas:    i.cas,
-				// TODO: Extras.
-				// TODO: Should changes-since respond with item value?
-			}
-			select {
-			case err = <-errs:
-				return false
-			default:
-			}
-		}
-		return true
-	}
-
-	errVisit := v.ps.visitChanges(casBytes(req.Cas), true, visitor)
-
-	close(ch)
-
-	if errVisit != nil {
-		return &gomemcached.MCResponse{Fatal: true}
-	}
-
-	if err == nil {
-		err = <-errs
-	}
-	if err != nil {
-		return &gomemcached.MCResponse{Fatal: true}
-	}
-
-	// TODO: Update stats.
-
-	return res
-}
-
-func vbGetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbGetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
+	res *gomemcached.MCResponse) {
 	v.Apply(func() {
 		if j, err := json.Marshal(v.Meta()); err == nil {
 			res = &gomemcached.MCResponse{Body: j}
@@ -370,7 +321,8 @@ func vbGetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gome
 // version, until (perhaps) one day when we have auth checking.
 var allow_vbSetVBMeta bool = false
 
-func vbSetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemcached.MCResponse) {
+func vbSetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
+	res *gomemcached.MCResponse) {
 	res = &gomemcached.MCResponse{Status: gomemcached.EINVAL}
 	if !allow_vbSetVBMeta {
 		return
@@ -475,7 +427,8 @@ func vbRGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
 	return res
 }
 
-func (v *VBucket) Visit(start []byte, visitor func(key []byte, data []byte) bool) error {
+func (v *VBucket) Visit(start []byte,
+	visitor func(key []byte, data []byte) bool) error {
 	return v.ps.visitItems(start, true, func(i *item) bool {
 		return visitor(i.key, i.data)
 	})
