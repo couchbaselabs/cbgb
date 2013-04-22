@@ -639,15 +639,18 @@ func TestBindAddress(t *testing.T) {
 	defer func(a string) { *addr = a }(*addr)
 
 	tests := []struct {
-		ba, host, exp string
+		ga, ba, host, exp string
 	}{
-		{":8091", "127.0.0.1:8091", "127.0.0.1:8091"},
-		{":8091", ":8091", ":8091"},
-		{"127.0.0.1:8091", ":8091", "127.0.0.1:8091"},
+		{"", ":8091", "127.0.0.1:8091", "127.0.0.1:8091"},
+		{"", ":8091", ":8091", ":8091"},
+		{"", "127.0.0.1:8091", ":8091", "127.0.0.1:8091"},
+		{"", ":8091", "", ":8091"},
+		{"woo", ":8091", "", "woo:8091"},
 	}
 
 	for _, test := range tests {
 		*addr = test.ba
+		guessAddress = test.ga
 		got := getBindAddress(test.host)
 		if got != test.exp {
 			t.Errorf("Expected %v %v -> %v, got %v",

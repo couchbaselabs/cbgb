@@ -26,15 +26,36 @@ var toplevelPool = couchbase.Pools{
 		},
 	}}
 
+var guessAddress string
+
+func init() {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		log.Printf("Error getting interface addresses: %v", err)
+		return
+	}
+	for _, a := range addrs {
+		if n, ok := a.(*net.IPNet); ok {
+			if n.IP.IsGlobalUnicast() {
+				guessAddress = n.IP.String()
+				break
+			}
+		}
+	}
+}
+
 func getBindAddress(host string) string {
 	if strings.Index(*addr, ":") > 0 {
 		return *addr
 	}
 	n, _, err := net.SplitHostPort(host)
-	if err != nil {
-		return *addr
+	if err == nil {
+		return n + *addr
 	}
-	return n + *addr
+	if guessAddress != "" {
+		return guessAddress + *addr
+	}
+	return *addr
 }
 
 func notImplemented(w http.ResponseWriter, r *http.Request) {
