@@ -157,6 +157,8 @@ func processViewResult(bucket Bucket, result *ViewResult,
 	return result, nil
 }
 
+// TODO: Allow reduction to be incremental w.r.t. memory usage, by
+// reducing chunks at a time rather than needing all rows in memory.
 func reduceViewResult(bucket Bucket, result *ViewResult,
 	p *ViewParams, reduceFunction string) (*ViewResult, error) {
 	groupLevel := 0
