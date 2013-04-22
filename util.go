@@ -253,3 +253,39 @@ func (r *Ring) Visit(f func(interface{})) {
 		}
 	}
 }
+
+// Converts non-nil error items to a []error.  On empty, returns nil
+// instead of zero-length array for less garbage.
+func RingToErrors(r *Ring) []error {
+	var res []error
+	r.Visit(func(v interface{}) {
+		if v != nil {
+			err, ok := v.(error)
+			if ok && err != nil {
+				if res == nil {
+					res = []error{}
+				}
+				res = append(res, err)
+			}
+		}
+	})
+	return res
+}
+
+// Converts non-nil/non-"" string items to a []string.  On empty,
+// returns nil instead of zero-length array for less garbage.
+func RingToStrings(r *Ring) []string {
+	var res []string
+	r.Visit(func(v interface{}) {
+		if v != nil {
+			s, ok := v.(string)
+			if ok && s != "" {
+				if res == nil {
+					res = []string{}
+				}
+				res = append(res, s)
+			}
+		}
+	})
+	return res
+}

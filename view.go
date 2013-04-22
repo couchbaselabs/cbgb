@@ -230,25 +230,25 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		return nil, fmt.Errorf("view map function error: %v", err)
 	}
 
-	errs := []error{}
-	logs := []string{}
+	errs := NewRing(10) // []error
+	logs := NewRing(10) // []string
 	emits := []*ViewRow{}
 
 	o.Set("emit", func(call otto.FunctionCall) otto.Value {
 		if len(call.ArgumentList) <= 0 {
-			errs = append(errs, fmt.Errorf("emit() needs an emit key argument"))
+			errs.Push(fmt.Errorf("emit() needs an emit key argument"))
 			return otto.UndefinedValue()
 		}
 		key, err := call.ArgumentList[0].Export()
 		if err != nil {
-			errs = append(errs, err)
+			errs.Push(err)
 			return otto.UndefinedValue()
 		}
 		var value interface{}
 		if len(call.ArgumentList) >= 2 {
 			value, err = call.ArgumentList[1].Export()
 			if err != nil {
-				errs = append(errs, err)
+				errs.Push(err)
 				return otto.UndefinedValue()
 			}
 		}
@@ -262,15 +262,15 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		}
 		v, err := call.ArgumentList[0].Export()
 		if err != nil {
-			errs = append(errs, err)
+			errs.Push(err)
 			return otto.UndefinedValue()
 		}
 		j, err := json.Marshal(v)
 		if err != nil {
-			errs = append(errs, err)
+			errs.Push(err)
 			return otto.UndefinedValue()
 		}
-		logs = append(logs, string(j))
+		logs.Push(string(j))
 		return otto.UndefinedValue()
 	})
 
@@ -279,11 +279,15 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		mapf: mapf,
 		restart: func() ([]*ViewRow, []string, []error) {
 			resEmits := emits
-			resLogs := logs
-			resErrs := errs
+			resLogs := RingToStrings(logs)
+			resErrs := RingToErrors(errs)
 			emits = []*ViewRow{}
-			logs = []string{}
-			errs = []error{}
+			if len(resLogs) > 0 {
+				logs = NewRing(10)
+			}
+			if len(resErrs) > 0 {
+				errs = NewRing(10)
+			}
 			return resEmits, resLogs, resErrs
 		},
 	}, nil
