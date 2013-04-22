@@ -32,6 +32,10 @@ func restAPI(r *mux.Router) {
 		withBucketAccess(restPostBucketFlushDirty)).Methods("POST")
 	sr.HandleFunc("/buckets/{bucketname}/stats",
 		withBucketAccess(restGetBucketStats)).Methods("GET")
+	sr.HandleFunc("/buckets/{bucketname}/errs",
+		withBucketAccess(restGetBucketErrs)).Methods("GET")
+	sr.HandleFunc("/buckets/{bucketname}/logs",
+		withBucketAccess(restGetBucketLogs)).Methods("GET")
 
 	sra := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
 	sra.HandleFunc("/buckets", restPostBucket).Methods("POST")
@@ -255,6 +259,22 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		st = bucket.SnapshotStats()
 	}
 	jsonEncode(w, st.ToMap())
+}
+
+func restGetBucketErrs(w http.ResponseWriter, r *http.Request) {
+	_, bucket := parseBucketName(w, mux.Vars(r))
+	if bucket == nil {
+		return
+	}
+	jsonEncode(w, bucket.Errs())
+}
+
+func restGetBucketLogs(w http.ResponseWriter, r *http.Request) {
+	_, bucket := parseBucketName(w, mux.Vars(r))
+	if bucket == nil {
+		return
+	}
+	jsonEncode(w, bucket.Logs())
 }
 
 // To start a cpu profiling...
