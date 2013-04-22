@@ -63,6 +63,9 @@ type Bucket interface {
 	SetDDocs(old, val *DDocs) bool
 
 	GetItemBytes() int64
+
+	PushErr(err error)
+	PushLog(msg string)
 }
 
 type livebucket struct {
@@ -77,11 +80,12 @@ type livebucket struct {
 	bucketItemBytes int64
 	activity        int64 // To track quiescence opportunities.
 
-	stats    BucketStatsSnapshot
-	statLock sync.Mutex
-
 	ddocs unsafe.Pointer // *DDocs, holding the json.Unmarshal'ed design docs.
 
+	lock  sync.Mutex // Lock covers the fields below.
+	logs  *Ring
+	errs  *Ring
+	stats BucketStatsSnapshot
 }
 
 func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {
@@ -109,6 +113,8 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 		settings:     settings,
 		bucketstores: make(map[int]*bucketstore),
 		observer:     broadcastMux.Sub(),
+		logs:         NewRing(10),
+		errs:         NewRing(10),
 		stats: BucketStatsSnapshot{
 			CurBucket:      &BucketStats{},
 			CurBucketStore: &BucketStoreStats{},
@@ -362,8 +368,8 @@ func (b *livebucket) Auth(passwordClearText []byte) bool {
 }
 
 func (b *livebucket) SnapshotStats() StatsSnapshot {
-	b.statLock.Lock()
-	defer b.statLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.stats.requests++
 
@@ -371,8 +377,8 @@ func (b *livebucket) SnapshotStats() StatsSnapshot {
 }
 
 func (b *livebucket) sampleStats(t time.Time) {
-	b.statLock.Lock()
-	defer b.statLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	currBucketStats := AggregateBucketStats(b, "")
 	diffBucketStats := &BucketStats{}
@@ -394,8 +400,8 @@ func (b *livebucket) sampleStats(t time.Time) {
 }
 
 func (b *livebucket) shouldContinueDoingStats(t time.Time) bool {
-	b.statLock.Lock()
-	defer b.statLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	o := b.stats.requests
 	b.stats.requests = 0
@@ -422,24 +428,24 @@ func (b *livebucket) mkQuiesceStats() func(time.Time) bool {
 
 // Start the stats at the given interval.
 func (b *livebucket) StartStats(d time.Duration) {
-	b.statLock.Lock()
-	defer b.statLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	statAggPeriodic.Register(b.availablech, b.mkSampleStats())
 	statAggPassPeriodic.Register(b.availablech, b.mkQuiesceStats())
 }
 
 func (b *livebucket) StopStats() {
-	b.statLock.Lock()
-	defer b.statLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	statAggPeriodic.Unregister(b.availablech)
 	statAggPassPeriodic.Unregister(b.availablech)
 }
 
 func (b *livebucket) StatAge() time.Duration {
-	b.statLock.Lock()
-	defer b.statLock.Unlock()
+	b.lock.Lock()
+	defer b.lock.Unlock()
 
 	b.stats.requests++
 
@@ -448,4 +454,18 @@ func (b *livebucket) StatAge() time.Duration {
 
 func (b *livebucket) GetItemBytes() int64 {
 	return atomic.LoadInt64(&b.bucketItemBytes)
+}
+
+func (b *livebucket) PushErr(err error) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.errs.Push(err)
+}
+
+func (b *livebucket) PushLog(msg string) {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	b.logs.Push(msg)
 }
