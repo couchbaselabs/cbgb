@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http/httptest"
 	"net/url"
 	"testing"
@@ -249,4 +250,52 @@ func TestRing(t *testing.T) {
 	if cur != len(exp) {
 		t.Errorf("expected to see: %#v, but got one more", exp)
 	}
+}
+
+func TestRingConversions(t *testing.T) {
+	e0 := fmt.Errorf("e0")
+	e1 := fmt.Errorf("e1")
+
+	emptyRing := NewRing(10)
+
+	justNums := NewRing(5)
+	for i := 0; i < 6; i ++ {
+		justNums.Push(i)
+	}
+
+	r := NewRing(10)
+	r.Push(0)
+	r.Push("hi")
+	r.Push("bye")
+	r.Push(e0)
+	r.Push(1)
+	r.Push(e1)
+
+	checkStrings := func(got, exp []string) {
+		if len(got) != len(exp) {
+			t.Errorf("got vs exp len mismatch, %#v, %#v", got, exp)
+		}
+		for i, g := range got {
+			if g != exp[i] {
+				t.Errorf("got vs exp item mismatch, %#v, %#v", g, exp[i])
+			}
+		}
+	}
+	checkStrings(RingToStrings(r), []string{"hi", "bye"})
+	checkStrings(RingToStrings(emptyRing), []string{})
+	checkStrings(RingToStrings(justNums), []string{})
+
+	checkErrors := func(got, exp []error) {
+		if len(got) != len(exp) {
+			t.Errorf("got vs exp len mismatch, %#v, %#v", got, exp)
+		}
+		for i, g := range got {
+			if g != exp[i] {
+				t.Errorf("got vs exp item mismatch, %#v, %#v", g, exp[i])
+			}
+		}
+	}
+	checkErrors(RingToErrors(r), []error{e0, e1})
+	checkErrors(RingToErrors(emptyRing), []error{})
+	checkErrors(RingToErrors(justNums), []error{})
 }
