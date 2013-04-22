@@ -23,6 +23,16 @@ func NewFileService(workers int) *FileService {
 	return fs
 }
 
+// Open a FileLike thing that works within this FileService.
+func (fs *FileService) OpenFile(path string, mode int) (FileLike, error) {
+	rv := &fileLike{fs, path, mode}
+	err := fs.Do(rv.path, rv.mode, func(*os.File) error { return nil })
+	// Clear out bits that only make sense the first time
+	// you open something.
+	rv.mode = rv.mode &^ (os.O_EXCL | os.O_APPEND | os.O_TRUNC)
+	return rv, err
+}
+
 func (f *FileService) Do(path string, flags int, fn func(*os.File) error) error {
 	r := fileRequest{path, flags, fn, make(chan error, 1)}
 	f.reqs <- r

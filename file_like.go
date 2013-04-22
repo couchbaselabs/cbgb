@@ -24,16 +24,6 @@ type fileLike struct {
 	mode int
 }
 
-// Open a FileLike thing that works within this FileService
-func (fs *FileService) OpenFile(path string, mode int) (FileLike, error) {
-	rv := &fileLike{fs, path, mode}
-	err := fs.Do(rv.path, rv.mode, func(*os.File) error { return nil })
-	// Clear out bits that only make sense the first time
-	// you open something.
-	rv.mode = rv.mode &^ (os.O_EXCL | os.O_APPEND | os.O_TRUNC)
-	return rv, err
-}
-
 func (f *fileLike) Close() error {
 	return nil
 }
