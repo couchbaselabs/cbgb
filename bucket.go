@@ -65,7 +65,10 @@ type Bucket interface {
 	GetItemBytes() int64
 
 	PushErr(err error)
+	Errs() []error
+
 	PushLog(msg string)
+	Logs() []string
 }
 
 type livebucket struct {
@@ -463,9 +466,35 @@ func (b *livebucket) PushErr(err error) {
 	b.errs.Push(err)
 }
 
+func (b *livebucket) Errs() []error {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	res := make([]error, 0, len(b.errs.Items))
+	b.errs.Visit(func(v interface{}) {
+		if v != nil {
+			res = append(res, v.(error))
+		}
+	})
+	return res
+}
+
 func (b *livebucket) PushLog(msg string) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
 	b.logs.Push(msg)
+}
+
+func (b *livebucket) Logs() []string {
+	b.lock.Lock()
+	defer b.lock.Unlock()
+
+	res := make([]string, 0, len(b.logs.Items))
+	b.logs.Visit(func(v interface{}) {
+		if v != nil && v != "" {
+			res = append(res, v.(string))
+		}
+	})
+	return res
 }

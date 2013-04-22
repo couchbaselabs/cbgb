@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
@@ -960,4 +961,92 @@ func TestBucketMaybeQuiesce(t *testing.T) {
 	if !x {
 		t.Errorf("expected foo to still be closed")
 	}
+}
+
+func TestErrs(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	bs, _ := NewBuckets(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer bs.CloseAll()
+
+	b, _ := bs.New("mybucket", bs.settings)
+
+	test := func(got, exp []error) {
+		if len(got) != len(exp) {
+			t.Errorf("mismatched lengths, %v != %v, %v, %v",
+				len(got), len(exp), got, exp)
+		}
+		for i, x := range exp {
+			if x != got[i] {
+				t.Errorf("entry %v, expected %v, got %v", i, x, got[i])
+			}
+		}
+	}
+
+	test(b.Errs(), []error{})
+
+	e0 := fmt.Errorf("e0")
+	e1 := fmt.Errorf("e1")
+	e2 := fmt.Errorf("e2")
+
+	b.PushErr(e0)
+	test(b.Errs(), []error{e0})
+
+	b.PushErr(e1)
+	b.PushErr(e2)
+	test(b.Errs(), []error{e0, e1, e2})
+
+	exp := make([]error, len(b.(*livebucket).errs.Items))
+	for i := 0; i < len(b.(*livebucket).errs.Items); i++ {
+		b.PushErr(e0)
+		exp[i] = e0
+	}
+	test(b.Errs(), exp)
+}
+
+func TestLogs(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	bs, _ := NewBuckets(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer bs.CloseAll()
+
+	b, _ := bs.New("mybucket", bs.settings)
+
+	test := func(got, exp []string) {
+		if len(got) != len(exp) {
+			t.Errorf("mismatched lengths, %v != %v, %v, %v",
+				len(got), len(exp), got, exp)
+		}
+		for i, x := range exp {
+			if x != got[i] {
+				t.Errorf("entry %v, expected %v, got %v", i, x, got[i])
+			}
+		}
+	}
+
+	test(b.Logs(), []string{})
+
+	e0 := "e0"
+	e1 := "e1"
+	e2 := "e2"
+
+	b.PushLog(e0)
+	test(b.Logs(), []string{e0})
+
+	b.PushLog(e1)
+	b.PushLog(e2)
+	test(b.Logs(), []string{e0, e1, e2})
+
+	exp := make([]string, len(b.(*livebucket).logs.Items))
+	for i := 0; i < len(b.(*livebucket).logs.Items); i++ {
+		b.PushLog(e0)
+		exp[i] = e0
+	}
+	test(b.Logs(), exp)
 }

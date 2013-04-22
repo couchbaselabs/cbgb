@@ -241,13 +241,13 @@ func deadlinedHandler(deadline time.Duration, h http.HandlerFunc) http.HandlerFu
 // Simple array-based ring.
 type Ring struct {
 	Items []interface{}
-	Last int
+	Last  int
 }
 
 func NewRing(size int) *Ring {
 	return &Ring{
 		Items: make([]interface{}, size),
-		Last:  size-1,
+		Last:  size - 1,
 	}
 }
 
