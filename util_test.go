@@ -4,11 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
-	"io/ioutil"
 	"net/http/httptest"
 	"net/url"
-	"os"
-	"path/filepath"
 	"testing"
 
 	"github.com/dustin/gomemcached"
@@ -123,49 +120,6 @@ func TestOneResponderExplicit(t *testing.T) {
 	or.WriteHeader(500)
 	if rr.Code != 200 {
 		t.Fatalf("Expected code to still be 200, it's %v", rr.Code)
-	}
-}
-
-func TestTempMkCacheFile(t *testing.T) {
-	fn0, f0, err := mkCacheFile("", "testing")
-	if err != nil {
-		t.Errorf("expected no err, err: %v", err)
-	}
-	f0.Close()
-	fn1, f1, err := mkCacheFile("", "testing")
-	if err != nil {
-		t.Errorf("expected no err, err: %v", err)
-	}
-	f1.Close()
-	if fn0 == fn1 {
-		t.Errorf("expected cache files to be different")
-	}
-	os.Remove(fn0)
-	os.Remove(fn1)
-}
-
-func TestMkCacheFile(t *testing.T) {
-	testDir, _ := ioutil.TempDir("./tmp", "test")
-	defer os.RemoveAll(testDir)
-	fn0, f0, err := mkCacheFile(filepath.Join(testDir, "tmcf"), "")
-	if err != nil {
-		t.Errorf("expected no err, err: %v", err)
-	}
-	f0.Close()
-	fn1, f1, err := mkCacheFile(filepath.Join(testDir, "tmcf"), "")
-	if err != nil {
-		t.Errorf("expected no err, err: %v", err)
-	}
-	f1.Close()
-	if fn0 != fn1 {
-		t.Errorf("expected cache files to be same")
-	}
-	os.Remove(fn0)
-	os.Remove(fn1)
-
-	_, _, err = mkCacheFile(filepath.Join(testDir, "not-a-dir", "tmcf"), "")
-	if err == nil {
-		t.Errorf("expected failed mkCacheFile on bad dir")
 	}
 }
 

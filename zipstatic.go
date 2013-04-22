@@ -3,6 +3,8 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha1"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -44,32 +46,69 @@ func parseHTTPTime(text string) (t time.Time, err error) {
 	return
 }
 
-func zipStatic(path, cachePath string) (*zipHandler, error) {
-	log.Printf("loading static content from: %v", path)
+func updateStatic(path, cachePath string) (time.Time, error) {
 	lastTs := time.Now()
 
 	res, err := http.Get(path)
-	if err == nil {
-		defer res.Body.Close()
-		if res.StatusCode == 200 {
-			var f *os.File
-			cachePath, f, err = mkCacheFile(cachePath, "zipstatic")
-			if err != nil {
-				return nil, err
-			}
-			_, err = io.Copy(f, res.Body)
-			f.Close()
-			if err != nil {
-				os.Remove(cachePath)
-				return nil, err
-			}
-			t, parseErr := parseHTTPTime(res.Header.Get("Last-Modified"))
-			if parseErr == nil {
-				lastTs = t
-			}
+	if err != nil {
+		return lastTs, err
+	}
+	defer res.Body.Close()
+	if res.StatusCode != 200 {
+		return lastTs, fmt.Errorf("HTTP error getting %v: %v", path, res.Status)
+	}
+
+	ftmp := cachePath + ".tmp"
+	os.Remove(ftmp)
+	defer os.Remove(ftmp)
+	f, err := os.OpenFile(ftmp, os.O_RDWR|os.O_CREATE|os.O_EXCL, 0666)
+	if err != nil {
+		return lastTs, err
+	}
+	defer f.Close()
+
+	hash := sha1.New()
+	_, err = io.Copy(f, io.TeeReader(res.Body, hash))
+	if err != nil {
+		return lastTs, err
+	}
+	h := `"` + hex.EncodeToString(hash.Sum(nil)) + `x"`
+	et := res.Header.Get("Etag")
+	if et != "" && h != et {
+		err := fmt.Errorf("invalid download: etag=%v, computed=%v",
+			res.Header.Get("Etag"), h)
+		return lastTs, err
+	}
+
+	t, parseErr := parseHTTPTime(res.Header.Get("Last-Modified"))
+	if parseErr == nil {
+		lastTs = t
+	}
+
+	os.Remove(cachePath)
+	os.Rename(f.Name(), cachePath)
+
+	return lastTs, nil
+}
+
+func zipStatic(path, cachePath string) (*zipHandler, error) {
+	log.Printf("loading static content from: %v", path)
+	lastTs, err := updateStatic(path, cachePath)
+	if err != nil {
+		st, e2 := os.Stat(cachePath)
+		if e2 == nil {
+			log.Printf("Error loading static data (%v). Proceeding with local copy",
+				err)
+			err = nil
+			lastTs = st.ModTime()
 		} else {
-			err = fmt.Errorf("HTTP error getting %v: %v", path, res.Status)
+			err = fmt.Errorf("Both remote (%v) and local (%v) static content "+
+				"is unavailable. Cannot REST", err, e2)
 		}
+	}
+
+	if err != nil {
+		return nil, err
 	}
 
 	zf, zerr := zipStaticServe(cachePath, lastTs)
