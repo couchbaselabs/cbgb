@@ -86,7 +86,9 @@ func (a authenticationFilter) ServeHTTP(w http.ResponseWriter, r *http.Request) 
 		if authenticateUser(u, p) {
 			context.Set(r, authInfoKey, httpUser(u))
 		} else {
-			log.Printf("error: incorrect password, user: %v", u)
+			if !strings.HasSuffix(r.URL.Path, "/stats") {
+				log.Printf("error: incorrect password, user: %v", u)
+			}
 		}
 	}
 }
