@@ -48,7 +48,6 @@ func (f *fileLike) WriteAt(p []byte, off int64) (n int, err error) {
 	if f.mode&(os.O_WRONLY|os.O_RDWR) == 0 {
 		return 0, unWritable
 	}
-
 	err = f.fs.Do(f.path, f.mode, func(file *os.File) error {
 		n, err = file.WriteAt(p, off)
 		return err

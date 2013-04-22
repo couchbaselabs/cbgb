@@ -16,6 +16,8 @@ var fileService *FileService
 
 var persistPeriodic *periodically
 
+// TODO: Make compact_every configurable, and/or revisit this (overly
+// simplistic?) compaction policy/trigger.
 const compact_every = 10000
 
 type bucketstore struct {
