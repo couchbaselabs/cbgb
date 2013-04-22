@@ -119,6 +119,8 @@ func zipStatic(path, cachePath string) (*zipHandler, error) {
 		}
 		return nil, zerr
 	}
+
+	log.Printf("Static init complete")
 	return zf, nil
 }
 
