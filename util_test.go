@@ -259,7 +259,7 @@ func TestRingConversions(t *testing.T) {
 	emptyRing := NewRing(10)
 
 	justNums := NewRing(5)
-	for i := 0; i < 6; i ++ {
+	for i := 0; i < 6; i++ {
 		justNums.Push(i)
 	}
 

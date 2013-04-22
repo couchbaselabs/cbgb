@@ -12,9 +12,7 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
-// TODO: Make this configurable.  Not totally obvious since the
-// actual server is a different package.
-var fileService = NewFileService(32)
+var fileService *FileService
 
 var persistPeriodic *periodically
 

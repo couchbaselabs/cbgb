@@ -51,6 +51,8 @@ var statAggPassFreq = flag.Duration("stat-agg-pass-freq", time.Minute*5,
 	"Stat aggregation passivation frequency")
 var maxConns = flag.Int("max-conns", 800,
 	"Max number of connections")
+var fileServiceWorkers = flag.Int("file-service-workers", 32,
+	"Number of file service workers")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
@@ -68,12 +70,14 @@ func usage() {
 }
 
 func initPeriodically() {
+	// TODO: The periodically's have # workers that could be configured.
 	quiescePeriodic = newPeriodically(*quiesceFreq, 1)
 	expirePeriodic = newPeriodically(*expireFreq, 2)
 	persistPeriodic = newPeriodically(*persistFreq, 5)
 	viewRefreshPeriodic = newPeriodically(*viewRefreshFreq, 5)
 	statAggPeriodic = newPeriodically(*statAggFreq, 10)
 	statAggPassPeriodic = newPeriodically(*statAggPassFreq, 10)
+	fileService = NewFileService(*fileServiceWorkers)
 }
 
 func main() {
