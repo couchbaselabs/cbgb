@@ -188,14 +188,20 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 	emits, logs, errs := pvmf.restart()
 	if len(errs) > 0 {
 		for _, err := range errs {
-			log.Printf("map function err, ddocId: %v, viewId: %v, docId: %v, err: %s",
+			err = fmt.Errorf("map function err, " +
+				"ddocId: %v, viewId: %v, docId: %v, err: %s",
 				ddocId, viewId, docId, err)
+			log.Printf("%v", err)
+			v.parent.PushErr(err)
 		}
 		return nil, errs[0]
 	}
 	for _, msg := range logs {
-		log.Printf("map function log, ddocId: %v, viewId: %v, docId: %v, log: %s",
+		msg = fmt.Sprintf("map function log, " +
+			"ddocId: %v, viewId: %v, docId: %v, msg: %s",
 			ddocId, viewId, docId, msg)
+		log.Printf("%v", msg)
+		v.parent.PushLog(msg)
 	}
 	for _, emit := range emits {
 		emit.Id = docId
