@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/dustin/gomemcached"
 )
@@ -356,5 +357,37 @@ func TestServerStats(t *testing.T) {
 	sx.Sub(s1)
 	if !sx.Equal(s1) {
 		t.Errorf("unequal, %#v vs %#v", sx, s1)
+	}
+	sx.Aggregate(nil)
+	if !sx.Equal(s1) {
+		t.Errorf("unequal, %#v vs %#v", sx, s1)
+	}
+	sx.Aggregate(s1)
+	if !sx.Equal(s2) {
+		t.Errorf("unequal, %#v vs %#v", sx, s2)
+	}
+}
+
+func TestServerStatsSnapshot(t *testing.T) {
+	n := time.Now()
+	b := sampleServerStats(n)
+	if !b {
+		t.Errorf("expected true sampleServerStats()")
+	}
+	s := snapshotServerStats()
+	if s == nil {
+		t.Errorf("expected snapshotServerStats() to work")
+	}
+	u := s.LatestUpdateTime()
+	if u != n {
+		t.Errorf("expected the same update time")
+	}
+	m := s.ToMap()
+	if m == nil || m["totals"] == nil || m["diffs"] == nil || m["levels"] == nil {
+		t.Errorf("expected 1st-level keys in stats map to exist")
+	}
+	a := s.(*ServerStatsSnapshot).AggServer.creator()
+	if a == nil {
+		t.Errorf("expected AggServer() to work")
 	}
 }
