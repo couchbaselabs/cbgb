@@ -700,6 +700,18 @@ func TestRestGetSettings(t *testing.T) {
 	}
 }
 
+func TestRestGetStats(t *testing.T) {
+	o := statsSnapshotDelay
+	statsSnapshotDelay = 0
+	j := testRestGetJson(t, "http://127.0.0.1/_api/stats")
+	m := j.(map[string]interface{})
+	if len(m) == 0 {
+		t.Errorf("expected rest stats to be data-full, got: %#v", m)
+	}
+	statsSnapshotDelay = o
+}
+
+
 func TestRestGetBucket(t *testing.T) {
 	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo")
 	m := j.(map[string]interface{})
