@@ -1051,7 +1051,7 @@ func TestLogs(t *testing.T) {
 	test(b.Logs(), exp)
 }
 
-func TestMkQuiesceStats(t *testing.T) {
+func TestMkVariousStats(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 	bs, _ := NewBuckets(testBucketDir,
@@ -1068,5 +1068,13 @@ func TestMkQuiesceStats(t *testing.T) {
 	x := q(time.Now())
 	if x {
 		t.Errorf("expected stats to quiesce on an inactive bucket")
+	}
+
+	ss := b.(*livebucket).mkSampleStats()
+	if ss == nil {
+		t.Errorf("expected mkSampleStats() to work")
+	}
+	if !ss(time.Now()) {
+		t.Errorf("expected stats sampler to be true")
 	}
 }
