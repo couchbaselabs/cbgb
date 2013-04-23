@@ -1050,3 +1050,23 @@ func TestLogs(t *testing.T) {
 	}
 	test(b.Logs(), exp)
 }
+
+func TestMkQuiesceStats(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+	bs, _ := NewBuckets(testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	defer bs.CloseAll()
+
+	b, _ := bs.New("mybucket", bs.settings)
+	q := b.(*livebucket).mkQuiesceStats()
+	if q == nil {
+		t.Errorf("expected mkQuiesceStats() to work")
+	}
+	x := q(time.Now())
+	if x {
+		t.Errorf("expected stats to quiesce on an inactive bucket")
+	}
+}
