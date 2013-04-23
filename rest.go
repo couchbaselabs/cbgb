@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"regexp"
@@ -56,11 +57,13 @@ func initStatic(r *mux.Router,
 	staticPrefix, staticPath, staticCachePath string) error {
 	if strings.HasPrefix(staticPath, "http://") {
 		zs, err := zipStatic(staticPath, staticCachePath)
-		if err != nil {
-			return err
+		if err == nil {
+			r.PathPrefix(staticPrefix).Handler(
+				http.StripPrefix(staticPrefix, zs))
+		} else {
+			log.Printf("Couldn't initialize remote static content: %v", err)
+			r.PathPrefix(staticPrefix).Handler(&lastResortHandler{})
 		}
-		r.PathPrefix(staticPrefix).Handler(
-			http.StripPrefix(staticPrefix, zs))
 	} else {
 		r.PathPrefix(staticPrefix).Handler(
 			http.StripPrefix(staticPrefix,

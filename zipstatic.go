@@ -103,7 +103,7 @@ func zipStatic(path, cachePath string) (*zipHandler, error) {
 			lastTs = st.ModTime()
 		} else {
 			err = fmt.Errorf("Both remote (%v) and local (%v) static content "+
-				"is unavailable. Cannot REST", err, e2)
+				"is unavailable.", err, e2)
 		}
 	}
 
@@ -153,3 +153,27 @@ func zipStaticServe(fn string, lastTs time.Time) (*zipHandler, error) {
 
 	return zf, nil
 }
+
+type lastResortHandler struct{}
+
+func (h *lastResortHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	w.Header().Set("Content-Type", "text/html")
+	w.Write([]byte(lastResortText))
+}
+
+const lastResortText = `<html>
+<head><title>cbgb missing UI</title></head>
+
+<body>
+  <h1>cbgb is missing its UI</h1>
+
+  <p>
+    cbgb was not given a usable UI and could not fetch one from the
+    internet.  The REST API will continue to work, but no admin UI
+    will be available to you until you fix whatever got you here.
+  </p>
+
+  <p>
+    For more info, check your logs and stuff.
+  </p>
+</body> </html>`

@@ -148,3 +148,14 @@ func TestZipStatic(t *testing.T) {
 		}
 	}
 }
+
+func TestLastResortHandler(t *testing.T) {
+	l := &lastResortHandler{}
+	rr := httptest.NewRecorder()
+	req := &http.Request{URL: &url.URL{Path: "/_static/app.html"}}
+	l.ServeHTTP(rr, req)
+	if rr.Body.String() != lastResortText {
+		t.Fatalf("Incorrect response for last resort: %v",
+			rr.Body.String())
+	}
+}
