@@ -89,3 +89,7 @@ func TestAuthError401(t *testing.T) {
 		t.Errorf("Expected cbgb realm, got %v", got)
 	}
 }
+
+func TestInitAdmin(t *testing.T) {
+	initAdmin() // Should not panic.
+}
