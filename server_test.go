@@ -337,13 +337,13 @@ func TestListenerFail(t *testing.T) {
 func TestServerStats(t *testing.T) {
 	s1 := &ServerStats{
 		AcceptedConns: 1,
-		ClosedConns: 1,
-		OpenConns: 1,
+		ClosedConns:   1,
+		OpenConns:     1,
 	}
 	s2 := &ServerStats{
 		AcceptedConns: 2,
-		ClosedConns: 2,
-		OpenConns: 2,
+		ClosedConns:   2,
+		OpenConns:     2,
 	}
 	sx := &ServerStats{}
 	sx.Add(s1)

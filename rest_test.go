@@ -711,7 +711,6 @@ func TestRestGetStats(t *testing.T) {
 	statsSnapshotDelay = o
 }
 
-
 func TestRestGetBucket(t *testing.T) {
 	j := testRestGetJson(t, "http://127.0.0.1/_api/buckets/foo")
 	m := j.(map[string]interface{})
