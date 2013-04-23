@@ -332,3 +332,29 @@ func TestListenerFail(t *testing.T) {
 		t.Fatalf("Error failing to listen: %v", l.Addr())
 	}
 }
+
+func TestServerStats(t *testing.T) {
+	s1 := &ServerStats{
+		AcceptedConns: 1,
+		ClosedConns: 1,
+		OpenConns: 1,
+	}
+	s2 := &ServerStats{
+		AcceptedConns: 2,
+		ClosedConns: 2,
+		OpenConns: 2,
+	}
+	sx := &ServerStats{}
+	sx.Add(s1)
+	if !sx.Equal(s1) {
+		t.Errorf("unequal, %#v vs %#v", sx, s1)
+	}
+	sx.Add(s1)
+	if !sx.Equal(s2) {
+		t.Errorf("unequal, %#v vs %#v", sx, s2)
+	}
+	sx.Sub(s1)
+	if !sx.Equal(s1) {
+		t.Errorf("unequal, %#v vs %#v", sx, s1)
+	}
+}
