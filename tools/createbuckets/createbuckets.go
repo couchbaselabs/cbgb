@@ -14,7 +14,7 @@ import (
 )
 
 var todo = flag.Int("buckets", 200, "How many buckets to create.")
-var base = flag.String("baseurl", "http://127.0.0.1:8077/",
+var base = flag.String("baseurl", "http://127.0.0.1:8091/",
 	"Base URL of your cbgb")
 var concurrency = flag.Int("workers", 8,
 	"How many concurrent workers creating buckets.")
