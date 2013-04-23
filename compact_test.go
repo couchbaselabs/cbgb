@@ -15,7 +15,7 @@ func TestCompaction(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -96,7 +96,7 @@ func TestCompaction(t *testing.T) {
 
 	b0.Close()
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -116,7 +116,7 @@ func TestEmptyFileCompaction(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -155,7 +155,7 @@ func TestCompactionNumFiles(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -195,7 +195,7 @@ func SKIP_TestCompactionPurgeTimeout(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -243,7 +243,7 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -297,7 +297,7 @@ func TestCopyDeltaBadNames(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -313,7 +313,7 @@ func TestBadCompactSwapFile(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

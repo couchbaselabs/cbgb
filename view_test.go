@@ -262,7 +262,7 @@ func TestStaleness(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -292,7 +292,7 @@ func TestMkViewsRefreshFun(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -314,7 +314,7 @@ func TestGetViewsStore(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -335,7 +335,7 @@ func TestNoDDocViewsRefresh(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -496,7 +496,7 @@ func TestMemoryOnlyViewsStore(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,

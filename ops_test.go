@@ -95,7 +95,7 @@ func TestBasicOps(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -164,7 +164,7 @@ func TestBasicOps(t *testing.T) {
 func TestMutationBroadcast(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -254,7 +254,7 @@ func testGet(rh *reqHandler, vbid uint16, key string) *gomemcached.MCResponse {
 func TestCASDelete(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -298,7 +298,7 @@ func TestCASDelete(t *testing.T) {
 func TestCASSet(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -345,7 +345,7 @@ func TestCASSet(t *testing.T) {
 func TestVersionCommand(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -370,7 +370,7 @@ func TestVersionCommand(t *testing.T) {
 func TestVersionNOOP(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -391,7 +391,7 @@ func TestVersionNOOP(t *testing.T) {
 func TestQuit(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -412,7 +412,7 @@ func TestQuit(t *testing.T) {
 func TestStats(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -439,7 +439,7 @@ func TestStats(t *testing.T) {
 func TestInvalidCommand(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -461,7 +461,7 @@ func TestInvalidCommand(t *testing.T) {
 func BenchmarkInvalidCommand(b *testing.B) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -485,7 +485,7 @@ func BenchmarkInvalidCommand(b *testing.B) {
 func TestParallelMutations(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -544,7 +544,7 @@ func BenchmarkParallelSet(b *testing.B) {
 func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -574,7 +574,7 @@ func benchmarkParallelCmd(b *testing.B, req *gomemcached.MCRequest) {
 func BenchmarkDispatch(b *testing.B) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -725,7 +725,7 @@ func TestVBMeta(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -772,7 +772,7 @@ func TestRGet(t *testing.T) {
 func testRGet(t *testing.T, startKey int, numItems int) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -860,7 +860,7 @@ func testRGet(t *testing.T, startKey int, numItems int) {
 func TestSlowClient(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -954,7 +954,7 @@ func TestStoreFrontBack(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -1112,7 +1112,7 @@ func TestMutationOps(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -1249,7 +1249,7 @@ func TestArithOps(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

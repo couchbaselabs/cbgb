@@ -84,7 +84,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -107,7 +107,7 @@ func TestSaveLoadEmptyBucket(t *testing.T) {
 
 	testExpectInts(t, r0, 2, []int{}, "after flush")
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -127,7 +127,7 @@ func TestSaveLoadBasic(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -151,7 +151,7 @@ func TestSaveLoadBasic(t *testing.T) {
 
 	testExpectInts(t, r0, 2, []int{0, 1, 2, 3, 4}, "after flush")
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -177,7 +177,7 @@ func TestSaveLoadMutations(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -203,7 +203,7 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b0.Close()
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -297,7 +297,7 @@ func TestSaveLoadMutations(t *testing.T) {
 
 	b1.Close()
 
-	b2, err := NewBucket(testBucketDir,
+	b2, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -363,7 +363,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -399,7 +399,7 @@ func testSaveLoadVBState(t *testing.T, withData bool) {
 	}
 
 	for _, test := range tests {
-		b1, err := NewBucket(testBucketDir,
+		b1, err := NewBucket("test", testBucketDir,
 			&BucketSettings{
 				NumPartitions: MAX_VBUCKETS,
 			})
@@ -435,7 +435,7 @@ func TestFlushCloseInterval(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -457,7 +457,7 @@ func TestFlushCloseInterval(t *testing.T) {
 
 	b0.Close()
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -561,7 +561,7 @@ func TestFlushError(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -602,7 +602,7 @@ func TestStatError(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -638,7 +638,7 @@ func TestReadAtError(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

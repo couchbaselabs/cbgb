@@ -81,7 +81,7 @@ func (b *Buckets) alloc_unlocked(name string,
 	if err != nil {
 		return nil, err
 	}
-	return NewBucket(bdir, settings)
+	return NewBucket(name, bdir, settings)
 }
 
 func (b *Buckets) register_unlocked(name string, bucket Bucket) {

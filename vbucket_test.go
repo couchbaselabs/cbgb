@@ -19,7 +19,7 @@ func TestItemBytesPersists(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -75,7 +75,7 @@ func TestItemBytesPersists(t *testing.T) {
 		t.Errorf("flush should not change item bytes")
 	}
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -130,7 +130,7 @@ func TestVBucketString(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -150,7 +150,7 @@ func TestMkVBucketSweeper(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -182,7 +182,7 @@ func TestVBucketExpire(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

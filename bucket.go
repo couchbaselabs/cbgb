@@ -31,6 +31,7 @@ var statAggPassPeriodic *periodically
 var bucketUnavailable = errors.New("Bucket unavailable")
 
 type Bucket interface {
+	Name() string
 	Available() bool
 	Compact() error
 	Close() error
@@ -73,6 +74,7 @@ type Bucket interface {
 
 type livebucket struct {
 	availablech  chan bool
+	name         string
 	dir          string
 	settings     *BucketSettings
 	vbuckets     [MAX_VBUCKETS]unsafe.Pointer // *vbucket
@@ -91,7 +93,8 @@ type livebucket struct {
 	stats BucketStatsSnapshot
 }
 
-func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err error) {
+func NewBucket(name, dirForBucket string, settings *BucketSettings) (
+	b Bucket, err error) {
 	fileNames, err := bucketFileNames(dirForBucket, settings)
 	if err != nil {
 		return nil, err
@@ -112,6 +115,7 @@ func NewBucket(dirForBucket string, settings *BucketSettings) (b Bucket, err err
 
 	res := &livebucket{
 		availablech:  make(chan bool),
+		name:         name,
 		dir:          dirForBucket,
 		settings:     settings,
 		bucketstores: make(map[int]*bucketstore),
@@ -168,6 +172,10 @@ func bucketFileNames(dirForBucket string, settings *BucketSettings) (
 		}
 	}
 	return fileNames, nil
+}
+
+func (b *livebucket) Name() string {
+	return b.name
 }
 
 func (b *livebucket) GetBucketDir() string {

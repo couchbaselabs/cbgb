@@ -137,7 +137,7 @@ func TestNewBucketAggregateStats(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, _ := NewBucket(testBucketDir,
+	b0, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

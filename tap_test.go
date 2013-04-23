@@ -16,7 +16,7 @@ import (
 func TestMutationLogger(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	b, _ := NewBucket(testBucketDir,
+	b, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -48,7 +48,7 @@ func TestMutationInvalid(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	b, _ := NewBucket(testBucketDir,
+	b, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -71,7 +71,7 @@ func TestMutationInvalid(t *testing.T) {
 func TestTapSetup(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -117,7 +117,7 @@ func TestTapChanges(t *testing.T) {
 
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -247,7 +247,7 @@ func makeMustTapFuncs(t *testing.T, rh *reqHandler, chpkt chan transmissible) (
 func TestTapDumpEmptyBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -280,7 +280,7 @@ func TestTapDumpEmptyBucket(t *testing.T) {
 func TestTapDumpBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -345,7 +345,7 @@ func mustTapDone(m string, t *testing.T, chpkt chan transmissible) {
 func TestTapDumpInactiveBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -392,7 +392,7 @@ func TestTapDumpInactiveBucket(t *testing.T) {
 func TestTapBackFillBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	testBucket, _ := NewBucket(testBucketDir,
+	testBucket, _ := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})

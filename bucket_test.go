@@ -29,7 +29,7 @@ func init() {
 
 func makeTestBucket(t *testing.T) Bucket {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
-	b, err := NewBucket(testBucketDir,
+	b, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -115,7 +115,7 @@ func TestBucketRegistry(t *testing.T) {
 func TestBucketNotifications(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	b, err := NewBucket(testBucketDir,
+	b, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -172,7 +172,7 @@ func TestBucketNotifications(t *testing.T) {
 func TestNewBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	nb, err := NewBucket(testBucketDir,
+	nb, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -202,7 +202,7 @@ func TestNewBucket(t *testing.T) {
 func TestCreateDestroyVBucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	nb, err := NewBucket(testBucketDir,
+	nb, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -279,7 +279,7 @@ func TestVBString(t *testing.T) {
 func TestBucketClose(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	nb, err := NewBucket(testBucketDir,
+	nb, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -548,7 +548,7 @@ func TestBucketsLoad(t *testing.T) {
 func TestSetVBState(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	b, err := NewBucket(testBucketDir,
+	b, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
@@ -607,7 +607,7 @@ func TestMemoryOnlyLevel1Bucket(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,
@@ -642,7 +642,7 @@ func TestMemoryOnlyLevel1Bucket(t *testing.T) {
 
 	b0.Close()
 
-	b1, err := NewBucket(testBucketDir,
+	b1, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 			MemoryOnly:    MemoryOnly_LEVEL_PERSIST_METADATA,
@@ -754,7 +754,7 @@ func TestBucketQuotaBytes(t *testing.T) {
 
 	quota := int64(1000)
 
-	b0, err := NewBucket(testBucketDir,
+	b0, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 			QuotaBytes:    quota,

@@ -11,7 +11,7 @@ import (
 func TestPartitionStoreEmptyVisit(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
-	b, err := NewBucket(testBucketDir,
+	b, err := NewBucket("test", testBucketDir,
 		&BucketSettings{
 			NumPartitions: MAX_VBUCKETS,
 		})
