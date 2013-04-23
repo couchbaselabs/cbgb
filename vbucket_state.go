@@ -84,5 +84,6 @@ func (c vbucketChange) getVBucket() *VBucket {
 }
 
 func (c vbucketChange) String() string {
-	return fmt.Sprintf("vbucket %v %v -> %v", c.vbid, c.oldState, c.newState)
+	return fmt.Sprintf("bucket: %s, vbucket: %v, state: %v -> %v",
+		c.bucket.Name(), c.vbid, c.oldState, c.newState)
 }
