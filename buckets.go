@@ -98,7 +98,7 @@ func (b *Buckets) GetNames() []string {
 	defer b.lock.Unlock()
 
 	res := make([]string, 0, len(b.buckets))
-	for name, _ := range b.buckets {
+	for name := range b.buckets {
 		res = append(res, name)
 	}
 	return res

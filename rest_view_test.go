@@ -829,7 +829,7 @@ func TestReverseViewRows(t *testing.T) {
 	}
 
 	r = []*ViewRow{
-		&ViewRow{Id: "a"},
+		{Id: "a"},
 	}
 	reverseViewRows(r)
 	if len(r) != 1 {
@@ -840,8 +840,8 @@ func TestReverseViewRows(t *testing.T) {
 	}
 
 	r = []*ViewRow{
-		&ViewRow{Id: "a"},
-		&ViewRow{Id: "b"},
+		{Id: "a"},
+		{Id: "b"},
 	}
 	reverseViewRows(r)
 	if len(r) != 2 {
@@ -852,9 +852,9 @@ func TestReverseViewRows(t *testing.T) {
 	}
 
 	r = []*ViewRow{
-		&ViewRow{Id: "a"},
-		&ViewRow{Id: "b"},
-		&ViewRow{Id: "c"},
+		{Id: "a"},
+		{Id: "b"},
+		{Id: "c"},
 	}
 	reverseViewRows(r)
 	if len(r) != 3 {
@@ -865,10 +865,10 @@ func TestReverseViewRows(t *testing.T) {
 	}
 
 	r = []*ViewRow{
-		&ViewRow{Id: "a"},
-		&ViewRow{Id: "b"},
-		&ViewRow{Id: "c"},
-		&ViewRow{Id: "d"},
+		{Id: "a"},
+		{Id: "b"},
+		{Id: "c"},
+		{Id: "d"},
 	}
 	reverseViewRows(r)
 	if len(r) != 4 {

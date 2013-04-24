@@ -225,7 +225,7 @@ func (b *livebucket) Close() error {
 		return nil
 	}
 	close(b.availablech)
-	for vbid, _ := range b.vbuckets {
+	for vbid := range b.vbuckets {
 		if vbp := atomic.LoadPointer(&b.vbuckets[vbid]); vbp != nil {
 			vb := (*VBucket)(vbp)
 			vb.Close()
