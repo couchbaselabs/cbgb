@@ -32,8 +32,8 @@ func (s *bucketstore) Compact() error {
 }
 
 func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error {
-	// TODO: Should cleanup all old, previous attempts to rescue disk space.
-	os.Remove(compactPath) // Clean up any previous attempts.
+	bsf.removeOldFiles()   // Clean up previous, successful compactions.
+	os.Remove(compactPath) // Clean up previous, aborted compaction attempts.
 
 	compactFile, err := fileService.OpenFile(compactPath, os.O_RDWR|os.O_CREATE|os.O_EXCL)
 	if err != nil {

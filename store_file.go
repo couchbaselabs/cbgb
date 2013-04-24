@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"runtime"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
@@ -31,15 +31,7 @@ func NewBucketStoreFile(path string, file FileLike,
 		file:  file,
 		stats: stats,
 	}
-	runtime.SetFinalizer(res, finalizeBucketStoreFile)
 	return res
-}
-
-func finalizeBucketStoreFile(bsf *bucketstorefile) {
-	if bsf.purge {
-		bsf.purge = false
-		os.Remove(bsf.path)
-	}
 }
 
 func (bsf *bucketstorefile) apply(fun func()) {
@@ -89,6 +81,45 @@ func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 		}
 	})
 	return fi, err
+}
+
+// Remove previous version files.
+func (bsf *bucketstorefile) removeOldFiles() error {
+	fname := filepath.Base(bsf.path)
+	suffix, err := parseFileNameSuffix(fname)
+	if err != nil {
+		return err
+	}
+	return removeOldFiles(filepath.Dir(bsf.path), fname, suffix)
+}
+
+func removeOldFiles(dirForBucket, fname, suffix string) error {
+	finfos, err := ioutil.ReadDir(dirForBucket)
+	if err != nil {
+		return err
+	}
+	prefix, ver, err := parseStoreFileName(fname, suffix)
+	if err != nil {
+		return err
+	}
+	for _, finfo := range finfos {
+		if finfo.IsDir() {
+			continue
+		}
+		xprefix, xver, err :=
+			parseStoreFileName(finfo.Name(), suffix)
+		if err != nil || xprefix != prefix {
+			continue // Skip non-matching files / parse errors.
+		}
+		if xver >= ver {
+			continue // Skip newer files.
+		}
+		err = os.Remove(filepath.Join(dirForBucket, finfo.Name()))
+		if err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // Find the highest version-numbered store files in a bucket directory.

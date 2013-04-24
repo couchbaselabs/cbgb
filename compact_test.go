@@ -5,6 +5,7 @@ import (
 	"io/ioutil"
 	"os"
 	"runtime"
+	"sort"
 	"strconv"
 	"testing"
 
@@ -330,4 +331,70 @@ func TestBadCompactSwapFile(t *testing.T) {
 	if err == nil {
 		t.Errorf("expected compactSwapFile to fail on bad compactPath")
 	}
+}
+
+func TestRemoveOldFiles(t *testing.T) {
+	d, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(d)
+
+	var err error
+
+	check := func(exp []string) {
+		got := []string{}
+		finfos, err := ioutil.ReadDir(d)
+		if err != nil {
+			t.Errorf("expected ReadDir(%v) to work, err: %v", d, err)
+		}
+		for _, finfo := range finfos {
+			if finfo.IsDir() {
+				continue
+			}
+			got = append(got, finfo.Name())
+		}
+		sort.Strings(got)
+		if len(got) != len(exp) {
+			t.Errorf("expected len(got) == len(exp), %v vs %v", got, exp)
+		}
+		for i, x := range exp {
+			if x != got[i] {
+				t.Errorf("expected got[i] == exp[i], %v, %v vs %v",
+					i, got[i], exp[i])
+			}
+		}
+	}
+
+	ioutil.WriteFile(d+"/prefix-9.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-10.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-12.store", []byte("hi"), 0600)
+	err = removeOldFiles(d, "prefix-12.store", "store")
+	if err != nil {
+		t.Errorf("expected removeOldFiles to work, err: %v", err)
+	}
+	check([]string{"prefix-12.store"})
+
+	ioutil.WriteFile(d+"/prefix-9.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-10.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-12.store", []byte("hi"), 0600)
+	err = removeOldFiles(d, "prefix-10.store", "store")
+	if err != nil {
+		t.Errorf("expected removeOldFiles to work, err: %v", err)
+	}
+	check([]string{"prefix-10.store", "prefix-12.store"})
+
+	ioutil.WriteFile(d+"/prefix-9.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-10.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-12.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/not-9.store", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/prefix-9.not", []byte("hi"), 0600)
+	ioutil.WriteFile(d+"/settings.json", []byte("hi"), 0600)
+	err = removeOldFiles(d, "prefix-10.store", "store")
+	if err != nil {
+		t.Errorf("expected removeOldFiles to work, err: %v", err)
+	}
+	check([]string{
+		"not-9.store",
+		"prefix-10.store",
+		"prefix-12.store",
+		"prefix-9.not",
+		"settings.json"})
 }
