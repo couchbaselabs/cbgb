@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -288,4 +289,12 @@ func RingToStrings(r *Ring) []string {
 		}
 	})
 	return res
+}
+
+func parseFileNameSuffix(fname string) (string, error) {
+	ext := filepath.Ext(fname)
+	if len(ext) <= 1 {
+		return "", fmt.Errorf("no suffix for fname: %v", fname)
+	}
+	return ext[1:], nil
 }

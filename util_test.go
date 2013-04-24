@@ -299,3 +299,29 @@ func TestRingConversions(t *testing.T) {
 	checkErrors(RingToErrors(emptyRing), []error{})
 	checkErrors(RingToErrors(justNums), []error{})
 }
+
+func TestParseFileNameSuffix(t *testing.T) {
+	tests := []struct {
+		in  string
+		out string
+		ok  bool
+	}{
+		{"", "", false},
+		{".", "", false},
+		{"hello", "", false},
+		{"hello.", "", false},
+		{".foo", "foo", true},
+		{"a.b", "b", true},
+	}
+	for _, test := range tests {
+		got, err := parseFileNameSuffix(test.in)
+		if err != nil && test.ok {
+			t.Errorf("expected good parseFileNameSuffix(%v), got: %v, %v",
+				test.in, got, err)
+		}
+		if got != test.out {
+			t.Errorf("expected parseFileNameSuffix(%v) to be: %v, got: %v",
+				test.in, test.out, got)
+		}
+	}
+}
