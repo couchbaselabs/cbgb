@@ -61,18 +61,23 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 	collRest := make([]string, 0, len(collNames)) // Names of unprocessed collections.
 	vbids := make([]uint16, 0, len(collNames))    // VBucket id's that we processed.
 
-	// Process compaction in a few steps: first, unlocked,
-	// snapshot-based collection copying meant to handle most of each
-	// vbucket's data; and then, locked copying of any vbucket
-	// mutations (deltas) that happened in the meantime.  Then, while
-	// still holding all vbucket collection locks, we copy any
-	// remaining non-vbucket collections and atomically swap the files.
+	// Process compaction in a few steps:
+	// 1) First, unlocked, snapshot-based collection copying meant to
+	// handle most of each vbucket's data.
+	// 2) Next, locked copying of any vbucket mutations (deltas)
+	// that happened in the meantime.
+	// 3) Next, while still holding all vbucket collection locks, we
+	// copy any remaining non-vbucket collections.
+	// 4) Finally, atomically swap the files and unwind the locks.
 	for _, collName := range collNames {
 		if !strings.HasSuffix(collName, COLL_SUFFIX_CHANGES) {
 			if !strings.HasSuffix(collName, COLL_SUFFIX_KEYS) {
-				// It's neither a changes nor a keys collection.
+				// It's neither a changes nor a keys collection,
+				// so handle it later in step 3.
 				collRest = append(collRest, collName)
 			}
+			// Skip the keys collection as it's handled while copying
+			// over the changes collection.
 			continue
 		}
 		vbid, lastChange, err :=
