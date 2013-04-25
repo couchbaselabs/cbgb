@@ -53,6 +53,8 @@ var maxConns = flag.Int("max-conns", 800,
 	"Max number of connections")
 var fileServiceWorkers = flag.Int("file-service-workers", 32,
 	"Number of file service workers")
+var compactEvery = flag.Int("compact-every", 10000,
+	"Compact file after this many writes")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings

@@ -16,10 +16,6 @@ var fileService *FileService
 
 var persistPeriodic *periodically
 
-// TODO: Make compact_every configurable, and/or revisit this (overly
-// simplistic?) compaction policy/trigger.
-const compact_every = 10000
-
 type bucketstore struct {
 	dirtiness     int64          // To track when we need flush to storage.
 	bsf           unsafe.Pointer // *bucketstorefile
@@ -138,7 +134,7 @@ func (s *bucketstore) flush_unlocked() (int64, error) {
 
 func (s *bucketstore) periodicPersist(time.Time) bool {
 	d, _ := s.Flush()
-	if s.stats.Writes-s.stats.LastCompactAt > compact_every {
+	if s.stats.Writes-s.stats.LastCompactAt > int64(*compactEvery) {
 		s.stats.LastCompactAt = s.stats.Writes
 		s.Compact()
 	}
