@@ -85,7 +85,7 @@ func (bs *BucketSettings) save(bucketDir string) error {
 	fname := filepath.Join(bucketDir, "settings.json")
 	fnameNew := filepath.Join(bucketDir, "settings.json.new")
 	fnameOld := filepath.Join(bucketDir, "settings.json.old")
-	if err = ioutil.WriteFile(fnameNew, j, 0600); err != nil {
+	if err = ioutil.WriteFile(fnameNew, j, 0666); err != nil {
 		return err
 	}
 	os.Rename(fname, fnameOld)
