@@ -158,7 +158,7 @@ func copyColl(srcColl *gkvlite.Collection, dstColl *gkvlite.Collection,
 		return 0, nil, nil
 	}
 
-	var errVisit error = nil
+	var errVisit error
 	err = srcColl.VisitItemsAscend(minItem.Key, true, func(i *gkvlite.Item) bool {
 		if errVisit = dstColl.SetItem(i); errVisit != nil {
 			return false
@@ -194,7 +194,6 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 	}
 
 	var errVisit error
-
 	err = cSrc.VisitItemsAscend(lastChangeCAS, true, func(cItem *gkvlite.Item) bool {
 		numVisits++
 		if numVisits <= 1 {
@@ -203,7 +202,6 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 		if errVisit = cDst.SetItem(cItem); errVisit != nil {
 			return false
 		}
-		// Update the keys index with the latest change.
 		i := &item{}
 		if errVisit = i.fromValueBytes(cItem.Val); errVisit != nil {
 			return false
@@ -211,6 +209,15 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 		if i.key == nil || len(i.key) <= 0 {
 			return true // A nil/empty key means a metadata change.
 		}
+		// Remove the old change from the destination changes-stream.
+		var kDstItem *gkvlite.Item
+		if kDstItem, errVisit = kDst.GetItem(i.key, false); errVisit != nil {
+			return false
+		}
+		if kDstItem != nil && len(kDstItem.Val) > 0 {
+			cDst.Delete(kDstItem.Val)
+		}
+		// Update the keys index with the latest change.
 		if i.isDeletion() {
 			if _, errVisit = kDst.Delete(i.key); errVisit != nil {
 				return false
