@@ -44,7 +44,8 @@ func (p *partitionstore) mutate(cb func(keys, changes *gkvlite.Collection)) {
 		(*gkvlite.Collection)(atomic.LoadPointer(&p.changes)))
 }
 
-func (p *partitionstore) collsPauseSwap(cb func() (keys, changes *gkvlite.Collection)) {
+func (p *partitionstore) collsPauseSwap(
+	cb func() (keys, changes *gkvlite.Collection)) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
@@ -59,25 +60,27 @@ func (p *partitionstore) get(key []byte) (*item, error) {
 	return p.getItem(key, true)
 }
 
-func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error) {
+func (p *partitionstore) getItem(key []byte, withValue bool) (
+	i *item, err error) {
 	for retries := 0; retries < 5; retries++ {
 		keys, changes := p.colls()
-		iItem, err := keys.GetItem(key, true)
+		kItem, err := keys.GetItem(key, true)
 		if err != nil {
 			return nil, err
 		}
-		if iItem == nil {
+		if kItem == nil {
 			return nil, nil
 		}
 		// TODO: What if a compaction happens in between the lookups,
 		// and the changes-feed no longer has the item?  Answer: compaction
 		// must not remove items that the key-index references.
-		cItem := (*gkvlite.Item)(atomic.LoadPointer(&iItem.Transient))
-		if cItem == nil {
-			cItem, err = changes.GetItem(iItem.Val, true)
-			if err != nil {
-				return nil, err
-			}
+		i := (*item)(atomic.LoadPointer(&kItem.Transient))
+		if i != nil {
+			return i, nil
+		}
+		cItem, err := changes.GetItem(kItem.Val, true)
+		if err != nil {
+			return nil, err
 		}
 		if cItem != nil {
 			i := &item{key: key}
@@ -92,7 +95,8 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (i *item, err error
 	return nil, fmt.Errorf("max getItem retries for key: %v", key)
 }
 
-func (p *partitionstore) getTotals() (numItems uint64, numItemBytes uint64, err error) {
+func (p *partitionstore) getTotals() (
+	numItems uint64, numItemBytes uint64, err error) {
 	keys, changes := p.colls()
 	numItems, _, err = keys.GetTotals()
 	if err == nil {
@@ -105,18 +109,20 @@ func (p *partitionstore) visitItems(start []byte, withValue bool,
 	visitor func(*item) bool) (err error) {
 	keys, changes := p.colls()
 	var vErr error
-	v := func(iItem *gkvlite.Item) bool {
-		cItem := (*gkvlite.Item)(atomic.LoadPointer(&iItem.Transient))
-		if cItem == nil {
-			cItem, vErr = changes.GetItem(iItem.Val, withValue)
-			if vErr != nil {
-				return false
-			}
+	v := func(kItem *gkvlite.Item) bool {
+		i := (*item)(atomic.LoadPointer(&kItem.Transient))
+		if i != nil {
+			return visitor(i)
+		}
+		var cItem *gkvlite.Item
+		cItem, vErr = changes.GetItem(kItem.Val, withValue)
+		if vErr != nil {
+			return false
 		}
 		if cItem == nil {
 			return true // TODO: track this case; might have been compacted away.
 		}
-		i := &item{key: iItem.Key}
+		i = &item{key: kItem.Key}
 		if vErr = i.fromValueBytes(cItem.Val); vErr != nil {
 			return false
 		}
@@ -175,6 +181,17 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 	cb func()) (deltaItemBytes int64, err error) {
 	vBytes := newItem.toValueBytes()
 	cBytes := casBytes(newItem.cas)
+	cItem := &gkvlite.Item{Key: cBytes, Val: vBytes, Priority: int32(rand.Int())}
+
+	var kItem *gkvlite.Item
+	if newItem.key != nil && len(newItem.key) > 0 {
+		kItem = &gkvlite.Item{
+			Key:       newItem.key,
+			Val:       cBytes,
+			Priority:  int32(rand.Int()),
+			Transient: unsafe.Pointer(newItem),
+		}
+	}
 
 	deltaItemBytes = newItem.NumBytes()
 	if oldItem != nil {
@@ -182,24 +199,16 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 	}
 
 	p.mutate(func(keys, changes *gkvlite.Collection) {
-		cItem := &gkvlite.Item{Key: cBytes, Val: vBytes, Priority: int32(rand.Int())}
 		if err = changes.SetItem(cItem); err != nil {
 			return
 		}
 
 		dirtyForce := false
-
 		if newItem.key != nil && len(newItem.key) > 0 {
 			// TODO: What if we flush between the keys update and changes
 			// update?  That could result in an inconsistent db file?
 			// Solution idea #1 is to have load-time fixup, that
 			// incorporates changes into the key-index.
-			kItem := &gkvlite.Item{
-				Key:       newItem.key,
-				Val:       cBytes,
-				Priority:  int32(rand.Int()),
-				Transient: unsafe.Pointer(cItem),
-			}
 			if err = keys.SetItem(kItem); err != nil {
 				return
 			}
