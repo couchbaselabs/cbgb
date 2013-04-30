@@ -211,7 +211,7 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 		}
 		// Remove the old change from the destination changes-stream.
 		var kDstItem *gkvlite.Item
-		if kDstItem, errVisit = kDst.GetItem(i.key, false); errVisit != nil {
+		if kDstItem, errVisit = kDst.GetItem(i.key, true); errVisit != nil {
 			return false
 		}
 		if kDstItem != nil && len(kDstItem.Val) > 0 {
