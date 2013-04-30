@@ -83,10 +83,17 @@ func (p *partitionstore) getItem(key []byte, withValue bool) (
 			return nil, err
 		}
 		if cItem != nil {
+			i = (*item)(atomic.LoadPointer(&cItem.Transient))
+			if i != nil {
+				atomic.StorePointer(&kItem.Transient, unsafe.Pointer(i))
+				return i, nil
+			}
 			i := &item{key: key}
 			if err = i.fromValueBytes(cItem.Val); err != nil {
 				return nil, err
 			}
+			atomic.StorePointer(&cItem.Transient, unsafe.Pointer(i))
+			atomic.StorePointer(&kItem.Transient, unsafe.Pointer(i))
 			return i, nil
 		}
 		// If cItem is nil, perhaps a concurrent set() happened after
@@ -122,10 +129,17 @@ func (p *partitionstore) visitItems(start []byte, withValue bool,
 		if cItem == nil {
 			return true // TODO: track this case; might have been compacted away.
 		}
+		i = (*item)(atomic.LoadPointer(&cItem.Transient))
+		if i != nil {
+			atomic.StorePointer(&kItem.Transient, unsafe.Pointer(i))
+			return visitor(i)
+		}
 		i = &item{key: kItem.Key}
 		if vErr = i.fromValueBytes(cItem.Val); vErr != nil {
 			return false
 		}
+		atomic.StorePointer(&cItem.Transient, unsafe.Pointer(i))
+		atomic.StorePointer(&kItem.Transient, unsafe.Pointer(i))
 		return visitor(i)
 	}
 	if err := p.visit(keys, start, withValue, v); err != nil {
@@ -179,9 +193,13 @@ func (p *partitionstore) set(newItem *item, oldItem *item) (
 // the caller to do more atomic things.
 func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 	cb func()) (deltaItemBytes int64, err error) {
-	vBytes := newItem.toValueBytes()
 	cBytes := casBytes(newItem.cas)
-	cItem := &gkvlite.Item{Key: cBytes, Val: vBytes, Priority: int32(rand.Int())}
+	cItem := &gkvlite.Item{
+		Key:       cBytes,
+		Val:       newItem.toValueBytes(),
+		Priority:  int32(rand.Int()),
+		Transient: unsafe.Pointer(newItem),
+	}
 
 	var kItem *gkvlite.Item
 	if newItem.key != nil && len(newItem.key) > 0 {
@@ -202,7 +220,6 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 		if err = changes.SetItem(cItem); err != nil {
 			return
 		}
-
 		dirtyForce := false
 		if newItem.key != nil && len(newItem.key) > 0 {
 			// TODO: What if we flush between the keys update and changes
@@ -235,6 +252,11 @@ func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
 	cBytes := casBytes(cas)
 	dItem := &item{key: key, cas: cas}
 	vBytes := dItem.markAsDeletion().toValueBytes()
+	cItem := &gkvlite.Item{
+		Key:      cBytes,
+		Val:      vBytes,
+		Priority: int32(rand.Int()),
+	}
 
 	deltaItemBytes = dItem.NumBytes()
 	if oldItem != nil {
@@ -242,10 +264,9 @@ func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
 	}
 
 	p.mutate(func(keys, changes *gkvlite.Collection) {
-		if err = changes.Set(cBytes, vBytes); err != nil {
+		if err = changes.SetItem(cItem); err != nil {
 			return
 		}
-
 		dirtyForce := false
 		if key != nil && len(key) > 0 {
 			// TODO: What if we flush between the keys update and changes
