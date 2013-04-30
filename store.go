@@ -47,7 +47,7 @@ func newBucketStore(path string, settings BucketSettings,
 		bsfForGKVLite = nil
 	}
 
-	sc := gkvlite.StoreCallbacks{KeyCompareForCollection: keyCompareForCollection}
+	sc := mkBucketStoreCallbacks(keyCompareForCollection)
 
 	store, err := gkvlite.NewStoreEx(bsfForGKVLite, sc)
 	if err != nil {
@@ -203,4 +203,11 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 	res.keys = unsafe.Pointer(k)
 	res.changes = unsafe.Pointer(c)
 	return res
+}
+
+func mkBucketStoreCallbacks(keyCompareForCollection func(string) gkvlite.KeyCompare) (
+	gkvlite.StoreCallbacks) {
+	return gkvlite.StoreCallbacks{
+		KeyCompareForCollection: keyCompareForCollection,
+	}
 }

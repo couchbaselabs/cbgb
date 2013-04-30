@@ -57,7 +57,6 @@ func (i item) isExpired(t time.Time) bool {
 
 const itemHdrLen = 4 + 4 + 8 + 2 + 4
 
-// Serialize everything but the key.
 func (i *item) toValueBytes() []byte {
 	if len(i.key) > MAX_ITEM_KEY_LENGTH {
 		return nil

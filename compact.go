@@ -46,7 +46,7 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 		}
 	}()
 
-	sc := gkvlite.StoreCallbacks{KeyCompareForCollection: s.keyCompareForCollection}
+	sc := mkBucketStoreCallbacks(s.keyCompareForCollection)
 
 	compactStore, err := gkvlite.NewStoreEx(compactFile, sc)
 	if err != nil {
@@ -129,7 +129,7 @@ func (s *bucketstore) compactSwapFile(bsf *bucketstorefile, compactPath string) 
 		return err
 	}
 
-	sc := gkvlite.StoreCallbacks{KeyCompareForCollection: s.keyCompareForCollection}
+	sc := mkBucketStoreCallbacks(s.keyCompareForCollection)
 
 	nextBSF := NewBucketStoreFile(nextPath, nextFile, bsf.stats)
 	nextStore, err := gkvlite.NewStoreEx(nextBSF, sc)
