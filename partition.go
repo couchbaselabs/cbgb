@@ -197,7 +197,7 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 	cItem := &gkvlite.Item{
 		Key:       cBytes,
 		Val:       newItem.toValueBytes(),
-		Priority:  int32(rand.Int()),
+		Priority:  rand.Int31(),
 		Transient: unsafe.Pointer(newItem),
 	}
 
@@ -206,7 +206,7 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 		kItem = &gkvlite.Item{
 			Key:       newItem.key,
 			Val:       cBytes,
-			Priority:  int32(rand.Int()),
+			Priority:  rand.Int31(),
 			Transient: unsafe.Pointer(newItem),
 		}
 	}
@@ -255,7 +255,7 @@ func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
 	cItem := &gkvlite.Item{
 		Key:      cBytes,
 		Val:      vBytes,
-		Priority: int32(rand.Int()),
+		Priority: rand.Int31(),
 	}
 
 	deltaItemBytes = dItem.NumBytes()
