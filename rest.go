@@ -283,7 +283,7 @@ func restGetBucketLogs(w http.ResponseWriter, r *http.Request) {
 // To start a cpu profiling...
 //    curl -X POST http://127.0.0.1:8091/_api/profile/cpu -d secs=5
 // To analyze a profiling...
-//    go tool pprof ./cbgb/cbgb run-cpu.pprof
+//    go tool pprof ./cbgb run-cpu.pprof
 func restProfileCPU(w http.ResponseWriter, r *http.Request) {
 	fname := "./run-cpu.pprof"
 	secs, err := strconv.Atoi(r.FormValue("secs"))
@@ -310,7 +310,7 @@ func restProfileCPU(w http.ResponseWriter, r *http.Request) {
 // To grab a memory profiling...
 //    curl -X POST http://127.0.0.1:8091/_api/profile/memory
 // To analyze a profiling...
-//    go tool pprof ./cbgb/cbgb run-memory.pprof
+//    go tool pprof ./cbgb run-memory.pprof
 func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 	fname := "./run-memory.pprof"
 	os.Remove(fname)
