@@ -122,7 +122,7 @@ func (p *partitionstore) visitItems(start []byte, withValue bool,
 			return visitor(i)
 		}
 		var cItem *gkvlite.Item
-		cItem, vErr = changes.GetItem(kItem.Val, withValue)
+		cItem, vErr = changes.GetItem(kItem.Val, true)
 		if vErr != nil {
 			return false
 		}
@@ -142,7 +142,7 @@ func (p *partitionstore) visitItems(start []byte, withValue bool,
 		atomic.StorePointer(&kItem.Transient, unsafe.Pointer(i))
 		return visitor(i)
 	}
-	if err := p.visit(keys, start, withValue, v); err != nil {
+	if err := p.visit(keys, start, true, v); err != nil {
 		return err
 	}
 	return vErr
