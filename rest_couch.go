@@ -157,7 +157,7 @@ func couchDbGetDesignDoc(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	w.Header().Add("X-Couchbase-Meta", walrus.MakeMeta(ddocIdFull))
+	// w.Header().Add("X-Couchbase-Meta", walrus.MakeMeta(ddocIdFull))
 	w.Write(body)
 }
 
@@ -343,7 +343,7 @@ func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// TODO: Content Type, Accepts, much to leverage from sync_gateway.
-	w.Header().Add("X-Couchbase-Meta", walrus.MakeMeta(docId))
+	// w.Header().Add("X-Couchbase-Meta", walrus.MakeMeta(docId))
 	w.Write(res.Body)
 }
 
