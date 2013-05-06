@@ -41,19 +41,17 @@ func newBucketStore(path string, settings BucketSettings,
 		}
 	}
 
+	sc := mkBucketStoreCallbacks(keyCompareForCollection)
+
 	bsf := NewBucketStoreFile(path, file, &BucketStoreStats{})
 	bsfForGKVLite := bsf
 	if settings.MemoryOnly >= MemoryOnly_LEVEL_PERSIST_NOTHING {
 		bsfForGKVLite = nil
 	}
-
-	sc := mkBucketStoreCallbacks(keyCompareForCollection)
-
-	store, err := gkvlite.NewStoreEx(bsfForGKVLite, sc)
+	bsf.store, err = gkvlite.NewStoreEx(bsfForGKVLite, sc)
 	if err != nil {
 		return nil, err
 	}
-	bsf.store = store
 
 	var bsfMemoryOnly *bucketstorefile
 	if settings.MemoryOnly > MemoryOnly_LEVEL_PERSIST_EVERYTHING {
