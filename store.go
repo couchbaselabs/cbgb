@@ -205,6 +205,9 @@ func (s *bucketstore) getPartitionStore(vbid uint16) (res *partitionstore) {
 
 func mkBucketStoreCallbacks(keyCompareForCollection func(string) gkvlite.KeyCompare) gkvlite.StoreCallbacks {
 	return gkvlite.StoreCallbacks{
+		ItemValLength:           itemValLength,
+		ItemValWrite:            itemValWrite,
+		ItemValRead:             itemValRead,
 		KeyCompareForCollection: keyCompareForCollection,
 	}
 }

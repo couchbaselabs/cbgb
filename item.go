@@ -4,7 +4,13 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
+	"strings"
+	"sync/atomic"
 	"time"
+	"unsafe"
+
+	"github.com/steveyen/gkvlite"
 )
 
 type item struct {
@@ -118,6 +124,83 @@ func (i *item) fromValueBytes(b []byte) (err error) {
 func (i *item) NumBytes() int64 {
 	// 8 == sizeof CAS, which is the key used in the changes collection.
 	return int64(len(i.key)+len(i.data)) + itemHdrLen + 8
+}
+
+func itemValLength(coll *gkvlite.Collection, i *gkvlite.Item) int {
+	if !strings.HasSuffix(coll.Name(), COLL_SUFFIX_CHANGES) {
+		return len(i.Val)
+	}
+	if i.Val != nil {
+		return len(i.Val)
+	}
+	if i.Transient == unsafe.Pointer(nil) {
+		// TODO: The item might have nil Val when gkvlite is
+		// traversing with a withValue of false; so we haven't
+		// read/unmarshal'ed the Val/Transient yet.  Impact: the byte
+		// aggregate math might wrong, and if we try to write with
+		// this 0 length, it'll be wrong; but, assuming here that the
+		// item.Loc() is non-empty so we'll never try to write this
+		// nil Val/Transient.
+		// panic(fmt.Sprintf("itemValLength saw nil Transient, i: %#v, coll.name: %v",
+		// 	i, coll.Name()))
+		return 0
+	}
+	ti := (interface{})(i.Transient)
+	item, ok := ti.(*item)
+	if !ok {
+		panic(fmt.Sprintf("itemValLength invoked on non-item, i: %#v", i))
+	}
+	if item == nil {
+		panic(fmt.Sprintf("itemValLength invoked on nil item, i: %#v", i))
+	}
+	return itemHdrLen + len(item.key) + len(item.data)
+}
+
+func itemValWrite(coll *gkvlite.Collection, i *gkvlite.Item,
+	w io.WriterAt, offset int64) error {
+	if !strings.HasSuffix(coll.Name(), COLL_SUFFIX_CHANGES) {
+		_, err := w.WriteAt(i.Val, offset)
+		return err
+	}
+	if i.Val != nil {
+		_, err := w.WriteAt(i.Val, offset)
+		return err
+	}
+	if i.Transient == unsafe.Pointer(nil) {
+		panic(fmt.Sprintf("itemValWrite saw nil Transient, i: %#v", i))
+	}
+	ti := (interface{})(i.Transient)
+	item, ok := ti.(*item)
+	if !ok {
+		panic(fmt.Sprintf("itemValWrite invoked on non-item, i: %#v", i))
+	}
+	if item == nil {
+		panic(fmt.Sprintf("itemValWrite invoked on nil item, i: %#v", i))
+	}
+	vBytes := item.toValueBytes()
+	_, err := w.WriteAt(vBytes, offset)
+	return err
+}
+
+func itemValRead(coll *gkvlite.Collection, i *gkvlite.Item,
+	r io.ReaderAt, offset int64, valLength uint32) error {
+	if i.Val != nil {
+		panic(fmt.Sprintf("itemValRead saw non-nil Val, i: %#v", i))
+	}
+	i.Val = make([]byte, valLength)
+	_, err := r.ReadAt(i.Val, offset)
+	if err != nil {
+		return err
+	}
+	if !strings.HasSuffix(coll.Name(), COLL_SUFFIX_CHANGES) {
+		return nil
+	}
+	x := &item{}
+	if err = x.fromValueBytes(i.Val); err != nil {
+		return err
+	}
+	atomic.StorePointer(&i.Transient, unsafe.Pointer(x))
+	return nil
 }
 
 func KeyLess(p, q interface{}) int {
