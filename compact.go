@@ -160,7 +160,7 @@ func copyColl(srcColl *gkvlite.Collection, dstColl *gkvlite.Collection,
 
 	var errVisit error
 	err = srcColl.VisitItemsAscend(minItem.Key, true, func(i *gkvlite.Item) bool {
-		if errVisit = dstColl.SetItem(i); errVisit != nil {
+		if errVisit = dstColl.SetItem(i.Copy()); errVisit != nil {
 			return false
 		}
 		numItems++
@@ -199,7 +199,7 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 		if numVisits <= 1 {
 			return true
 		}
-		if errVisit = cDst.SetItem(cItem); errVisit != nil {
+		if errVisit = cDst.SetItem(cItem.Copy()); errVisit != nil {
 			return false
 		}
 		i := &item{}

@@ -285,7 +285,19 @@ func testCopyDelta(t *testing.T, writeEvery int) {
 	cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
 	kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
 
-	numVisits, err := copyDelta(nil, cName, kName, v0.bs.BSF().store, v0.bs.BSF().store, writeEvery)
+	b1, err := NewBucket("test1", testBucketDir,
+		&BucketSettings{
+			NumPartitions: MAX_VBUCKETS,
+		})
+	if err != nil {
+		t.Errorf("expected NewBucket to work, got: %v", err)
+	}
+
+	v1, _ := b1.CreateVBucket(2)
+	b1.SetVBState(2, VBActive)
+
+	numVisits, err := copyDelta(nil, cName, kName,
+		v0.bs.BSF().store, v1.bs.BSF().store, writeEvery)
 	if err != nil {
 		t.Errorf("expected copyDelta to work, got: %v", err)
 	}
