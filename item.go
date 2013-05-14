@@ -218,7 +218,10 @@ func CASLess(p, q interface{}) int {
 }
 
 func casBytes(cas uint64) []byte {
-	buf := make([]byte, 8)
+	return casBytesFill(cas, make([]byte, 8))
+}
+
+func casBytesFill(cas uint64, buf []byte) []byte {
 	binary.BigEndian.PutUint64(buf, cas)
 	return buf
 }

@@ -212,7 +212,12 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 	}
 
 	deltaItemBytes = newItem.NumBytes()
+
+	var oldItemCasBytes []byte
 	if oldItem != nil {
+		oldItemCasBytes = make([]byte, 8)
+		casBytesFill(oldItem.cas, oldItemCasBytes)
+
 		deltaItemBytes -= oldItem.NumBytes()
 	}
 
@@ -235,7 +240,7 @@ func (p *partitionstore) setWithCallback(newItem *item, oldItem *item,
 
 		if oldItem != nil {
 			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
-			changes.Delete(casBytes(oldItem.cas))
+			changes.Delete(oldItemCasBytes)
 		}
 
 		p.parent.dirty(dirtyForce)
@@ -259,7 +264,12 @@ func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
 	}
 
 	deltaItemBytes = dItem.NumBytes()
+
+	var oldItemCasBytes []byte
 	if oldItem != nil {
+		oldItemCasBytes = make([]byte, 8)
+		casBytesFill(oldItem.cas, oldItemCasBytes)
+
 		deltaItemBytes -= oldItem.NumBytes()
 	}
 
@@ -282,7 +292,7 @@ func (p *partitionstore) del(key []byte, cas uint64, oldItem *item) (
 
 		if oldItem != nil {
 			// TODO: Need a "frozen" CAS point where we don't de-duplicate changes stream.
-			changes.Delete(casBytes(oldItem.cas))
+			changes.Delete(oldItemCasBytes)
 		}
 
 		p.parent.dirty(dirtyForce)
