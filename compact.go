@@ -320,7 +320,7 @@ func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
 				bsf.path, collName)
 		}
 		collNext := compactStore.SetCollection(collName, nil)
-		if collCurr == nil {
+		if collNext == nil {
 			return fmt.Errorf("compact rest dest missing: %v, collName: %v",
 				bsf.path, collName)
 		}
