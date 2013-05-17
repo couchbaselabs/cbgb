@@ -134,10 +134,12 @@ func (s *bucketstore) periodicPersist(time.Time) bool {
 	d, _ := s.Flush()
 	if s.stats.Writes-s.stats.LastCompactAt > int64(*compactEvery) {
 		s.stats.LastCompactAt = s.stats.Writes
-		s.Compact()
+		if err := s.Compact(); err != nil {
+			log.Printf("compact err: %v", err)
+		}
 	}
 	if d > 0 {
-		log.Printf("Flushed all but %v items (retrying)", d)
+		log.Printf("flushed all but %v items (retrying)", d)
 	}
 	return d > 0
 }
