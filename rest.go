@@ -313,7 +313,7 @@ func restProfileCPU(w http.ResponseWriter, r *http.Request) {
 
 	pprof.StartCPUProfile(f)
 	go func() {
-		<-time.After(time.Duration(secs) * time.Second)
+		time.Sleep(time.Duration(secs) * time.Second)
 		pprof.StopCPUProfile()
 		f.Close()
 	}()
