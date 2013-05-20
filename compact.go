@@ -100,6 +100,7 @@ func (s *bucketstore) compactGo(bsf *bucketstorefile, compactPath string) error 
 			if err != nil {
 				return err
 			}
+			compactStore.Close()
 			compactFile.Close()
 
 			return s.compactSwapFile(bsf, compactPath) // The last step.
@@ -288,6 +289,7 @@ func (s *bucketstore) copyVBucketColls(bsf *bucketstorefile,
 		return 0, nil, fmt.Errorf("compact source snapshot failed: %v, vbid: %v",
 			bsf.path, vbid)
 	}
+	defer currSnapshot.Close()
 	cCurrSnapshot := currSnapshot.GetCollection(cName)
 	kCurrSnapshot := currSnapshot.GetCollection(kName)
 	if cCurrSnapshot == nil || kCurrSnapshot == nil {
@@ -313,6 +315,7 @@ func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
 	if currSnapshot == nil {
 		return fmt.Errorf("compact source snapshot failed: %v", bsf.path)
 	}
+	defer currSnapshot.Close()
 	for _, collName := range collRest {
 		collCurr := currSnapshot.GetCollection(collName)
 		if collCurr == nil {
