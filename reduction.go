@@ -81,8 +81,8 @@ type statsResult struct {
 	count                 int
 }
 
-func (s statsResult) toMap() map[string]float64 {
-	return map[string]float64{
+func (s statsResult) toMap() map[string]interface{} {
+	return map[string]interface{}{
 		"sum":    s.sum,
 		"count":  float64(s.count),
 		"min":    s.min,
