@@ -69,6 +69,8 @@ func TestZeroate(t *testing.T) {
 		{math.Inf(1), 0},
 		{math.Inf(-1), 0},
 		{3.14, 3.14},
+		{1, 1},
+		{int64(1), 1},
 	}
 
 	for _, test := range tests {

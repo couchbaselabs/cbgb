@@ -17,14 +17,21 @@ func newReducer() *otto.Otto {
 
 // Convert interface{} to float with NaN and infs to 0 for summing
 func zeroate(i interface{}) float64 {
-	f, ok := i.(float64)
-	if !ok {
+	var val float64
+	switch x := i.(type) {
+	case float64:
+		val = x
+	case int:
+		val = float64(x)
+	case int64:
+		val = float64(x)
+	default:
 		return 0
 	}
-	if math.IsNaN(f) || math.IsInf(f, 1) || math.IsInf(f, -1) {
+	if math.IsNaN(val) || math.IsInf(val, 1) || math.IsInf(val, -1) {
 		return 0
 	}
-	return f
+	return val
 }
 
 func javascriptReduceSum(call otto.FunctionCall) otto.Value {
