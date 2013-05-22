@@ -1,12 +1,25 @@
 package main
 
 import (
+	"fmt"
 	"io/ioutil"
 	"math"
 	"testing"
 
 	"github.com/robertkrimen/otto"
 )
+
+func toInt(i interface{}) int {
+	switch x := i.(type) {
+	case int:
+		return x
+	case int64:
+		return int(x)
+	case float64:
+		return int(x)
+	}
+	panic(fmt.Errorf("Unhandled type: %T(%v)", i, i))
+}
 
 func mkAssert(t *testing.T) func(otto.FunctionCall) otto.Value {
 	return func(call otto.FunctionCall) otto.Value {
@@ -27,9 +40,9 @@ func mkAssert(t *testing.T) func(otto.FunctionCall) otto.Value {
 			return otto.UndefinedValue()
 		}
 
-		if exp != got {
-			t.Errorf("Expected %v for %v, got %v",
-				exp, name, got)
+		if toInt(exp) != toInt(got) {
+			t.Errorf("FAIL Expected %T(%v) for %v, got %T(%v)",
+				exp, exp, name, got, got)
 		} else {
 			t.Logf("PASS %v", name)
 		}
