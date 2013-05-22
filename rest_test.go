@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -20,7 +19,6 @@ import (
 
 // Don't do any normal logging while running tests.
 func init() {
-	log.SetOutput(ioutil.Discard)
 	*staticPath = "static"
 	*adminUser = ""
 	bdir := "tmp"
