@@ -236,7 +236,7 @@ func TestItemNumBytes(t *testing.T) {
 	}
 }
 
-func TestSizeOf(t *testing.T) {
+func TestSizeOfItem(t *testing.T) {
 	i := &item{}
 	t.Logf("sizeof various structs and types, in bytes...")
 	t.Logf("  len(item.toValueBytes()): %v",
@@ -248,5 +248,4 @@ func TestSizeOf(t *testing.T) {
 	t.Logf("  Sizeof(item{}): %v", unsafe.Sizeof(item{}))
 	t.Logf("  Sizeof([]byte{}): %v", unsafe.Sizeof([]byte{}))
 	t.Logf("  len(casBytes(0)): %v", len(casBytes(0)))
-
 }

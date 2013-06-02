@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/dustin/gomemcached"
 )
@@ -444,4 +445,9 @@ func TestTapBackFillBucket(t *testing.T) {
 	mustBeTapAck(mustTransmit("ack-wanted", gomemcached.TAP_OPAQUE))
 
 	mustTransmit("post-DUMP-mutation", gomemcached.TAP_MUTATION)
+}
+
+func TestSizeOfMutation(t *testing.T) {
+	t.Logf("sizeof various structs and types, in bytes...")
+	t.Logf("  Sizeof(mutation{}): %v", unsafe.Sizeof(mutation{}))
 }

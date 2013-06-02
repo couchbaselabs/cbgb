@@ -7,6 +7,7 @@ import (
 	"os"
 	"testing"
 	"time"
+	"unsafe"
 
 	"github.com/dustin/gomemcached"
 )
@@ -390,4 +391,10 @@ func TestServerStatsSnapshot(t *testing.T) {
 	if a == nil {
 		t.Errorf("expected AggServer() to work")
 	}
+}
+
+func TestSizeOfReqRes(t *testing.T) {
+	t.Logf("sizeof various structs and types, in bytes...")
+	t.Logf("  Sizeof(MCRequest{}): %v", unsafe.Sizeof(gomemcached.MCRequest{}))
+	t.Logf("  Sizeof(MCResponse{}): %v", unsafe.Sizeof(gomemcached.MCResponse{}))
 }
