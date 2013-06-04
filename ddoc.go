@@ -46,7 +46,7 @@ func (b *livebucket) SetDDoc(ddocId string, body []byte) error {
 	if res.Status != gomemcached.SUCCESS {
 		return fmt.Errorf("set ddoc failed: %v, status: %v", ddocId, res.Status)
 	}
-	b.resetDDocs()
+	b.restartIndexes()
 	return nil
 }
 
@@ -58,11 +58,11 @@ func (b *livebucket) DelDDoc(ddocId string) error {
 	if res.Status != gomemcached.SUCCESS {
 		return fmt.Errorf("delete ddoc failed: %v, status: %v", ddocId, res.Status)
 	}
-	b.resetDDocs()
+	b.restartIndexes()
 	return nil
 }
 
-func (b *livebucket) resetDDocs() {
+func (b *livebucket) restartIndexes() {
 	b.SetDDocs(b.GetDDocs(), nil) // Clear all our cached ddocs.
 	np := b.GetBucketSettings().NumPartitions
 	for vbid := 0; vbid < np; vbid++ {
