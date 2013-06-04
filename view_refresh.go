@@ -249,15 +249,13 @@ func (v *VBucket) getViewsStorePathPrefix() (dirForBucket, vfprefix string) {
 
 func (v *VBucket) clearViewsStore() (err error) {
 	v.Apply(func() {
-		if v.viewsStore != nil {
-			// TODO: Rethink/recheck lock hierarchy here, to prevent
-			// deadlock and racing with concurrent flush & compaction.
-			v.viewsStore.apply(func() {
-				v.viewsStore.Close()
-				os.Remove(v.viewsStore.BSF().path)
-				v.viewsStore = nil
-			})
-		}
+		// TODO: Rethink/recheck lock hierarchy here, to prevent
+		// deadlock and racing with concurrent flush & compaction.
+		v.viewsStore.apply(func() {
+			v.viewsStore.Close()
+			os.Remove(v.viewsStore.BSF().path)
+			v.viewsStore = nil
+		})
 		dirForBucket, vfprefix := v.getViewsStorePathPrefix()
 		vfiles, err := filepath.Glob(filepath.Join(dirForBucket,
 			vfprefix+"-*."+VIEWS_FILE_SUFFIX))

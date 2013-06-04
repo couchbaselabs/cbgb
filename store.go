@@ -183,6 +183,9 @@ func (s *bucketstore) collWithKeyCompare(collName string,
 }
 
 func (s *bucketstore) apply(f func()) {
+	if s == nil {
+		return
+	}
 	s.diskLock.Lock()
 	defer s.diskLock.Unlock()
 	f()
