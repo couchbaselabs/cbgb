@@ -227,10 +227,9 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 }
 
 func (v *VBucket) getViewsStorePath() (path string, err error) {
-	dirForBucket := v.parent.GetBucketDir()
-	settings := v.parent.GetBucketSettings()
-	vfprefix := fmt.Sprintf("%s_%d", settings.UUID, v.vbid)
+	dirForBucket, vfprefix := v.getViewsStorePathPrefix()
 	vfn := makeStoreFileName(vfprefix, 0, VIEWS_FILE_SUFFIX)
+	settings := v.parent.GetBucketSettings()
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
 		vfn, err = latestStoreFileName(dirForBucket, vfprefix,
 			VIEWS_FILE_SUFFIX)
@@ -239,6 +238,13 @@ func (v *VBucket) getViewsStorePath() (path string, err error) {
 		}
 	}
 	return filepath.Join(dirForBucket, vfn), nil
+}
+
+func (v *VBucket) getViewsStorePathPrefix() (dirForBucket, vfprefix string) {
+	dirForBucket = v.parent.GetBucketDir()
+	settings := v.parent.GetBucketSettings()
+	vfprefix = fmt.Sprintf("%s_%d", settings.UUID, v.vbid)
+	return dirForBucket, vfprefix
 }
 
 func (v *VBucket) clearViewsStore() (err error) {
