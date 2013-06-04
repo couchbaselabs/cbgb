@@ -83,6 +83,18 @@ func (bsf *bucketstorefile) Stat() (fi os.FileInfo, err error) {
 	return fi, err
 }
 
+func (bsf *bucketstorefile) Truncate(size int64) (err error) {
+	bsf.apply(func() {
+		if bsf.purge {
+			err = fmt.Errorf("Truncate to purgable bucketstorefile: %v",
+				bsf.path)
+			return
+		}
+		err = bsf.file.Truncate(size)
+	})
+	return err
+}
+
 // Remove previous version files.
 func (bsf *bucketstorefile) removeOldFiles() error {
 	fname := filepath.Base(bsf.path)

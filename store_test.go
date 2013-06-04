@@ -32,6 +32,10 @@ func (b brokenFile) Stat() (os.FileInfo, error) {
 	return nil, b.error
 }
 
+func (b brokenFile) Truncate(size int64) error {
+	return b.error
+}
+
 func testLoadInts(t *testing.T, rh *reqHandler, vbid int, numItems int) {
 	for i := 0; i < numItems; i++ {
 		req := &gomemcached.MCRequest{

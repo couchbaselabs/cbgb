@@ -14,8 +14,8 @@ type FileLike interface {
 	io.Closer
 	io.ReaderAt
 	io.WriterAt
-
 	Stat() (os.FileInfo, error)
+	Truncate(size int64) error
 }
 
 type fileLike struct {
@@ -51,6 +51,16 @@ func (f *fileLike) WriteAt(p []byte, off int64) (n int, err error) {
 	err = f.fs.Do(f.path, f.mode, func(file *os.File) error {
 		n, err = file.WriteAt(p, off)
 		return err
+	})
+	return
+}
+
+func (f *fileLike) Truncate(size int64) (err error) {
+	if f.mode&(os.O_WRONLY|os.O_RDWR) == 0 {
+		return unWritable
+	}
+	err = f.fs.Do(f.path, f.mode, func(file *os.File) error {
+		return file.Truncate(size)
 	})
 	return
 }
