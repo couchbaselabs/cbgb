@@ -11,17 +11,11 @@ type periodicRequest struct {
 	f func(time.Time) bool
 }
 
-type periodicWorkItem struct {
-	t  time.Time
-	f  func(time.Time) bool
-	rv chan bool
-}
-
 type periodically struct {
 	funcs   map[<-chan bool]func(time.Time) bool
 	ctl     chan periodicRequest
 	ticker  tickSrc
-	work    chan periodicWorkItem
+	sem     chan bool
 	running chan bool
 }
 
@@ -60,24 +54,14 @@ func newPeriodicallyInt(ticker tickSrc, ctlbuf, workers int) *periodically {
 		funcs:   map[<-chan bool]func(time.Time) bool{},
 		ctl:     make(chan periodicRequest, ctlbuf),
 		ticker:  ticker,
-		work:    make(chan periodicWorkItem),
+		sem:     make(chan bool, workers),
 		running: make(chan bool),
-	}
-	for i := 0; i < workers; i++ {
-		go periodicWorker(rv.work)
 	}
 	go rv.service()
 	return rv
 }
 
-func periodicWorker(ch <-chan periodicWorkItem) {
-	for i := range ch {
-		i.rv <- i.f(i.t)
-	}
-}
-
 func (p *periodically) service() {
-	defer close(p.work)
 	defer close(p.running)
 	defer p.ticker.Stop()
 	for {
@@ -97,6 +81,17 @@ func (p *periodically) service() {
 	}
 }
 
+func (p *periodically) runTask(t time.Time,
+	ch <-chan bool, f func(time.Time) bool) chan bool {
+	rv := make(chan bool, 1)
+	p.sem <- true
+	go func() {
+		defer func() { <-p.sem }()
+		rv <- f(t)
+	}()
+	return rv
+}
+
 func (p *periodically) doWork(t time.Time) {
 	var remove []<-chan bool
 	results := map[<-chan bool]chan bool{}
@@ -105,9 +100,7 @@ func (p *periodically) doWork(t time.Time) {
 		case <-ch:
 			remove = append(remove, ch)
 		default:
-			rv := make(chan bool, 1)
-			p.work <- periodicWorkItem{t, f, rv}
-			results[ch] = rv
+			results[ch] = p.runTask(t, ch, f)
 		}
 	}
 	// Harvest the results and verify they want to keep tickin'
