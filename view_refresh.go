@@ -57,7 +57,7 @@ func (v *VBucket) viewsRefresh() (int64, error) {
 
 func (v *VBucket) viewsRefresh_unlocked() error {
 	ddocs := v.parent.GetDDocs()
-	if ddocs == nil {
+	if ddocs == nil || len(*ddocs) <= 0 {
 		return nil
 	}
 	viewsStore, err := v.getViewsStore()
