@@ -98,14 +98,22 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	Main(fmt.Sprintf("cbgb - version %v", VERSION))
+
+	// Let goroutines do their work.
+	select {}
+}
+
+func Main(hello string) {
 	initAdmin()
 	initPeriodically()
 
 	if !*verbose {
 		log.SetOutput(ioutil.Discard)
 	}
-
-	log.Printf("cbgb - version %v", VERSION)
+	if hello != "" {
+		log.Printf(hello)
+	}
 
 	if *adminUser == "" && *adminPass == "" {
 		log.Printf("-------------------------------------------------------")
@@ -135,9 +143,6 @@ func main() {
 
 	mainServer(*defaultBucketName, *addr, *maxConns, *restCouch, *restNS,
 		*staticPath, filepath.Join(*data, ".staticCache"))
-
-	// Let goroutines do their work.
-	select {}
 }
 
 func mainServer(defaultBucketName string, addr string, maxConns int,
