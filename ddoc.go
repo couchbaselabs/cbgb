@@ -82,23 +82,11 @@ func (b *livebucket) GetDDocs() *DDocs {
 	ddocs := (*DDocs)(atomic.LoadPointer(&b.ddocs))
 	if ddocs == nil {
 		for {
-			ddocs = &DDocs{}
-			var errJson error
-			var errVisit error
-			errVisit = b.VisitDDocs(nil, func(key []byte, data []byte) bool {
-				ddoc := &DDoc{}
-				errJson = json.Unmarshal(data, ddoc)
-				if errJson != nil {
-					// TODO: Perhaps should continue on with rest of ddocs
-					// if any ddoc fails to parse; and log the error somewhere.
-					return false
-				}
-				(*ddocs)[string(key)] = ddoc
-				return true
-			})
-			if errVisit != nil || errJson != nil {
+			v, err := b.LoadDDocs()
+			if err != nil {
 				return nil
 			}
+			ddocs = &v
 			if b.SetDDocs(nil, ddocs) {
 				break
 			}
@@ -110,4 +98,28 @@ func (b *livebucket) GetDDocs() *DDocs {
 func (b *livebucket) SetDDocs(old, val *DDocs) bool {
 	return atomic.CompareAndSwapPointer(&b.ddocs,
 		unsafe.Pointer(old), unsafe.Pointer(val))
+}
+
+func (b *livebucket) LoadDDocs() (DDocs, error) {
+	ddocs := DDocs{}
+	var errJson error
+	var errVisit error
+	errVisit = b.VisitDDocs(nil, func(key []byte, data []byte) bool {
+		ddoc := &DDoc{}
+		errJson = json.Unmarshal(data, ddoc)
+		if errJson != nil {
+			// TODO: Perhaps should continue on with rest of ddocs
+			// if any ddoc fails to parse; and log the error somewhere.
+			return false
+		}
+		ddocs[string(key)] = ddoc
+		return true
+	})
+	if errVisit != nil {
+		return nil, errVisit
+	}
+	if errJson != nil {
+		return nil, errJson
+	}
+	return ddocs, nil
 }
