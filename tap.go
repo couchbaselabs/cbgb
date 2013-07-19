@@ -137,8 +137,8 @@ func doTapForward(b Bucket, req *gomemcached.MCRequest, r io.Reader,
 					// or may not be what we want.
 					res := vb.get(m.key)
 					if res.Status != gomemcached.SUCCESS {
-						log.Printf("tapped a missing item, skipping key: %s",
-							m.key)
+						log.Printf("tapped a missing item, skipping key: %s, res: %#v",
+							m.key, res)
 						continue
 					}
 					pkt.Body = res.Body
