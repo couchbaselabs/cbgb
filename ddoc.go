@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"sync/atomic"
 	"unsafe"
 
@@ -81,16 +82,13 @@ func (b *livebucket) VisitDDocs(start []byte,
 func (b *livebucket) GetDDocs() *DDocs {
 	ddocs := (*DDocs)(atomic.LoadPointer(&b.ddocs))
 	if ddocs == nil {
-		for {
-			v, err := b.LoadDDocs()
-			if err != nil {
-				return nil
-			}
-			ddocs = &v
-			if b.SetDDocs(nil, ddocs) {
-				break
-			}
+		v, err := b.LoadDDocs()
+		if err != nil || v == nil {
+			log.Printf("bucket.LoadDDocs() err: %v, bucket: %v", err, b.Name())
+			return nil
 		}
+		ddocs = &v
+		b.SetDDocs(nil, ddocs)
 	}
 	return ddocs
 }
