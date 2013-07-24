@@ -18,8 +18,11 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/signal"
 	"path/filepath"
+	"runtime/pprof"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/daaku/go.flagbytes"
@@ -97,6 +100,8 @@ func initPeriodically() {
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+
+	go dumpOnSignal(syscall.SIGINFO)
 
 	Main(fmt.Sprintf("cbgb - version %v", VERSION))
 
@@ -202,4 +207,12 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 	}
 
 	return bucket, nil
+}
+
+func dumpOnSignal(signals ...os.Signal) {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, signals...)
+	for _ = range c {
+		pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+	}
 }
