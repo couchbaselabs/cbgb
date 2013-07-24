@@ -99,7 +99,7 @@ func vbMutate(v *VBucket, w io.Writer,
 	})
 
 	if err != nil || (res != nil && res.Status != gomemcached.SUCCESS) {
-		if err != ignore {
+		if err != nil && err != ignore {
 			atomic.AddInt64(&v.stats.StoreErrors, 1)
 		}
 	} else {
