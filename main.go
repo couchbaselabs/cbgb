@@ -101,7 +101,7 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
-	go dumpOnSignal(syscall.SIGINFO)
+	go dumpOnSignal(syscall.SIGUSR2)
 
 	Main(fmt.Sprintf("cbgb - version %v", VERSION))
 
