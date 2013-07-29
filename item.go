@@ -13,6 +13,9 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
+const DELETION_EXP  = 0x80000000 // Deletion sentinel exp.
+const DELETION_FLAG = 0xffffffff // Deletion sentinel flag.
+
 type item struct {
 	key       []byte
 	exp, flag uint32

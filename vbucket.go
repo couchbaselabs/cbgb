@@ -27,8 +27,6 @@ const (
 	MAX_ITEM_KEY_LENGTH  = 250
 	MAX_ITEM_DATA_LENGTH = 1024 * 1024
 	MAX_ITEM_EXP         = 0x7fffffff
-	DELETION_EXP         = 0x80000000 // Deletion sentinel exp.
-	DELETION_FLAG        = 0xffffffff // Deletion sentinel flag.
 )
 
 var ignore = errors.New("not-an-error/sentinel")
