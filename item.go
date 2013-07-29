@@ -13,7 +13,7 @@ import (
 	"github.com/steveyen/gkvlite"
 )
 
-const DELETION_EXP  = 0x80000000 // Deletion sentinel exp.
+const DELETION_EXP = 0x80000000  // Deletion sentinel exp.
 const DELETION_FLAG = 0xffffffff // Deletion sentinel flag.
 
 type item struct {
@@ -51,17 +51,12 @@ func (i *item) isDeletion() bool {
 
 func (i *item) Equal(j *item) bool {
 	return bytes.Equal(i.key, j.key) &&
-		i.exp == j.exp &&
-		i.flag == j.flag &&
-		i.cas == j.cas &&
+		i.exp == j.exp && i.flag == j.flag && i.cas == j.cas &&
 		bytes.Equal(i.data, j.data)
 }
 
-func (i item) isExpired(t time.Time) bool {
-	if i.exp == 0 {
-		return false
-	}
-	return !time.Unix(int64(i.exp), 0).After(t)
+func (i *item) isExpired(t time.Time) bool {
+	return i.exp != 0 && !time.Unix(int64(i.exp), 0).After(t)
 }
 
 const itemHdrLen = 4 + 4 + 8 + 2 + 4
@@ -73,7 +68,6 @@ func (i *item) toValueBytes() []byte {
 	if len(i.data) > MAX_ITEM_DATA_LENGTH {
 		return nil
 	}
-
 	rv := make([]byte, itemHdrLen+len(i.key)+len(i.data))
 	off := 0
 	binary.BigEndian.PutUint32(rv[off:], i.exp)
