@@ -103,22 +103,14 @@ func main() {
 
 	go dumpOnSignal(syscall.SIGUSR2)
 
-	Main(fmt.Sprintf("cbgb - version %v", VERSION))
-
-	// Let goroutines do their work.
-	select {}
-}
-
-func Main(hello string) {
 	initAdmin()
 	initPeriodically()
 
 	if !*verbose {
 		log.SetOutput(ioutil.Discard)
 	}
-	if hello != "" {
-		log.Printf(hello)
-	}
+
+	log.Printf("cbgb - version %v", VERSION)
 
 	if *adminUser == "" && *adminPass == "" {
 		log.Printf("-------------------------------------------------------")
@@ -148,6 +140,9 @@ func Main(hello string) {
 
 	mainServer(*defaultBucketName, *addr, *maxConns, *restCouch, *restNS,
 		*staticPath, filepath.Join(*data, ".staticCache"))
+
+	// Let goroutines do their work.
+	select {}
 }
 
 func mainServer(defaultBucketName string, addr string, maxConns int,
