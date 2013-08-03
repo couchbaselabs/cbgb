@@ -70,6 +70,7 @@ var fileServiceWorkers = flag.Int("file-service-workers", 32,
 	"Number of file service workers")
 var compactEvery = flag.Int("compact-every", 10000,
 	"Compact file after this many writes")
+var logSyslog = flag.Bool("syslog", false, "Log to syslog")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
@@ -100,6 +101,8 @@ func initPeriodically() {
 func main() {
 	flag.Usage = usage
 	flag.Parse()
+
+	initLogger(*logSyslog)
 
 	go dumpOnSignal(syscall.SIGUSR2)
 
