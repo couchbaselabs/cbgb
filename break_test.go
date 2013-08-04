@@ -214,7 +214,7 @@ func testRunner(t *testing.T, buckets *Buckets,
 func TestAllTheThings(t *testing.T) {
 
 	if testing.Short() {
-		return
+		t.Skipf("Skipping the all the things test.")
 	}
 
 	os.RemoveAll(tmpdirName)
