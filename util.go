@@ -168,7 +168,7 @@ func (a *Bytes) MarshalJSON() ([]byte, error) {
 
 func (a *Bytes) UnmarshalJSON(d []byte) error {
 	var s string
-	err := json.Unmarshal(d, &s)
+	err := jsonUnmarshal(d, &s)
 	if err != nil {
 		return err
 	}

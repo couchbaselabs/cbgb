@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net"
@@ -212,7 +211,7 @@ func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
 	var errVisit, errJson error
 	errVisit = b.VisitDDocs(nil, func(key []byte, data []byte) bool {
 		var j interface{}
-		errJson = json.Unmarshal(data, &j)
+		errJson = jsonUnmarshal(data, &j)
 		if errJson != nil {
 			return false
 		}

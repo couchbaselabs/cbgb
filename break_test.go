@@ -229,6 +229,7 @@ func TestAllTheThings(t *testing.T) {
 	defer f.Close()
 
 	d := json.NewDecoder(f)
+	d.UseNumber()
 
 	ch := make(chan testDef)
 	wg := &sync.WaitGroup{}

@@ -13,7 +13,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -243,7 +242,7 @@ func docifyViewResult(bucket Bucket, result *ViewResult) (
 			res := GetItem(bucket, []byte(row.Id), VBActive)
 			if res.Status == gomemcached.SUCCESS {
 				var parsedDoc interface{}
-				err := json.Unmarshal(res.Body, &parsedDoc)
+				err := jsonUnmarshal(res.Body, &parsedDoc)
 				if err == nil {
 					row.Doc = &ViewDocValue{
 						Meta: map[string]interface{}{
@@ -326,7 +325,7 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 			return false
 		}
 		var emitValue interface{}
-		err = json.Unmarshal(i.Val, &emitValue)
+		err = jsonUnmarshal(i.Val, &emitValue)
 		if err != nil {
 			return false
 		}

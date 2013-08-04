@@ -10,6 +10,15 @@ import (
 	"time"
 )
 
+func asInt(o interface{}) int {
+	ob := o.(json.Number)
+	i, err := ob.Int64()
+	if err != nil {
+		panic(err)
+	}
+	return int(i)
+}
+
 func TestViewQueryUpdateAfter(t *testing.T) {
 	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
 	defer os.RemoveAll(d)
@@ -36,7 +45,7 @@ func TestViewQueryUpdateAfter(t *testing.T) {
 				rr, rr.Body.String())
 		}
 		dd := &ViewResult{}
-		err := json.Unmarshal(rr.Body.Bytes(), dd)
+		err := jsonUnmarshal(rr.Body.Bytes(), dd)
 		if err != nil {
 			t.Errorf("expected good view result, got: %v", err)
 		}
@@ -100,7 +109,7 @@ func TestViewQuerySmoke(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &ViewResult{}
-	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	err := jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -114,7 +123,7 @@ func TestViewQuerySmoke(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -128,7 +137,7 @@ func TestViewQuerySmoke(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -142,7 +151,7 @@ func TestViewQuerySmoke(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -198,7 +207,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &ViewResult{}
-	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	err := jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, err: %v", err)
 	}
@@ -212,7 +221,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 		if row.Doc != nil {
@@ -229,7 +238,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -243,7 +252,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -257,7 +266,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -271,7 +280,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -285,7 +294,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -299,7 +308,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -313,7 +322,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -332,7 +341,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -346,7 +355,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -360,7 +369,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -374,7 +383,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -388,7 +397,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -402,7 +411,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -417,7 +426,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -431,7 +440,7 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -446,7 +455,7 @@ func TestCouchViewBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -460,13 +469,13 @@ func TestCouchViewBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 		if row.Doc == nil {
 			t.Errorf("expected include_doc to give a doc, got: %#v", row)
 		}
-		if int(row.Doc.Json.(map[string]interface{})["amount"].(float64)) != (i + 1) {
+		if asInt(row.Doc.Json.(map[string]interface{})["amount"]) != (i + 1) {
 			t.Errorf("Expected %v at %v, got %v", i+1, i, row.Doc.Json)
 		}
 	}
@@ -503,7 +512,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &ViewResult{}
-	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	err := jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -512,7 +521,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			1, dd.TotalRows, dd, rr.Body.String())
 	}
 	exp := 4
-	if exp != int(dd.Rows[0].Value.(float64)) {
+	if exp != asInt(dd.Rows[0].Value) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
 	}
@@ -526,7 +535,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -540,7 +549,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.(float64)) {
+		if a[i] != asInt(row.Key) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -555,7 +564,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -564,7 +573,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			1, dd.TotalRows, dd, rr.Body.String())
 	}
 	exp = 2
-	if exp != int(dd.Rows[0].Value.(float64)) {
+	if exp != asInt(dd.Rows[0].Value) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
 	}
@@ -579,7 +588,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -598,7 +607,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -607,7 +616,7 @@ func TestCouchViewReduceBasic(t *testing.T) {
 			1, dd.TotalRows, dd, rr.Body.String())
 	}
 	exp = 4
-	if exp != int(dd.Rows[0].Value.(float64)) {
+	if exp != asInt(dd.Rows[0].Value) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
 	}
@@ -646,7 +655,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &ViewResult{}
-	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	err := jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -655,7 +664,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			1, dd.TotalRows, dd, rr.Body.String())
 	}
 	exp := 4
-	if exp != int(dd.Rows[0].Value.(float64)) {
+	if exp != asInt(dd.Rows[0].Value) {
 		t.Errorf("expected row value %#v to match %#v in row %#v",
 			dd.Rows[0].Value, exp, dd.Rows[0])
 	}
@@ -670,7 +679,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -701,7 +710,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -717,7 +726,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			t.Errorf("expected row %#v to match key %#v, i %v, j %v",
 				row, a[i], i, j)
 		}
-		if v[i] != int(row.Value.(float64)) {
+		if v[i] != asInt(row.Value) {
 			t.Errorf("expected row %#v to match val %#v, i %v",
 				row, v[i], i)
 		}
@@ -733,7 +742,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -749,7 +758,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			t.Errorf("expected row %#v to match key %#v, i %v, j %v",
 				row, a[i], i, j)
 		}
-		if v[i] != int(row.Value.(float64)) {
+		if v[i] != asInt(row.Value) {
 			t.Errorf("expected row %#v to match val %#v, i %v",
 				row, v[i], i)
 		}
@@ -765,7 +774,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -781,7 +790,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			t.Errorf("expected row %#v to match key %#v, i %v, j %v",
 				row, a[i], i, j)
 		}
-		if v[i] != int(row.Value.(float64)) {
+		if v[i] != asInt(row.Value) {
 			t.Errorf("expected row %#v to match val %#v, i %v",
 				row, v[i], i)
 		}
@@ -797,7 +806,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -813,7 +822,7 @@ func TestCouchViewGroupLevel(t *testing.T) {
 			t.Errorf("expected row %#v to match key %#v, i %v, j %v",
 				row, a[i], i, j)
 		}
-		if v[i] != int(row.Value.(float64)) {
+		if v[i] != asInt(row.Value) {
 			t.Errorf("expected row %#v to match val %#v, i %v",
 				row, v[i], i)
 		}
@@ -903,7 +912,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &ViewResult{}
-	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	err := jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, err: %v", err)
 	}
@@ -917,7 +926,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+		if a[i] != asInt(row.Key.([]interface{})[0]) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -931,7 +940,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, err: %v", err)
 	}
@@ -945,7 +954,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+		if a[i] != asInt(row.Key.([]interface{})[0]) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -959,7 +968,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, err: %v", err)
 	}
@@ -973,7 +982,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+		if a[i] != asInt(row.Key.([]interface{})[0]) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -987,7 +996,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, err: %v", err)
 	}
@@ -1001,7 +1010,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+		if a[i] != asInt(row.Key.([]interface{})[0]) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}
@@ -1015,7 +1024,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, err: %v", err)
 	}
@@ -1029,7 +1038,7 @@ func TestCouchViewEmitArray(t *testing.T) {
 		if k[i] != row.Id {
 			t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 		}
-		if a[i] != int(row.Key.([]interface{})[0].(float64)) {
+		if a[i] != asInt(row.Key.([]interface{})[0]) {
 			t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 		}
 	}

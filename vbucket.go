@@ -227,7 +227,7 @@ func (v *VBucket) load() (err error) {
 			err = errors.New("missing COLL_VBMETA")
 			return
 		}
-		if err = json.Unmarshal(x.Val, meta); err != nil {
+		if err = jsonUnmarshal(x.Val, meta); err != nil {
 			return
 		}
 
@@ -329,7 +329,7 @@ func vbSetVBMeta(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
 		return
 	}
 	newMeta := &VBMeta{}
-	if err := json.Unmarshal(req.Body, newMeta); err != nil {
+	if err := jsonUnmarshal(req.Body, newMeta); err != nil {
 		// XXX:  The test requires that we don't report what's wrong
 		// res.Body = []byte(err.Error())
 		return

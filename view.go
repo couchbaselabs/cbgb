@@ -145,7 +145,7 @@ func ParseViewParams(params Form) (p *ViewParams, err error) {
 			val.Field(i).SetBool(paramVal == "true")
 		case sf.Type.Kind() == reflect.Interface:
 			var ob interface{}
-			err := json.Unmarshal([]byte(paramVal), &ob)
+			err := jsonUnmarshal([]byte(paramVal), &ob)
 			if err != nil {
 				return p, err
 			}

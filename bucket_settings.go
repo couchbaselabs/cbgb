@@ -74,7 +74,7 @@ func (bs *BucketSettings) load(bucketDir string) (exists bool, err error) {
 		}
 		return false, err
 	}
-	return true, json.Unmarshal(b, bs)
+	return true, jsonUnmarshal(b, bs)
 }
 
 func (bs *BucketSettings) save(bucketDir string) error {

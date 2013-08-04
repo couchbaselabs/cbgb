@@ -554,7 +554,7 @@ func TestCouchViewWithMutations(t *testing.T) {
 				rr, rr.Body.String())
 		}
 		dd := &ViewResult{}
-		err := json.Unmarshal(rr.Body.Bytes(), dd)
+		err := jsonUnmarshal(rr.Body.Bytes(), dd)
 		if err != nil {
 			t.Errorf("expected good view result, err: %v", err)
 		}
@@ -568,7 +568,7 @@ func TestCouchViewWithMutations(t *testing.T) {
 			if k[i] != row.Id {
 				t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
 			}
-			if a[i] != int(row.Key.(float64)) {
+			if a[i] != asInt(row.Key) {
 				t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
 			}
 			if row.Doc != nil {

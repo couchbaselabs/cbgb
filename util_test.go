@@ -166,7 +166,7 @@ func TestBytesDecoder(t *testing.T) {
 
 	for in, out := range pos {
 		b := Bytes{}
-		err := json.Unmarshal([]byte(in), &b)
+		err := jsonUnmarshal([]byte(in), &b)
 		if err != nil {
 			t.Errorf("Error unmarshaling %v", in)
 		}
@@ -179,7 +179,7 @@ func TestBytesDecoder(t *testing.T) {
 
 	for _, in := range neg {
 		b := Bytes{}
-		err := json.Unmarshal([]byte(in), &b)
+		err := jsonUnmarshal([]byte(in), &b)
 		if err == nil {
 			t.Errorf("Expected error unmarshaling %v, got %v", in, b)
 		}

@@ -137,7 +137,7 @@ func (v *VBucket) viewsRefreshItem(ddocs *DDocs,
 		func() {
 			if oldBackIndexItem != nil {
 				var viewEmitsOld map[string]ViewRows
-				err = json.Unmarshal(oldBackIndexItem.data, &viewEmitsOld)
+				err = jsonUnmarshal(oldBackIndexItem.data, &viewEmitsOld)
 				if err != nil {
 					return
 				}
@@ -164,7 +164,7 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 	docId := string(i.key)
 	docType := "json"
 	var doc interface{}
-	err = json.Unmarshal(i.data, &doc)
+	err = jsonUnmarshal(i.data, &doc)
 	if err != nil {
 		doc = base64.StdEncoding.EncodeToString(i.data)
 		docType = "base64"
@@ -349,7 +349,7 @@ func vindexKeyParse(k []byte) (docId []byte, emitKey interface{}, err error) {
 	if len(parts) != 2 {
 		return nil, nil, fmt.Errorf("vindexKeyParse failed split: %v", k)
 	}
-	if err = json.Unmarshal(parts[0], &emitKey); err != nil {
+	if err = jsonUnmarshal(parts[0], &emitKey); err != nil {
 		return nil, nil, err
 	}
 	return parts[1], emitKey, nil

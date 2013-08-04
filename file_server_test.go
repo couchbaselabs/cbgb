@@ -31,6 +31,7 @@ func TestFileService(t *testing.T) {
 	err = fs.Do(testfileservicename, os.O_RDONLY,
 		func(f *os.File) error {
 			d := json.NewDecoder(f)
+			d.UseNumber()
 			return d.Decode(&out)
 		})
 	if err != nil {

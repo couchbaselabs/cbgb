@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"sync/atomic"
@@ -104,7 +103,7 @@ func (b *livebucket) LoadDDocs() (DDocs, error) {
 	var errVisit error
 	errVisit = b.VisitDDocs(nil, func(key []byte, data []byte) bool {
 		ddoc := &DDoc{}
-		errJson = json.Unmarshal(data, ddoc)
+		errJson = jsonUnmarshal(data, ddoc)
 		if errJson != nil {
 			// TODO: Perhaps should continue on with rest of ddocs
 			// if any ddoc fails to parse; and log the error somewhere.

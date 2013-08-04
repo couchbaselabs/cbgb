@@ -172,7 +172,7 @@ func couchDbPutDesignDoc(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var into map[string]interface{}
-	if err = json.Unmarshal(body, &into); err != nil {
+	if err = jsonUnmarshal(body, &into); err != nil {
 		http.Error(w, fmt.Sprintf("Bad Request, err: %v", err), 400)
 		return
 	}
@@ -220,6 +220,7 @@ func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
 	}
 	revsDiffRequest := map[string]interface{}{}
 	d := json.NewDecoder(r.Body)
+	d.UseNumber()
 	err := d.Decode(&revsDiffRequest)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Unable to parse _revs_diff body as JSON: %v", err), 500)
@@ -263,6 +264,7 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 
 	var bulkDocsRequest BulkDocsRequest
 	d := json.NewDecoder(r.Body)
+	d.UseNumber()
 	err := d.Decode(&bulkDocsRequest)
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Unable to parse _bulk_docs body as JSON: %v",
@@ -466,7 +468,7 @@ func visitVBucketAllDocs(vb *VBucket, ch chan *ViewRow) {
 		docId := string(key)
 		docType := "json"
 		var doc interface{}
-		err := json.Unmarshal(data, &doc)
+		err := jsonUnmarshal(data, &doc)
 		if err != nil {
 			doc = base64.StdEncoding.EncodeToString(data)
 			docType = "base64"

@@ -264,7 +264,7 @@ func TestCouchDbRevsDiff(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	actualRevsDiffResponse := map[string]interface{}{}
-	err = json.Unmarshal(rr.Body.Bytes(), &actualRevsDiffResponse)
+	err = jsonUnmarshal(rr.Body.Bytes(), &actualRevsDiffResponse)
 	missingMap, ok := actualRevsDiffResponse["doca"]
 	if !ok {
 		t.Errorf("expected response to contain doca, got: %#v", actualRevsDiffResponse)
@@ -394,7 +394,7 @@ func TestCouchAllDocs(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd := &ViewResult{}
-	err := json.Unmarshal(rr.Body.Bytes(), dd)
+	err := jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -421,7 +421,7 @@ func TestCouchAllDocs(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	dd = &ViewResult{}
-	err = json.Unmarshal(rr.Body.Bytes(), dd)
+	err = jsonUnmarshal(rr.Body.Bytes(), dd)
 	if err != nil {
 		t.Errorf("expected good view result, got: %v", err)
 	}
@@ -471,12 +471,12 @@ func TestCouchGetDesignDoc(t *testing.T) {
 			rr, rr.Body.String())
 	}
 	var o interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &o)
+	err := jsonUnmarshal(rr.Body.Bytes(), &o)
 	if err != nil {
 		t.Errorf("expected ddoc to parse, err: %v", err)
 	}
 	gotDDoc, _ := json.Marshal(o)
-	err = json.Unmarshal([]byte(ddoc), &o)
+	err = jsonUnmarshal([]byte(ddoc), &o)
 	if err != nil {
 		t.Errorf("expected ddoc to parse, err: %v", err)
 	}
@@ -536,7 +536,7 @@ func jsonFindParse(t *testing.T, b []byte, path string) (interface{}, error) {
 		return nil, err
 	}
 	var rv interface{}
-	err = json.Unmarshal(d, &rv)
+	err = jsonUnmarshal(d, &rv)
 	return rv, err
 }
 
@@ -777,7 +777,7 @@ func testRestGetJsonEx(t *testing.T, url string,
 		t.Errorf("expected rest GET %v to work, got: %#v", url, rr)
 	}
 	var j interface{}
-	err := json.Unmarshal(rr.Body.Bytes(), &j)
+	err := jsonUnmarshal(rr.Body.Bytes(), &j)
 	if err != nil {
 		t.Errorf("expected rest GET %v to give json, got: %#v",
 			url, rr.Body.String())
