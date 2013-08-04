@@ -236,6 +236,7 @@ func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		http.Error(w, fmt.Sprintf("error deleting bucket: %v, err: %v",
 			bucketName, err), 400)
+		return
 	}
 
 	w.WriteHeader(204)
@@ -249,7 +250,9 @@ func restPostBucketCompact(w http.ResponseWriter, r *http.Request) {
 	if err := bucket.Compact(); err != nil {
 		http.Error(w, fmt.Sprintf("error compacting bucket: %v, err: %v",
 			bucketName, err), 500)
+		return
 	}
+	w.WriteHeader(202)
 }
 
 func restPostBucketFlushDirty(w http.ResponseWriter, r *http.Request) {
@@ -260,7 +263,9 @@ func restPostBucketFlushDirty(w http.ResponseWriter, r *http.Request) {
 	if err := bucket.Flush(); err != nil {
 		http.Error(w, fmt.Sprintf("error flushing bucket: %v, err: %v",
 			bucketName, err), 500)
+		return
 	}
+	w.WriteHeader(202)
 }
 
 func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
@@ -319,6 +324,7 @@ func restProfileCPU(w http.ResponseWriter, r *http.Request) {
 		pprof.StopCPUProfile()
 		f.Close()
 	}()
+	w.WriteHeader(204)
 }
 
 // To grab a memory profiling...
