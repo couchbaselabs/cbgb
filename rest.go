@@ -193,6 +193,8 @@ func restPostBucket(w http.ResponseWriter, r *http.Request) {
 			fmt.Sprintf("create bucket error; name: %v, err: %v", bucketName, err), 500)
 		return
 	}
+
+	log.Printf("%v created bucket %v", currentUser(r), bucketName)
 	http.Redirect(w, r, "/_api/buckets/"+bucketName, 303)
 }
 
