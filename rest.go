@@ -238,6 +238,7 @@ func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
 			bucketName, err), 400)
 		return
 	}
+	log.Printf("%v deleted bucket %v", currentUser(r), bucketName)
 
 	w.WriteHeader(204)
 }
