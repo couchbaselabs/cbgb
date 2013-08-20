@@ -335,7 +335,7 @@ func vindexKeyCompare(a, b []byte) int {
 	return c
 }
 
-// Returns byte array that looks like "docId/emitKey".
+// Returns byte array that looks like "emitKey\0docId".
 func vindexKey(docId []byte, emitKey interface{}) ([]byte, error) {
 	emitKeyBytes, err := json.Marshal(emitKey)
 	if err != nil {
