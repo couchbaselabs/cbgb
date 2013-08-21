@@ -443,6 +443,12 @@ func TestVIndexKeyCompare(t *testing.T) {
 		{"b", []int{0, 1}, "a", []int{0, 10}, -1},
 		{"b", []int{0, 9}, "a", []int{0, 10}, -1},
 		{"b", []interface{}{0, "x"}, "a", []interface{}{0, "b"}, 1},
+		{"a", []interface{}{0, "b"}, "b", []interface{}{0, "x"}, -1},
+		{"a", []interface{}{"x", 1}, "a", []interface{}{"x", 1}, 0},
+		{"a", []interface{}{"x", 1}, "b", []interface{}{"x", 1}, -1},
+		{"a", []interface{}{"x", 10}, "a", []interface{}{"x", 9}, 1},
+		{"a", []interface{}{"*", 9}, "a", []interface{}{"*", 10}, -1},
+		{"a", []interface{}{"*", "9"}, "a", []interface{}{"*", "10"}, 1},
 	}
 	for i, test := range tests {
 		ka, err := vindexKey([]byte(test.docIdA), test.emitKeyA)
