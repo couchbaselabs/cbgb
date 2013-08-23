@@ -885,17 +885,19 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 	fooPath, _ := buckets1.Path("foo")
 	barPath, _ := buckets1.Path("bar")
 	os.MkdirAll(barPath, 0777)
-	filepath.Walk(fooPath, func(p string, info os.FileInfo, err error) error {
+	err = filepath.Walk(fooPath, func(p string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
+		}
+		if info.IsDir() {
+			return nil
 		}
 		sf, err := os.Open(p)
 		if err != nil {
 			return err
 		}
 		defer sf.Close()
-		df, err := os.OpenFile(path.Join(barPath, path.Base(p)),
-			os.O_TRUNC|os.O_CREATE, 0666)
+		df, err := os.Create(path.Join(barPath, path.Base(p)))
 		if err != nil {
 			return err
 		}
@@ -906,8 +908,9 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 
 	err = buckets1.Load(true) // Load again.
 	if err != nil {
-		t.Errorf("expected buckets reload to work, got: %v", err)
+		t.Fatalf("Error copying stuff: %v", err)
 	}
+
 	bx := buckets1.Get("bar")
 	if bx == nil {
 		t.Errorf("expected bar dir to be found")
