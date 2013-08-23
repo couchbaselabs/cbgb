@@ -94,14 +94,6 @@ func TestRestAPIBuckets(t *testing.T) {
 		t.Errorf("expected req to work, got: %#v, %v",
 			rr, rr.Body.String())
 	}
-
-	rr = httptest.NewRecorder()
-	r, _ = http.NewRequest("POST", "http://127.0.0.1/_api/bucketsRescan", nil)
-	mr.ServeHTTP(rr, r)
-	if rr.Code != 303 {
-		t.Errorf("expected req to work, got: %#v, %v",
-			rr, rr.Body.String())
-	}
 }
 
 func TestCouchDocGet(t *testing.T) {

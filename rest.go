@@ -52,7 +52,6 @@ func restAPI(r *mux.Router) {
 
 	sra := r.PathPrefix("/_api/").MatcherFunc(adminRequired).Subrouter()
 	sra.HandleFunc("/buckets", restPostBucket).Methods("POST")
-	sra.HandleFunc("/bucketsRescan", restPostBucketsRescan).Methods("POST")
 	sra.HandleFunc("/bucketPath", restGetBucketPath).Methods("GET")
 	sra.HandleFunc("/profile/cpu", restProfileCPU).Methods("POST")
 	sra.HandleFunc("/profile/memory", restProfileMemory).Methods("POST")
@@ -134,16 +133,6 @@ func restGetBuckets(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	jsonEncode(w, bn)
-}
-
-func restPostBucketsRescan(w http.ResponseWriter, r *http.Request) {
-	err := buckets.Load(true)
-	if err != nil {
-		http.Error(w,
-			fmt.Sprintf("rescanning/reloading buckets directory err: %v", err), 500)
-		return
-	}
-	http.Redirect(w, r, "/_api/buckets", 303)
 }
 
 // Computes/hashes the bucket's subdir given a bucket name...
