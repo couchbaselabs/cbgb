@@ -414,6 +414,11 @@ func TestRemoveOldFiles(t *testing.T) {
 }
 
 func TestCompactionViews(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode.")
+		return
+	}
+
 	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
 	defer os.RemoveAll(d)
 	mr := testSetupMux(d)
