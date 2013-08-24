@@ -3,6 +3,8 @@ package main
 import (
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"runtime"
 	"sort"
@@ -409,4 +411,89 @@ func TestRemoveOldFiles(t *testing.T) {
 		"prefix-12.store",
 		"prefix-9.not",
 		"settings.json"})
+}
+
+func TestCompactionViews(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	t.Logf("TestCompactionViews dir: %s", d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { emit(doc.amount, null) }"
+			}
+		}
+    }`, nil)
+
+	rowCount := func(startKey, endKey int) (int, string) {
+		rr := httptest.NewRecorder()
+		r, _ := http.NewRequest("GET",
+			fmt.Sprintf("http://127.0.0.1/default/_design/d0/_view/v0?startkey=%d"+
+				"&endkey=%d&stale=false", startKey, endKey), nil)
+		mr.ServeHTTP(rr, r)
+		if rr.Code != 200 {
+			t.Errorf("expected req to 200, got: %#v, %v",
+				rr, rr.Body.String())
+		}
+		dd := &ViewResult{}
+		err := jsonUnmarshal(rr.Body.Bytes(), dd)
+		if err != nil {
+			t.Errorf("expected good view result, got: %v", err)
+		}
+		return dd.TotalRows, rr.Body.String()
+	}
+
+	count, _ := rowCount(0, 100000)
+
+	added := 10000 // Add even more items.
+
+	docFmt := func(i int) string {
+		return fmt.Sprintf(`{"amount":%d}`, i)
+	}
+
+	for i := 10; i < added; i++ {
+		a := (i%10)*(added*10) + i      // So that amount is not in order.
+		x := (10-(i%10))*(added*10) + i // So that the key is not in order.
+		res := SetItem(bucket, []byte(fmt.Sprintf("x-%d", x)), []byte(docFmt(a)), VBActive)
+		if res == nil || res.Status != gomemcached.SUCCESS {
+			t.Errorf("expected SetItem to work, got: %v", res)
+		}
+		count++
+	}
+
+	done := make(chan bool)
+
+	for i := 0; i < 5; i++ {
+		go func() {
+			for {
+				select {
+				case <-done:
+					return
+				default:
+				}
+				c, s := rowCount(0, 10000000)
+				if c != count {
+					t.Errorf("expected count: %v, got: %v, rcstring: %v", count, c, s)
+				}
+				t.Logf("expected count: %v, got: %v", count, c)
+			}
+			runtime.Gosched()
+		}()
+	}
+
+	if err := bucket.Compact(); err != nil {
+		t.Errorf("expected Compact to work, got: %v", err)
+	}
+
+	c, s := rowCount(0, 10000000)
+	if c != count {
+		t.Errorf("at end expected count: %v, got: %v, rcstring: %v\n", count, c, s)
+	}
+
+	close(done)
 }

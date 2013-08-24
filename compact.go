@@ -249,6 +249,13 @@ func copyDelta(lastChangeCAS []byte, cName string, kName string,
 	return numVisits, nil
 }
 
+func (s *bucketstore) KeyCompareForCollection(collName string) gkvlite.KeyCompare {
+	if s.keyCompareForCollection == nil {
+		return nil
+	}
+	return s.keyCompareForCollection(collName)
+}
+
 func (s *bucketstore) copyVBucketColls(bsf *bucketstorefile,
 	collName string, compactStore *gkvlite.Store, writeEvery int) (
 	uint16, *gkvlite.Item, error) {
@@ -264,7 +271,7 @@ func (s *bucketstore) copyVBucketColls(bsf *bucketstorefile,
 	cName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_CHANGES)
 	kName := fmt.Sprintf("%v%s", vbid, COLL_SUFFIX_KEYS)
 	cDest := compactStore.SetCollection(cName, nil)
-	kDest := compactStore.SetCollection(kName, nil)
+	kDest := compactStore.SetCollection(kName, s.KeyCompareForCollection(kName))
 	if cDest == nil || kDest == nil {
 		return 0, nil, fmt.Errorf("compact could not create colls for vbid: %v",
 			vbid)
@@ -322,7 +329,7 @@ func (s *bucketstore) copyRemainingColls(bsf *bucketstorefile,
 			return fmt.Errorf("compact rest coll missing: %v, collName: %v",
 				bsf.path, collName)
 		}
-		collNext := compactStore.SetCollection(collName, nil)
+		collNext := compactStore.SetCollection(collName, s.KeyCompareForCollection(collName))
 		if collNext == nil {
 			return fmt.Errorf("compact rest dest missing: %v, collName: %v",
 				bsf.path, collName)
