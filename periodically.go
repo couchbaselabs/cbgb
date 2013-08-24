@@ -11,8 +11,10 @@ type periodicRequest struct {
 	f func(time.Time) bool
 }
 
+type pFuncs map[<-chan bool]func(time.Time) bool
+
 type periodically struct {
-	funcs   map[<-chan bool]func(time.Time) bool
+	funcs   pFuncs
 	ctl     chan periodicRequest
 	ticker  tickSrc
 	sem     chan bool
@@ -51,7 +53,7 @@ func newPeriodicallyInt(ticker tickSrc, ctlbuf, workers int) *periodically {
 		return nil
 	}
 	rv := &periodically{
-		funcs:   map[<-chan bool]func(time.Time) bool{},
+		funcs:   make(pFuncs),
 		ctl:     make(chan periodicRequest, ctlbuf),
 		ticker:  ticker,
 		sem:     make(chan bool, workers),
@@ -64,18 +66,28 @@ func newPeriodicallyInt(ticker tickSrc, ctlbuf, workers int) *periodically {
 func (p *periodically) service() {
 	defer close(p.running)
 	defer p.ticker.Stop()
+	var workFinished <-chan time.Time
+	tick := p.ticker.C()
+	additions := pFuncs{}
+	removals := []<-chan bool{}
 	for {
 		select {
-		case t := <-p.ticker.C():
-			p.doWork(t)
+		case t := <-tick:
+			workFinished = p.doWork(t, additions, removals)
+			additions = pFuncs{}
+			removals = removals[:0]
+			tick = nil
+		case <-workFinished:
+			tick = p.ticker.C()
+			workFinished = nil
 		case req := <-p.ctl:
 			switch {
 			case req.k == nil && req.f == nil:
 				return
 			case req.f == nil:
-				delete(p.funcs, req.k)
+				removals = append(removals, req.k)
 			default:
-				p.funcs[req.k] = req.f
+				additions[req.k] = req.f
 			}
 		}
 	}
@@ -92,27 +104,39 @@ func (p *periodically) runTask(t time.Time,
 	return rv
 }
 
-func (p *periodically) doWork(t time.Time) {
-	var remove []<-chan bool
-	results := map[<-chan bool]chan bool{}
-	for ch, f := range p.funcs {
-		select {
-		case <-ch:
-			remove = append(remove, ch)
-		default:
-			results[ch] = p.runTask(t, ch, f)
-		}
-	}
-	// Harvest the results and verify they want to keep tickin'
-	for kch, rvch := range results {
-		if !<-rvch {
-			delete(p.funcs, kch)
-		}
-	}
-	// Delete all the ones that were implicitly closed.
-	for _, ch := range remove {
+func (p *periodically) doWork(t time.Time,
+	additions pFuncs, removals []<-chan bool) <-chan time.Time {
+
+	rv := make(chan time.Time)
+	// first, fix up the pfuncs
+	for _, ch := range removals {
+		delete(additions, ch)
 		delete(p.funcs, ch)
 	}
+	for ch, f := range additions {
+		p.funcs[ch] = f
+	}
+
+	go func() {
+		results := map[<-chan bool]chan bool{}
+		for ch, f := range p.funcs {
+			select {
+			case <-ch:
+				// This one signaled it's gone now
+				delete(p.funcs, ch)
+			default:
+				results[ch] = p.runTask(t, ch, f)
+			}
+		}
+		// Harvest the results and verify they want to keep tickin'
+		for kch, rvch := range results {
+			if !<-rvch {
+				delete(p.funcs, kch)
+			}
+		}
+		rv <- t
+	}()
+	return rv
 }
 
 func (p *periodically) Stop() {

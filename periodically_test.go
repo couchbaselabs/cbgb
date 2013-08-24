@@ -1,6 +1,7 @@
 package main
 
 import (
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -39,15 +40,15 @@ func TestPeriodicallyNormal(t *testing.T) {
 	qt := newPeriodically(time.Millisecond, 1)
 	defer qt.Stop()
 
-	ran := 0
+	ran := int32(0)
 	qt.Register(stopch, func(time.Time) bool {
-		ran++
+		atomic.AddInt32(&ran, 1)
 		return true
 	})
 
 	time.Sleep(5 * time.Millisecond)
 
-	if ran < 1 {
+	if atomic.LoadInt32(&ran) < 1 {
 		t.Fatalf("Ticker seems to not be updating with real time: %v", ran)
 	}
 }
@@ -82,9 +83,9 @@ func TestPeriodicallySimulated(t *testing.T) {
 	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
-	ran := 0
+	ran := int32(0)
 	qt.Register(stopch, func(time.Time) bool {
-		ran++
+		atomic.AddInt32(&ran, 1)
 		return true
 	})
 
@@ -95,7 +96,7 @@ func TestPeriodicallySimulated(t *testing.T) {
 	qt.Stop()
 	<-timesrc.stopped
 
-	if ran != 5 {
+	if atomic.LoadInt32(&ran) != 5 {
 		t.Fatalf("Ticker did not update expected number of times: %v", ran)
 	}
 }
@@ -110,9 +111,9 @@ func TestPeriodicallyUnregister(t *testing.T) {
 	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
-	ran := 0
+	ran := int32(0)
 	qt.Register(stopch, func(time.Time) bool {
-		ran++
+		atomic.AddInt32(&ran, 1)
 		return true
 	})
 
@@ -124,7 +125,7 @@ func TestPeriodicallyUnregister(t *testing.T) {
 	qt.Stop()
 	<-timesrc.stopped
 
-	if ran != 1 {
+	if atomic.LoadInt32(&ran) != 1 {
 		t.Fatalf("Ticker did not update expected number of times: %v", ran)
 	}
 }
@@ -138,12 +139,12 @@ func TestPeriodicallyPassiveUnregister(t *testing.T) {
 	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
-	ran := 0
+	ran := int32(0)
 	qt.Register(stopch, func(time.Time) bool {
-		if ran == 0 {
+		if atomic.LoadInt32(&ran) == 0 {
 			close(stopch)
 		}
-		ran++
+		atomic.AddInt32(&ran, 1)
 		return true
 	})
 
@@ -159,7 +160,7 @@ func TestPeriodicallyPassiveUnregister(t *testing.T) {
 	// worker.  That means one check with no worker, and one check
 	// while the worker is busy.  Beyond that, either the workers
 	// are all busy or we've detected it missing.
-	if ran > 2 {
+	if atomic.LoadInt32(&ran) > 2 {
 		t.Fatalf("Ticker did not update expected number of times: %v", ran)
 	}
 }
@@ -174,9 +175,9 @@ func TestPeriodicallyRequestNoIteration(t *testing.T) {
 	qt := newPeriodicallyInt(timesrc, 0, 1)
 	defer qt.Stop()
 
-	ran := 0
+	ran := int32(0)
 	qt.Register(stopch, func(time.Time) bool {
-		ran++
+		atomic.AddInt32(&ran, 1)
 		return false
 	})
 
@@ -188,7 +189,7 @@ func TestPeriodicallyRequestNoIteration(t *testing.T) {
 	<-timesrc.stopped
 
 	// The closing rules are similar to those above.
-	if ran > 2 {
+	if atomic.LoadInt32(&ran) > 2 {
 		t.Fatalf("Ticker did not update expected number of times: %v", ran)
 	}
 }
