@@ -36,12 +36,13 @@ func TestInitStatic(t *testing.T) {
 }
 
 func testSetupBuckets(t *testing.T, numPartitions int) (string, *Buckets) {
+	return testSetupBucketsEx(t, &BucketSettings{NumPartitions: numPartitions})
+}
+
+func testSetupBucketsEx(t *testing.T, bs *BucketSettings) (string, *Buckets) {
 	d, _ := ioutil.TempDir("./tmp", "test")
 	var err error
-	bucketSettings = &BucketSettings{
-		NumPartitions: numPartitions,
-	}
-	buckets, err = NewBuckets(d, bucketSettings)
+	buckets, err = NewBuckets(d, bs)
 	if err != nil {
 		t.Fatalf("testSetupBuckets failed: %v", err)
 	}
@@ -53,8 +54,12 @@ func testSetupBuckets(t *testing.T, numPartitions int) (string, *Buckets) {
 
 func testSetupDefaultBucket(t *testing.T, numPartitions int,
 	vbid uint16) (string, *Buckets, Bucket) {
-	d, buckets := testSetupBuckets(t, numPartitions)
-	bucket, err := buckets.New("default", bucketSettings)
+	return testSetupDefaultBucketEx(t, &BucketSettings{NumPartitions: numPartitions}, vbid)
+}
+
+func testSetupDefaultBucketEx(t *testing.T, bs *BucketSettings, vbid uint16) (string, *Buckets, Bucket) {
+	d, buckets := testSetupBucketsEx(t, bs)
+	bucket, err := buckets.New("default", bs)
 	if err != nil {
 		t.Fatalf("testSetupDefaultBucket failed: %v", err)
 	}
