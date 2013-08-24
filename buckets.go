@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sync"
 	"sync/atomic"
 	"time"
 )
@@ -17,12 +16,38 @@ var quiescePeriodic *periodically
 
 var noBucket = errors.New("No bucket")
 
+type bres struct {
+	b   Bucket
+	err error
+}
+
+type getBReq struct {
+	name string
+	res  chan Bucket
+}
+
+type newBReq struct {
+	name     string
+	settings *BucketSettings
+	res      chan bres
+}
+
+type closeBReq struct {
+	name  string
+	purge bool
+	res   chan error
+}
+
 // Holder of buckets.
 type Buckets struct {
 	buckets  map[string]Bucket
 	dir      string // Directory where all buckets are stored.
-	lock     sync.Mutex
 	settings *BucketSettings
+
+	gch    chan getBReq
+	sch    chan newBReq
+	cch    chan closeBReq
+	listch chan chan []string
 }
 
 // Build a new holder of buckets.
@@ -34,33 +59,40 @@ func NewBuckets(bdir string, settings *BucketSettings) (*Buckets, error) {
 		buckets:  map[string]Bucket{},
 		dir:      bdir,
 		settings: settings.Copy(),
+		gch:      make(chan getBReq),
+		sch:      make(chan newBReq),
+		cch:      make(chan closeBReq),
+		listch:   make(chan chan []string),
 	}
+	go buckets.service()
 	return buckets, nil
 }
 
 // Allocates and registers a new, named bucket, or error if it exists.
 func (b *Buckets) New(name string,
 	defaultSettings *BucketSettings) (Bucket, error) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	r := newBReq{name, defaultSettings, make(chan bres)}
 
-	return b.new_unlocked(name, defaultSettings)
+	b.sch <- r
+	rv := <-r.res
+
+	return rv.b, rv.err
 }
 
-func (b *Buckets) new_unlocked(name string,
+func (b *Buckets) create(name string,
 	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already exists: %v", name)
 	}
-	rv, err = b.alloc_unlocked(name, true, defaultSettings)
+	rv, err = b.alloc(name, true, defaultSettings)
 	if err != nil {
 		return nil, err
 	}
-	b.register_unlocked(name, rv)
+	b.register(name, rv)
 	return rv, nil
 }
 
-func (b *Buckets) alloc_unlocked(name string, create bool,
+func (b *Buckets) alloc(name string, create bool,
 	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	settings := &BucketSettings{}
 	if defaultSettings != nil {
@@ -91,7 +123,7 @@ func (b *Buckets) alloc_unlocked(name string, create bool,
 	return NewBucket(name, bdir, settings)
 }
 
-func (b *Buckets) register_unlocked(name string, bucket Bucket) {
+func (b *Buckets) register(name string, bucket Bucket) {
 	var ch chan bool
 	if lb, ok := bucket.(*livebucket); ok {
 		ch = lb.availablech
@@ -101,9 +133,12 @@ func (b *Buckets) register_unlocked(name string, bucket Bucket) {
 }
 
 func (b *Buckets) GetNames() []string {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	ch := make(chan []string)
+	b.listch <- ch
+	return <-ch
+}
 
+func (b *Buckets) listInternal() []string {
 	res := make([]string, 0, len(b.buckets))
 	for name := range b.buckets {
 		res = append(res, name)
@@ -111,18 +146,47 @@ func (b *Buckets) GetNames() []string {
 	return res
 }
 
+func (b *Buckets) service() {
+	for {
+		select {
+		case req, ok := <-b.gch:
+			if !ok {
+				return
+			}
+			// request to retrieve a bucket
+			req.res <- b.getInternal(req.name)
+		case req := <-b.sch:
+			// request to create a bucket
+			rv := bres{}
+			rv.b, rv.err = b.create(req.name, req.settings)
+			req.res <- rv
+		case req := <-b.cch:
+			// request to close a bucket
+			req.res <- b.closeInternal(req.name, req.purge)
+		case req := <-b.listch:
+			// list buckets
+			req <- b.listInternal()
+		}
+	}
+}
+
 // Get the named bucket (or nil if it doesn't exist).
 func (b *Buckets) Get(name string) Bucket {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	r := getBReq{name, make(chan Bucket)}
 
+	b.gch <- r
+
+	return <-r.res
+}
+
+func (b *Buckets) getInternal(name string) Bucket {
 	rv := b.buckets[name]
 	if rv != nil {
 		return rv
 	}
 
 	// The entry is nil (previously quiesced), so try to re-load it.
-	rv, err := b.loadBucket_unlocked(name, false)
+	rv, err := b.loadBucket(name, false)
 	if err != nil {
 		return nil
 	}
@@ -131,9 +195,12 @@ func (b *Buckets) Get(name string) Bucket {
 
 // Close the named bucket, optionally purging all its files.
 func (b *Buckets) Close(name string, purgeFiles bool) error {
-	b.lock.Lock()
-	defer b.lock.Unlock()
+	r := closeBReq{name, purgeFiles, make(chan error)}
+	b.cch <- r
+	return <-r.res
+}
 
+func (b *Buckets) closeInternal(name string, purgeFiles bool) error {
 	bucket, ok := b.buckets[name]
 	if !ok {
 		return fmt.Errorf("not a bucket: %v", name)
@@ -156,11 +223,9 @@ func (b *Buckets) CloseAll() {
 	if b == nil {
 		return
 	}
-	b.lock.Lock()
-	defer b.lock.Unlock()
 
-	for _, bucket := range b.buckets {
-		bucket.Close()
+	for _, bname := range b.GetNames() {
+		b.Close(bname, false)
 	}
 }
 
@@ -187,12 +252,12 @@ func BucketPath(bucketName string) (string, error) {
 	return filepath.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX), nil
 }
 
-func (b *Buckets) loadBucket_unlocked(name string, create bool) (Bucket, error) {
+func (b *Buckets) loadBucket(name string, create bool) (Bucket, error) {
 	log.Printf("loading bucket: %v", name)
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already registered: %v", name)
 	}
-	bucket, err := b.alloc_unlocked(name, create, b.settings)
+	bucket, err := b.alloc(name, create, b.settings)
 	if err != nil {
 		log.Printf("Alloc error on %v: %v", name, err)
 		return nil, err
@@ -201,7 +266,7 @@ func (b *Buckets) loadBucket_unlocked(name string, create bool) (Bucket, error) 
 	if err != nil {
 		return nil, err
 	}
-	b.register_unlocked(name, bucket)
+	b.register(name, bucket)
 	return bucket, nil
 }
 
