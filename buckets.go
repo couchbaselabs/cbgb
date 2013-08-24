@@ -227,14 +227,6 @@ func (b *Buckets) listNames() ([]string, error) {
 	return res, nil
 }
 
-// Load a specific bucket by name.
-func (b *Buckets) LoadBucket(name string) (Bucket, error) {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	return b.loadBucket_unlocked(name, false)
-}
-
 func (b *Buckets) loadBucket_unlocked(name string, create bool) (Bucket, error) {
 	log.Printf("loading bucket: %v", name)
 	if b.buckets[name] != nil {
