@@ -254,10 +254,7 @@ func (b *Buckets) makeQuiescer(name string) func(time.Time) bool {
 
 // Returns true if the bucket is closed.
 func (b *Buckets) maybeQuiesce(name string) bool {
-	b.lock.Lock()
-	defer b.lock.Unlock()
-
-	bucket := b.buckets[name]
+	bucket := b.Get(name)
 	if bucket == nil {
 		return true
 	}
@@ -275,8 +272,6 @@ func (b *Buckets) maybeQuiesce(name string) bool {
 	}
 
 	log.Printf("quiescing bucket: %v", name)
-	lb.Close()
-
-	delete(b.buckets, name)
+	b.Close(name, false)
 	return true
 }
