@@ -349,7 +349,7 @@ func TestBucketsLoadNames(t *testing.T) {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
 
-	names, err := b.LoadNames()
+	names, err := b.listNames()
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
@@ -361,12 +361,9 @@ func TestBucketsLoadNames(t *testing.T) {
 		t.Fatalf("Expected mkdir to work, got: %v", err)
 	}
 
-	names, err = b.LoadNames()
+	names, err = b.listNames()
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
-	}
-	if err = b.Load(false); err != nil {
-		t.Fatalf("Expected Buckets.Load() on empty directory to work")
 	}
 
 	// crc32("foo") == 0x8c736521
@@ -375,7 +372,7 @@ func TestBucketsLoadNames(t *testing.T) {
 	os.MkdirAll(path.Join(d, "65", "21", "foo-bucket"), 0777)
 	os.MkdirAll(path.Join(d, "8c", "aa", "bar-bucket"), 0777)
 
-	names, err = b.LoadNames()
+	names, err = b.listNames()
 	if err != nil || len(names) != 2 {
 		t.Fatalf("Expected names to be len(2), got: %v", names)
 	}
@@ -484,18 +481,14 @@ func TestMissingBucketsDir(t *testing.T) {
 			NumPartitions: MAX_VBUCKETS,
 		})
 	defer b.CloseAll()
-	names, err := b.LoadNames()
+	names, err := b.listNames()
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
 	os.RemoveAll(d)
-	names, err = b.LoadNames()
+	names, err = b.listNames()
 	if err == nil {
 		t.Fatalf("Expected names to fail on missing dir")
-	}
-	err = b.Load(false)
-	if err == nil {
-		t.Fatalf("Expected load to fail on missing dir")
 	}
 }
 
@@ -517,10 +510,6 @@ func TestBucketsLoad(t *testing.T) {
 	b.New("b2", b.settings)
 	b.Get("b1").Flush()
 	b.Get("b2").Flush()
-	err = b.Load(false)
-	if err == nil {
-		t.Errorf("expected re-Buckets.Load() to fail")
-	}
 
 	b2, err := NewBuckets(d,
 		&BucketSettings{
@@ -529,10 +518,6 @@ func TestBucketsLoad(t *testing.T) {
 	defer b2.CloseAll()
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
-	}
-	err = b2.Load(false)
-	if err != nil {
-		t.Errorf("expected re-Buckets.Load() to fail")
 	}
 	if b.Get("b0") != nil {
 		t.Errorf("expected Buckets.Get(b0) to fail")
@@ -694,11 +679,6 @@ func TestMemoryOnlyBucketSettingsReload(t *testing.T) {
 	}
 	defer buckets1.CloseAll()
 
-	err = buckets1.Load(false)
-	if err != nil {
-		t.Errorf("expected buckets reload to work, got: %v", err)
-	}
-
 	b1 := buckets1.Get("foo")
 	if b1 == nil {
 		t.Errorf("expected metadata-persisted bucket to survive restart")
@@ -736,11 +716,6 @@ func TestPersistNothing(t *testing.T) {
 		t.Fatalf("Expected NewBuckets to succeed: %v", err)
 	}
 	defer buckets1.CloseAll()
-
-	err = buckets1.Load(false)
-	if err != nil {
-		t.Errorf("expected buckets reload to work, got: %v", err)
-	}
 
 	b1 := buckets1.Get("foo")
 	if b1 != nil {
@@ -860,19 +835,11 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 	}
 	defer buckets1.CloseAll()
 
-	err = buckets1.Load(true)
-	if err != nil {
-		t.Errorf("expected buckets reload to work, got: %v", err)
-	}
 	b1 := buckets1.Get("foo")
 	if b1 == nil {
 		t.Errorf("expected bucket foo to be there")
 	}
 
-	err = buckets1.Load(true) // Load again.
-	if err != nil {
-		t.Errorf("expected buckets reload to work, got: %v", err)
-	}
 	b1x := buckets1.Get("foo")
 	if b1x == nil {
 		t.Errorf("expected bucket foo to be there")
@@ -906,7 +873,6 @@ func TestReloadOnlyNewDirectory(t *testing.T) {
 		return err
 	})
 
-	err = buckets1.Load(true) // Load again.
 	if err != nil {
 		t.Fatalf("Error copying stuff: %v", err)
 	}

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"hash/crc32"
 	"io/ioutil"
@@ -15,6 +16,8 @@ import (
 )
 
 var quiescePeriodic *periodically
+
+var noBucket = errors.New("No bucket")
 
 // Holder of buckets.
 type Buckets struct {
@@ -51,7 +54,7 @@ func (b *Buckets) new_unlocked(name string,
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already exists: %v", name)
 	}
-	rv, err = b.alloc_unlocked(name, defaultSettings)
+	rv, err = b.alloc_unlocked(name, true, defaultSettings)
 	if err != nil {
 		return nil, err
 	}
@@ -59,7 +62,7 @@ func (b *Buckets) new_unlocked(name string,
 	return rv, nil
 }
 
-func (b *Buckets) alloc_unlocked(name string,
+func (b *Buckets) alloc_unlocked(name string, create bool,
 	defaultSettings *BucketSettings) (rv Bucket, err error) {
 	settings := &BucketSettings{}
 	if defaultSettings != nil {
@@ -71,16 +74,22 @@ func (b *Buckets) alloc_unlocked(name string,
 	if err != nil {
 		return nil, err
 	}
+	exists, err := settings.load(bdir)
+	if err != nil {
+		return nil, err
+	}
+
+	if !(exists || create) {
+		return nil, noBucket
+	}
+
 	if settings.MemoryOnly < MemoryOnly_LEVEL_PERSIST_NOTHING {
 		// If an accessible bdir directory exists already, it's ok.
 		if err = os.MkdirAll(bdir, 0777); err != nil && !isDir(bdir) {
 			return nil, fmt.Errorf("could not access bucket dir: %v", bdir)
 		}
 	}
-	_, err = settings.load(bdir)
-	if err != nil {
-		return nil, err
-	}
+
 	return NewBucket(name, bdir, settings)
 }
 
@@ -109,16 +118,13 @@ func (b *Buckets) Get(name string) Bucket {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	rv, ok := b.buckets[name]
+	rv := b.buckets[name]
 	if rv != nil {
 		return rv
 	}
-	if !ok {
-		return nil
-	}
 
 	// The entry is nil (previously quiesced), so try to re-load it.
-	rv, err := b.loadBucket_unlocked(name)
+	rv, err := b.loadBucket_unlocked(name, false)
 	if err != nil {
 		return nil
 	}
@@ -184,7 +190,7 @@ func BucketPath(bucketName string) (string, error) {
 }
 
 // Reads the buckets directory and returns list of bucket names.
-func (b *Buckets) LoadNames() ([]string, error) {
+func (b *Buckets) listNames() ([]string, error) {
 	res := []string{}
 	listHi, err := ioutil.ReadDir(b.dir)
 	if err != nil {
@@ -221,46 +227,22 @@ func (b *Buckets) LoadNames() ([]string, error) {
 	return res, nil
 }
 
-// Loads all buckets from the buckets directory tree.  If
-// errorIfBucketAlreadyExists is false any existing (already loaded)
-// buckets are left unchanged (existing buckets are not reloaded).
-func (b *Buckets) Load(ignoreIfBucketAlreadyExists bool) error {
-	bucketNames, err := b.LoadNames()
-	if err != nil {
-		return err
-	}
-	for _, bucketName := range bucketNames {
-		if b.Get(bucketName) != nil {
-			if !ignoreIfBucketAlreadyExists {
-				return fmt.Errorf("loading bucket %v, but it exists already",
-					bucketName)
-			}
-			log.Printf("loading bucket: %v, already loaded", bucketName)
-			continue
-		}
-		_, err = b.LoadBucket(bucketName)
-		if err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
 // Load a specific bucket by name.
 func (b *Buckets) LoadBucket(name string) (Bucket, error) {
 	b.lock.Lock()
 	defer b.lock.Unlock()
 
-	return b.loadBucket_unlocked(name)
+	return b.loadBucket_unlocked(name, false)
 }
 
-func (b *Buckets) loadBucket_unlocked(name string) (Bucket, error) {
+func (b *Buckets) loadBucket_unlocked(name string, create bool) (Bucket, error) {
 	log.Printf("loading bucket: %v", name)
 	if b.buckets[name] != nil {
 		return nil, fmt.Errorf("bucket already registered: %v", name)
 	}
-	bucket, err := b.alloc_unlocked(name, b.settings)
+	bucket, err := b.alloc_unlocked(name, create, b.settings)
 	if err != nil {
+		log.Printf("Alloc error on %v: %v", name, err)
 		return nil, err
 	}
 	err = bucket.Load()
@@ -303,7 +285,6 @@ func (b *Buckets) maybeQuiesce(name string) bool {
 	log.Printf("quiescing bucket: %v", name)
 	lb.Close()
 
-	// Using nil, not delete, to mark quiescence.
-	b.buckets[name] = nil
+	delete(b.buckets, name)
 	return true
 }

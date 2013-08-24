@@ -60,10 +60,6 @@ func TestGetSetDDoc(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
-	err = b2.Load(false)
-	if err != nil {
-		t.Errorf("expected re-Buckets.Load() to fail")
-	}
 	b = b2.Get("thebucket")
 	if b == nil {
 		t.Errorf("expected the bucket")

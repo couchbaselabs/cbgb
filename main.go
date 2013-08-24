@@ -134,9 +134,6 @@ func main() {
 		log.Fatalf("error: could not make buckets: %v, data dir: %v", err, *data)
 	}
 	log.Printf("loading buckets from: %v", *data)
-	if err = bs.Load(false); err != nil {
-		log.Fatalf("error: could not load buckets: %v, data dir: %v", err, *data)
-	}
 
 	buckets = bs
 	bucketSettings = bss
