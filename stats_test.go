@@ -242,6 +242,7 @@ func TestBasicAggStats(t *testing.T) {
 }
 
 func TestMultiDayAggStats(t *testing.T) {
+	t.Parallel()
 	a := NewAggStats(func() Aggregatable {
 		return &BucketStats{}
 	})

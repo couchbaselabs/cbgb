@@ -15,6 +15,8 @@ import (
 )
 
 func TestCompaction(t *testing.T) {
+	t.Parallel()
+
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
@@ -155,6 +157,7 @@ func TestEmptyFileCompaction(t *testing.T) {
 }
 
 func TestCompactionNumFiles(t *testing.T) {
+	t.Parallel()
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)
 
@@ -238,6 +241,8 @@ func SKIP_TestCompactionPurgeTimeout(t *testing.T) {
 }
 
 func TestCopyDelta(t *testing.T) {
+	t.Parallel()
+
 	testCopyDelta(t, 1)
 	testCopyDelta(t, 0x0800000)
 }

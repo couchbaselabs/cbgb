@@ -109,6 +109,7 @@ func TestTapSetup(t *testing.T) {
 }
 
 func TestTapChanges(t *testing.T) {
+	t.Parallel()
 	// This test has a couple of loose sync points where it sleeps
 	// waiting for messages to go through since there's no way to
 	// observe the effect of the observation currently.  There

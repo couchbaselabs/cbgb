@@ -32,8 +32,6 @@ func TestPeriodicallyNoWorkers(t *testing.T) {
 }
 
 func TestPeriodicallyNormal(t *testing.T) {
-	t.Parallel()
-
 	stopch := make(chan bool)
 	defer close(stopch)
 
