@@ -7,6 +7,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -334,6 +335,44 @@ func TestBucketPath(t *testing.T) {
 	}
 }
 
+// Reads the buckets directory and returns list of bucket names.
+func listBucketNames(dir string) ([]string, error) {
+	res := []string{}
+	listHi, err := ioutil.ReadDir(dir)
+	if err != nil {
+		return nil, err
+	}
+	for _, entryHi := range listHi {
+		if !entryHi.IsDir() {
+			continue
+		}
+		pathHi := filepath.Join(dir, entryHi.Name())
+		listLo, err := ioutil.ReadDir(pathHi)
+		if err != nil {
+			return nil, err
+		}
+		for _, entryLo := range listLo {
+			if !entryLo.IsDir() {
+				continue
+			}
+			pathLo := filepath.Join(pathHi, entryLo.Name())
+			list, err := ioutil.ReadDir(pathLo)
+			if err != nil {
+				return nil, err
+			}
+			for _, entry := range list {
+				if !entry.IsDir() ||
+					!strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
+					continue
+				}
+				res = append(res,
+					entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
+			}
+		}
+	}
+	return res, nil
+}
+
 func TestBucketsLoadNames(t *testing.T) {
 	d, err := ioutil.TempDir("./tmp", "test")
 	if err != nil {
@@ -349,7 +388,7 @@ func TestBucketsLoadNames(t *testing.T) {
 		t.Fatalf("Expected NewBuckets() to work on temp dir")
 	}
 
-	names, err := b.listNames()
+	names, err := listBucketNames(b.dir)
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
@@ -361,7 +400,7 @@ func TestBucketsLoadNames(t *testing.T) {
 		t.Fatalf("Expected mkdir to work, got: %v", err)
 	}
 
-	names, err = b.listNames()
+	names, err = listBucketNames(b.dir)
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
@@ -372,7 +411,7 @@ func TestBucketsLoadNames(t *testing.T) {
 	os.MkdirAll(path.Join(d, "65", "21", "foo-bucket"), 0777)
 	os.MkdirAll(path.Join(d, "8c", "aa", "bar-bucket"), 0777)
 
-	names, err = b.listNames()
+	names, err = listBucketNames(b.dir)
 	if err != nil || len(names) != 2 {
 		t.Fatalf("Expected names to be len(2), got: %v", names)
 	}
@@ -481,12 +520,12 @@ func TestMissingBucketsDir(t *testing.T) {
 			NumPartitions: MAX_VBUCKETS,
 		})
 	defer b.CloseAll()
-	names, err := b.listNames()
+	names, err := listBucketNames(b.dir)
 	if err != nil || len(names) != 0 {
 		t.Fatalf("Expected names to be empty")
 	}
 	os.RemoveAll(d)
-	names, err = b.listNames()
+	names, err = listBucketNames(b.dir)
 	if err == nil {
 		t.Fatalf("Expected names to fail on missing dir")
 	}

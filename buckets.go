@@ -4,12 +4,10 @@ import (
 	"errors"
 	"fmt"
 	"hash/crc32"
-	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -187,44 +185,6 @@ func BucketPath(bucketName string) (string, error) {
 	hi := fmt.Sprintf("%02x", c>>8)
 	// Example result for "default" bucket: "$BUCKETS_DIR/00/df/default-bucket".
 	return filepath.Join(hi, lo, bucketName+BUCKET_DIR_SUFFIX), nil
-}
-
-// Reads the buckets directory and returns list of bucket names.
-func (b *Buckets) listNames() ([]string, error) {
-	res := []string{}
-	listHi, err := ioutil.ReadDir(b.dir)
-	if err != nil {
-		return nil, err
-	}
-	for _, entryHi := range listHi {
-		if !entryHi.IsDir() {
-			continue
-		}
-		pathHi := filepath.Join(b.dir, entryHi.Name())
-		listLo, err := ioutil.ReadDir(pathHi)
-		if err != nil {
-			return nil, err
-		}
-		for _, entryLo := range listLo {
-			if !entryLo.IsDir() {
-				continue
-			}
-			pathLo := filepath.Join(pathHi, entryLo.Name())
-			list, err := ioutil.ReadDir(pathLo)
-			if err != nil {
-				return nil, err
-			}
-			for _, entry := range list {
-				if !entry.IsDir() ||
-					!strings.HasSuffix(entry.Name(), BUCKET_DIR_SUFFIX) {
-					continue
-				}
-				res = append(res,
-					entry.Name()[0:len(entry.Name())-len(BUCKET_DIR_SUFFIX)])
-			}
-		}
-	}
-	return res, nil
 }
 
 func (b *Buckets) loadBucket_unlocked(name string, create bool) (Bucket, error) {
