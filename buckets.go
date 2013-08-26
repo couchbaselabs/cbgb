@@ -38,13 +38,21 @@ type closeBReq struct {
 	res   chan error
 }
 
+type asyncOpenComplete struct {
+	name   string
+	bucket Bucket
+}
+
 // Holder of buckets.
 type Buckets struct {
 	buckets  map[string]Bucket
 	dir      string // Directory where all buckets are stored.
 	settings *BucketSettings
+	// When a bucket is currently opening, it's listed here
+	opening map[string][]chan<- Bucket
 
 	gch    chan getBReq
+	agch   chan asyncOpenComplete
 	sch    chan newBReq
 	cch    chan closeBReq
 	listch chan chan []string
@@ -57,9 +65,11 @@ func NewBuckets(bdir string, settings *BucketSettings) (*Buckets, error) {
 	}
 	buckets := &Buckets{
 		buckets:  map[string]Bucket{},
+		opening:  map[string][]chan<- Bucket{},
 		dir:      bdir,
 		settings: settings.Copy(),
 		gch:      make(chan getBReq),
+		agch:     make(chan asyncOpenComplete),
 		sch:      make(chan newBReq),
 		cch:      make(chan closeBReq),
 		listch:   make(chan chan []string),
@@ -154,7 +164,15 @@ func (b *Buckets) service() {
 				return
 			}
 			// request to retrieve a bucket
-			req.res <- b.getInternal(req.name)
+			b.getInternal(req.name, req.res)
+		case ao := <-b.agch:
+			for _, ch := range b.opening[ao.name] {
+				ch <- ao.bucket
+			}
+			delete(b.opening, ao.name)
+			if ao.bucket != nil {
+				b.buckets[ao.name] = ao.bucket
+			}
 		case req := <-b.sch:
 			// request to create a bucket
 			rv := bres{}
@@ -179,18 +197,30 @@ func (b *Buckets) Get(name string) Bucket {
 	return <-r.res
 }
 
-func (b *Buckets) getInternal(name string) Bucket {
-	rv := b.buckets[name]
-	if rv != nil {
-		return rv
-	}
-
-	// The entry is nil (previously quiesced), so try to re-load it.
+func (b *Buckets) asyncOpen(name string) {
 	rv, err := b.loadBucket(name, false)
 	if err != nil {
-		return nil
+		log.Printf("Problem opening bucket %v: %v", name, err)
+		b.agch <- asyncOpenComplete{name: name}
+		return
 	}
-	return rv
+	b.agch <- asyncOpenComplete{name: name, bucket: rv}
+}
+
+func (b *Buckets) getInternal(name string, ch chan<- Bucket) {
+	// If the bucket is already open, we're done here.
+	rv := b.buckets[name]
+	if rv != nil {
+		ch <- rv
+		return
+	}
+
+	// We only actually start opening a bucket if it's not already open
+	if b.opening[name] == nil {
+		go b.asyncOpen(name)
+	}
+	// Subscribe to notification of this bucket opening.
+	b.opening[name] = append(b.opening[name], ch)
 }
 
 // Close the named bucket, optionally purging all its files.
