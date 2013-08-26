@@ -16,32 +16,35 @@ var quiescePeriodic *periodically
 
 var noBucket = errors.New("No bucket")
 
-type bres struct {
-	b   Bucket
-	err error
-}
+// Types used by the bucket state machine
+type (
+	bucketRes struct {
+		b   Bucket
+		err error
+	}
 
-type getBReq struct {
-	name string
-	res  chan Bucket
-}
+	getBucketReq struct {
+		name string
+		res  chan Bucket
+	}
 
-type newBReq struct {
-	name     string
-	settings *BucketSettings
-	res      chan bres
-}
+	newBucketReq struct {
+		name     string
+		settings *BucketSettings
+		res      chan bucketRes
+	}
 
-type closeBReq struct {
-	name  string
-	purge bool
-	res   chan error
-}
+	closeBucketReq struct {
+		name  string
+		purge bool
+		res   chan error
+	}
 
-type asyncOpenComplete struct {
-	name   string
-	bucket Bucket
-}
+	asyncOpenComplete struct {
+		name   string
+		bucket Bucket
+	}
+)
 
 // Holder of buckets.
 type Buckets struct {
@@ -51,10 +54,10 @@ type Buckets struct {
 	// When a bucket is currently opening, it's listed here
 	opening map[string][]chan<- Bucket
 
-	gch    chan getBReq
+	gch    chan getBucketReq
 	agch   chan asyncOpenComplete
-	sch    chan newBReq
-	cch    chan closeBReq
+	sch    chan newBucketReq
+	cch    chan closeBucketReq
 	listch chan chan []string
 }
 
@@ -68,10 +71,10 @@ func NewBuckets(bdir string, settings *BucketSettings) (*Buckets, error) {
 		opening:  map[string][]chan<- Bucket{},
 		dir:      bdir,
 		settings: settings.Copy(),
-		gch:      make(chan getBReq),
+		gch:      make(chan getBucketReq),
 		agch:     make(chan asyncOpenComplete),
-		sch:      make(chan newBReq),
-		cch:      make(chan closeBReq),
+		sch:      make(chan newBucketReq),
+		cch:      make(chan closeBucketReq),
 		listch:   make(chan chan []string),
 	}
 	go buckets.service()
@@ -81,7 +84,7 @@ func NewBuckets(bdir string, settings *BucketSettings) (*Buckets, error) {
 // Allocates and registers a new, named bucket, or error if it exists.
 func (b *Buckets) New(name string,
 	defaultSettings *BucketSettings) (Bucket, error) {
-	r := newBReq{name, defaultSettings, make(chan bres)}
+	r := newBucketReq{name, defaultSettings, make(chan bucketRes)}
 
 	b.sch <- r
 	rv := <-r.res
@@ -175,7 +178,7 @@ func (b *Buckets) service() {
 			}
 		case req := <-b.sch:
 			// request to create a bucket
-			rv := bres{}
+			rv := bucketRes{}
 			rv.b, rv.err = b.create(req.name, req.settings)
 			req.res <- rv
 		case req := <-b.cch:
@@ -190,7 +193,7 @@ func (b *Buckets) service() {
 
 // Get the named bucket (or nil if it doesn't exist).
 func (b *Buckets) Get(name string) Bucket {
-	r := getBReq{name, make(chan Bucket)}
+	r := getBucketReq{name, make(chan Bucket)}
 
 	b.gch <- r
 
@@ -225,7 +228,7 @@ func (b *Buckets) getInternal(name string, ch chan<- Bucket) {
 
 // Close the named bucket, optionally purging all its files.
 func (b *Buckets) Close(name string, purgeFiles bool) error {
-	r := closeBReq{name, purgeFiles, make(chan error)}
+	r := closeBucketReq{name, purgeFiles, make(chan error)}
 	b.cch <- r
 	return <-r.res
 }
