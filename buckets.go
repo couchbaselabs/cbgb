@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
+	"flag"
 	"fmt"
 	"hash/crc32"
 	"log"
+	"net/http"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -15,6 +18,8 @@ import (
 var quiescePeriodic *periodically
 
 var noBucket = errors.New("No bucket")
+
+var configSvcUrl = flag.String("config-svc", "", "URL to bucket config service")
 
 // Types used by the bucket state machine
 type (
@@ -200,14 +205,51 @@ func (b *Buckets) Get(name string) Bucket {
 	return <-r.res
 }
 
+func (b *Buckets) getRemoteConfig(name string) (*BucketSettings, error) {
+	u := *configSvcUrl + name
+	log.Printf("Getting config for %v from %v", name, u)
+	res, err := http.Get(u)
+	if err != nil {
+		return nil, err
+	}
+	defer res.Body.Close()
+
+	if res.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP error: %v", res.Status)
+	}
+	d := json.NewDecoder(res.Body)
+	rv := &BucketSettings{}
+	err = d.Decode(rv)
+	return rv, err
+}
+
 func (b *Buckets) asyncOpen(name string) {
 	rv, err := b.loadBucket(name, false)
-	if err != nil {
-		log.Printf("Problem opening bucket %v: %v", name, err)
-		b.agch <- asyncOpenComplete{name: name}
+	if err == nil {
+		b.agch <- asyncOpenComplete{name: name, bucket: rv}
 		return
 	}
-	b.agch <- asyncOpenComplete{name: name, bucket: rv}
+	log.Printf("Problem opening bucket %v: %v", name, err)
+
+	if *configSvcUrl != "" {
+		cfg, err := b.getRemoteConfig(name)
+		if err != nil {
+			log.Printf("Error loading remote config for %v: %v",
+				name, err)
+			b.agch <- asyncOpenComplete{name: name}
+			return
+		}
+
+		bucket, err := createBucket(name, cfg)
+		if err == nil {
+			b.agch <- asyncOpenComplete{name: name, bucket: bucket}
+			return
+		}
+		log.Printf("Error creating DB %v provisioned remotely: %v",
+			name, err)
+	}
+
+	b.agch <- asyncOpenComplete{name: name}
 }
 
 func (b *Buckets) getInternal(name string, ch chan<- Bucket) {
