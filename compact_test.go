@@ -491,7 +491,6 @@ func TestCompactionViews(t *testing.T) {
 				}
 				t.Logf("expected count: %v, got: %v", count, c)
 			}
-			runtime.Gosched()
 		}()
 	}
 
