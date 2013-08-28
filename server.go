@@ -125,6 +125,8 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 			return &gomemcached.MCResponse{Fatal: true}
 		}
 		return nil
+	case gomemcached.OBSERVE:
+		return doObserve(rh.currentBucket, req)
 	}
 
 	vb, err := rh.currentBucket.GetVBucket(req.VBucket)
@@ -138,6 +140,21 @@ func (rh *reqHandler) HandleMessage(w io.Writer, r io.Reader,
 	}
 
 	return vb.Dispatch(w, req)
+}
+
+func doObserve(b Bucket, req *gomemcached.MCRequest) *gomemcached.MCResponse {
+	keys, err := parseObserveKeys(req.Body)
+	if err != nil {
+		return &gomemcached.MCResponse{Status: gomemcached.EINVAL,
+			Body: []byte(err.Error())}
+	}
+	// XXX:  Fake observe
+	res := []obsStatus{}
+	for _, k := range keys {
+		res = append(res, obsStatus{k, obsPersisted, 0})
+	}
+
+	return &gomemcached.MCResponse{Body: encodeObserveBody(res)}
 }
 
 func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler,
