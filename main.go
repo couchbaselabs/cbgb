@@ -71,6 +71,7 @@ var fileServiceWorkers = flag.Int("file-service-workers", 32,
 var compactEvery = flag.Int("compact-every", 10000,
 	"Compact file after this many writes")
 var logSyslog = flag.Bool("syslog", false, "Log to syslog")
+var logTapMutation = flag.Bool("log-tap-mutation", false, "Log tap mutations?")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
@@ -122,7 +123,9 @@ func main() {
 		log.Printf("-------------------------------------------------------")
 	}
 
-	go MutationLogger(mutationLogCh)
+	if *logTapMutation {
+		go MutationLogger(mutationLogCh)
+	}
 
 	bss := &BucketSettings{
 		NumPartitions: *defaultNumPartitions,
@@ -190,7 +193,9 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 		return nil, err
 	}
 
-	bucket.Subscribe(mutationLogCh)
+	if *logTapMutation {
+		bucket.Subscribe(mutationLogCh)
+	}
 
 	for vbid := 0; vbid < bucketSettings.NumPartitions; vbid++ {
 		bucket.CreateVBucket(uint16(vbid))
