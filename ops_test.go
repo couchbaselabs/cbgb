@@ -199,7 +199,7 @@ func TestMutationBroadcast(t *testing.T) {
 				req.Opcode = gomemcached.SET
 				req.Cas = 85824
 			},
-			gomemcached.EINVAL, false},
+			gomemcached.KEY_EEXISTS, false},
 		{"good set",
 			func() { req.Cas = 0 },
 			gomemcached.SUCCESS, true},
@@ -283,8 +283,8 @@ func TestCASDelete(t *testing.T) {
 	}
 
 	res := rh.HandleMessage(nil, nil, delreq)
-	if res.Status != gomemcached.EINVAL {
-		t.Fatalf("Expected einval, got %v", res)
+	if res.Status != gomemcached.KEY_EEXISTS {
+		t.Fatalf("Expected eexists, got %v", res)
 	}
 
 	delreq.Cas = setres.Cas
@@ -316,8 +316,8 @@ func TestCASSet(t *testing.T) {
 		Cas:     883494,
 	}
 	res := rh.HandleMessage(nil, nil, setreq)
-	if res.Status != gomemcached.EINVAL {
-		t.Fatalf("Expected einval, got %v", res)
+	if res.Status != gomemcached.KEY_EEXISTS {
+		t.Fatalf("Expected exists, got %v", res)
 	}
 
 	setreq.Cas = 0
@@ -330,8 +330,8 @@ func TestCASSet(t *testing.T) {
 
 	setreq.Cas = 1 + objcas
 	res = rh.HandleMessage(nil, nil, setreq)
-	if res.Status != gomemcached.EINVAL {
-		t.Fatalf("Expected einval, got %v when objcas %v != setcas %v",
+	if res.Status != gomemcached.KEY_EEXISTS {
+		t.Fatalf("Expected exists, got %v when objcas %v != setcas %v",
 			res, objcas, setreq.Cas)
 	}
 

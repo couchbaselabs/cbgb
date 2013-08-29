@@ -136,7 +136,7 @@ func vbMutateValidate(v *VBucket, w io.Writer, req *gomemcached.MCRequest,
 	}
 	if req.Cas != 0 && (itemOld == nil || itemOld.cas != req.Cas) {
 		return &gomemcached.MCResponse{
-			Status: gomemcached.EINVAL,
+			Status: gomemcached.KEY_EEXISTS,
 			Body:   []byte("CAS mismatch"),
 		}, ignore
 	}
@@ -248,8 +248,12 @@ func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 		if req.Cas != 0 && (prevItem == nil || prevItem.cas != req.Cas) {
+			status := gomemcached.KEY_EEXISTS
+			if prevItem == nil {
+				status = gomemcached.KEY_ENOENT
+			}
 			res = &gomemcached.MCResponse{
-				Status: gomemcached.EINVAL,
+				Status: status,
 				Body:   []byte("CAS mismatch"),
 			}
 			return
