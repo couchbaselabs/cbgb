@@ -181,17 +181,6 @@ function BucketsCtrl($scope, $http) {
       });
   };
 
-  $scope.bucketsRescan = function() {
-    $http.post("/_api/bucketsRescan").
-      success(function() {
-        alert("Rescan buckets directory succeeded.");
-        retrieveBucketNames();
-      }).
-      error(function(data) {
-        alert("Rescan buckets directory failed.");
-      });
-  };
-
   function retrieveBucketNames() {
     $http.get('/_api/buckets').
       success(function(data) {
