@@ -135,6 +135,8 @@ func main() {
 	buckets = bs
 	bucketSettings = bss
 
+	go deliverEvents()
+
 	mainServer(*defaultBucketName, *addr, *maxConns, *restCouch, *restNS,
 		*staticPath, filepath.Join(*data, ".staticCache"))
 

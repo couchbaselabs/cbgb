@@ -375,6 +375,7 @@ func (b *Buckets) maybeQuiesce(name string) bool {
 	}
 
 	log.Printf("quiescing bucket: %v", name)
+	sendEvent(name, "quiescing", nil)
 	b.Close(name, false)
 	return true
 }

@@ -315,6 +315,7 @@ func (b *livebucket) Load() (err error) {
 			return errVisit
 		}
 	}
+	sendEvent(b.name, "loaded", nil)
 	return nil
 }
 
