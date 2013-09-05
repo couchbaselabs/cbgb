@@ -130,7 +130,7 @@ func (s *bucketstore) flush_unlocked() (int64, error) {
 	} // else, we're in memory-only mode.
 	atomic.AddInt64(&s.stats.Flushes, 1)
 
-	sendEvent(s.name, "persist", s.Stats())
+	sendEvent(s.name, "stats", s.Stats())
 	return atomic.AddInt64(&s.dirtiness, -d), nil
 }
 
