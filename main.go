@@ -71,11 +71,9 @@ var fileServiceWorkers = flag.Int("file-service-workers", 32,
 var compactEvery = flag.Int("compact-every", 10000,
 	"Compact file after this many writes")
 var logSyslog = flag.Bool("syslog", false, "Log to syslog")
-var logTapMutation = flag.Bool("log-tap-mutation", false, "Log tap mutations?")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
-var mutationLogCh = make(chan interface{}, 1024)
 
 func usage() {
 	fmt.Fprintf(os.Stderr, "cbgb - version %s\n", VERSION)
@@ -121,10 +119,6 @@ func main() {
 		log.Printf("warning: running openly without any adminUser/adminPass")
 		log.Printf("warning: please don't run this way in production usage")
 		log.Printf("-------------------------------------------------------")
-	}
-
-	if *logTapMutation {
-		go MutationLogger(mutationLogCh)
 	}
 
 	bss := &BucketSettings{
@@ -191,10 +185,6 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 	bucket, err := buckets.New(bucketName, bucketSettings)
 	if err != nil {
 		return nil, err
-	}
-
-	if *logTapMutation {
-		bucket.Subscribe(mutationLogCh)
 	}
 
 	for vbid := 0; vbid < bucketSettings.NumPartitions; vbid++ {
