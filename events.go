@@ -36,6 +36,7 @@ func transmitEvent(c *coap.Conn, path string, s statusEvent) {
 		Payload: payload,
 	}
 
+	req.SetOption(coap.ContentType, coap.AppJSON)
 	req.SetPathString(path)
 
 	_, err = c.Send(req)
