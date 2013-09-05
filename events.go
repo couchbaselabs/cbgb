@@ -19,7 +19,7 @@ type statusEvent struct {
 
 var eventCh = make(chan statusEvent)
 
-func transmitEvent(c *coap.Conn, s statusEvent) {
+func transmitEvent(c *coap.Conn, path string, s statusEvent) {
 	if c == nil {
 		return
 	}
@@ -36,7 +36,7 @@ func transmitEvent(c *coap.Conn, s statusEvent) {
 		Payload: payload,
 	}
 
-	req.SetPathString("/dbev/" + s.DBName)
+	req.SetPathString(path)
 
 	_, err = c.Send(req)
 	if err != nil {
@@ -44,30 +44,30 @@ func transmitEvent(c *coap.Conn, s statusEvent) {
 	}
 }
 
-func dialCoap() *coap.Conn {
+func dialCoap() (*coap.Conn, string) {
 	if *eventUrl == "" {
-		return nil
+		return nil, ""
 	}
 	u, err := url.Parse(*eventUrl)
 	if err != nil {
 		log.Printf("Error dialing coap from %q: %v",
 			*eventUrl, err)
-		return nil
+		return nil, ""
 	}
 	conn, err := coap.Dial("udp", u.Host)
 	if err != nil {
 		log.Printf("Error dialing coap from %q: %v",
 			*eventUrl, err)
-		return nil
+		return nil, ""
 	}
-	return conn
+	return conn, u.Path
 }
 
 func deliverEvents() {
-	c := dialCoap()
+	c, path := dialCoap()
 
 	for ev := range eventCh {
-		transmitEvent(c, ev)
+		transmitEvent(c, path, ev)
 	}
 }
 
