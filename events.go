@@ -12,9 +12,9 @@ import (
 var eventUrl = flag.String("event-url", "", "Event URL")
 
 type statusEvent struct {
-	DBName string                 `json:"db"`
-	Type   string                 `json:"type"`
-	Data   map[string]interface{} `json:"data,omitempty"`
+	DBName string      `json:"db"`
+	Type   string      `json:"type"`
+	Data   interface{} `json:"data,omitempty"`
 }
 
 var eventCh = make(chan statusEvent)
@@ -71,7 +71,7 @@ func deliverEvents() {
 	}
 }
 
-func sendEvent(name, t string, data map[string]interface{}) {
+func sendEvent(name, t string, data interface{}) {
 	e := statusEvent{name, t, data}
 	select {
 	case eventCh <- e:
