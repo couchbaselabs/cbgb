@@ -17,6 +17,7 @@ var fileService *FileService
 var persistPeriodic *periodically
 
 type bucketstore struct {
+	name          string
 	dirtiness     int64          // To track when we need flush to storage.
 	bsf           unsafe.Pointer // *bucketstorefile
 	bsfMemoryOnly *bucketstorefile
@@ -29,7 +30,7 @@ type bucketstore struct {
 	diskLock sync.Mutex
 }
 
-func newBucketStore(path string, settings BucketSettings,
+func newBucketStore(name, path string, settings BucketSettings,
 	keyCompareForCollection func(collName string) gkvlite.KeyCompare) (
 	res *bucketstore, err error) {
 	var file FileLike
@@ -63,6 +64,7 @@ func newBucketStore(path string, settings BucketSettings,
 	}
 
 	return &bucketstore{
+		name:          name,
 		bsf:           unsafe.Pointer(bsf),
 		bsfMemoryOnly: bsfMemoryOnly,
 		endch:         make(chan bool),
@@ -129,7 +131,7 @@ func (s *bucketstore) flush_unlocked() (int64, error) {
 	atomic.AddInt64(&s.stats.Flushes, 1)
 
 	stats := s.Stats()
-	sendEvent("whydoinotknowthishere", "persist",
+	sendEvent(s.name, "persist",
 		map[string]interface{}{
 			"size": stats.FileSize,
 		})
