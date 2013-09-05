@@ -81,6 +81,7 @@ type livebucket struct {
 	vbucketDDoc  *VBucket
 	bucketstores map[int]*bucketstore
 	observer     broadcast.Broadcaster
+	observers    int64
 
 	bucketItemBytes int64
 	activity        int64 // To track quiescence opportunities.
@@ -190,6 +191,7 @@ func (b *livebucket) GetBucketSettings() *BucketSettings {
 //
 // Note that this is retroactive -- it will send existing states.
 func (b *livebucket) Subscribe(ch chan<- interface{}) {
+	atomic.AddInt64(&b.observers, 1)
 	b.observer.Register(ch)
 	go func() {
 		for i := uint16(0); i < uint16(b.settings.NumPartitions); i++ {
@@ -209,6 +211,7 @@ func (b *livebucket) Subscribe(ch chan<- interface{}) {
 
 func (b *livebucket) Unsubscribe(ch chan<- interface{}) {
 	b.observer.Unregister(ch)
+	atomic.AddInt64(&b.observers, -1)
 }
 
 func (b *livebucket) Available() bool {

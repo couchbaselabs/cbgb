@@ -971,6 +971,33 @@ func TestBucketMaybeQuiesce(t *testing.T) {
 	}
 }
 
+func TestBucketQuiesceWhenObserved(t *testing.T) {
+	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
+	defer os.RemoveAll(testBucketDir)
+
+	buckets, _ := NewBuckets(testBucketDir,
+		&BucketSettings{NumPartitions: MAX_VBUCKETS})
+	b0, _ := buckets.New("foo", &BucketSettings{NumPartitions: MAX_VBUCKETS})
+
+	lb := b0.(*livebucket)
+	lb.observers = int64(1)
+
+	x := buckets.maybeQuiesce("foo")
+	if x {
+		t.Errorf("expected observed foo to not be closed")
+	}
+	x = buckets.maybeQuiesce("foo")
+	if x {
+		t.Errorf("expected observed foo to not be closed")
+	}
+
+	lb.observers = 0
+	x = buckets.maybeQuiesce("foo")
+	if !x {
+		t.Errorf("expected unobserved foo to be closed")
+	}
+}
+
 func TestErrs(t *testing.T) {
 	testBucketDir, _ := ioutil.TempDir("./tmp", "test")
 	defer os.RemoveAll(testBucketDir)

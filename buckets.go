@@ -365,6 +365,9 @@ func (b *Buckets) maybeQuiesce(name string) bool {
 		return true
 	}
 
+	if atomic.LoadInt64(&lb.observers) > 0 {
+		return false
+	}
 	val := atomic.LoadInt64(&lb.activity)
 	if val > 0 {
 		atomic.AddInt64(&lb.activity, -val)
