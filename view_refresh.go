@@ -217,7 +217,7 @@ func (v *VBucket) getViewsStore() (res *bucketstore, err error) {
 			if err != nil {
 				return
 			}
-			v.viewsStore, err = newBucketStore("XXXviewXXX", vsp,
+			v.viewsStore, err = newBucketStore(v.parent.Name()+"/v", vsp,
 				*v.parent.GetBucketSettings(),
 				viewKeyCompareForCollection)
 		}
