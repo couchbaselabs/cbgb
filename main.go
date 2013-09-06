@@ -22,7 +22,6 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/daaku/go.flagbytes"
@@ -103,7 +102,7 @@ func main() {
 
 	initLogger(*logSyslog)
 
-	go dumpOnSignal(syscall.SIGUSR2)
+	go dumpOnSignalForPlatform()
 
 	initAdmin()
 	initPeriodically()
