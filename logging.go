@@ -16,4 +16,7 @@ func initLogger(slog bool) {
 		log.SetOutput(lw)
 		log.SetFlags(0)
 	}
+	if *logPlain {
+		log.SetFlags(0)
+	}
 }

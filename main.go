@@ -70,6 +70,7 @@ var fileServiceWorkers = flag.Int("file-service-workers", 32,
 var compactEvery = flag.Int("compact-every", 10000,
 	"Compact file after this many writes")
 var logSyslog = flag.Bool("syslog", false, "Log to syslog")
+var logPlain = flag.Bool("log-no-ts", false, "Log without timestamps")
 
 var buckets *Buckets
 var bucketSettings *BucketSettings
