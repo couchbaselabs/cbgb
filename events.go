@@ -17,7 +17,7 @@ type statusEvent struct {
 	Data   interface{} `json:"data,omitempty"`
 }
 
-var eventCh = make(chan statusEvent)
+var eventCh = make(chan statusEvent, 20)
 
 func transmitEvent(c *coap.Conn, path string, s statusEvent) {
 	if c == nil {
