@@ -14,6 +14,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"net/http"
 	"sort"
 
@@ -61,6 +62,13 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	}
 
 	in, out := MakeViewRowMerger(bucket)
+	errs := make(chan error)
+	defer close(errs)
+	go func() {
+		for e := range errs {
+			log.Printf("View merge error:  %v", e)
+		}
+	}()
 	for vbid := 0; vbid < len(in); vbid++ {
 		vb, err := bucket.GetVBucket(uint16(vbid))
 		if err != nil {
@@ -68,7 +76,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, fmt.Sprintf("GetVBucket err: %v", err), 404)
 			return
 		}
-		go visitVIndex(vb, ddocId, viewId, p, in[vbid])
+		go visitVIndex(vb, ddocId, viewId, p, in[vbid], errs)
 	}
 
 	vr := &ViewResult{Rows: make([]*ViewRow, 0, 100)}
@@ -263,18 +271,20 @@ func docifyViewResult(bucket Bucket, result *ViewResult) (
 }
 
 func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
-	ch chan *ViewRow) error {
+	ch chan *ViewRow, errs chan<- error) {
 	defer close(ch)
 
 	if vb == nil {
-		return fmt.Errorf("no vbucket during visitVIndex(), ddocId: %v, viewId: %v",
+		errs <- fmt.Errorf("no vbucket during visitVIndex(), ddocId: %v, viewId: %v",
 			ddocId, viewId)
+		return
 	}
 	switch p.Stale {
 	case "false":
 		_, err := vb.viewsRefresh()
 		if err != nil {
-			return err
+			errs <- err
+			return
 		}
 	case "update_after":
 		// Asynchronously start view updates after finishing
@@ -283,12 +293,14 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 	}
 	viewsStore, err := vb.getViewsStore()
 	if err != nil {
-		return err
+		errs <- err
+		return
 	}
 	vindex := viewsStore.coll("_design/" + ddocId + "/" + viewId + VINDEX_COLL_SUFFIX)
 	if vindex == nil {
-		return fmt.Errorf("no vindex during visitVIndex(), ddocId: %v, viewId: %v",
+		errs <- fmt.Errorf("no vindex during visitVIndex(), ddocId: %v, viewId: %v",
 			ddocId, viewId)
+		return
 	}
 
 	var begKey interface{}
@@ -309,7 +321,8 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 	if begKey != nil {
 		begKeyBytes, err = vindexKey(nil, begKey)
 		if err != nil {
-			return err
+			errs <- err
+			return
 		}
 	}
 	if bytes.Equal(begKeyBytes, []byte("null\x00")) {
@@ -340,9 +353,10 @@ func visitVIndex(vb *VBucket, ddocId string, viewId string, p *ViewParams,
 		vb.markStale()
 	}
 	if errVisit != nil {
-		return errVisit
+		errs <- errVisit
+		return
 	}
-	return err
+	errs <- err
 }
 
 func MakeViewRowMerger(bucket Bucket) ([]chan *ViewRow, chan *ViewRow) {
