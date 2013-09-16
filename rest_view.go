@@ -66,7 +66,9 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	defer close(errs)
 	go func() {
 		for e := range errs {
-			log.Printf("View merge error:  %v", e)
+			if e != nil {
+				log.Printf("View merge error:  %v", e)
+			}
 		}
 	}()
 	for vbid := 0; vbid < len(in); vbid++ {
