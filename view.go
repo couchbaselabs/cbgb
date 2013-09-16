@@ -95,6 +95,7 @@ func NewViewParams() *ViewParams {
 	return &ViewParams{
 		Reduce:       true,
 		InclusiveEnd: true,
+		Stale:        "false",
 	}
 }
 
