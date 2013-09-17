@@ -235,7 +235,7 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 	logs := NewRing(10) // []string
 	emits := []*ViewRow{}
 
-	o.Set("emit", func(call otto.FunctionCall) otto.Value {
+	must(o.Set("emit", func(call otto.FunctionCall) otto.Value {
 		if len(call.ArgumentList) <= 0 {
 			errs.Push(fmt.Errorf("emit() needs an emit key argument"))
 			return otto.UndefinedValue()
@@ -255,9 +255,9 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		}
 		emits = append(emits, &ViewRow{Key: key, Value: value})
 		return otto.UndefinedValue()
-	})
+	}))
 
-	o.Set("log", func(call otto.FunctionCall) otto.Value {
+	must(o.Set("log", func(call otto.FunctionCall) otto.Value {
 		if len(call.ArgumentList) <= 0 {
 			return otto.UndefinedValue()
 		}
@@ -273,7 +273,7 @@ func (v *View) PrepareViewMapFunction() (*ViewMapFunction, error) {
 		}
 		logs.Push(string(j))
 		return otto.UndefinedValue()
-	})
+	}))
 
 	return &ViewMapFunction{
 		otto: o,
