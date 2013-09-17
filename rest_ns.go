@@ -63,13 +63,14 @@ func notImplemented(w http.ResponseWriter, r *http.Request) {
 }
 
 func restNSVersion(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{
+	mustEncode(w, map[string]interface{}{
 		"implementationVersion": VERSION + "-cbgb",
 	})
+
 }
 
 func restNSPools(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, &toplevelPool)
+	mustEncode(w, &toplevelPool)
 }
 
 func getNSNodeList(host, bucket string) []couchbase.Node {
@@ -99,7 +100,7 @@ func getNSNodeList(host, bucket string) []couchbase.Node {
 }
 
 func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{
+	mustEncode(w, map[string]interface{}{
 		"buckets": map[string]interface{}{
 			"uri": "/pools/default/buckets",
 		},
@@ -107,6 +108,7 @@ func restNSPoolsDefault(w http.ResponseWriter, r *http.Request) {
 		"nodes": getNSNodeList(r.Host, ""),
 		"stats": map[string]interface{}{"uri": "/pools/default/stats"},
 	})
+
 }
 
 func restNSBucketList(w http.ResponseWriter, r *http.Request) {
@@ -122,7 +124,7 @@ func restNSBucketList(w http.ResponseWriter, r *http.Request) {
 			rv = append(rv, b)
 		}
 	}
-	jsonEncode(w, &rv)
+	mustEncode(w, &rv)
 }
 
 func restNSBucket(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +134,7 @@ func restNSBucket(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 404)
 		return
 	}
-	jsonEncode(w, &b)
+	mustEncode(w, &b)
 }
 
 func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
@@ -195,7 +197,7 @@ func restNSBucketDDocs(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 404)
 		return
 	}
-	jsonEncode(w, &rows)
+	mustEncode(w, &rows)
 }
 
 func getNSBucketDDocs(host, bucketName, uuid string) (interface{}, error) {
@@ -267,15 +269,15 @@ func restNSStreaming(orig func(http.ResponseWriter,
 }
 
 func restNSSettingsStats(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{"sendStats": false})
+	mustEncode(w, map[string]interface{}{"sendStats": false})
 }
 
 func restNSPoolsDefaultTasks(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{})
+	mustEncode(w, map[string]interface{}{})
 }
 
 func restNSLocalRandomKey(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{"ok": false})
+	mustEncode(w, map[string]interface{}{"ok": false})
 }
 
 func restNSAPI(r *mux.Router) {

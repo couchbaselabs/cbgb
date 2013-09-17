@@ -28,16 +28,16 @@ func getIntValue(f url.Values, name string, def int64) int64 {
 	return val
 }
 
-func jsonEncode(w io.Writer, i interface{}) error {
+func mustEncode(w io.Writer, i interface{}) {
 	if headered, ok := w.(http.ResponseWriter); ok {
 		headered.Header().Set("Cache-Control", "no-cache")
 		headered.Header().Set("Content-type", "application/json")
 	}
 	err := json.NewEncoder(w).Encode(i)
 	if err != nil {
+		log.Printf("Failed to marshal %v: %v", i, err)
 		http.Error(w.(http.ResponseWriter), err.Error(), 500)
 	}
-	return err
 }
 
 // Responder used for streaming results that prevents duplicate

@@ -122,7 +122,7 @@ func couchDbGetView(w http.ResponseWriter, r *http.Request) {
 	}
 	vr.TotalRows = len(vr.Rows)
 
-	jsonEncode(w, vr)
+	mustEncode(w, vr)
 }
 
 // Originally from github.com/couchbaselabs/walrus, but modified to

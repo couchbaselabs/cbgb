@@ -206,9 +206,10 @@ func couchDbGetDb(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "HEAD" {
 		return
 	}
-	jsonEncode(w, map[string]interface{}{
+	mustEncode(w, map[string]interface{}{
 		"db_name": bucketName,
 	})
+
 }
 
 // TODO this implementation does no conflict resolution
@@ -231,7 +232,7 @@ func couchDbRevsDiff(w http.ResponseWriter, r *http.Request) {
 	for key, val := range revsDiffRequest {
 		revsDiffResponse[key] = map[string]interface{}{"missing": val}
 	}
-	jsonEncode(w, revsDiffResponse)
+	mustEncode(w, revsDiffResponse)
 }
 
 type BulkDocsItemMeta struct {
@@ -316,7 +317,7 @@ func couchDbBulkDocs(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	w.WriteHeader(201)
-	jsonEncode(w, bulkDocsResponse)
+	mustEncode(w, bulkDocsResponse)
 }
 
 func couchDbEnsureFullCommit(w http.ResponseWriter, r *http.Request) {
@@ -331,7 +332,7 @@ func couchDbEnsureFullCommit(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(201)
-	jsonEncode(w, map[string]interface{}{"ok": true})
+	mustEncode(w, map[string]interface{}{"ok": true})
 }
 
 func couchDbGetDoc(w http.ResponseWriter, r *http.Request) {

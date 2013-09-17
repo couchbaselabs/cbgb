@@ -106,7 +106,7 @@ func restGetSettings(w http.ResponseWriter, r *http.Request) {
 			m[f.Name] = f.Value
 		}
 	})
-	jsonEncode(w, m)
+	mustEncode(w, m)
 }
 
 func restGetStats(w http.ResponseWriter, r *http.Request) {
@@ -117,7 +117,7 @@ func restGetStats(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(statsSnapshotDelay)
 		st = snapshotServerStats()
 	}
-	jsonEncode(w, st.ToMap())
+	mustEncode(w, st.ToMap())
 }
 
 func restGetBuckets(w http.ResponseWriter, r *http.Request) {
@@ -132,7 +132,7 @@ func restGetBuckets(w http.ResponseWriter, r *http.Request) {
 			bn = append(bn, n)
 		}
 	}
-	jsonEncode(w, bn)
+	mustEncode(w, bn)
 }
 
 // Computes/hashes the bucket's subdir given a bucket name...
@@ -210,12 +210,13 @@ func restGetBucket(w http.ResponseWriter, r *http.Request) {
 			partitions[strconv.Itoa(int(vbm.Id))] = vbm
 		}
 	}
-	jsonEncode(w, map[string]interface{}{
+	mustEncode(w, map[string]interface{}{
 		"name":       bucketName,
 		"itemBytes":  bucket.GetItemBytes(),
 		"settings":   settings.SafeView(),
 		"partitions": partitions,
 	})
+
 }
 
 func restDeleteBucket(w http.ResponseWriter, r *http.Request) {
@@ -272,7 +273,7 @@ func restGetBucketStats(w http.ResponseWriter, r *http.Request) {
 		time.Sleep(statsSnapshotDelay)
 		st = bucket.SnapshotStats()
 	}
-	jsonEncode(w, st.ToMap())
+	mustEncode(w, st.ToMap())
 }
 
 func restGetBucketErrs(w http.ResponseWriter, r *http.Request) {
@@ -280,7 +281,7 @@ func restGetBucketErrs(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	jsonEncode(w, bucket.Errs())
+	mustEncode(w, bucket.Errs())
 }
 
 func restGetBucketLogs(w http.ResponseWriter, r *http.Request) {
@@ -288,7 +289,7 @@ func restGetBucketLogs(w http.ResponseWriter, r *http.Request) {
 	if bucket == nil {
 		return
 	}
-	jsonEncode(w, bucket.Logs())
+	mustEncode(w, bucket.Logs())
 }
 
 // To start a cpu profiling...
@@ -337,7 +338,7 @@ func restProfileMemory(w http.ResponseWriter, r *http.Request) {
 }
 
 func restGetRuntime(w http.ResponseWriter, r *http.Request) {
-	jsonEncode(w, map[string]interface{}{
+	mustEncode(w, map[string]interface{}{
 		"version":   VERSION,
 		"startTime": startTime,
 		"arch":      runtime.GOARCH,
@@ -353,12 +354,13 @@ func restGetRuntime(w http.ResponseWriter, r *http.Request) {
 			"memProfileRate": runtime.MemProfileRate,
 		},
 	})
+
 }
 
 func restGetRuntimeMemStats(w http.ResponseWriter, r *http.Request) {
 	memStats := &runtime.MemStats{}
 	runtime.ReadMemStats(memStats)
-	jsonEncode(w, memStats)
+	mustEncode(w, memStats)
 }
 
 func restPostRuntimeGC(w http.ResponseWriter, r *http.Request) {
