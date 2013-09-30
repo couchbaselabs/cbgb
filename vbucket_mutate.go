@@ -161,7 +161,7 @@ func vbMutateItemNew(v *VBucket, w io.Writer, req *gomemcached.MCRequest,
 		}
 		exp = binary.BigEndian.Uint32(req.Extras[16:])
 	} else {
-		if len(req.Extras) == 8 {
+		if len(req.Extras) >= 8 {
 			flag = binary.BigEndian.Uint32(req.Extras)
 			exp = binary.BigEndian.Uint32(req.Extras[4:])
 		}
