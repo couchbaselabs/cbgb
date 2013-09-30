@@ -216,13 +216,25 @@ func updateMutationStats(cmdIn gomemcached.CommandCode, stats *BucketStats) (cmd
 	case gomemcached.SET:
 		cmd = gomemcached.SET
 		atomic.AddInt64(&stats.Sets, 1)
+	case SET_WITH_META:
+		cmd = gomemcached.SET
+		atomic.AddInt64(&stats.Sets, 1)
 	case gomemcached.SETQ:
+		cmd = gomemcached.SET
+		atomic.AddInt64(&stats.Sets, 1)
+	case SETQ_WITH_META:
 		cmd = gomemcached.SET
 		atomic.AddInt64(&stats.Sets, 1)
 	case gomemcached.ADD:
 		cmd = gomemcached.ADD
 		atomic.AddInt64(&stats.Adds, 1)
+	case ADD_WITH_META:
+		cmd = gomemcached.ADD
+		atomic.AddInt64(&stats.Adds, 1)
 	case gomemcached.ADDQ:
+		cmd = gomemcached.ADD
+		atomic.AddInt64(&stats.Adds, 1)
+	case ADDQ_WITH_META:
 		cmd = gomemcached.ADD
 		atomic.AddInt64(&stats.Adds, 1)
 	case gomemcached.REPLACE:

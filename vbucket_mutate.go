@@ -88,7 +88,7 @@ func vbMutate(v *VBucket, w io.Writer,
 				Body:   []byte(fmt.Sprintf("Store set error %v", err)),
 			}
 		} else {
-			if !req.Opcode.IsQuiet() {
+			if !IsQuietEx(req.Opcode) {
 				res = &gomemcached.MCResponse{Cas: itemCas}
 				if cmd == gomemcached.INCREMENT || cmd == gomemcached.DECREMENT {
 					res.Body = make([]byte, 8)
@@ -259,7 +259,7 @@ func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 			return
 		}
 		if prevItem == nil {
-			if req.Opcode.IsQuiet() {
+			if IsQuietEx(req.Opcode) {
 				return
 			}
 			res = &gomemcached.MCResponse{Status: gomemcached.KEY_ENOENT}
@@ -275,7 +275,7 @@ func vbDelete(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (res *gomemca
 				Body:   []byte(fmt.Sprintf("Store del error %v", err)),
 			}
 		} else {
-			if !req.Opcode.IsQuiet() {
+			if !IsQuietEx(req.Opcode) {
 				res = &gomemcached.MCResponse{Cas: cas}
 			}
 		}

@@ -302,7 +302,7 @@ func vbGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
 	}
 	if i == nil {
 		atomic.AddInt64(&v.stats.GetMisses, 1)
-		if req.Opcode.IsQuiet() {
+		if IsQuietEx(req.Opcode) {
 			return nil
 		}
 		return &gomemcached.MCResponse{Status: gomemcached.KEY_ENOENT}
@@ -451,4 +451,9 @@ func (v *VBucket) Visit(start []byte,
 	return v.ps.visitItems(start, true, func(i *item) bool {
 		return visitor(i.key, i.data)
 	})
+}
+
+func IsQuietEx(c gomemcached.CommandCode) bool {
+	return c.IsQuiet() ||
+		c == GETQ_META || c == SETQ_WITH_META || c == ADDQ_WITH_META || c == DELETEQ_WITH_META
 }
