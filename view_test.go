@@ -605,3 +605,57 @@ func TestCouchViewWithMutations(t *testing.T) {
 
 	testExpectations() // Re-test the expectations.
 }
+
+// This tests the behavior when execution of the map function results in a TypeError
+// for documents when amount < 2 we try to emit an expression which access a field inside of undefiend, triggering a TypeError
+// The correct behavior is to emit no rows for this document, but otherwise continue normal processing.
+func TestCouchViewMapFunctionTypeError(t *testing.T) {
+	d, _, bucket := testSetupDefaultBucket(t, 1, uint16(0))
+	defer os.RemoveAll(d)
+	mr := testSetupMux(d)
+
+	testSetupDDoc(t, bucket, `{
+		"_id":"_design/d0",
+		"language": "javascript",
+		"views": {
+			"v0": {
+				"map": "function(doc) { if(doc.amount < 2) { emit(doc[0].amount, null) } else { emit(doc.amount, null) } }"
+			}
+		}
+    }`, nil)
+
+	testExpectations := func() {
+		rr := httptest.NewRecorder()
+		r, _ := http.NewRequest("GET",
+			"http://127.0.0.1/default/_design/d0/_view/v0?stale=false", nil)
+		mr.ServeHTTP(rr, r)
+		if rr.Code != 200 {
+			t.Errorf("expected req to 200, got: %#v, %v",
+				rr, rr.Body.String())
+		}
+		dd := &ViewResult{}
+		err := jsonUnmarshal(rr.Body.Bytes(), dd)
+		if err != nil {
+			t.Errorf("expected good view result, err: %v", err)
+		}
+		k := []string{"d", "b", "c"}
+		a := []int{2, 3, 4}
+		if dd.TotalRows != len(k) {
+			t.Errorf("expected %v rows, got: %v, %v, %v",
+				len(k), dd.TotalRows, dd, rr.Body.String())
+		}
+		for i, row := range dd.Rows {
+			if k[i] != row.Id {
+				t.Errorf("expected row %#v to match k %#v, i %v", row, k[i], i)
+			}
+			if a[i] != asInt(row.Key) {
+				t.Errorf("expected row %#v to match a %#v, i %v", row, a[i], i)
+			}
+			if row.Doc != nil {
+				t.Errorf("expected no doc since it's not include_docs, got: %#v", row)
+			}
+		}
+	}
+
+	testExpectations()
+}
