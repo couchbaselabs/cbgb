@@ -183,11 +183,11 @@ func (v *VBucket) execViewMapFunction(ddocId string, ddoc *DDoc,
 	}
 	_, err = pvmf.mapf.Call(pvmf.mapf, odoc, ometa)
 	if err != nil {
-		// error executing map function should simply log it and emits no rows for this item
-		err = fmt.Errorf("map function err, "+
+		// error executing map function should simply log it
+		// and emits no rows for this item
+		log.Printf("map function err, "+
 			"ddocId: %v, viewId: %v, docId: %v, err: %s",
 			ddocId, viewId, docId, err)
-		log.Printf("%v", err)
 		return nil, nil
 	}
 	emits, logs, errs := pvmf.restart()
