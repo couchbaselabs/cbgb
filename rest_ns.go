@@ -154,7 +154,7 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		Type:         "membase",
 		Name:         bucketName,
 		NodeLocator:  "vbucket",
-		Nodes:        getNSNodeList(host, bucketName),
+		NodesJson:    getNSNodeList(host, bucketName),
 		Replicas:     1,
 		URI:          "/pools/default/buckets/" + bucketName + bucketUUIDSuffix,
 		StreamingURI: "/poolsStreaming/default/buckets/" + bucketName,
@@ -178,14 +178,14 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 	if bs.PasswordHashFunc == "" && bs.PasswordSalt == "" {
 		rv.Password = bs.PasswordHash // The json saslPassword field.
 	}
-	rv.VBucketServerMap.HashAlgorithm = "CRC"
-	rv.VBucketServerMap.NumReplicas = 1
-	rv.VBucketServerMap.ServerList = []string{getBindAddress(host)}
+	rv.VBSMJson.HashAlgorithm = "CRC"
+	rv.VBSMJson.NumReplicas = 1
+	rv.VBSMJson.ServerList = []string{getBindAddress(host)}
 
 	np := bs.NumPartitions
-	rv.VBucketServerMap.VBucketMap = make([][]int, np)
+	rv.VBSMJson.VBucketMap = make([][]int, np)
 	for i := 0; i < np; i++ {
-		rv.VBucketServerMap.VBucketMap[i] = []int{0, -1}
+		rv.VBSMJson.VBucketMap[i] = []int{0, -1}
 	}
 	return rv, nil
 }
