@@ -38,16 +38,17 @@ func TestPeriodicallyNormal(t *testing.T) {
 	qt := newPeriodically(time.Millisecond, 1)
 	defer qt.Stop()
 
-	ran := int32(0)
+	signaled := make(chan bool)
 	qt.Register(stopch, func(time.Time) bool {
-		atomic.AddInt32(&ran, 1)
+		signaled <- true
 		return true
 	})
 
-	time.Sleep(5 * time.Millisecond)
-
-	if atomic.LoadInt32(&ran) < 1 {
-		t.Fatalf("Ticker seems to not be updating with real time: %v", ran)
+	select {
+	case <-signaled:
+		// ok
+	case <-time.After(50 * time.Millisecond):
+		t.Fatalf("Ticker seems to not be updating with real time")
 	}
 }
 
