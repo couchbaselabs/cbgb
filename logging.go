@@ -10,9 +10,7 @@ import (
 func initLogger(slog bool) {
 	if slog {
 		lw, err := syslog.New(syslog.LOG_INFO, "cbgb")
-		if err != nil {
-			log.Fatalf("Can't initialize syslog: %v", err)
-		}
+		must(err)
 		log.SetOutput(lw)
 		log.SetFlags(0)
 	}
