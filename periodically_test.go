@@ -47,7 +47,7 @@ func TestPeriodicallyNormal(t *testing.T) {
 	select {
 	case <-signaled:
 		// ok
-	case <-time.After(50 * time.Millisecond):
+	case <-time.After(time.Second):
 		t.Fatalf("Ticker seems to not be updating with real time")
 	}
 }
