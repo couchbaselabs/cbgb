@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"io"
 	"io/ioutil"
-	"log"
 	"os"
 	"reflect"
 	"strconv"
@@ -15,11 +14,6 @@ import (
 
 	"github.com/dustin/gomemcached"
 )
-
-// Don't do any normal logging while running tests.
-func init() {
-	log.SetOutput(ioutil.Discard)
-}
 
 type slowWriter struct {
 	numWritten  int
