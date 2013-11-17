@@ -79,6 +79,16 @@ func TestSaslBadAuthReq(t *testing.T) {
 	if res.Status != gomemcached.EINVAL {
 		t.Errorf("expected SASL_AUTH with bad body to fail, got: %v", res)
 	}
+
+	res = rh.HandleMessage(ioutil.Discard, nil, &gomemcached.MCRequest{
+		Opcode: gomemcached.SASL_AUTH,
+		Key:    []byte("NOTVERYPLAIN"),
+		Body:   []byte("\x00x\x00y"),
+	})
+
+	if res.Status != gomemcached.EINVAL {
+		t.Errorf("expected SASL_AUTH with bad auth to fail, got: %v", res)
+	}
 }
 
 func TestSaslRejectedAuth(t *testing.T) {
