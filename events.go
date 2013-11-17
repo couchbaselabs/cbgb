@@ -50,7 +50,7 @@ func transmitEvent(c coapSender, path string, s statusEvent) error {
 	return err
 }
 
-func dialCoap(ustr string) (*coap.Conn, string) {
+func dialCoap(ustr string) (coapSender, string) {
 	if ustr == "" {
 		return nil, ""
 	}
