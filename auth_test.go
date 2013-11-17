@@ -91,5 +91,31 @@ func TestAuthError401(t *testing.T) {
 }
 
 func TestInitAdmin(t *testing.T) {
-	initAdmin() // Should not panic.
+	*adminUser = ""
+	*adminPass = ""
+	err := initAdmin()
+	if err != nil {
+		t.Errorf("Errored in ''/'' case: %v", err)
+	}
+
+	*adminUser = "u"
+	*adminPass = "p"
+	err = initAdmin()
+	if err != nil {
+		t.Errorf("Errored in 'u'/'p' case: %v", err)
+	}
+
+	*adminUser = "u"
+	*adminPass = ""
+	err = initAdmin()
+	if err == nil {
+		t.Errorf("Didn't error in the in 'u'/'' case")
+	}
+
+	*adminUser = ""
+	*adminPass = "p"
+	err = initAdmin()
+	if err == nil {
+		t.Errorf("Didn't error in the in ''/'p' case")
+	}
 }

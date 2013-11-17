@@ -28,7 +28,7 @@ import (
 var adminUser = flag.String("adminUser", "", "Admin username")
 var adminPass = flag.String("adminPass", "", "Admin password")
 
-func initAdmin() {
+func initAdmin() error {
 	if *adminUser == "" {
 		*adminUser = os.Getenv("CBGB_ADMIN_USER")
 	}
@@ -36,11 +36,12 @@ func initAdmin() {
 		*adminPass = os.Getenv("CBGB_ADMIN_PASS")
 	}
 	if *adminUser != "" && *adminPass == "" {
-		log.Fatalf("error: adminUser was supplied, but missing adminPass param")
+		return fmt.Errorf("adminUser was supplied, but missing adminPass param")
 	}
 	if *adminUser == "" && *adminPass != "" {
-		log.Fatalf("error: adminPass was supplied, but missing adminUser param")
+		return fmt.Errorf("adminPass was supplied, but missing adminUser param")
 	}
+	return nil
 }
 
 type contextKey int

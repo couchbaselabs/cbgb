@@ -103,7 +103,7 @@ func main() {
 
 	startInfoHandler()
 
-	initAdmin()
+	must(initAdmin())
 	initPeriodically()
 
 	if !*verbose {
