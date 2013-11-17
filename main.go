@@ -23,7 +23,6 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/daaku/go.flagbytes"
@@ -204,7 +203,7 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 	return bucket, nil
 }
 
-var infoSigs = []os.Signal{syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP}
+var infoSigs []os.Signal
 
 type sigHandler struct {
 	ch   chan os.Signal
