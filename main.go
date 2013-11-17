@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 	"runtime/pprof"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/daaku/go.flagbytes"
@@ -104,7 +105,7 @@ func main() {
 
 	initLogger(*logSyslog)
 
-	dumpOnSignalForPlatform()
+	startInfoHandler()
 
 	initAdmin()
 	initPeriodically()
@@ -203,13 +204,15 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 	return bucket, nil
 }
 
+var infoSigs = []os.Signal{syscall.SIGINT, syscall.SIGQUIT, syscall.SIGHUP}
+
 type sigHandler struct {
 	ch   chan os.Signal
 	w    io.Writer
 	hook func()
 }
 
-func NewSigHandler(sigs ...os.Signal) *sigHandler {
+func NewSigHandler(sigs []os.Signal) *sigHandler {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, sigs...)
 	return &sigHandler{c, os.Stderr, func() {}}
@@ -226,4 +229,10 @@ func (c *sigHandler) Close() error {
 	signal.Stop(c.ch)
 	close(c.ch)
 	return nil
+}
+
+func startInfoHandler() {
+	if len(infoSigs) > 0 {
+		go NewSigHandler(infoSigs).Run()
+	}
 }

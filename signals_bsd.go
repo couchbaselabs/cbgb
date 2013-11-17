@@ -10,10 +10,14 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-// +build windows !darwin !freebsd !linux !openbsd !netbsd
+// +build !linux !windows
 
 package main
 
-func dumpOnSignalForPlatform() {
-	// No-op for windows.
+import (
+	"syscall"
+)
+
+func init() {
+	infoSigs = append(infoSigs, syscall.SIGINFO)
 }

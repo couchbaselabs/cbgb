@@ -10,7 +10,7 @@ import (
 func TestDumpOnSignal(t *testing.T) {
 	wg := sync.WaitGroup{}
 
-	h := NewSigHandler(os.Interrupt)
+	h := NewSigHandler([]os.Signal{os.Interrupt})
 	buf := &bytes.Buffer{}
 	h.hook = func() {
 		h.Close()
