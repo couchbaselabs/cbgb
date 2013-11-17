@@ -55,12 +55,11 @@ func (f *fileLike) WriteAt(p []byte, off int64) (n int, err error) {
 	return
 }
 
-func (f *fileLike) Truncate(size int64) (err error) {
+func (f *fileLike) Truncate(size int64) error {
 	if f.mode&(os.O_WRONLY|os.O_RDWR) == 0 {
 		return unWritable
 	}
-	err = f.fs.Do(f.path, f.mode, func(file *os.File) error {
+	return f.fs.Do(f.path, f.mode, func(file *os.File) error {
 		return file.Truncate(size)
 	})
-	return
 }

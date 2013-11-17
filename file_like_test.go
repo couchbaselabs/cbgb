@@ -72,6 +72,11 @@ func TestFileLike(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Should've failed write, wrote %v bytes instead", n)
 	}
+	// Also, truncate
+	err = f.Truncate(1)
+	if err == nil {
+		t.Fatalf("Truncate should've failed, but didn't")
+	}
 
 	n, err = f.ReadAt(buf, 32768)
 	if err != nil {
@@ -135,5 +140,39 @@ func TestFileLikeRW(t *testing.T) {
 	s := string(buf[:len("a write")])
 	if s != "a write" {
 		t.Fatalf("Misread:  %q", s)
+	}
+}
+
+func TestFileLikeTruncate(t *testing.T) {
+	fn := ",file-like-thing-trunc"
+	defer os.Remove(fn)
+
+	fs := NewFileService(1)
+	defer fs.Close()
+	f, err := fs.OpenFile(fn, os.O_CREATE|os.O_RDWR|os.O_EXCL)
+	if err != nil {
+		t.Fatalf("Error opening file: %v", err)
+	}
+
+	buf := make([]byte, 4096)
+	copy(buf, []byte("a write"))
+
+	_, err = f.WriteAt(buf, 8192)
+	if err != nil {
+		t.Fatalf("Error writing: %v", err)
+	}
+
+	err = f.Truncate(300)
+	if err != nil {
+		t.Fatalf("Failed to truncate: %v", err)
+	}
+
+	fi, err := os.Stat(fn)
+	if err != nil {
+		t.Fatalf("stat fail: %v", err)
+	}
+
+	if fi.Size() != 300 {
+		t.Fatalf("Expected size = 300, got %v", fi.Size())
 	}
 }
