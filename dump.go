@@ -19,5 +19,5 @@ import (
 )
 
 func dumpOnSignalForPlatform() {
-	dumpOnSignal(syscall.SIGUSR2)
+	go NewSigHandler(syscall.SIGUSR2).Run()
 }

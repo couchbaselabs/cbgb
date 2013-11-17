@@ -15,6 +15,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"log"
 	"os"
@@ -103,7 +104,7 @@ func main() {
 
 	initLogger(*logSyslog)
 
-	go dumpOnSignalForPlatform()
+	dumpOnSignalForPlatform()
 
 	initAdmin()
 	initPeriodically()
@@ -202,10 +203,27 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 	return bucket, nil
 }
 
-func dumpOnSignal(signals ...os.Signal) {
+type sigHandler struct {
+	ch   chan os.Signal
+	w    io.Writer
+	hook func()
+}
+
+func NewSigHandler(sigs ...os.Signal) *sigHandler {
 	c := make(chan os.Signal, 1)
-	signal.Notify(c, signals...)
-	for _ = range c {
-		pprof.Lookup("goroutine").WriteTo(os.Stderr, 1)
+	signal.Notify(c, sigs...)
+	return &sigHandler{c, os.Stderr, func() {}}
+}
+
+func (c *sigHandler) Run() {
+	for _ = range c.ch {
+		pprof.Lookup("goroutine").WriteTo(c.w, 1)
+		c.hook()
 	}
+}
+
+func (c *sigHandler) Close() error {
+	signal.Stop(c.ch)
+	close(c.ch)
+	return nil
 }
