@@ -315,7 +315,8 @@ func (b *livebucket) Load() (err error) {
 			return errVisit
 		}
 	}
-	sendEvent(b.name, "state", map[string]interface{}{"state": "active"})
+	defaultEventManager.sendEvent(b.name, "state",
+		map[string]interface{}{"state": "active"})
 	return nil
 }
 

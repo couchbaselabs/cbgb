@@ -17,17 +17,24 @@ type statusEvent struct {
 	Data   interface{} `json:"data,omitempty"`
 }
 
-var eventCh = make(chan statusEvent, 20)
+type eventManager struct {
+	eventCh chan statusEvent
+}
 
-func transmitEvent(c *coap.Conn, path string, s statusEvent) {
+var defaultEventManager eventManager
+
+type coapSender interface {
+	Send(coap.Message) (*coap.Message, error)
+}
+
+func transmitEvent(c coapSender, path string, s statusEvent) error {
 	if c == nil {
-		return
+		return nil
 	}
 
 	payload, err := json.Marshal(s)
 	if err != nil {
-		log.Printf("Error marshaling %v: %v", s, err)
-		return
+		return err
 	}
 
 	req := coap.Message{
@@ -40,43 +47,50 @@ func transmitEvent(c *coap.Conn, path string, s statusEvent) {
 	req.SetPathString(path)
 
 	_, err = c.Send(req)
-	if err != nil {
-		log.Printf("Error transmitting %v: %v", req, err)
-	}
+	return err
 }
 
-func dialCoap() (*coap.Conn, string) {
-	if *eventUrl == "" {
+func dialCoap(ustr string) (*coap.Conn, string) {
+	if ustr == "" {
 		return nil, ""
 	}
-	u, err := url.Parse(*eventUrl)
+	u, err := url.Parse(ustr)
 	if err != nil {
 		log.Printf("Error dialing coap from %q: %v",
-			*eventUrl, err)
+			ustr, err)
 		return nil, ""
 	}
 	conn, err := coap.Dial("udp", u.Host)
 	if err != nil {
-		log.Printf("Error dialing coap from %q: %v",
-			*eventUrl, err)
+		log.Printf("Error dialing coap from %q: %v", ustr, err)
 		return nil, ""
 	}
 	return conn, u.Path
 }
 
-func deliverEvents() {
-	c, path := dialCoap()
+func (e *eventManager) deliverEvents(u string) {
+	c, path := dialCoap(u)
 
-	for ev := range eventCh {
-		transmitEvent(c, path, ev)
+	for ev := range e.eventCh {
+		err := transmitEvent(c, path, ev)
+		if err != nil {
+			log.Printf("Error transmitting %v: %v", ev, err)
+		}
 	}
 }
 
-func sendEvent(name, t string, data interface{}) {
-	e := statusEvent{name, t, data}
+func (e *eventManager) sendEvent(name, t string, data interface{}) bool {
+	ev := statusEvent{name, t, data}
 	select {
-	case eventCh <- e:
+	case e.eventCh <- ev:
+		return true
 	default:
-		log.Printf("Dropped event: %v", e)
+		log.Printf("Dropped event: %v", ev)
+		return false
 	}
+}
+
+func (e *eventManager) Close() error {
+	close(e.eventCh)
+	return nil
 }

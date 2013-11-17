@@ -135,7 +135,8 @@ func main() {
 	buckets = bs
 	bucketSettings = bss
 
-	go deliverEvents()
+	defaultEventManager = eventManager{make(chan statusEvent, 20)}
+	go defaultEventManager.deliverEvents(*eventUrl)
 
 	mainServer(*defaultBucketName, *addr, *maxConns, *restCouch, *restNS,
 		*staticPath, filepath.Join(*data, ".staticCache"))
