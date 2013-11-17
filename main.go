@@ -193,9 +193,5 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 		bucket.SetVBState(uint16(vbid), VBActive)
 	}
 
-	if err = bucket.Flush(); err != nil {
-		return nil, err
-	}
-
-	return bucket, nil
+	return bucket, bucket.Flush()
 }
