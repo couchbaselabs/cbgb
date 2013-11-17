@@ -10,14 +10,44 @@
 // implied. See the License for the specific language governing
 // permissions and limitations under the License.
 
-// +build !windows
-
 package main
 
 import (
-	"syscall"
+	"io"
+	"os"
+	"os/signal"
+	"runtime/pprof"
 )
 
-func init() {
-	infoSigs = append(infoSigs, syscall.SIGUSR2)
+var infoSigs []os.Signal
+
+type sigHandler struct {
+	ch   chan os.Signal
+	w    io.Writer
+	hook func()
+}
+
+func NewSigHandler(sigs []os.Signal) *sigHandler {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, sigs...)
+	return &sigHandler{c, os.Stderr, func() {}}
+}
+
+func (c *sigHandler) Run() {
+	for _ = range c.ch {
+		pprof.Lookup("goroutine").WriteTo(c.w, 1)
+		c.hook()
+	}
+}
+
+func (c *sigHandler) Close() error {
+	signal.Stop(c.ch)
+	close(c.ch)
+	return nil
+}
+
+func startInfoHandler() {
+	if len(infoSigs) > 0 {
+		go NewSigHandler(infoSigs).Run()
+	}
 }

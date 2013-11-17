@@ -15,13 +15,10 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"os/signal"
 	"path/filepath"
-	"runtime/pprof"
 	"strings"
 	"time"
 
@@ -201,37 +198,4 @@ func createBucket(bucketName string, bucketSettings *BucketSettings) (
 	}
 
 	return bucket, nil
-}
-
-var infoSigs []os.Signal
-
-type sigHandler struct {
-	ch   chan os.Signal
-	w    io.Writer
-	hook func()
-}
-
-func NewSigHandler(sigs []os.Signal) *sigHandler {
-	c := make(chan os.Signal, 1)
-	signal.Notify(c, sigs...)
-	return &sigHandler{c, os.Stderr, func() {}}
-}
-
-func (c *sigHandler) Run() {
-	for _ = range c.ch {
-		pprof.Lookup("goroutine").WriteTo(c.w, 1)
-		c.hook()
-	}
-}
-
-func (c *sigHandler) Close() error {
-	signal.Stop(c.ch)
-	close(c.ch)
-	return nil
-}
-
-func startInfoHandler() {
-	if len(infoSigs) > 0 {
-		go NewSigHandler(infoSigs).Run()
-	}
 }
