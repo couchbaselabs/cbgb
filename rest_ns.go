@@ -75,9 +75,7 @@ func restNSPools(w http.ResponseWriter, r *http.Request) {
 
 func getNSNodeList(host, bucket string) []couchbase.Node {
 	port, err := strconv.Atoi((*addr)[strings.LastIndex(*addr, ":")+1:])
-	if err != nil {
-		log.Fatalf("Unable to determine port to advertise")
-	}
+	must(err)
 	node := couchbase.Node{
 		ClusterCompatibility: 131072,
 		ClusterMembership:    "active",
@@ -320,9 +318,8 @@ func restNSAPI(r *mux.Router) {
 
 func restNSServe(restNS string, staticPath string, staticCachePath string) {
 	r := mux.NewRouter()
-	if err := initStatic(r, "/_static/", staticPath, staticCachePath); err != nil {
-		log.Fatalf("error initializing static resources: %v", err)
-	}
+	err := initStatic(r, "/_static/", staticPath, staticCachePath)
+	must(err)
 	restAPI(r)
 	restNSAPI(r)
 	cbr := r.PathPrefix("/couchBase/").Subrouter()
