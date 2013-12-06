@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/dustin/gomemcached"
@@ -65,6 +66,17 @@ func TestGetHTTPInt(t *testing.T) {
 			t.Errorf("Expected %v for %v (%q) got %v",
 				v, k, k[v], got)
 		}
+	}
+}
+
+func TestMustEncodeBadInput(t *testing.T) {
+	recorder := httptest.NewRecorder()
+	mustEncode(recorder, make(chan bool))
+	if recorder.Code != 500 {
+		t.Errorf("Expected code 500, was %v", recorder.Code)
+	}
+	if !strings.Contains(recorder.Body.String(), "json: unsupported type") {
+		t.Errorf("Expected unsupported type error, got %v", recorder.Body)
 	}
 }
 
