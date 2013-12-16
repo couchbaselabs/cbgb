@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/dustin/yellow"
 	"github.com/steveyen/gkvlite"
 )
 
@@ -200,23 +201,14 @@ func CreateNewUUID() string {
 
 func deadlinedHandler(deadline time.Duration, h http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		start := time.Now()
 		q := ""
 		if r.URL.RawQuery != "" {
 			q = "?" + r.URL.RawQuery
 		}
 
-		wd := time.AfterFunc(deadline, func() {
-			log.Printf("%v:%v%v is taking longer than %v",
-				r.Method, r.URL.Path, q, deadline)
-		})
-
+		defer yellow.DeadlineLog(deadline, "%v:%v%v with a deadline of %v",
+			r.Method, r.URL.Path, q, deadline).Done()
 		h(w, r)
-
-		if !wd.Stop() {
-			log.Printf("%v:%v%v eventually finished in %v",
-				r.Method, r.URL.Path, q, time.Since(start))
-		}
 	}
 }
 
