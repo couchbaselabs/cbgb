@@ -164,28 +164,28 @@ func sessionLoop(s io.ReadWriteCloser, addr string, handler *reqHandler,
 
 	var err error
 	for err == nil {
-		err = handleMessage(s, s, handler)
+		_, err = handleMessage(s, s, handler)
 	}
 	if err != io.EOF {
 		log.Printf("error: sessionLoop, addr: %v, err: %v", addr, err)
 	}
 }
 
-func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) error {
+func handleMessage(w io.Writer, r io.Reader, handler *reqHandler) (int, error) {
 	req, err := memcached.ReadPacket(r)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	res := handler.HandleMessage(w, r, &req)
 	if res == nil { // Quiet command
-		return nil
+		return 0, nil
 	}
 	if !res.Fatal {
 		res.Opcode = req.Opcode
 		res.Opaque = req.Opaque
 		return res.Transmit(w)
 	}
-	return io.EOF
+	return 0, io.EOF
 }
 
 func waitForConnections(ls net.Listener, maxConns int, buckets *Buckets,

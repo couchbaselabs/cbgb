@@ -124,7 +124,7 @@ type funreq struct {
 }
 
 type transmissible interface {
-	Transmit(io.Writer) error
+	Transmit(io.Writer) (int, error)
 }
 
 // Given an io.Writer, return a channel that can be fed things that
@@ -146,7 +146,7 @@ func transmitPackets(w io.Writer) (chan<- transmissible, <-chan error) {
 	errs := make(chan error, 1)
 	go func() {
 		for pkt := range ch {
-			err := pkt.Transmit(w)
+			_, err := pkt.Transmit(w)
 			if err != nil {
 				errs <- err
 				for _ = range ch {

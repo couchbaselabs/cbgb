@@ -31,13 +31,13 @@ const (
 
 const (
 	// TODO: Graduate these to gomemcached/couchbase one day.
-	GET_META = gomemcached.CommandCode(0xa0)
-	GETQ_META = gomemcached.CommandCode(0xa1)
-	SET_WITH_META = gomemcached.CommandCode(0xa2)
-	SETQ_WITH_META = gomemcached.CommandCode(0xa3)
-	ADD_WITH_META = gomemcached.CommandCode(0xa4)
-	ADDQ_WITH_META = gomemcached.CommandCode(0xa5)
-	DELETE_WITH_META = gomemcached.CommandCode(0xa8)
+	GET_META          = gomemcached.CommandCode(0xa0)
+	GETQ_META         = gomemcached.CommandCode(0xa1)
+	SET_WITH_META     = gomemcached.CommandCode(0xa2)
+	SETQ_WITH_META    = gomemcached.CommandCode(0xa3)
+	ADD_WITH_META     = gomemcached.CommandCode(0xa4)
+	ADDQ_WITH_META    = gomemcached.CommandCode(0xa5)
+	DELETE_WITH_META  = gomemcached.CommandCode(0xa8)
 	DELETEQ_WITH_META = gomemcached.CommandCode(0xa9)
 )
 
@@ -100,14 +100,14 @@ var dispatchTable = [256]dispatchFun{
 	gomemcached.DECREMENT:  vbMutate,
 	gomemcached.DECREMENTQ: vbMutate,
 
-	GET_META: vbGet,
-	GETQ_META: vbGet,
-	SET_WITH_META: vbMutate,
-	SETQ_WITH_META: vbMutate,
-	DELETE_WITH_META: vbDelete,
+	GET_META:          vbGet,
+	GETQ_META:         vbGet,
+	SET_WITH_META:     vbMutate,
+	SETQ_WITH_META:    vbMutate,
+	DELETE_WITH_META:  vbDelete,
 	DELETEQ_WITH_META: vbDelete,
-	ADD_WITH_META: vbMutate,
-	ADDQ_WITH_META: vbMutate,
+	ADD_WITH_META:     vbMutate,
+	ADDQ_WITH_META:    vbMutate,
 
 	gomemcached.RGET: vbRGet,
 
@@ -424,7 +424,7 @@ func vbRGet(v *VBucket, w io.Writer, req *gomemcached.MCRequest) (
 				Extras: extras,
 				Body:   i.data,
 			}
-			err := r.Transmit(w)
+			_, err := r.Transmit(w)
 			if err != nil {
 				res = &gomemcached.MCResponse{Fatal: true}
 				return false
