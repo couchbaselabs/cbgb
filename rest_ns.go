@@ -152,7 +152,7 @@ func getNSBucket(host, bucketName, uuid string) (*couchbase.Bucket, error) {
 		Type:         "membase",
 		Name:         bucketName,
 		NodeLocator:  "vbucket",
-		NodesJson:    getNSNodeList(host, bucketName),
+		NodesJSON:    getNSNodeList(host, bucketName),
 		Replicas:     1,
 		URI:          "/pools/default/buckets/" + bucketName + bucketUUIDSuffix,
 		StreamingURI: "/poolsStreaming/default/buckets/" + bucketName,
